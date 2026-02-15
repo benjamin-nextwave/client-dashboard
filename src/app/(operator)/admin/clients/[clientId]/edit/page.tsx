@@ -94,9 +94,17 @@ export default async function EditClientPage({ params }: EditClientPageProps) {
         </Link>
       </div>
 
-      <h2 className="mb-6 text-2xl font-bold text-gray-900">
-        Klant bewerken: {client.company_name}
-      </h2>
+      <div className="mb-6 flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-gray-900">
+          Klant bewerken: {client.company_name}
+        </h2>
+        <Link
+          href={`/admin/clients/${clientId}/csv`}
+          className="rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
+        >
+          CSV Beheer
+        </Link>
+      </div>
 
       {campaignWarning && (
         <div className="mb-4 rounded-md bg-yellow-50 p-4 text-sm text-yellow-700">
