@@ -1,4 +1,6 @@
 import { redirect } from 'next/navigation'
+import { getClientBranding } from '@/lib/client/get-client-branding'
+import { SidebarNav } from '@/components/client/sidebar-nav'
 import { createClient } from '@/lib/supabase/server'
 
 async function signOut() {
@@ -8,27 +10,30 @@ async function signOut() {
   redirect('/login')
 }
 
-export default function ClientLayout({
+export default async function ClientLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const client = await getClientBranding()
+
+  if (!client) {
+    redirect('/login')
+  }
+
+  const brandColor = client.primary_color || '#3B82F6'
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <h1 className="text-lg font-semibold text-gray-900">Dashboard</h1>
-          <form action={signOut}>
-            <button
-              type="submit"
-              className="rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-            >
-              Uitloggen
-            </button>
-          </form>
-        </div>
-      </header>
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <div
+      className="flex min-h-screen bg-gray-50"
+      style={{ '--brand-color': brandColor } as React.CSSProperties}
+    >
+      <SidebarNav
+        companyName={client.company_name}
+        logoUrl={client.logo_url}
+        signOutAction={signOut}
+      />
+      <main className="flex-1 px-6 py-8 overflow-auto">
         {children}
       </main>
     </div>
