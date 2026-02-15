@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Operator Admin Core** - Client account creation and management
 - [x] **Phase 3: Client Dashboard Shell & Branding** - White-labeled UI foundation
 - [x] **Phase 4: Instantly.ai Integration & Campaign Stats** - External API integration and statistics display
-- [ ] **Phase 5: Inbox & Reply Functionality** - Lead management and email replies
+- [x] **Phase 5: Inbox & Reply Functionality** - Lead management and email replies
 - [ ] **Phase 6: CSV Import/Export & DNC Management** - Data workflows and filtering
 - [ ] **Phase 7: Contact Preview & Sent Emails** - Transparency and control features
 - [ ] **Phase 8: Polish & Error Monitoring** - Quality of life and production monitoring
@@ -139,10 +139,10 @@ Plans:
 **Plans:** 4 plans
 
 Plans:
-- [ ] 05-01-PLAN.md -- Database migration (cached_emails, synced_leads extensions), Instantly email API client, sync extension, inbox data queries
-- [ ] 05-02-PLAN.md -- Inbox list page with Gmail-style layout, status badges, server actions for reply/compose
-- [ ] 05-03-PLAN.md -- Thread view page with conversation display, reply form, compose modal, contact card
-- [ ] 05-04-PLAN.md -- Build verification and visual checkpoint of complete inbox system
+- [x] 05-01-PLAN.md -- Database migration (cached_emails, synced_leads extensions), Instantly email API client, sync extension, inbox data queries
+- [x] 05-02-PLAN.md -- Inbox list page with Gmail-style layout, status badges, server actions for reply/compose
+- [x] 05-03-PLAN.md -- Thread view page with conversation display, reply form, compose modal, contact card
+- [x] 05-04-PLAN.md -- Build verification and visual checkpoint of complete inbox system
 
 ---
 
@@ -224,7 +224,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 2. Operator Admin Core | 3/3 | Complete | 2026-02-15 |
 | 3. Client Dashboard Shell & Branding | 2/2 | Complete | 2026-02-15 |
 | 4. Instantly.ai Integration & Campaign Stats | 5/5 | Complete | 2026-02-15 |
-| 5. Inbox & Reply Functionality | 0/4 | Planned | - |
+| 5. Inbox & Reply Functionality | 4/4 | Complete | 2026-02-15 |
 | 6. CSV Import/Export & DNC Management | 0/TBD | Not started | - |
 | 7. Contact Preview & Sent Emails | 0/TBD | Not started | - |
 | 8. Polish & Error Monitoring | 0/TBD | Not started | - |
