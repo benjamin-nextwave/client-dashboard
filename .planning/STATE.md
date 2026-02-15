@@ -6,33 +6,33 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** Clients can see their campaign performance and reply to positive leads directly from their branded dashboard -- keeping the entire outreach workflow in one place.
 
-**Current focus:** Phase 2 -- Operator Admin Core (in progress)
+**Current focus:** Phase 2 -- Operator Admin Core (COMPLETE)
 
 ## Current Position
 
-Phase: 2 of 8 (Operator Admin Core)
-Plan: 2 of 3 in current phase
-Status: In progress
-Last activity: 2026-02-15 -- Completed 02-02-PLAN.md (Client Creation Flow)
+Phase: 2 of 8 (Operator Admin Core) -- COMPLETE
+Plan: 3 of 3 in current phase (all complete)
+Status: Phase complete -- ready for Phase 3
+Last activity: 2026-02-15 -- Completed 02-03-PLAN.md (Client Edit Flow)
 
-Progress: [█████░░░░░] 5/~20 total plans (2/3 in phase 2)
+Progress: [██████░░░░] 6/~20 total plans (3/3 in phase 2)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5
-- Average duration: ~6 min
-- Total execution time: ~27 min
+- Total plans completed: 6
+- Average duration: ~5 min
+- Total execution time: ~30 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-foundation-multi-tenancy | 3/3 | ~20 min | ~7 min |
-| 02-operator-admin-core | 2/3 | ~7 min | ~4 min |
+| 02-operator-admin-core | 3/3 | ~10 min | ~3 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-03 (~2 min), 01-02 (~3 min), 02-01 (~2 min), 02-02 (~5 min)
+- Last 5 plans: 01-02 (~3 min), 02-01 (~2 min), 02-02 (~5 min), 02-03 (~3 min)
 - Trend: Consistent fast execution
 
 *Updated after each plan completion*
@@ -60,6 +60,9 @@ Recent decisions affecting current work:
 - **force-dynamic on admin pages**: Admin client requires runtime env vars, cannot prerender (02-02)
 - **useActionState + RHF for forms**: Server action state for errors + React Hook Form for client validation display (02-02)
 - **Campaign names in hidden inputs**: Avoids re-fetching from Instantly during server action (02-02)
+- **Optional password on edit**: Only updates auth user password if non-empty, avoids accidental resets (02-03)
+- **Campaign re-association via delete + re-insert**: Simpler than diffing, safe within single action (02-03)
+- **Hidden originalEmail for change detection**: Avoids extra DB query in updateClient action (02-03)
 
 ### Pending Todos
 
@@ -84,9 +87,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-15 (plan 02-02 execution)
-Stopped at: Completed 02-02-PLAN.md -- ready for 02-03 (Client Edit/Delete)
-Resume file: .planning/phases/02-operator-admin-core/02-03-PLAN.md
+Last session: 2026-02-15 (plan 02-03 execution)
+Stopped at: Completed Phase 2 -- all 3 plans done. Ready for Phase 3 (Client Dashboard).
+Resume file: Phase 3 planning needed
 
 ---
 *State initialized: 2026-02-15*
