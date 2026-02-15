@@ -107,12 +107,14 @@ Plans:
   7. All campaign data is aggregated across associated campaigns — client never sees campaign names or count
   8. System tracks which sender account was used for each contact to enable proper reply routing
 
-**Research Flag**: NEEDS RESEARCH — Instantly.ai API endpoints, rate limits, authentication flow, and available fields need verification before planning.
-
-**Plans**: TBD
+**Plans:** 5 plans
 
 Plans:
-- [ ] TBD (to be planned)
+- [ ] 04-01-PLAN.md -- Database migration (synced_leads, campaign_analytics tables with RLS), extend Instantly API client, create sync module
+- [ ] 04-02-PLAN.md -- Cron sync endpoint, dashboard data aggregation query helpers
+- [ ] 04-03-PLAN.md -- Install Recharts/date-fns, stats cards component, contact list modal component
+- [ ] 04-04-PLAN.md -- Chart components (contact status, ICP charts), wire up Overzicht page with all components
+- [ ] 04-05-PLAN.md -- Build verification and visual checkpoint of complete dashboard
 
 ---
 
@@ -218,7 +220,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 1. Foundation & Multi-tenancy | 3/3 | Complete | 2026-02-15 |
 | 2. Operator Admin Core | 3/3 | Complete | 2026-02-15 |
 | 3. Client Dashboard Shell & Branding | 2/2 | Complete | 2026-02-15 |
-| 4. Instantly.ai Integration & Campaign Stats | 0/TBD | Not started | - |
+| 4. Instantly.ai Integration & Campaign Stats | 0/5 | In progress | - |
 | 5. Inbox & Reply Functionality | 0/TBD | Not started | - |
 | 6. CSV Import/Export & DNC Management | 0/TBD | Not started | - |
 | 7. Contact Preview & Sent Emails | 0/TBD | Not started | - |
@@ -226,4 +228,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 
 ---
 *Roadmap created: 2026-02-15*
-*Last updated: 2026-02-15 (Phase 3 complete)*
+*Last updated: 2026-02-15 (Phase 4 planned)*
