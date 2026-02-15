@@ -1,8 +1,15 @@
-export default function AfsprakenPage() {
-  return (
-    <div>
-      <h1 className="text-2xl font-bold text-gray-900">Afspraken</h1>
-      <p className="mt-2 text-gray-600">Plan en bekijk uw afspraken.</p>
-    </div>
-  )
+import { redirect } from 'next/navigation'
+import { getClientBranding } from '@/lib/client/get-client-branding'
+
+const DEFAULT_MEETING_URL = 'https://meetings.nextwave.nl'
+
+export default async function AfsprakenPage() {
+  const client = await getClientBranding()
+
+  if (!client) {
+    redirect('/login')
+  }
+
+  const meetingUrl = client.meeting_url || DEFAULT_MEETING_URL
+  redirect(meetingUrl)
 }

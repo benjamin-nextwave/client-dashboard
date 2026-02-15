@@ -12,7 +12,7 @@ export const getClientBranding = cache(async () => {
 
   const { data: client } = await supabase
     .from('clients')
-    .select('id, company_name, primary_color, logo_url')
+    .select('id, company_name, primary_color, logo_url, meeting_url')
     .eq('id', clientId)
     .single()
 
