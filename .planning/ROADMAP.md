@@ -40,9 +40,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans:** 3 plans
 
 Plans:
-- [ ] 01-01-PLAN.md -- Project scaffolding, Supabase init, database migrations (schema + RLS + hook + seed)
-- [ ] 01-02-PLAN.md -- Auth infrastructure, login page, middleware, role-based route groups
-- [ ] 01-03-PLAN.md -- pgTAP tenant isolation test suite
+- [x] 01-01-PLAN.md -- Project scaffolding, Supabase init, database migrations (schema + RLS + hook + seed)
+- [x] 01-02-PLAN.md -- Auth infrastructure, login page, middleware, role-based route groups
+- [x] 01-03-PLAN.md -- pgTAP tenant isolation test suite
 
 ---
 
@@ -59,10 +59,12 @@ Plans:
   3. Operator can edit existing client settings (branding, credentials, campaigns, recruitment toggle, meeting URL)
   4. Client branding assets (logos) are stored securely with tenant-scoped paths preventing cross-tenant access
 
-**Plans**: TBD
+**Plans:** 3 plans
 
 Plans:
-- [ ] TBD (to be planned)
+- [ ] 02-01-PLAN.md -- Database migration (client_campaigns, storage bucket, RLS), install packages, shared lib utilities (Zod, Instantly client, storage helpers)
+- [ ] 02-02-PLAN.md -- Client list page, create client form with all fields, transactional createClient server action
+- [ ] 02-03-PLAN.md -- Edit client page with pre-populated form, updateClient server action, human verification checkpoint
 
 ---
 
@@ -212,8 +214,8 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Multi-tenancy | 3/3 | ✓ Complete | 2026-02-15 |
-| 2. Operator Admin Core | 0/TBD | Not started | - |
+| 1. Foundation & Multi-tenancy | 3/3 | Complete | 2026-02-15 |
+| 2. Operator Admin Core | 0/3 | Not started | - |
 | 3. Client Dashboard Shell & Branding | 0/TBD | Not started | - |
 | 4. Instantly.ai Integration & Campaign Stats | 0/TBD | Not started | - |
 | 5. Inbox & Reply Functionality | 0/TBD | Not started | - |
@@ -223,4 +225,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 
 ---
 *Roadmap created: 2026-02-15*
-*Last updated: 2026-02-15 (Phase 1 complete)*
+*Last updated: 2026-02-15 (Phase 2 planned)*
