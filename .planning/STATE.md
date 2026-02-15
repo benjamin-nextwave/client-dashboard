@@ -11,29 +11,29 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 Phase: 2 of 8 (Operator Admin Core)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-02-15 -- Completed 02-01-PLAN.md (Foundation Utilities)
+Last activity: 2026-02-15 -- Completed 02-02-PLAN.md (Client Creation Flow)
 
-Progress: [████░░░░░░] 4/~20 total plans (1/3 in phase 2)
+Progress: [█████░░░░░] 5/~20 total plans (2/3 in phase 2)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
+- Total plans completed: 5
 - Average duration: ~6 min
-- Total execution time: ~22 min
+- Total execution time: ~27 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-foundation-multi-tenancy | 3/3 | ~20 min | ~7 min |
-| 02-operator-admin-core | 1/3 | ~2 min | ~2 min |
+| 02-operator-admin-core | 2/3 | ~7 min | ~4 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (~15 min), 01-03 (~2 min), 01-02 (~3 min), 02-01 (~2 min)
-- Trend: Accelerating
+- Last 5 plans: 01-03 (~2 min), 01-02 (~3 min), 02-01 (~2 min), 02-02 (~5 min)
+- Trend: Consistent fast execution
 
 *Updated after each plan completion*
 
@@ -57,6 +57,9 @@ Recent decisions affecting current work:
 - **Admin client for storage uploads**: service_role bypasses storage RLS, safe since only operators trigger from Server Actions (02-01)
 - **Dutch Zod validation messages**: Consistent with Dutch UI convention from Phase 1 (02-01)
 - **No-store cache on Instantly API**: Operators need fresh campaign data, no caching (02-01)
+- **force-dynamic on admin pages**: Admin client requires runtime env vars, cannot prerender (02-02)
+- **useActionState + RHF for forms**: Server action state for errors + React Hook Form for client validation display (02-02)
+- **Campaign names in hidden inputs**: Avoids re-fetching from Instantly during server action (02-02)
 
 ### Pending Todos
 
@@ -81,9 +84,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-15 (plan 02-01 execution)
-Stopped at: Completed 02-01-PLAN.md -- ready for 02-02 (Client Creation Form)
-Resume file: .planning/phases/02-operator-admin-core/02-02-PLAN.md
+Last session: 2026-02-15 (plan 02-02 execution)
+Stopped at: Completed 02-02-PLAN.md -- ready for 02-03 (Client Edit/Delete)
+Resume file: .planning/phases/02-operator-admin-core/02-03-PLAN.md
 
 ---
 *State initialized: 2026-02-15*
