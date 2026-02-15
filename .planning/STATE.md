@@ -6,23 +6,23 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** Clients can see their campaign performance and reply to positive leads directly from their branded dashboard -- keeping the entire outreach workflow in one place.
 
-**Current focus:** Phase 4 -- Instantly.ai Integration & Campaign Stats (IN PROGRESS)
+**Current focus:** Phase 4 -- Instantly.ai Integration & Campaign Stats (COMPLETE)
 
 ## Current Position
 
 Phase: 4 of 8 (Instantly.ai Integration & Campaign Stats)
-Plan: 3 of ~3 in current phase
-Status: In progress -- plan 04-03 complete
-Last activity: 2026-02-15 -- Completed 04-03-PLAN.md (stats cards + contact list modal)
+Plan: 4 of 4 in current phase
+Status: Phase complete -- all 4 plans done
+Last activity: 2026-02-15 -- Completed 04-04-PLAN.md (charts & Overzicht dashboard)
 
-Progress: [███████████░] 11/~20 total plans (3/~3 in phase 4)
+Progress: [████████████░] 12/~20 total plans (4/4 in phase 4)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11
+- Total plans completed: 12
 - Average duration: ~4 min
-- Total execution time: ~41 min
+- Total execution time: ~43 min
 
 **By Phase:**
 
@@ -31,10 +31,10 @@ Progress: [███████████░] 11/~20 total plans (3/~3 in pha
 | 01-foundation-multi-tenancy | 3/3 | ~20 min | ~7 min |
 | 02-operator-admin-core | 3/3 | ~10 min | ~3 min |
 | 03-client-dashboard-shell-branding | 2/2 | ~5 min | ~2.5 min |
-| 04-instantly-ai-integration-campaign-stats | 3/~3 | ~6 min | ~2 min |
+| 04-instantly-ai-integration-campaign-stats | 4/4 | ~8 min | ~2 min |
 
 **Recent Trend:**
-- Last 5 plans: 03-02 (~3 min), 04-01 (~2 min), 04-02 (~2 min), 04-03 (~2 min)
+- Last 5 plans: 04-01 (~2 min), 04-02 (~2 min), 04-03 (~2 min), 04-04 (~2 min)
 - Trend: Consistent fast execution
 
 *Updated after each plan completion*
@@ -77,6 +77,8 @@ Recent decisions affecting current work:
 - **TypeScript-side aggregation**: Supabase JS client lacks GROUP BY; fetch rows and aggregate in TS for manageable dataset sizes (04-02)
 - **Email dedup via Set**: Contacts span campaigns; Set on email field for distinct counts (04-02)
 - **Dutch status labels in data layer**: lead_status mapped to Dutch labels at query function level (04-02)
+- **Client wrapper pattern for server/client boundary**: OverzichtDashboard manages modal state while page.tsx stays server component (04-04)
+- **Brand color opacity via RGB mixing**: Solid chart fills at varying intensities instead of CSS opacity (04-04)
 
 ### Pending Todos
 
@@ -101,9 +103,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-15 (plan 04-03 completion)
-Stopped at: Phase 4, plan 3 complete -- 11 plans total completed
-Resume file: .planning/phases/04-instantly-ai-integration-campaign-stats/04-03-SUMMARY.md
+Last session: 2026-02-15 (plan 04-04 completion)
+Stopped at: Phase 4 complete -- 12 plans total completed
+Resume file: .planning/phases/04-instantly-ai-integration-campaign-stats/04-04-SUMMARY.md
 
 ---
 *State initialized: 2026-02-15*
