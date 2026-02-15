@@ -10,6 +10,7 @@ interface InboxItemProps {
   isRecruitment: boolean
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function InboxItem({ lead, isRecruitment }: InboxItemProps) {
   const isNew = !lead.client_has_replied
   const name = [lead.first_name, lead.last_name].filter(Boolean).join(' ') || lead.email
