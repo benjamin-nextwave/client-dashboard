@@ -6,16 +6,16 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** Clients can see their campaign performance and reply to positive leads directly from their branded dashboard -- keeping the entire outreach workflow in one place.
 
-**Current focus:** Phase 8 -- Polish & Error Monitoring (COMPLETE)
+**Current focus:** v1.0 MVP shipped — planning next milestone
 
 ## Current Position
 
-Phase: 8 of 8 (Polish & Error Monitoring)
-Plan: 2 of 2 in current phase
-Status: Phase complete -- ALL PHASES COMPLETE
-Last activity: 2026-02-15 -- Completed 08-01-PLAN.md (error monitoring dashboard)
+Phase: 8 of 8 (all complete)
+Plan: 25 of 25 (all complete)
+Status: v1.0 SHIPPED
+Last activity: 2026-02-15 -- v1.0 milestone completed
 
-Progress: [█████████████████████████] 25/25 total plans (2/2 in phase 8)
+Progress: [█████████████████████████] 25/25 total plans complete
 
 ## Performance Metrics
 
@@ -37,105 +37,32 @@ Progress: [███████████████████████
 | 07-contact-preview-sent-emails | 2/2 | ~9 min | ~4.5 min |
 | 08-polish-error-monitoring | 2/2 | ~6 min | ~3 min |
 
-**Recent Trend:**
-- Last 5 plans: 07-01 (~4 min), 07-02 (~5 min), 08-02 (~2 min), 08-01 (~4 min)
-- Trend: Consistent fast execution, ALL PHASES COMPLETE
-
-*Updated after each plan completion*
-
 ## Accumulated Context
 
 ### Decisions
 
 Decisions are logged in PROJECT.md Key Decisions table.
-Recent decisions affecting current work:
-
-- **Supabase over Neon**: Integrated auth + storage + Postgres in one platform (Pending)
-- **Primary color + logo only for branding**: Keeps white-labeling simple, sufficient for client differentiation (Pending)
-- **Instantly handles sentiment**: Avoids building our own NLP, Instantly already classifies replies (Pending)
-- **All operators are equal admins**: Only 3 operators, no need for granular permissions (Pending)
-- **Next.js 15.5.12 over 16**: Better Supabase compatibility per research (01-01)
-- **RLS (SELECT auth.jwt()) wrappers**: All policies use subselect for 95%+ performance improvement (01-01)
-- **pgTAP throws_ok with 42501**: Using PostgreSQL error code for INSERT denial tests validates RLS policy-level blocking (01-03)
-- **useActionState for login form**: React 19 pattern for server action state management (01-02)
-- **Middleware handles authenticated /login visits**: Prevents stuck state by redirecting to dashboard (01-02)
-- **Dutch UI labels**: Inloggen, Uitloggen, Welkom throughout the app (01-02)
-- **Admin client for storage uploads**: service_role bypasses storage RLS, safe since only operators trigger from Server Actions (02-01)
-- **Dutch Zod validation messages**: Consistent with Dutch UI convention from Phase 1 (02-01)
-- **No-store cache on Instantly API**: Operators need fresh campaign data, no caching (02-01)
-- **force-dynamic on admin pages**: Admin client requires runtime env vars, cannot prerender (02-02)
-- **useActionState + RHF for forms**: Server action state for errors + React Hook Form for client validation display (02-02)
-- **Campaign names in hidden inputs**: Avoids re-fetching from Instantly during server action (02-02)
-- **Optional password on edit**: Only updates auth user password if non-empty, avoids accidental resets (02-03)
-- **Campaign re-association via delete + re-insert**: Simpler than diffing, safe within single action (02-03)
-- **Hidden originalEmail for change detection**: Avoids extra DB query in updateClient action (02-03)
-- **Inline SVG icons over icon library**: Zero extra dependencies for sidebar nav icons (03-01)
-- **signOutAction as prop**: Server action defined in server layout, passed to client SidebarNav component (03-01)
-- **CSS variable on wrapper div (not :root)**: Prevents brand color leakage between tenants (03-01)
-- **Server components for placeholder pages**: No client-side state needed for static content pages (03-02)
-- **Branded accent elements**: Overzicht page demonstrates theme integration with colored border accent (03-02)
-- **getHeaders() function over module-level const**: Bearer token evaluated at call time, not import time (04-01)
-- **90-day rolling sync window**: Covers 3 months of campaign data without overloading API (04-01)
-- **500ms inter-campaign delay**: Conservative rate limiting for Instantly API (04-01)
-- **Batch upserts of 500 leads**: Prevents Supabase payload size limits on large lead sets (04-01)
-- **TypeScript-side aggregation**: Supabase JS client lacks GROUP BY; fetch rows and aggregate in TS for manageable dataset sizes (04-02)
-- **Email dedup via Set**: Contacts span campaigns; Set on email field for distinct counts (04-02)
-- **Dutch status labels in data layer**: lead_status mapped to Dutch labels at query function level (04-02)
-- **Client wrapper pattern for server/client boundary**: OverzichtDashboard manages modal state while page.tsx stays server component (04-04)
-- **Brand color opacity via RGB mixing**: Solid chart fills at varying intensities instead of CSS opacity (04-04)
-- **5-minute TTL for email cache**: Balances API rate limits with data freshness for inbox viewing (05-01)
-- **Admin client for cache writes**: cached_emails RLS is SELECT-only for clients; admin client needed for INSERT during cache population (05-01)
-- **Deduplication by email for inbox lead list**: Same pattern as getContactList, keeps most recently updated lead per email (05-01)
-- **Separate is_recruitment query**: Queried clients table directly instead of modifying shared getClientBranding (05-02)
-- **Server action pattern for inbox**: Zod validation -> auth check -> RLS ownership verify -> API call -> admin write -> revalidate (05-02)
-- **Local CachedEmail type in thread-view**: Defined locally in client component rather than importing from server-side inbox-data.ts (05-03)
-- **State-based feedback over toast library**: Colored div with auto-dismiss for success/error messages, zero dependencies (05-03)
-- **Suppressed unused isRecruitment prop**: Kept for future recruitment filtering, eslint-disable comment to avoid build warnings (05-04)
-- **GIN index on csv_rows.data**: Enables fast JSONB email lookups during DNC filtering (06-01)
-- **7-day expiry on csv_uploads**: Auto-cleans temporary upload data (06-01)
-- **Admin client for bulk DNC import**: service_role bypasses RLS for batch upsert performance with ignoreDuplicates (06-02)
-- **Auto-detect email column in CSV**: Case-insensitive match against common column names for DNC bulk import (06-02)
-- **window.location.reload() after CSV upload**: Simplicity over state lifting for refreshing upload list (06-03)
-- **HTML details/summary for expandable cards**: Zero JS overhead for toggling upload preview visibility (06-03)
-- **TypeScript-side DNC matching over SQL JOINs**: Supabase JS client cannot do complex JOINed UPDATEs; fetch DNC sets, match in TS (06-04)
-- **Batch fetch 1000, update 500**: Scalable row processing for large CSV datasets during DNC filtering (06-04)
-- **Programmatic anchor click for CSV download**: Standard browser download pattern for export trigger (06-04)
-- **Soft-delete via is_excluded boolean**: Preserves data, integrates with DNC filter by adding excluded emails to dncEmails Set (07-01)
-- **RLS UPDATE policy for client self-service exclusions**: Clients can only exclude their own leads (07-01)
-- **sender_account IS NOT NULL as outbound filter**: Consistent with inbox-data.ts caching logic for identifying sent emails (07-02)
-- **Cache warm-up via campaign listing**: Fetches last 50 emails per campaign from Instantly API on first visit when cache is empty (07-02)
-- **DEFAULT_MEETING_URL fallback**: Redirect to https://meetings.nextwave.nl when client has no custom meeting_url (08-02)
-- **Error boundary pattern with Dutch labels**: All error.tsx use 'use client', Dutch text, blue retry button; global-error uses inline styles (08-02)
-- **Admin client for error inserts**: service_role bypasses RLS for logError, consistent with existing admin data patterns (08-01)
-- **Await logError instead of fire-and-forget**: Serverless safety -- ensures error is written before function exits (08-01)
+All v1.0 decisions reviewed and marked with outcomes at milestone completion.
 
 ### Pending Todos
 
-None yet.
+None.
 
 ### Blockers/Concerns
 
-**Phase 4 & 5 Research Required:**
-- Instantly.ai API documentation has LOW confidence -- exact endpoints, rate limits, authentication flow, and email threading header availability (Message-ID, In-Reply-To, References) need verification before planning these phases
-- Recommended action: Run `/gsd:research-phase 4` before planning Phase 4
+No active blockers. v1.0 shipped.
 
-**CSV Processing at Scale:**
-- CSV import for 20k+ rows may hit Vercel timeout/memory limits
-- Mitigation planned in Phase 6 with batched client-side parsing
-
-**User Setup Required (01-01):**
-- Supabase project must be created and env vars configured before local dev
-- Custom Access Token Hook must be manually enabled in Supabase Dashboard after migration deployment
-
-**User Setup Required (02-01):**
-- INSTANTLY_API_KEY environment variable needed for campaign listing (requires Instantly.ai Growth plan)
+**Known items for future milestones:**
+- CSV processing at scale (20k+ rows) relies on client-side PapaParse — monitor for edge cases
+- Instantly API rate limits (500ms inter-campaign delay) may need tuning under heavier load
+- Custom Access Token Hook requires manual Supabase Dashboard setup per deployment
 
 ## Session Continuity
 
-Last session: 2026-02-15 (ALL PHASES COMPLETE)
-Stopped at: ALL 25 PLANS COMPLETE across 8 phases
-Resume file: .planning/phases/08-polish-error-monitoring/08-01-SUMMARY.md
+Last session: 2026-02-15 (v1.0 MILESTONE COMPLETE)
+Stopped at: Milestone archival complete
+Next action: `/gsd:new-milestone` for next version
 
 ---
 *State initialized: 2026-02-15*
-*Last updated: 2026-02-15*
+*Last updated: 2026-02-15 after v1.0 milestone completion*
