@@ -125,13 +125,61 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| — | — | Pending |
+| AUTH-01 | Phase 1 | Pending |
+| AUTH-02 | Phase 1 | Pending |
+| AUTH-03 | Phase 1 | Pending |
+| AUTH-04 | Phase 1 | Pending |
+| OADM-01 | Phase 2 | Pending |
+| OADM-02 | Phase 2 | Pending |
+| OADM-03 | Phase 2 | Pending |
+| OADM-04 | Phase 6 | Pending |
+| OADM-05 | Phase 6 | Pending |
+| OADM-06 | Phase 6 | Pending |
+| OADM-07 | Phase 8 | Pending |
+| STAT-01 | Phase 4 | Pending |
+| STAT-02 | Phase 4 | Pending |
+| STAT-03 | Phase 4 | Pending |
+| STAT-04 | Phase 4 | Pending |
+| STAT-05 | Phase 4 | Pending |
+| STAT-06 | Phase 4 | Pending |
+| STAT-07 | Phase 4 | Pending |
+| STAT-08 | Phase 4 | Pending |
+| STAT-09 | Phase 4 | Pending |
+| STAT-10 | Phase 4 | Pending |
+| INBX-01 | Phase 5 | Pending |
+| INBX-02 | Phase 5 | Pending |
+| INBX-03 | Phase 5 | Pending |
+| INBX-04 | Phase 5 | Pending |
+| INBX-05 | Phase 5 | Pending |
+| INBX-06 | Phase 5 | Pending |
+| PREV-01 | Phase 7 | Pending |
+| PREV-02 | Phase 7 | Pending |
+| PREV-03 | Phase 7 | Pending |
+| DNC-01 | Phase 6 | Pending |
+| DNC-02 | Phase 6 | Pending |
+| DNC-03 | Phase 6 | Pending |
+| DNC-04 | Phase 6 | Pending |
+| DNC-05 | Phase 6 | Pending |
+| SENT-01 | Phase 7 | Pending |
+| SENT-02 | Phase 7 | Pending |
+| SENT-03 | Phase 7 | Pending |
+| MEET-01 | Phase 8 | Pending |
+| MEET-02 | Phase 8 | Pending |
+| BRND-01 | Phase 3 | Pending |
+| BRND-02 | Phase 3 | Pending |
+| BRND-03 | Phase 3 | Pending |
+| INST-01 | Phase 4 | Pending |
+| INST-02 | Phase 4 | Pending |
+| INST-03 | Phase 4 | Pending |
+| INST-04 | Phase 4 | Pending |
 
 **Coverage:**
 - v1 requirements: 38 total
-- Mapped to phases: 0
-- Unmapped: 38
+- Mapped to phases: 38
+- Unmapped: 0
+
+**Coverage = 100%** (All v1 requirements mapped)
 
 ---
 *Requirements defined: 2026-02-15*
-*Last updated: 2026-02-15 after initial definition*
+*Last updated: 2026-02-15 after roadmap creation*
