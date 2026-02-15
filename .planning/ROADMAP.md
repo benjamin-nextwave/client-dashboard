@@ -110,11 +110,11 @@ Plans:
 **Plans:** 5 plans
 
 Plans:
-- [ ] 04-01-PLAN.md -- Database migration (synced_leads, campaign_analytics tables with RLS), extend Instantly API client, create sync module
-- [ ] 04-02-PLAN.md -- Cron sync endpoint, dashboard data aggregation query helpers
-- [ ] 04-03-PLAN.md -- Install Recharts/date-fns, stats cards component, contact list modal component
-- [ ] 04-04-PLAN.md -- Chart components (contact status, ICP charts), wire up Overzicht page with all components
-- [ ] 04-05-PLAN.md -- Build verification and visual checkpoint of complete dashboard
+- [x] 04-01-PLAN.md -- Database migration (synced_leads, campaign_analytics tables with RLS), extend Instantly API client, create sync module
+- [x] 04-02-PLAN.md -- Cron sync endpoint, dashboard data aggregation query helpers
+- [x] 04-03-PLAN.md -- Install Recharts/date-fns, stats cards component, contact list modal component
+- [x] 04-04-PLAN.md -- Chart components (contact status, ICP charts), wire up Overzicht page with all components
+- [x] 04-05-PLAN.md -- Build verification and visual checkpoint of complete dashboard
 
 ---
 
@@ -134,12 +134,15 @@ Plans:
   6. Each lead displays status label: "Nieuwe lead" (unanswered) or "In gesprek" (conversation ongoing)
   7. For recruitment clients, inbox contact details include the vacancy/job posting URL
 
-**Research Flag**: NEEDS RESEARCH — Email threading header support (Message-ID, In-Reply-To, References) in Instantly.ai API must be verified.
+**Research Flag**: RESOLVED -- Instantly API v2 handles threading via reply_to_uuid mechanism. No custom SMTP header management needed.
 
-**Plans**: TBD
+**Plans:** 4 plans
 
 Plans:
-- [ ] TBD (to be planned)
+- [ ] 05-01-PLAN.md -- Database migration (cached_emails, synced_leads extensions), Instantly email API client, sync extension, inbox data queries
+- [ ] 05-02-PLAN.md -- Inbox list page with Gmail-style layout, status badges, server actions for reply/compose
+- [ ] 05-03-PLAN.md -- Thread view page with conversation display, reply form, compose modal, contact card
+- [ ] 05-04-PLAN.md -- Build verification and visual checkpoint of complete inbox system
 
 ---
 
@@ -221,11 +224,11 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 2. Operator Admin Core | 3/3 | Complete | 2026-02-15 |
 | 3. Client Dashboard Shell & Branding | 2/2 | Complete | 2026-02-15 |
 | 4. Instantly.ai Integration & Campaign Stats | 5/5 | Complete | 2026-02-15 |
-| 5. Inbox & Reply Functionality | 0/TBD | Not started | - |
+| 5. Inbox & Reply Functionality | 0/4 | Planned | - |
 | 6. CSV Import/Export & DNC Management | 0/TBD | Not started | - |
 | 7. Contact Preview & Sent Emails | 0/TBD | Not started | - |
 | 8. Polish & Error Monitoring | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2026-02-15*
-*Last updated: 2026-02-15 (Phase 4 complete)*
+*Last updated: 2026-02-15 (Phase 5 planned)*
