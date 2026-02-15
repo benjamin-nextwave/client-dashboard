@@ -163,10 +163,13 @@ Plans:
   7. Client can view their current DNC list (emails and domains) and remove entries
   8. CSV upload handles 20k+ row files without Vercel timeout or memory issues
 
-**Plans**: TBD
+**Plans:** 4 plans
 
 Plans:
-- [ ] TBD (to be planned)
+- [ ] 06-01-PLAN.md -- Database migration (csv_uploads, csv_rows, dnc_entries tables with RLS), install PapaParse, Zod validation schemas
+- [ ] 06-02-PLAN.md -- Client DNC management page: add email, add domain, bulk CSV import, list/remove entries
+- [ ] 06-03-PLAN.md -- Operator CSV upload page: PapaParse client-side parsing, batched insert, preview table
+- [ ] 06-04-PLAN.md -- DNC filtering action, CSV export API route, filter/export UI, cleanup cron
 
 ---
 
@@ -225,10 +228,10 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 3. Client Dashboard Shell & Branding | 2/2 | Complete | 2026-02-15 |
 | 4. Instantly.ai Integration & Campaign Stats | 5/5 | Complete | 2026-02-15 |
 | 5. Inbox & Reply Functionality | 4/4 | Complete | 2026-02-15 |
-| 6. CSV Import/Export & DNC Management | 0/TBD | Not started | - |
+| 6. CSV Import/Export & DNC Management | 0/4 | Not started | - |
 | 7. Contact Preview & Sent Emails | 0/TBD | Not started | - |
 | 8. Polish & Error Monitoring | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2026-02-15*
-*Last updated: 2026-02-15 (Phase 5 planned)*
+*Last updated: 2026-02-15 (Phase 6 planned)*
