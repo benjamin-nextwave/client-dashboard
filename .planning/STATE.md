@@ -11,18 +11,18 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 Phase: 4 of 8 (Instantly.ai Integration & Campaign Stats)
-Plan: 1 of ~3 in current phase
-Status: In progress -- plan 04-01 complete
-Last activity: 2026-02-15 -- Completed 04-01-PLAN.md (database tables + API sync infrastructure)
+Plan: 2 of ~3 in current phase
+Status: In progress -- plan 04-02 complete
+Last activity: 2026-02-15 -- Completed 04-02-PLAN.md (cron endpoint + dashboard data queries)
 
-Progress: [█████████░] 9/~20 total plans (1/~3 in phase 4)
+Progress: [██████████░] 10/~20 total plans (2/~3 in phase 4)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 9
+- Total plans completed: 10
 - Average duration: ~4 min
-- Total execution time: ~37 min
+- Total execution time: ~39 min
 
 **By Phase:**
 
@@ -31,10 +31,10 @@ Progress: [█████████░] 9/~20 total plans (1/~3 in phase 4)
 | 01-foundation-multi-tenancy | 3/3 | ~20 min | ~7 min |
 | 02-operator-admin-core | 3/3 | ~10 min | ~3 min |
 | 03-client-dashboard-shell-branding | 2/2 | ~5 min | ~2.5 min |
-| 04-instantly-ai-integration-campaign-stats | 1/~3 | ~2 min | ~2 min |
+| 04-instantly-ai-integration-campaign-stats | 2/~3 | ~4 min | ~2 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-03 (~3 min), 03-01 (~2 min), 03-02 (~3 min), 04-01 (~2 min)
+- Last 5 plans: 03-01 (~2 min), 03-02 (~3 min), 04-01 (~2 min), 04-02 (~2 min)
 - Trend: Consistent fast execution
 
 *Updated after each plan completion*
@@ -74,6 +74,9 @@ Recent decisions affecting current work:
 - **90-day rolling sync window**: Covers 3 months of campaign data without overloading API (04-01)
 - **500ms inter-campaign delay**: Conservative rate limiting for Instantly API (04-01)
 - **Batch upserts of 500 leads**: Prevents Supabase payload size limits on large lead sets (04-01)
+- **TypeScript-side aggregation**: Supabase JS client lacks GROUP BY; fetch rows and aggregate in TS for manageable dataset sizes (04-02)
+- **Email dedup via Set**: Contacts span campaigns; Set on email field for distinct counts (04-02)
+- **Dutch status labels in data layer**: lead_status mapped to Dutch labels at query function level (04-02)
 
 ### Pending Todos
 
@@ -98,9 +101,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-15 (plan 04-01 completion)
-Stopped at: Phase 4, plan 1 complete -- 9 plans total completed
-Resume file: .planning/phases/04-instantly-ai-integration-campaign-stats/04-01-SUMMARY.md
+Last session: 2026-02-15 (plan 04-02 completion)
+Stopped at: Phase 4, plan 2 complete -- 10 plans total completed
+Resume file: .planning/phases/04-instantly-ai-integration-campaign-stats/04-02-SUMMARY.md
 
 ---
 *State initialized: 2026-02-15*
