@@ -197,6 +197,165 @@ export async function getCsvUploadWithRows(
   }
 }
 
+export async function applyDncFilter(
+  uploadId: string
+): Promise<{ success: true; filtered: number; total: number; emailMatches: number; domainMatches: number } | { error: string }> {
+  const uuidSchema = z.string().uuid('Ongeldig upload ID')
+  const parsed = uuidSchema.safeParse(uploadId)
+  if (!parsed.success) {
+    return { error: 'Ongeldig upload ID.' }
+  }
+
+  const admin = createAdminClient()
+
+  // Fetch upload metadata
+  const { data: upload, error: uploadError } = await admin
+    .from('csv_uploads')
+    .select('client_id, email_column, total_rows')
+    .eq('id', uploadId)
+    .single()
+
+  if (uploadError || !upload) {
+    return { error: 'Upload niet gevonden.' }
+  }
+
+  if (!upload.email_column) {
+    return { error: 'Geen e-mailkolom geselecteerd.' }
+  }
+
+  const emailColumn = upload.email_column as string
+  const clientId = upload.client_id as string
+
+  // Step 1: Reset any previous filtering
+  const { error: resetError } = await admin
+    .from('csv_rows')
+    .update({ is_filtered: false, filter_reason: null })
+    .eq('upload_id', uploadId)
+
+  if (resetError) {
+    return { error: `Filter resetten mislukt: ${resetError.message}` }
+  }
+
+  // Step 2: Fetch all DNC entries for this client
+  const { data: dncEntries, error: dncError } = await admin
+    .from('dnc_entries')
+    .select('entry_type, value')
+    .eq('client_id', clientId)
+
+  if (dncError) {
+    return { error: `DNC-lijst ophalen mislukt: ${dncError.message}` }
+  }
+
+  const dncEmails = new Set<string>()
+  const dncDomains = new Set<string>()
+
+  for (const entry of dncEntries ?? []) {
+    if (entry.entry_type === 'email') {
+      dncEmails.add((entry.value as string).toLowerCase())
+    } else if (entry.entry_type === 'domain') {
+      dncDomains.add((entry.value as string).toLowerCase())
+    }
+  }
+
+  // If no DNC entries, nothing to filter
+  if (dncEmails.size === 0 && dncDomains.size === 0) {
+    // Update status to filtered (no matches but filter was applied)
+    await admin
+      .from('csv_uploads')
+      .update({ status: 'filtered' })
+      .eq('id', uploadId)
+
+    return { success: true, filtered: 0, total: upload.total_rows, emailMatches: 0, domainMatches: 0 }
+  }
+
+  // Step 3: Fetch all csv_rows for this upload (just id and email value)
+  // Fetch in batches to handle large datasets
+  const batchSize = 1000
+  let offset = 0
+  let emailMatchIds: string[] = []
+  let domainMatchIds: string[] = []
+
+  while (true) {
+    const { data: rows, error: rowsError } = await admin
+      .from('csv_rows')
+      .select('id, data')
+      .eq('upload_id', uploadId)
+      .range(offset, offset + batchSize - 1)
+
+    if (rowsError) {
+      return { error: `Rijen ophalen mislukt: ${rowsError.message}` }
+    }
+
+    if (!rows || rows.length === 0) break
+
+    for (const row of rows) {
+      const data = row.data as Record<string, string>
+      const emailValue = data[emailColumn]
+      if (!emailValue) continue
+
+      const email = emailValue.toLowerCase().trim()
+
+      if (dncEmails.has(email)) {
+        emailMatchIds.push(row.id as string)
+      } else {
+        const atIndex = email.indexOf('@')
+        if (atIndex !== -1) {
+          const domain = email.substring(atIndex + 1)
+          if (dncDomains.has(domain)) {
+            domainMatchIds.push(row.id as string)
+          }
+        }
+      }
+    }
+
+    if (rows.length < batchSize) break
+    offset += batchSize
+  }
+
+  // Step 4: Batch update matched rows
+  const updateBatchSize = 500
+
+  for (let i = 0; i < emailMatchIds.length; i += updateBatchSize) {
+    const batch = emailMatchIds.slice(i, i + updateBatchSize)
+    const { error: updateError } = await admin
+      .from('csv_rows')
+      .update({ is_filtered: true, filter_reason: 'email_match' })
+      .in('id', batch)
+
+    if (updateError) {
+      return { error: `Filter bijwerken mislukt: ${updateError.message}` }
+    }
+  }
+
+  for (let i = 0; i < domainMatchIds.length; i += updateBatchSize) {
+    const batch = domainMatchIds.slice(i, i + updateBatchSize)
+    const { error: updateError } = await admin
+      .from('csv_rows')
+      .update({ is_filtered: true, filter_reason: 'domain_match' })
+      .in('id', batch)
+
+    if (updateError) {
+      return { error: `Filter bijwerken mislukt: ${updateError.message}` }
+    }
+  }
+
+  // Step 5: Update upload status to 'filtered'
+  await admin
+    .from('csv_uploads')
+    .update({ status: 'filtered' })
+    .eq('id', uploadId)
+
+  const totalFiltered = emailMatchIds.length + domainMatchIds.length
+
+  return {
+    success: true,
+    filtered: totalFiltered,
+    total: upload.total_rows,
+    emailMatches: emailMatchIds.length,
+    domainMatches: domainMatchIds.length,
+  }
+}
+
 export async function setEmailColumn(
   uploadId: string,
   emailColumn: string
