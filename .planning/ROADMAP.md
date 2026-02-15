@@ -37,10 +37,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. User session persists across browser refresh without requiring re-authentication
   5. Integration tests verify Client A cannot access Client B data through any query path
 
-**Plans**: TBD
+**Plans:** 3 plans
 
 Plans:
-- [ ] TBD (to be planned)
+- [ ] 01-01-PLAN.md -- Project scaffolding, Supabase init, database migrations (schema + RLS + hook + seed)
+- [ ] 01-02-PLAN.md -- Auth infrastructure, login page, middleware, role-based route groups
+- [ ] 01-03-PLAN.md -- pgTAP tenant isolation test suite
 
 ---
 
@@ -206,11 +208,11 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Multi-tenancy | 0/TBD | Not started | - |
+| 1. Foundation & Multi-tenancy | 0/3 | Planning complete | - |
 | 2. Operator Admin Core | 0/TBD | Not started | - |
 | 3. Client Dashboard Shell & Branding | 0/TBD | Not started | - |
 | 4. Instantly.ai Integration & Campaign Stats | 0/TBD | Not started | - |
