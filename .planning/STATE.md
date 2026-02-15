@@ -6,23 +6,23 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** Clients can see their campaign performance and reply to positive leads directly from their branded dashboard -- keeping the entire outreach workflow in one place.
 
-**Current focus:** Phase 2 -- Operator Admin Core (COMPLETE)
+**Current focus:** Phase 3 -- Client Dashboard Shell & Branding (IN PROGRESS)
 
 ## Current Position
 
-Phase: 2 of 8 (Operator Admin Core) -- COMPLETE
-Plan: 3 of 3 in current phase (all complete)
-Status: Phase complete -- ready for Phase 3
-Last activity: 2026-02-15 -- Completed 02-03-PLAN.md (Client Edit Flow)
+Phase: 3 of 8 (Client Dashboard Shell & Branding)
+Plan: 1 of 1 in current phase (complete)
+Status: Phase complete -- ready for Phase 4
+Last activity: 2026-02-15 -- Completed 03-01-PLAN.md (Dashboard Shell & Branding)
 
-Progress: [██████░░░░] 6/~20 total plans (3/3 in phase 2)
+Progress: [███████░░░] 7/~20 total plans (1/1 in phase 3)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
+- Total plans completed: 7
 - Average duration: ~5 min
-- Total execution time: ~30 min
+- Total execution time: ~32 min
 
 **By Phase:**
 
@@ -30,9 +30,10 @@ Progress: [██████░░░░] 6/~20 total plans (3/3 in phase 2)
 |-------|-------|-------|----------|
 | 01-foundation-multi-tenancy | 3/3 | ~20 min | ~7 min |
 | 02-operator-admin-core | 3/3 | ~10 min | ~3 min |
+| 03-client-dashboard-shell-branding | 1/1 | ~2 min | ~2 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-02 (~3 min), 02-01 (~2 min), 02-02 (~5 min), 02-03 (~3 min)
+- Last 5 plans: 02-01 (~2 min), 02-02 (~5 min), 02-03 (~3 min), 03-01 (~2 min)
 - Trend: Consistent fast execution
 
 *Updated after each plan completion*
@@ -63,6 +64,9 @@ Recent decisions affecting current work:
 - **Optional password on edit**: Only updates auth user password if non-empty, avoids accidental resets (02-03)
 - **Campaign re-association via delete + re-insert**: Simpler than diffing, safe within single action (02-03)
 - **Hidden originalEmail for change detection**: Avoids extra DB query in updateClient action (02-03)
+- **Inline SVG icons over icon library**: Zero extra dependencies for sidebar nav icons (03-01)
+- **signOutAction as prop**: Server action defined in server layout, passed to client SidebarNav component (03-01)
+- **CSS variable on wrapper div (not :root)**: Prevents brand color leakage between tenants (03-01)
 
 ### Pending Todos
 
@@ -87,9 +91,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-15 (plan 02-03 execution)
-Stopped at: Completed Phase 2 -- all 3 plans done. Ready for Phase 3 (Client Dashboard).
-Resume file: Phase 3 planning needed
+Last session: 2026-02-15 (plan 03-01 execution)
+Stopped at: Completed Phase 3 -- dashboard shell & branding done. Ready for Phase 4 (Inbox & Reply).
+Resume file: Phase 4 research needed
 
 ---
 *State initialized: 2026-02-15*
