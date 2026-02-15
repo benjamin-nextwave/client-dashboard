@@ -188,10 +188,11 @@ Plans:
   5. Client can click a sent email to view full details (recipient, subject, body, date/time)
   6. Sent emails page has no reply, forward, or compose actions (read-only only)
 
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] TBD (to be planned)
+- [ ] 07-01-PLAN.md -- Contact preview page: migration (is_excluded column), preview data/actions, table UI with delete, sidebar nav, DNC filter integration
+- [ ] 07-02-PLAN.md -- Sent emails: data layer with cache population, list page, detail page (read-only, no interactive actions)
 
 ---
 
@@ -229,9 +230,9 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 4. Instantly.ai Integration & Campaign Stats | 5/5 | Complete | 2026-02-15 |
 | 5. Inbox & Reply Functionality | 4/4 | Complete | 2026-02-15 |
 | 6. CSV Import/Export & DNC Management | 4/4 | Complete | 2026-02-15 |
-| 7. Contact Preview & Sent Emails | 0/TBD | Not started | - |
+| 7. Contact Preview & Sent Emails | 0/2 | Not started | - |
 | 8. Polish & Error Monitoring | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2026-02-15*
-*Last updated: 2026-02-15 (Phase 6 complete)*
+*Last updated: 2026-02-15 (Phase 7 planned)*
