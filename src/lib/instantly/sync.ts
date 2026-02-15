@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { logError } from '@/lib/errors/log-error'
 import { getCampaignDailyAnalytics, listLeads } from './client'
 import type { InstantlyLead } from './types'
 
@@ -155,6 +156,12 @@ export async function syncClientData(clientId: string): Promise<void> {
             `Failed to upsert analytics for campaign ${campaignId}:`,
             analyticsError.message
           )
+          await logError({
+            clientId,
+            errorType: 'sync_error',
+            message: `Analytics upsert mislukt voor campagne ${campaignId}`,
+            details: { campaignId, error: analyticsError.message },
+          })
         }
       }
     } catch (error) {
@@ -162,6 +169,12 @@ export async function syncClientData(clientId: string): Promise<void> {
         `Failed to sync analytics for campaign ${campaignId}:`,
         error
       )
+      await logError({
+        clientId,
+        errorType: 'api_failure',
+        message: `Sync analytics mislukt voor campagne ${campaignId}`,
+        details: { campaignId, error: error instanceof Error ? error.message : String(error) },
+      })
     }
 
     await delay(RATE_LIMIT_DELAY_MS)
@@ -231,6 +244,12 @@ export async function syncClientData(clientId: string): Promise<void> {
               `Failed to upsert leads batch for campaign ${campaignId}:`,
               leadsError.message
             )
+            await logError({
+              clientId,
+              errorType: 'sync_error',
+              message: `Leads upsert mislukt voor campagne ${campaignId}`,
+              details: { campaignId, error: leadsError.message },
+            })
           }
         }
       }
@@ -239,6 +258,12 @@ export async function syncClientData(clientId: string): Promise<void> {
         `Failed to sync leads for campaign ${campaignId}:`,
         error
       )
+      await logError({
+        clientId,
+        errorType: 'api_failure',
+        message: `Sync leads mislukt voor campagne ${campaignId}`,
+        details: { campaignId, error: error instanceof Error ? error.message : String(error) },
+      })
     }
 
     await delay(RATE_LIMIT_DELAY_MS)
@@ -273,6 +298,12 @@ export async function syncAllClients(): Promise<void> {
       await syncClientData(clientId)
     } catch (error) {
       console.error(`Failed to sync client ${clientId}:`, error)
+      await logError({
+        clientId,
+        errorType: 'sync_error',
+        message: `Volledige sync mislukt voor klant ${clientId}`,
+        details: { error: error instanceof Error ? error.message : String(error) },
+      })
     }
 
     await delay(RATE_LIMIT_DELAY_MS)
