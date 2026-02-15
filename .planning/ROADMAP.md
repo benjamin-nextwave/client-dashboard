@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Client Dashboard Shell & Branding** - White-labeled UI foundation
 - [x] **Phase 4: Instantly.ai Integration & Campaign Stats** - External API integration and statistics display
 - [x] **Phase 5: Inbox & Reply Functionality** - Lead management and email replies
-- [ ] **Phase 6: CSV Import/Export & DNC Management** - Data workflows and filtering
+- [x] **Phase 6: CSV Import/Export & DNC Management** - Data workflows and filtering
 - [ ] **Phase 7: Contact Preview & Sent Emails** - Transparency and control features
 - [ ] **Phase 8: Polish & Error Monitoring** - Quality of life and production monitoring
 
@@ -166,10 +166,10 @@ Plans:
 **Plans:** 4 plans
 
 Plans:
-- [ ] 06-01-PLAN.md -- Database migration (csv_uploads, csv_rows, dnc_entries tables with RLS), install PapaParse, Zod validation schemas
-- [ ] 06-02-PLAN.md -- Client DNC management page: add email, add domain, bulk CSV import, list/remove entries
-- [ ] 06-03-PLAN.md -- Operator CSV upload page: PapaParse client-side parsing, batched insert, preview table
-- [ ] 06-04-PLAN.md -- DNC filtering action, CSV export API route, filter/export UI, cleanup cron
+- [x] 06-01-PLAN.md -- Database migration (csv_uploads, csv_rows, dnc_entries tables with RLS), install PapaParse, Zod validation schemas
+- [x] 06-02-PLAN.md -- Client DNC management page: add email, add domain, bulk CSV import, list/remove entries
+- [x] 06-03-PLAN.md -- Operator CSV upload page: PapaParse client-side parsing, batched insert, preview table
+- [x] 06-04-PLAN.md -- DNC filtering action, CSV export API route, filter/export UI, cleanup cron
 
 ---
 
@@ -228,10 +228,10 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 3. Client Dashboard Shell & Branding | 2/2 | Complete | 2026-02-15 |
 | 4. Instantly.ai Integration & Campaign Stats | 5/5 | Complete | 2026-02-15 |
 | 5. Inbox & Reply Functionality | 4/4 | Complete | 2026-02-15 |
-| 6. CSV Import/Export & DNC Management | 0/4 | Not started | - |
+| 6. CSV Import/Export & DNC Management | 4/4 | Complete | 2026-02-15 |
 | 7. Contact Preview & Sent Emails | 0/TBD | Not started | - |
 | 8. Polish & Error Monitoring | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2026-02-15*
-*Last updated: 2026-02-15 (Phase 6 planned)*
+*Last updated: 2026-02-15 (Phase 6 complete)*
