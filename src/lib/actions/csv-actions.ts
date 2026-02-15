@@ -272,8 +272,8 @@ export async function applyDncFilter(
   // Fetch in batches to handle large datasets
   const batchSize = 1000
   let offset = 0
-  let emailMatchIds: string[] = []
-  let domainMatchIds: string[] = []
+  const emailMatchIds: string[] = []
+  const domainMatchIds: string[] = []
 
   while (true) {
     const { data: rows, error: rowsError } = await admin

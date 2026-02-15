@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getCsvUploads } from '@/lib/actions/csv-actions'
 import { CsvUpload } from './_components/csv-upload'
 import { CsvPreview } from './_components/csv-preview'
+import { CsvFilterExport } from './_components/csv-filter-export'
 
 export const dynamic = 'force-dynamic'
 
@@ -91,6 +92,12 @@ export default async function CsvPage({ params }: CsvPageProps) {
                     </div>
                   </summary>
                   <div className="mt-2">
+                    <CsvFilterExport
+                      uploadId={upload.id}
+                      uploadStatus={upload.status}
+                      totalRows={upload.total_rows}
+                      emailColumn={upload.email_column}
+                    />
                     <CsvPreview uploadId={upload.id} />
                   </div>
                 </details>
