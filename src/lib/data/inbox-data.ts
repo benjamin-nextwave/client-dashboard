@@ -4,7 +4,7 @@ import { listEmails } from '@/lib/instantly/client'
 
 // --- Types ---
 
-interface InboxLead {
+export interface InboxLead {
   id: string
   email: string
   first_name: string | null
