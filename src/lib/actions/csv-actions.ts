@@ -257,7 +257,18 @@ export async function applyDncFilter(
     }
   }
 
-  // If no DNC entries, nothing to filter
+  // Step 2b: Fetch excluded contacts (client-removed from preview)
+  const { data: excludedLeads } = await admin
+    .from('synced_leads')
+    .select('email')
+    .eq('client_id', clientId)
+    .eq('is_excluded', true)
+
+  for (const lead of excludedLeads ?? []) {
+    dncEmails.add((lead.email as string).toLowerCase())
+  }
+
+  // If no DNC entries and no excluded contacts, nothing to filter
   if (dncEmails.size === 0 && dncDomains.size === 0) {
     // Update status to filtered (no matches but filter was applied)
     await admin
