@@ -11,18 +11,18 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 Phase: 7 of 8 (Contact Preview & Sent Emails)
-Plan: 1 of ? in current phase
+Plan: 2 of ? in current phase
 Status: In progress
-Last activity: 2026-02-15 -- Completed 07-01-PLAN.md (Contact Preview Page)
+Last activity: 2026-02-15 -- Completed 07-02-PLAN.md (Sent Emails List & Detail)
 
-Progress: [██████████████████████] 22/~24 total plans (1/? in phase 7)
+Progress: [███████████████████████] 23/~24 total plans (2/? in phase 7)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 22
-- Average duration: ~3.2 min
-- Total execution time: ~70 min
+- Total plans completed: 23
+- Average duration: ~3.3 min
+- Total execution time: ~75 min
 
 **By Phase:**
 
@@ -34,10 +34,10 @@ Progress: [██████████████████████] 2
 | 04-instantly-ai-integration-campaign-stats | 5/5 | ~9 min | ~1.8 min |
 | 05-inbox-reply-functionality | 4/4 | ~8 min | ~2 min |
 | 06-csv-import-export-dnc-management | 4/4 | ~13 min | ~3.3 min |
-| 07-contact-preview-sent-emails | 1/? | ~4 min | ~4 min |
+| 07-contact-preview-sent-emails | 2/? | ~9 min | ~4.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 06-02 (~3 min), 06-03 (~4 min), 06-04 (~4 min), 07-01 (~4 min)
+- Last 5 plans: 06-03 (~4 min), 06-04 (~4 min), 07-01 (~4 min), 07-02 (~5 min)
 - Trend: Consistent fast execution, Phase 7 in progress
 
 *Updated after each plan completion*
@@ -101,6 +101,8 @@ Recent decisions affecting current work:
 - **Programmatic anchor click for CSV download**: Standard browser download pattern for export trigger (06-04)
 - **Soft-delete via is_excluded boolean**: Preserves data, integrates with DNC filter by adding excluded emails to dncEmails Set (07-01)
 - **RLS UPDATE policy for client self-service exclusions**: Clients can only exclude their own leads (07-01)
+- **sender_account IS NOT NULL as outbound filter**: Consistent with inbox-data.ts caching logic for identifying sent emails (07-02)
+- **Cache warm-up via campaign listing**: Fetches last 50 emails per campaign from Instantly API on first visit when cache is empty (07-02)
 
 ### Pending Todos
 
@@ -125,9 +127,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-15 (plan 07-01 completed)
-Stopped at: Phase 7 in progress -- 22 plans total completed
-Resume file: .planning/phases/07-contact-preview-sent-emails/07-01-SUMMARY.md
+Last session: 2026-02-15 (plan 07-02 completed)
+Stopped at: Phase 7 in progress -- 23 plans total completed
+Resume file: .planning/phases/07-contact-preview-sent-emails/07-02-SUMMARY.md
 
 ---
 *State initialized: 2026-02-15*
