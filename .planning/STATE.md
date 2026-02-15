@@ -11,18 +11,18 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 Phase: 6 of 8 (CSV Import/Export & DNC Management)
-Plan: 1 of 4 in current phase
+Plan: 2 of 4 in current phase
 Status: In progress
-Last activity: 2026-02-15 -- Completed 06-01-PLAN.md (Database & Validation Foundation)
+Last activity: 2026-02-15 -- Completed 06-02-PLAN.md (DNC Management Page)
 
-Progress: [██████████████████░░] 18/~21 total plans (1/4 in phase 6)
+Progress: [███████████████████░] 19/~21 total plans (2/4 in phase 6)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 18
+- Total plans completed: 19
 - Average duration: ~3.1 min
-- Total execution time: ~55 min
+- Total execution time: ~58 min
 
 **By Phase:**
 
@@ -33,11 +33,11 @@ Progress: [██████████████████░░] 18/~21 
 | 03-client-dashboard-shell-branding | 2/2 | ~5 min | ~2.5 min |
 | 04-instantly-ai-integration-campaign-stats | 5/5 | ~9 min | ~1.8 min |
 | 05-inbox-reply-functionality | 4/4 | ~8 min | ~2 min |
-| 06-csv-import-export-dnc-management | 1/4 | ~2 min | ~2 min |
+| 06-csv-import-export-dnc-management | 2/4 | ~5 min | ~2.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 05-02 (~2 min), 05-03 (~3 min), 05-04 (~1 min), 06-01 (~2 min)
-- Trend: Consistent fast execution, Phase 6 started
+- Last 5 plans: 05-03 (~3 min), 05-04 (~1 min), 06-01 (~2 min), 06-02 (~3 min)
+- Trend: Consistent fast execution, Phase 6 progressing
 
 *Updated after each plan completion*
 
@@ -91,6 +91,8 @@ Recent decisions affecting current work:
 - **Suppressed unused isRecruitment prop**: Kept for future recruitment filtering, eslint-disable comment to avoid build warnings (05-04)
 - **GIN index on csv_rows.data**: Enables fast JSONB email lookups during DNC filtering (06-01)
 - **7-day expiry on csv_uploads**: Auto-cleans temporary upload data (06-01)
+- **Admin client for bulk DNC import**: service_role bypasses RLS for batch upsert performance with ignoreDuplicates (06-02)
+- **Auto-detect email column in CSV**: Case-insensitive match against common column names for DNC bulk import (06-02)
 
 ### Pending Todos
 
@@ -115,9 +117,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-15 (plan 06-01 completed)
-Stopped at: Phase 6 IN PROGRESS -- 18 plans total completed, continuing with 06-02
-Resume file: .planning/phases/06-csv-import-export-dnc-management/06-01-SUMMARY.md
+Last session: 2026-02-15 (plan 06-02 completed)
+Stopped at: Phase 6 IN PROGRESS -- 19 plans total completed, continuing with 06-03
+Resume file: .planning/phases/06-csv-import-export-dnc-management/06-02-SUMMARY.md
 
 ---
 *State initialized: 2026-02-15*
