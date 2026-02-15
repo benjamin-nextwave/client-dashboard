@@ -210,10 +210,11 @@ Plans:
   4. If no custom meeting URL is set, meetings page redirects to the default NextWave meetings URL
   5. All pages have proper loading states and error boundaries for production readiness
 
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] TBD (to be planned)
+- [ ] 08-01-PLAN.md -- Error monitoring system: migration (error_logs table), logError utility, sync instrumentation, operator errors dashboard with resolve functionality
+- [ ] 08-02-PLAN.md -- Meetings redirect (getClientBranding + afspraken page), error boundaries and loading skeletons across all route segments
 
 ---
 
@@ -231,8 +232,8 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 5. Inbox & Reply Functionality | 4/4 | Complete | 2026-02-15 |
 | 6. CSV Import/Export & DNC Management | 4/4 | Complete | 2026-02-15 |
 | 7. Contact Preview & Sent Emails | 2/2 | Complete | 2026-02-15 |
-| 8. Polish & Error Monitoring | 0/TBD | Not started | - |
+| 8. Polish & Error Monitoring | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-15*
-*Last updated: 2026-02-15 (Phase 7 complete)*
+*Last updated: 2026-02-15 (Phase 8 planned)*
