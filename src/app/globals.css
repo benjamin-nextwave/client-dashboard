@@ -1,1 +1,5 @@
 @import "tailwindcss";
+
+@theme inline {
+  --color-brand: var(--brand-color, #3B82F6);
+}
