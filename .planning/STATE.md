@@ -6,23 +6,23 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** Clients can see their campaign performance and reply to positive leads directly from their branded dashboard -- keeping the entire outreach workflow in one place.
 
-**Current focus:** Phase 5 -- Inbox & Reply Functionality (IN PROGRESS)
+**Current focus:** Phase 6 -- CSV Import/Export & DNC Management (IN PROGRESS)
 
 ## Current Position
 
-Phase: 5 of 8 (Inbox & Reply Functionality)
-Plan: 4 of 4 in current phase
-Status: Phase complete
-Last activity: 2026-02-15 -- Completed 05-04-PLAN.md (Build verification & visual checkpoint)
+Phase: 6 of 8 (CSV Import/Export & DNC Management)
+Plan: 1 of 4 in current phase
+Status: In progress
+Last activity: 2026-02-15 -- Completed 06-01-PLAN.md (Database & Validation Foundation)
 
-Progress: [████████████████░░░░] 17/~20 total plans (4/4 in phase 5 - COMPLETE)
+Progress: [██████████████████░░] 18/~21 total plans (1/4 in phase 6)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 17
+- Total plans completed: 18
 - Average duration: ~3.1 min
-- Total execution time: ~53 min
+- Total execution time: ~55 min
 
 **By Phase:**
 
@@ -33,10 +33,11 @@ Progress: [████████████████░░░░] 17/~20 
 | 03-client-dashboard-shell-branding | 2/2 | ~5 min | ~2.5 min |
 | 04-instantly-ai-integration-campaign-stats | 5/5 | ~9 min | ~1.8 min |
 | 05-inbox-reply-functionality | 4/4 | ~8 min | ~2 min |
+| 06-csv-import-export-dnc-management | 1/4 | ~2 min | ~2 min |
 
 **Recent Trend:**
-- Last 5 plans: 05-01 (~2 min), 05-02 (~2 min), 05-03 (~3 min), 05-04 (~1 min)
-- Trend: Consistent fast execution, Phase 5 complete
+- Last 5 plans: 05-02 (~2 min), 05-03 (~3 min), 05-04 (~1 min), 06-01 (~2 min)
+- Trend: Consistent fast execution, Phase 6 started
 
 *Updated after each plan completion*
 
@@ -88,6 +89,8 @@ Recent decisions affecting current work:
 - **Local CachedEmail type in thread-view**: Defined locally in client component rather than importing from server-side inbox-data.ts (05-03)
 - **State-based feedback over toast library**: Colored div with auto-dismiss for success/error messages, zero dependencies (05-03)
 - **Suppressed unused isRecruitment prop**: Kept for future recruitment filtering, eslint-disable comment to avoid build warnings (05-04)
+- **GIN index on csv_rows.data**: Enables fast JSONB email lookups during DNC filtering (06-01)
+- **7-day expiry on csv_uploads**: Auto-cleans temporary upload data (06-01)
 
 ### Pending Todos
 
@@ -112,9 +115,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-15 (plan 05-04 completed)
-Stopped at: Phase 5 COMPLETE -- 17 plans total completed, ready for Phase 6
-Resume file: .planning/phases/05-inbox-reply-functionality/05-04-SUMMARY.md
+Last session: 2026-02-15 (plan 06-01 completed)
+Stopped at: Phase 6 IN PROGRESS -- 18 plans total completed, continuing with 06-02
+Resume file: .planning/phases/06-csv-import-export-dnc-management/06-01-SUMMARY.md
 
 ---
 *State initialized: 2026-02-15*
