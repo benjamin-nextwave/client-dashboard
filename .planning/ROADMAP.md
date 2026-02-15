@@ -13,7 +13,7 @@ This roadmap delivers a multi-tenant white-label dashboard platform enabling Nex
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation & Multi-tenancy** - Secure authentication and tenant isolation
-- [ ] **Phase 2: Operator Admin Core** - Client account creation and management
+- [x] **Phase 2: Operator Admin Core** - Client account creation and management
 - [ ] **Phase 3: Client Dashboard Shell & Branding** - White-labeled UI foundation
 - [ ] **Phase 4: Instantly.ai Integration & Campaign Stats** - External API integration and statistics display
 - [ ] **Phase 5: Inbox & Reply Functionality** - Lead management and email replies
@@ -62,9 +62,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 02-01-PLAN.md -- Database migration (client_campaigns, storage bucket, RLS), install packages, shared lib utilities (Zod, Instantly client, storage helpers)
-- [ ] 02-02-PLAN.md -- Client list page, create client form with all fields, transactional createClient server action
-- [ ] 02-03-PLAN.md -- Edit client page with pre-populated form, updateClient server action, human verification checkpoint
+- [x] 02-01-PLAN.md -- Database migration (client_campaigns, storage bucket, RLS), install packages, shared lib utilities (Zod, Instantly client, storage helpers)
+- [x] 02-02-PLAN.md -- Client list page, create client form with all fields, transactional createClient server action
+- [x] 02-03-PLAN.md -- Edit client page with pre-populated form, updateClient server action, human verification checkpoint
 
 ---
 
@@ -82,10 +82,11 @@ Plans:
   4. Each client sees only their own branding (no leakage of other clients' logos or colors)
   5. Dashboard layout includes navigation to all feature pages (Overzicht, Inbox, Verzonden, Voorkeuren, DNC, Afspraken)
 
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] TBD (to be planned)
+- [ ] 03-01-PLAN.md -- Tailwind @theme inline theming, getClientBranding helper, sidebar nav components, branded layout rewrite
+- [ ] 03-02-PLAN.md -- Placeholder pages for all 6 routes, human verification of branded shell
 
 ---
 
@@ -215,8 +216,8 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation & Multi-tenancy | 3/3 | Complete | 2026-02-15 |
-| 2. Operator Admin Core | 0/3 | Not started | - |
-| 3. Client Dashboard Shell & Branding | 0/TBD | Not started | - |
+| 2. Operator Admin Core | 3/3 | Complete | 2026-02-15 |
+| 3. Client Dashboard Shell & Branding | 0/2 | Not started | - |
 | 4. Instantly.ai Integration & Campaign Stats | 0/TBD | Not started | - |
 | 5. Inbox & Reply Functionality | 0/TBD | Not started | - |
 | 6. CSV Import/Export & DNC Management | 0/TBD | Not started | - |
@@ -225,4 +226,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 
 ---
 *Roadmap created: 2026-02-15*
-*Last updated: 2026-02-15 (Phase 2 planned)*
+*Last updated: 2026-02-15 (Phase 3 planned)*
