@@ -6,32 +6,33 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** Clients can see their campaign performance and reply to positive leads directly from their branded dashboard -- keeping the entire outreach workflow in one place.
 
-**Current focus:** Phase 2 -- Operator Admin Core (next)
+**Current focus:** Phase 2 -- Operator Admin Core (in progress)
 
 ## Current Position
 
-Phase: 1 of 8 (Foundation & Multi-tenancy)
-Plan: 3 of 3 in current phase
-Status: Phase complete
-Last activity: 2026-02-15 -- Completed 01-02-PLAN.md (Auth Flow & Route Protection)
+Phase: 2 of 8 (Operator Admin Core)
+Plan: 1 of 3 in current phase
+Status: In progress
+Last activity: 2026-02-15 -- Completed 02-01-PLAN.md (Foundation Utilities)
 
-Progress: [███░░░░░░░] 3/3 plans in phase 1
+Progress: [████░░░░░░] 4/~20 total plans (1/3 in phase 2)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: ~7 min
-- Total execution time: ~20 min
+- Total plans completed: 4
+- Average duration: ~6 min
+- Total execution time: ~22 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-foundation-multi-tenancy | 3/3 | ~20 min | ~7 min |
+| 02-operator-admin-core | 1/3 | ~2 min | ~2 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (~15 min), 01-03 (~2 min), 01-02 (~3 min)
+- Last 5 plans: 01-01 (~15 min), 01-03 (~2 min), 01-02 (~3 min), 02-01 (~2 min)
 - Trend: Accelerating
 
 *Updated after each plan completion*
@@ -53,6 +54,9 @@ Recent decisions affecting current work:
 - **useActionState for login form**: React 19 pattern for server action state management (01-02)
 - **Middleware handles authenticated /login visits**: Prevents stuck state by redirecting to dashboard (01-02)
 - **Dutch UI labels**: Inloggen, Uitloggen, Welkom throughout the app (01-02)
+- **Admin client for storage uploads**: service_role bypasses storage RLS, safe since only operators trigger from Server Actions (02-01)
+- **Dutch Zod validation messages**: Consistent with Dutch UI convention from Phase 1 (02-01)
+- **No-store cache on Instantly API**: Operators need fresh campaign data, no caching (02-01)
 
 ### Pending Todos
 
@@ -72,11 +76,14 @@ None yet.
 - Supabase project must be created and env vars configured before local dev
 - Custom Access Token Hook must be manually enabled in Supabase Dashboard after migration deployment
 
+**User Setup Required (02-01):**
+- INSTANTLY_API_KEY environment variable needed for campaign listing (requires Instantly.ai Growth plan)
+
 ## Session Continuity
 
-Last session: 2026-02-15 (plan 01-02 execution)
-Stopped at: Completed 01-02-PLAN.md, Phase 1 complete -- ready for Phase 2
-Resume file: .planning/phases/02-*/02-01-PLAN.md (after phase 2 planning)
+Last session: 2026-02-15 (plan 02-01 execution)
+Stopped at: Completed 02-01-PLAN.md -- ready for 02-02 (Client Creation Form)
+Resume file: .planning/phases/02-operator-admin-core/02-02-PLAN.md
 
 ---
 *State initialized: 2026-02-15*
