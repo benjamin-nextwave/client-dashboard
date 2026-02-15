@@ -20,6 +20,7 @@ interface ClientFormProps {
   selectedCampaignIds?: string[]
   currentLogoUrl?: string | null
   isEditing?: boolean
+  originalEmail?: string
 }
 
 export function ClientForm({
@@ -29,6 +30,7 @@ export function ClientForm({
   selectedCampaignIds,
   currentLogoUrl,
   isEditing = false,
+  originalEmail,
 }: ClientFormProps) {
   const [state, formAction, pending] = useActionState(action, { error: '' })
 
@@ -54,6 +56,10 @@ export function ClientForm({
         <div className="rounded-md bg-red-50 p-4 text-sm text-red-700">
           {state.error}
         </div>
+      )}
+
+      {isEditing && originalEmail && (
+        <input type="hidden" name="originalEmail" value={originalEmail} />
       )}
 
       {/* Bedrijfsnaam */}

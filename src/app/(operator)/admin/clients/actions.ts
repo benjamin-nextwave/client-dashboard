@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { clientFormSchema } from '@/lib/validations/client'
+import { clientFormSchema, clientEditSchema } from '@/lib/validations/client'
 import { uploadClientLogo } from '@/lib/supabase/storage'
 
 export async function createClient(
@@ -104,6 +104,123 @@ export async function createClient(
 
     if (campaignError) {
       console.warn(`Campagne koppeling mislukt voor klant ${client.id}: ${campaignError.message}`)
+    }
+  }
+
+  revalidatePath('/admin')
+  redirect('/admin')
+}
+
+export async function updateClient(
+  clientId: string,
+  prevState: { error: string },
+  formData: FormData
+) {
+  const raw = {
+    companyName: formData.get('companyName') as string,
+    email: formData.get('email') as string,
+    password: formData.get('password') as string,
+    primaryColor: formData.get('primaryColor') as string,
+    isRecruitment: formData.get('isRecruitment') === 'on',
+    meetingUrl: formData.get('meetingUrl') as string,
+  }
+
+  const result = clientEditSchema.safeParse(raw)
+  if (!result.success) {
+    return { error: result.error.errors[0].message }
+  }
+
+  const { companyName, email, primaryColor, isRecruitment, meetingUrl } = result.data
+  const password = result.data.password
+
+  const supabase = createAdminClient()
+
+  // Update client record
+  const { error: clientError } = await supabase
+    .from('clients')
+    .update({
+      company_name: companyName,
+      primary_color: primaryColor,
+      is_recruitment: isRecruitment,
+      meeting_url: meetingUrl || null,
+    })
+    .eq('id', clientId)
+
+  if (clientError) {
+    return { error: `Klant bijwerken mislukt: ${clientError.message}` }
+  }
+
+  // Look up the profile to get auth user id
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('client_id', clientId)
+    .eq('user_role', 'client')
+    .single()
+
+  if (profileError || !profile) {
+    return { error: `Profiel niet gevonden voor deze klant` }
+  }
+
+  // Update password if provided
+  if (password && password.length > 0) {
+    const { error: pwError } = await supabase.auth.admin.updateUserById(
+      profile.id,
+      { password }
+    )
+    if (pwError) {
+      return { error: `Wachtwoord bijwerken mislukt: ${pwError.message}` }
+    }
+  }
+
+  // Update email if changed
+  const originalEmail = formData.get('originalEmail') as string
+  if (email && originalEmail && email !== originalEmail) {
+    const { error: emailError } = await supabase.auth.admin.updateUserById(
+      profile.id,
+      { email }
+    )
+    if (emailError) {
+      return { error: `E-mailadres bijwerken mislukt: ${emailError.message}` }
+    }
+  }
+
+  // Handle logo upload
+  const logo = formData.get('logo') as File | null
+  if (logo && logo.size > 0) {
+    const uploadResult = await uploadClientLogo(clientId, logo)
+    if ('error' in uploadResult) {
+      console.warn(`Logo upload mislukt voor klant ${clientId}: ${uploadResult.error}`)
+    } else {
+      await supabase.from('clients').update({ logo_url: uploadResult.url }).eq('id', clientId)
+    }
+  }
+
+  // Handle campaigns: delete existing, insert new
+  const { error: deleteError } = await supabase
+    .from('client_campaigns')
+    .delete()
+    .eq('client_id', clientId)
+
+  if (deleteError) {
+    console.warn(`Campagnes verwijderen mislukt voor klant ${clientId}: ${deleteError.message}`)
+  }
+
+  const campaignIds = formData.getAll('campaign_ids') as string[]
+  const campaignNames = formData.getAll('campaign_names') as string[]
+  if (campaignIds.length > 0) {
+    const campaignRows = campaignIds.map((id, index) => ({
+      client_id: clientId,
+      campaign_id: id,
+      campaign_name: campaignNames[index] || '',
+    }))
+
+    const { error: campaignError } = await supabase
+      .from('client_campaigns')
+      .insert(campaignRows)
+
+    if (campaignError) {
+      console.warn(`Campagne koppeling mislukt voor klant ${clientId}: ${campaignError.message}`)
     }
   }
 
