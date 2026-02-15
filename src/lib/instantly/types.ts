@@ -36,6 +36,23 @@ export interface InstantlyDailyAnalytics {
   unique_clicks: number
 }
 
+export interface InstantlyEmail {
+  id: string // UUID - used as reply_to_uuid
+  thread_id: string
+  from_address_email: string
+  to_address_email_list: string
+  subject: string
+  body: { text?: string; html?: string }
+  timestamp_created: string
+  timestamp_email?: string
+  is_reply: boolean
+  campaign_id?: string
+  subsequence_id?: string | null
+  i_status?: number
+  is_unread?: boolean
+  attachments?: unknown[] | null
+}
+
 export interface InstantlyLead {
   id: string
   email: string

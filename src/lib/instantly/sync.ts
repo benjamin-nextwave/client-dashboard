@@ -173,6 +173,7 @@ export async function syncClientData(clientId: string): Promise<void> {
       if (leads.length > 0) {
         const leadRows = leads.map((lead) => {
           const icpFields = normalizeIcpFields(lead.payload ?? {})
+          const payload = lead.payload ?? {}
 
           return {
             client_id: clientId,
@@ -192,6 +193,22 @@ export async function syncClientData(clientId: string): Promise<void> {
             sender_account: lead.last_step_from,
             email_sent_count: lead.email_open_count > 0 ? 1 : 0, // Approximate from available data
             email_reply_count: lead.email_reply_count,
+            linkedin_url: extractPayloadField(payload, [
+              'LinkedIn',
+              'linkedin',
+              'linkedin_url',
+              'LinkedIn URL',
+              'linkedIn',
+              'Linkedin',
+            ]),
+            vacancy_url: extractPayloadField(payload, [
+              'Vacancy URL',
+              'vacancy_url',
+              'Vacature URL',
+              'vacature_url',
+              'Vacancy',
+              'vacature',
+            ]),
             payload: lead.payload,
             last_synced_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),

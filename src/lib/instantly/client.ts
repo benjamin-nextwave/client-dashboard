@@ -2,6 +2,7 @@ import type {
   InstantlyCampaign,
   InstantlyCampaignAnalytics,
   InstantlyDailyAnalytics,
+  InstantlyEmail,
   InstantlyLead,
   InstantlyListResponse,
 } from './types'
@@ -118,6 +119,77 @@ export async function listLeads(
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify(body),
+    cache: 'no-store',
+  })
+
+  if (!response.ok) {
+    throw new Error(
+      `Instantly API error: ${response.status} ${response.statusText}`
+    )
+  }
+
+  return response.json()
+}
+
+interface ListEmailsOptions {
+  lead?: string
+  eaccount?: string
+  campaignId?: string
+  limit?: number
+  startingAfter?: string
+  sortOrder?: 'asc' | 'desc'
+  search?: string
+}
+
+export async function listEmails(
+  options?: ListEmailsOptions
+): Promise<InstantlyListResponse<InstantlyEmail>> {
+  const params = new URLSearchParams()
+
+  if (options?.lead) params.set('lead', options.lead)
+  if (options?.eaccount) params.set('eaccount', options.eaccount)
+  if (options?.campaignId) params.set('campaign_id', options.campaignId)
+  if (options?.limit) params.set('limit', String(options.limit))
+  if (options?.startingAfter) params.set('starting_after', options.startingAfter)
+  if (options?.sortOrder) params.set('sort_order', options.sortOrder)
+  if (options?.search) params.set('search', options.search)
+
+  const response = await fetch(
+    `${BASE_URL}/emails?${params.toString()}`,
+    {
+      headers: getHeaders(),
+      cache: 'no-store',
+    }
+  )
+
+  if (!response.ok) {
+    throw new Error(
+      `Instantly API error: ${response.status} ${response.statusText}`
+    )
+  }
+
+  return response.json()
+}
+
+interface ReplyEmailOptions {
+  eaccount: string
+  replyToUuid: string
+  subject: string
+  bodyHtml: string
+}
+
+export async function replyToEmail(
+  options: ReplyEmailOptions
+): Promise<InstantlyEmail> {
+  const response = await fetch(`${BASE_URL}/emails/reply`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({
+      eaccount: options.eaccount,
+      reply_to_uuid: options.replyToUuid,
+      subject: options.subject,
+      body: { html: options.bodyHtml },
+    }),
     cache: 'no-store',
   })
 
