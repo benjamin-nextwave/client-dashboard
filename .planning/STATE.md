@@ -6,7 +6,7 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** Clients can see their campaign performance and reply to positive leads directly from their branded dashboard -- keeping the entire outreach workflow in one place.
 
-**Current focus:** Phase 1 -- Foundation & Multi-tenancy (COMPLETE)
+**Current focus:** Phase 2 -- Operator Admin Core (next)
 
 ## Current Position
 
