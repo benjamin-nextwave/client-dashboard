@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Foundation & Multi-tenancy** - Secure authentication and tenant isolation
 - [x] **Phase 2: Operator Admin Core** - Client account creation and management
 - [x] **Phase 3: Client Dashboard Shell & Branding** - White-labeled UI foundation
-- [ ] **Phase 4: Instantly.ai Integration & Campaign Stats** - External API integration and statistics display
+- [x] **Phase 4: Instantly.ai Integration & Campaign Stats** - External API integration and statistics display
 - [ ] **Phase 5: Inbox & Reply Functionality** - Lead management and email replies
 - [ ] **Phase 6: CSV Import/Export & DNC Management** - Data workflows and filtering
 - [ ] **Phase 7: Contact Preview & Sent Emails** - Transparency and control features
@@ -220,7 +220,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 1. Foundation & Multi-tenancy | 3/3 | Complete | 2026-02-15 |
 | 2. Operator Admin Core | 3/3 | Complete | 2026-02-15 |
 | 3. Client Dashboard Shell & Branding | 2/2 | Complete | 2026-02-15 |
-| 4. Instantly.ai Integration & Campaign Stats | 0/5 | In progress | - |
+| 4. Instantly.ai Integration & Campaign Stats | 5/5 | Complete | 2026-02-15 |
 | 5. Inbox & Reply Functionality | 0/TBD | Not started | - |
 | 6. CSV Import/Export & DNC Management | 0/TBD | Not started | - |
 | 7. Contact Preview & Sent Emails | 0/TBD | Not started | - |
@@ -228,4 +228,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 
 ---
 *Roadmap created: 2026-02-15*
-*Last updated: 2026-02-15 (Phase 4 planned)*
+*Last updated: 2026-02-15 (Phase 4 complete)*
