@@ -6,23 +6,23 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** Clients can see their campaign performance and reply to positive leads directly from their branded dashboard -- keeping the entire outreach workflow in one place.
 
-**Current focus:** Phase 6 -- CSV Import/Export & DNC Management (IN PROGRESS)
+**Current focus:** Phase 6 -- CSV Import/Export & DNC Management (COMPLETE)
 
 ## Current Position
 
 Phase: 6 of 8 (CSV Import/Export & DNC Management)
-Plan: 3 of 4 in current phase
-Status: In progress
-Last activity: 2026-02-15 -- Completed 06-03-PLAN.md (CSV Upload Page)
+Plan: 4 of 4 in current phase
+Status: Phase complete
+Last activity: 2026-02-15 -- Completed 06-04-PLAN.md (CSV DNC Filtering & Export)
 
-Progress: [████████████████████] 20/~21 total plans (3/4 in phase 6)
+Progress: [█████████████████████] 21/~21 total plans (4/4 in phase 6)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 20
+- Total plans completed: 21
 - Average duration: ~3.1 min
-- Total execution time: ~62 min
+- Total execution time: ~66 min
 
 **By Phase:**
 
@@ -33,11 +33,11 @@ Progress: [████████████████████] 20/~21 
 | 03-client-dashboard-shell-branding | 2/2 | ~5 min | ~2.5 min |
 | 04-instantly-ai-integration-campaign-stats | 5/5 | ~9 min | ~1.8 min |
 | 05-inbox-reply-functionality | 4/4 | ~8 min | ~2 min |
-| 06-csv-import-export-dnc-management | 3/4 | ~9 min | ~3 min |
+| 06-csv-import-export-dnc-management | 4/4 | ~13 min | ~3.3 min |
 
 **Recent Trend:**
-- Last 5 plans: 05-04 (~1 min), 06-01 (~2 min), 06-02 (~3 min), 06-03 (~4 min)
-- Trend: Consistent fast execution, Phase 6 nearing completion
+- Last 5 plans: 06-01 (~2 min), 06-02 (~3 min), 06-03 (~4 min), 06-04 (~4 min)
+- Trend: Consistent fast execution, Phase 6 complete
 
 *Updated after each plan completion*
 
@@ -95,6 +95,9 @@ Recent decisions affecting current work:
 - **Auto-detect email column in CSV**: Case-insensitive match against common column names for DNC bulk import (06-02)
 - **window.location.reload() after CSV upload**: Simplicity over state lifting for refreshing upload list (06-03)
 - **HTML details/summary for expandable cards**: Zero JS overhead for toggling upload preview visibility (06-03)
+- **TypeScript-side DNC matching over SQL JOINs**: Supabase JS client cannot do complex JOINed UPDATEs; fetch DNC sets, match in TS (06-04)
+- **Batch fetch 1000, update 500**: Scalable row processing for large CSV datasets during DNC filtering (06-04)
+- **Programmatic anchor click for CSV download**: Standard browser download pattern for export trigger (06-04)
 
 ### Pending Todos
 
@@ -119,9 +122,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-15 (plan 06-03 completed)
-Stopped at: Phase 6 IN PROGRESS -- 20 plans total completed, continuing with 06-04
-Resume file: .planning/phases/06-csv-import-export-dnc-management/06-03-SUMMARY.md
+Last session: 2026-02-15 (plan 06-04 completed)
+Stopped at: Phase 6 COMPLETE -- 21 plans total completed, ready for Phase 7
+Resume file: .planning/phases/06-csv-import-export-dnc-management/06-04-SUMMARY.md
 
 ---
 *State initialized: 2026-02-15*
