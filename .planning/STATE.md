@@ -6,23 +6,23 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** Clients can see their campaign performance and reply to positive leads directly from their branded dashboard -- keeping the entire outreach workflow in one place.
 
-**Current focus:** Phase 4 -- Instantly.ai Integration & Campaign Stats (COMPLETE)
+**Current focus:** Phase 5 -- Inbox & Reply Functionality (IN PROGRESS)
 
 ## Current Position
 
-Phase: 4 of 8 (Instantly.ai Integration & Campaign Stats)
-Plan: 5 of 5 in current phase
-Status: Phase complete -- all 5 plans done
-Last activity: 2026-02-15 -- Completed 04-05-PLAN.md (Overzicht dashboard verification APPROVED)
+Phase: 5 of 8 (Inbox & Reply Functionality)
+Plan: 1 of ? in current phase
+Status: In progress
+Last activity: 2026-02-15 -- Completed 05-01-PLAN.md (Inbox data foundation)
 
-Progress: [█████████████░] 13/~20 total plans (5/5 in phase 4)
+Progress: [██████████████░░░░░░] 14/~20 total plans (1/? in phase 5)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 12
-- Average duration: ~4 min
-- Total execution time: ~43 min
+- Total plans completed: 13
+- Average duration: ~3.5 min
+- Total execution time: ~45 min
 
 **By Phase:**
 
@@ -32,9 +32,10 @@ Progress: [█████████████░] 13/~20 total plans (5/5 i
 | 02-operator-admin-core | 3/3 | ~10 min | ~3 min |
 | 03-client-dashboard-shell-branding | 2/2 | ~5 min | ~2.5 min |
 | 04-instantly-ai-integration-campaign-stats | 5/5 | ~9 min | ~1.8 min |
+| 05-inbox-reply-functionality | 1/? | ~2 min | ~2 min |
 
 **Recent Trend:**
-- Last 5 plans: 04-02 (~2 min), 04-03 (~2 min), 04-04 (~2 min), 04-05 (~1 min)
+- Last 5 plans: 04-03 (~2 min), 04-04 (~2 min), 04-05 (~1 min), 05-01 (~2 min)
 - Trend: Consistent fast execution
 
 *Updated after each plan completion*
@@ -79,6 +80,9 @@ Recent decisions affecting current work:
 - **Dutch status labels in data layer**: lead_status mapped to Dutch labels at query function level (04-02)
 - **Client wrapper pattern for server/client boundary**: OverzichtDashboard manages modal state while page.tsx stays server component (04-04)
 - **Brand color opacity via RGB mixing**: Solid chart fills at varying intensities instead of CSS opacity (04-04)
+- **5-minute TTL for email cache**: Balances API rate limits with data freshness for inbox viewing (05-01)
+- **Admin client for cache writes**: cached_emails RLS is SELECT-only for clients; admin client needed for INSERT during cache population (05-01)
+- **Deduplication by email for inbox lead list**: Same pattern as getContactList, keeps most recently updated lead per email (05-01)
 
 ### Pending Todos
 
@@ -103,9 +107,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-15 (plan 04-05 verification approved)
-Stopped at: Phase 4 complete -- 13 plans total completed
-Resume file: .planning/phases/04-instantly-ai-integration-campaign-stats/04-05-SUMMARY.md
+Last session: 2026-02-15 (plan 05-01 completed)
+Stopped at: Phase 5 in progress -- 14 plans total completed
+Resume file: .planning/phases/05-inbox-reply-functionality/05-01-SUMMARY.md
 
 ---
 *State initialized: 2026-02-15*
