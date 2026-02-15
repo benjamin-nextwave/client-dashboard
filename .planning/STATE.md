@@ -6,23 +6,23 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 
 **Core value:** Clients can see their campaign performance and reply to positive leads directly from their branded dashboard -- keeping the entire outreach workflow in one place.
 
-**Current focus:** Phase 6 -- CSV Import/Export & DNC Management (COMPLETE)
+**Current focus:** Phase 7 -- Contact Preview & Sent Emails
 
 ## Current Position
 
-Phase: 6 of 8 (CSV Import/Export & DNC Management)
-Plan: 4 of 4 in current phase
-Status: Phase complete
-Last activity: 2026-02-15 -- Completed 06-04-PLAN.md (CSV DNC Filtering & Export)
+Phase: 7 of 8 (Contact Preview & Sent Emails)
+Plan: 1 of ? in current phase
+Status: In progress
+Last activity: 2026-02-15 -- Completed 07-01-PLAN.md (Contact Preview Page)
 
-Progress: [█████████████████████] 21/~21 total plans (4/4 in phase 6)
+Progress: [██████████████████████] 22/~24 total plans (1/? in phase 7)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 21
-- Average duration: ~3.1 min
-- Total execution time: ~66 min
+- Total plans completed: 22
+- Average duration: ~3.2 min
+- Total execution time: ~70 min
 
 **By Phase:**
 
@@ -34,10 +34,11 @@ Progress: [█████████████████████] 21/~
 | 04-instantly-ai-integration-campaign-stats | 5/5 | ~9 min | ~1.8 min |
 | 05-inbox-reply-functionality | 4/4 | ~8 min | ~2 min |
 | 06-csv-import-export-dnc-management | 4/4 | ~13 min | ~3.3 min |
+| 07-contact-preview-sent-emails | 1/? | ~4 min | ~4 min |
 
 **Recent Trend:**
-- Last 5 plans: 06-01 (~2 min), 06-02 (~3 min), 06-03 (~4 min), 06-04 (~4 min)
-- Trend: Consistent fast execution, Phase 6 complete
+- Last 5 plans: 06-02 (~3 min), 06-03 (~4 min), 06-04 (~4 min), 07-01 (~4 min)
+- Trend: Consistent fast execution, Phase 7 in progress
 
 *Updated after each plan completion*
 
@@ -98,6 +99,8 @@ Recent decisions affecting current work:
 - **TypeScript-side DNC matching over SQL JOINs**: Supabase JS client cannot do complex JOINed UPDATEs; fetch DNC sets, match in TS (06-04)
 - **Batch fetch 1000, update 500**: Scalable row processing for large CSV datasets during DNC filtering (06-04)
 - **Programmatic anchor click for CSV download**: Standard browser download pattern for export trigger (06-04)
+- **Soft-delete via is_excluded boolean**: Preserves data, integrates with DNC filter by adding excluded emails to dncEmails Set (07-01)
+- **RLS UPDATE policy for client self-service exclusions**: Clients can only exclude their own leads (07-01)
 
 ### Pending Todos
 
@@ -122,9 +125,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-15 (plan 06-04 completed)
-Stopped at: Phase 6 COMPLETE -- 21 plans total completed, ready for Phase 7
-Resume file: .planning/phases/06-csv-import-export-dnc-management/06-04-SUMMARY.md
+Last session: 2026-02-15 (plan 07-01 completed)
+Stopped at: Phase 7 in progress -- 22 plans total completed
+Resume file: .planning/phases/07-contact-preview-sent-emails/07-01-SUMMARY.md
 
 ---
 *State initialized: 2026-02-15*
