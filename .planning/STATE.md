@@ -11,28 +11,28 @@ See: .planning/PROJECT.md (updated 2026-02-15)
 ## Current Position
 
 Phase: 1 of 8 (Foundation & Multi-tenancy)
-Plan: 1 of 3 in current phase
+Plan: 3 of 3 in current phase (01-02 still pending)
 Status: In progress
-Last activity: 2026-02-15 — Completed 01-01-PLAN.md (Project Init & Database Schema)
+Last activity: 2026-02-15 — Completed 01-03-PLAN.md (RLS Tenant Isolation Tests)
 
-Progress: [█░░░░░░░░░] 1/3 plans in phase 1
+Progress: [██░░░░░░░░] 2/3 plans in phase 1 (01-01 done, 01-02 pending, 01-03 done)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1
-- Average duration: ~15 min
-- Total execution time: ~15 min
+- Total plans completed: 2
+- Average duration: ~9 min
+- Total execution time: ~17 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-foundation-multi-tenancy | 1/3 | ~15 min | ~15 min |
+| 01-foundation-multi-tenancy | 2/3 | ~17 min | ~9 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (~15 min)
-- Trend: Not yet established
+- Last 5 plans: 01-01 (~15 min), 01-03 (~2 min)
+- Trend: Accelerating (simpler plan)
 
 *Updated after each plan completion*
 
@@ -49,6 +49,7 @@ Recent decisions affecting current work:
 - **All operators are equal admins**: Only 3 operators, no need for granular permissions (Pending)
 - **Next.js 15.5.12 over 16**: Better Supabase compatibility per research (01-01)
 - **RLS (SELECT auth.jwt()) wrappers**: All policies use subselect for 95%+ performance improvement (01-01)
+- **pgTAP throws_ok with 42501**: Using PostgreSQL error code for INSERT denial tests validates RLS policy-level blocking (01-03)
 
 ### Pending Todos
 
@@ -70,8 +71,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-15 (plan 01-01 execution)
-Stopped at: Completed 01-01-PLAN.md, ready for 01-02-PLAN.md
+Last session: 2026-02-15 (plan 01-03 execution)
+Stopped at: Completed 01-03-PLAN.md, 01-02 still pending
 Resume file: .planning/phases/01-foundation-multi-tenancy/01-02-PLAN.md
 
 ---
