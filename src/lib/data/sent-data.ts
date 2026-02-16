@@ -45,25 +45,7 @@ export async function getSentEmails(
     console.error('[sent-data] Failed to fetch sent emails from cache:', error.message)
   }
 
-  if (cached && cached.length > 0) {
-    return cached.map(mapToSentEmail)
-  }
-
-  // Cache is empty - populate from Instantly API
-  await populateSentEmailCache(clientId)
-
-  // Re-query after population
-  const { data: freshData } = await supabase
-    .from('cached_emails')
-    .select(
-      'id, to_address, from_address, subject, body_text, email_timestamp, sender_account'
-    )
-    .eq('client_id', clientId)
-    .eq('is_reply', false)
-    .not('sender_account', 'is', null)
-    .order('email_timestamp', { ascending: false })
-
-  return (freshData ?? []).map(mapToSentEmail)
+  return (cached ?? []).map(mapToSentEmail)
 }
 
 /**
