@@ -61,8 +61,8 @@ export interface InstantlyLead {
   company_name: string | null
   phone: string | null
   website: string | null
-  status: string
-  status_summary: string | null
+  status: number
+  status_summary: Record<string, unknown> | null
   email_open_count: number
   email_reply_count: number
   email_click_count: number

@@ -1,3 +1,5 @@
+export const runtime = 'nodejs'
+
 import { syncAllClients } from '@/lib/instantly/sync'
 import { NextResponse } from 'next/server'
 

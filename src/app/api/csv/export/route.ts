@@ -20,12 +20,7 @@ export async function GET(request: Request) {
     return Response.json({ error: 'Niet ingelogd.' }, { status: 401 })
   }
 
-  // Check operator role from JWT
-  const { data: { session } } = await supabase.auth.getSession()
-  const userRole = session?.access_token
-    ? JSON.parse(atob(session.access_token.split('.')[1])).user_role
-    : null
-
+  const userRole = user.app_metadata?.user_role
   if (userRole !== 'operator') {
     return Response.json({ error: 'Geen toegang.' }, { status: 403 })
   }
@@ -44,7 +39,15 @@ export async function GET(request: Request) {
   }
 
   const headers = upload.headers as string[]
-  const filename = upload.filename as string
+
+  // Fetch client company name for export filename
+  const { data: client } = await admin
+    .from('clients')
+    .select('company_name')
+    .eq('id', upload.client_id)
+    .single()
+
+  const companyName = (client?.company_name as string) ?? 'Export'
 
   // Fetch all non-filtered rows ordered by row_index
   // Fetch in batches to handle large datasets
@@ -81,9 +84,12 @@ export async function GET(request: Request) {
     data: allRows.map((row) => headers.map((h) => row[h] ?? '')),
   })
 
-  // Generate export filename
-  const nameWithoutExt = filename.replace(/\.[^.]+$/, '')
-  const exportFilename = `${nameWithoutExt}_gefilterd.csv`
+  // Generate export filename: "{CompanyName} contacten voor instantly {dd-mm-yyyy}.csv"
+  const now = new Date()
+  const dd = String(now.getDate()).padStart(2, '0')
+  const mm = String(now.getMonth() + 1).padStart(2, '0')
+  const yyyy = now.getFullYear()
+  const exportFilename = `${companyName} contacten voor instantly ${dd}-${mm}-${yyyy}.csv`
 
   return new Response(csvString, {
     headers: {

@@ -13,7 +13,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "NextWave Dashboard",
+  title: {
+    default: 'NextWave Dashboard',
+    template: '%s | NextWave Dashboard',
+  },
   description: "Client campaign dashboards",
 };
 

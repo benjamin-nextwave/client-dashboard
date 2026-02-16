@@ -9,6 +9,7 @@ interface StatsCardsProps {
   contactCount: number
   emailsSent: number
   onOpenContactList: () => void
+  periodLabel: string
 }
 
 export function StatsCards({
@@ -18,6 +19,7 @@ export function StatsCards({
   contactCount,
   emailsSent,
   onOpenContactList,
+  periodLabel,
 }: StatsCardsProps) {
   return (
     <div className="space-y-6">
@@ -38,7 +40,7 @@ export function StatsCards({
             />
           </svg>
           <span className="font-medium">
-            {unansweredPositive} reactie{unansweredPositive !== 1 ? 's' : ''} vereist
+            {unansweredPositive} actie{unansweredPositive !== 1 ? 's' : ''} vereist
           </span>
           <Link
             href="/dashboard/inbox"
@@ -51,18 +53,18 @@ export function StatsCards({
 
       {/* Stat cards grid */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Total replies this month */}
+        {/* Total replies */}
         <div className="rounded-lg bg-white p-6 shadow-sm">
           <p className="text-sm text-gray-500">Totaal aantal reacties</p>
           <p className="mt-1 text-3xl font-bold text-gray-900">{totalReplies}</p>
-          <p className="mt-1 text-xs text-gray-400">deze maand</p>
+          <p className="mt-1 text-xs text-gray-400">{periodLabel}</p>
         </div>
 
-        {/* Positive leads this month */}
+        {/* Positive leads (all-time) */}
         <div className="rounded-lg bg-white p-6 shadow-sm">
           <p className="text-sm text-gray-500">Geleverde leads</p>
           <p className="mt-1 text-3xl font-bold text-gray-900">{positiveLeads}</p>
-          <p className="mt-1 text-xs text-gray-400">deze maand</p>
+          <p className="mt-1 text-xs text-gray-400">positieve reacties totaal</p>
         </div>
 
         {/* Contacts in database */}
@@ -78,11 +80,11 @@ export function StatsCards({
           </button>
         </div>
 
-        {/* Emails sent this month */}
+        {/* Emails sent */}
         <div className="rounded-lg bg-white p-6 shadow-sm">
           <p className="text-sm text-gray-500">Verzonden mails</p>
           <p className="mt-1 text-3xl font-bold text-gray-900">{emailsSent}</p>
-          <p className="mt-1 text-xs text-gray-400">deze maand</p>
+          <p className="mt-1 text-xs text-gray-400">{periodLabel}</p>
         </div>
       </div>
     </div>

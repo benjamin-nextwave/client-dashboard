@@ -36,7 +36,7 @@ BEGIN
   IF profile.client_id IS NOT NULL THEN
     claims := jsonb_set(claims, '{client_id}', to_jsonb(profile.client_id::TEXT));
   ELSE
-    claims := jsonb_set(claims, '{client_id}', 'null');
+    claims := jsonb_set(claims, '{client_id}', '""');
   END IF;
 
   event := jsonb_set(event, '{claims}', claims);

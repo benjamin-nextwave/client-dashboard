@@ -2,6 +2,7 @@ import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { getClientBranding } from '@/lib/client/get-client-branding'
 import { getLeadThread } from '@/lib/data/inbox-data'
+import { markLeadAsOpened } from '@/lib/actions/inbox-actions'
 import { createClient } from '@/lib/supabase/server'
 import { ThreadView } from '../_components/thread-view'
 import { LeadContactCard } from '../_components/lead-contact-card'
@@ -32,6 +33,9 @@ export default async function LeadThreadPage({
   if (leadError || !lead) {
     notFound()
   }
+
+  // Mark as opened
+  await markLeadAsOpened(leadId)
 
   // Fetch email thread
   const emails = await getLeadThread(client.id, lead.email)

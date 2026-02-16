@@ -1,7 +1,8 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logError } from '@/lib/errors/log-error'
-import { getCampaignDailyAnalytics, listLeads } from './client'
-import type { InstantlyLead } from './types'
+import { sendLeadWebhook } from '@/lib/webhooks/notify-lead'
+import { getCampaignDailyAnalytics, listLeads, listEmails } from './client'
+import type { InstantlyLead, InstantlyEmail } from './types'
 
 const RATE_LIMIT_DELAY_MS = 500
 
@@ -60,12 +61,24 @@ function normalizeIcpFields(payload: Record<string, unknown>): {
 
 /**
  * Derive lead_status from Instantly lead data.
+ * Instantly uses numeric status: 0=not_yet_emailed, 1=emailed, etc.
  */
 function deriveLeadStatus(lead: InstantlyLead): string {
   if (lead.email_reply_count > 0) return 'replied'
-  if (lead.status_summary?.toLowerCase().includes('bounced')) return 'bounced'
-  if (lead.email_open_count > 0 || lead.status === 'contacted') return 'emailed'
+  if (lead.status === 0) return 'not_yet_emailed'
+  if (lead.email_open_count > 0 || lead.status === 1) return 'emailed'
   return 'not_yet_emailed'
+}
+
+/**
+ * Map Instantly email i_status to interest_status.
+ * i_status: -1 = not interested, 0 = neutral, 1 = interested
+ */
+function mapInterestStatus(iStatus: number | null | undefined): string | null {
+  if (iStatus === 1) return 'positive'
+  if (iStatus === 0) return 'neutral'
+  if (iStatus === -1) return 'negative'
+  return null
 }
 
 /**
@@ -92,11 +105,148 @@ async function fetchAllLeads(campaignId: string): Promise<InstantlyLead[]> {
   return allLeads
 }
 
+interface EmailMapResult {
+  interestMap: Map<string, string>
+  replyMap: Map<string, { subject: string | null; content: string | null }>
+}
+
+/**
+ * Fetch all emails for a campaign to build interest_status map and reply data map.
+ * Returns a map of lead email -> interest_status based on the most
+ * positive i_status found across all their emails, plus the latest reply content per lead.
+ */
+async function fetchEmailInterestMap(
+  campaignId: string
+): Promise<EmailMapResult> {
+  const interestMap = new Map<string, string>()
+  const replyMap = new Map<string, { subject: string | null; content: string | null }>()
+  let cursor: string | undefined
+
+  do {
+    const response = await listEmails({
+      campaignId,
+      limit: 100,
+      startingAfter: cursor,
+    })
+
+    for (const email of response.items) {
+      const leadEmail = extractLeadEmailFromEmail(email)
+      if (!leadEmail) continue
+
+      // Track interest status
+      if (email.i_status != null) {
+        const newStatus = mapInterestStatus(email.i_status)
+        if (newStatus) {
+          const existing = interestMap.get(leadEmail)
+          // Keep the most positive status: positive > neutral > negative
+          if (
+            !existing ||
+            (newStatus === 'positive') ||
+            (newStatus === 'neutral' && existing === 'negative')
+          ) {
+            interestMap.set(leadEmail, newStatus)
+          }
+        }
+      }
+
+      // Track latest reply content (from lead replies)
+      if (email.is_reply && email.from_address_email?.toLowerCase() === leadEmail) {
+        const existing = replyMap.get(leadEmail)
+        const emailTs = email.timestamp_email ?? email.timestamp_created
+        if (!existing || (emailTs && emailTs > (email.timestamp_created ?? ''))) {
+          replyMap.set(leadEmail, {
+            subject: email.subject ?? null,
+            content: email.body?.html ?? email.body?.text ?? null,
+          })
+        }
+      }
+    }
+
+    cursor = response.next_starting_after ?? undefined
+    if (cursor) {
+      await delay(RATE_LIMIT_DELAY_MS)
+    }
+  } while (cursor)
+
+  return { interestMap, replyMap }
+}
+
+/**
+ * Extract the lead's email address from an Instantly email.
+ * The lead email is in to_address_email_list for outbound,
+ * or from_address_email for inbound replies.
+ */
+function extractLeadEmailFromEmail(email: InstantlyEmail): string | null {
+  // If the email has an i_status, it's categorized by Instantly
+  // The from_address is the lead for reply emails
+  // The to_address is the lead for outbound emails
+  // i_status is typically set on reply emails from leads
+  if (email.from_address_email) {
+    return email.from_address_email.toLowerCase()
+  }
+  return null
+}
+
+/**
+ * Fetch all emails for a campaign with pagination and upsert into cached_emails.
+ */
+async function syncCampaignEmails(
+  clientId: string,
+  campaignId: string,
+  supabase: ReturnType<typeof createAdminClient>
+): Promise<void> {
+  let cursor: string | undefined
+
+  do {
+    const response = await listEmails({
+      campaignId,
+      limit: 100,
+      startingAfter: cursor,
+    })
+
+    if (response.items.length > 0) {
+      const cacheRows = response.items.map((email) => ({
+        client_id: clientId,
+        instantly_email_id: email.id,
+        thread_id: email.thread_id,
+        lead_email: email.is_reply
+          ? email.from_address_email
+          : email.to_address_email_list,
+        from_address: email.from_address_email,
+        to_address: email.to_address_email_list,
+        subject: email.subject,
+        body_text: email.body?.text ?? null,
+        body_html: email.body?.html ?? null,
+        is_reply: email.is_reply,
+        sender_account: email.is_reply ? null : email.from_address_email,
+        email_timestamp: email.timestamp_email ?? email.timestamp_created,
+      }))
+
+      const { error: upsertError } = await supabase
+        .from('cached_emails')
+        .upsert(cacheRows, { onConflict: 'instantly_email_id' })
+
+      if (upsertError) {
+        console.error(
+          `Failed to cache emails for campaign ${campaignId}:`,
+          upsertError.message
+        )
+      }
+    }
+
+    cursor = response.next_starting_after ?? undefined
+    if (cursor) {
+      await delay(RATE_LIMIT_DELAY_MS)
+    }
+  } while (cursor)
+}
+
 /**
  * Sync all campaign data for a single client.
  * Fetches campaign IDs from client_campaigns, then for each campaign:
  * 1. Fetches daily analytics and upserts into campaign_analytics
- * 2. Fetches all leads with pagination and upserts into synced_leads
+ * 2. Fetches all emails to build interest_status map + cache emails
+ * 3. Fetches all leads with pagination and upserts into synced_leads
  */
 export async function syncClientData(clientId: string): Promise<void> {
   const supabase = createAdminClient()
@@ -179,14 +329,60 @@ export async function syncClientData(clientId: string): Promise<void> {
 
     await delay(RATE_LIMIT_DELAY_MS)
 
-    // 2. Sync leads
+    // 2. Fetch emails to build interest_status map and reply data (from i_status)
+    let interestMap = new Map<string, string>()
+    let replyMap = new Map<string, { subject: string | null; content: string | null }>()
+    try {
+      const emailMapResult = await fetchEmailInterestMap(campaignId)
+      interestMap = emailMapResult.interestMap
+      replyMap = emailMapResult.replyMap
+    } catch (error) {
+      console.error(
+        `Failed to fetch email interest map for campaign ${campaignId}:`,
+        error
+      )
+      // Non-fatal: continue with leads sync, interest_status will be null
+    }
+
+    await delay(RATE_LIMIT_DELAY_MS)
+
+    // 2b. Cache all emails into cached_emails table
+    try {
+      await syncCampaignEmails(clientId, campaignId, supabase)
+    } catch (error) {
+      console.error(
+        `Failed to cache emails for campaign ${campaignId}:`,
+        error
+      )
+      // Non-fatal: continue with leads sync
+    }
+
+    await delay(RATE_LIMIT_DELAY_MS)
+
+    // 3. Sync leads
     try {
       const leads = await fetchAllLeads(campaignId)
 
       if (leads.length > 0) {
+        // Fetch existing interest statuses to detect NEW positive leads
+        const leadEmails = leads.map((l) => l.email.toLowerCase())
+        const { data: existingLeads } = await supabase
+          .from('synced_leads')
+          .select('email, interest_status')
+          .eq('client_id', clientId)
+          .eq('campaign_id', campaignId)
+          .in('email', leadEmails)
+
+        const existingStatusMap = new Map<string, string | null>()
+        for (const el of existingLeads ?? []) {
+          existingStatusMap.set(el.email.toLowerCase(), el.interest_status)
+        }
+
         const leadRows = leads.map((lead) => {
           const icpFields = normalizeIcpFields(lead.payload ?? {})
           const payload = lead.payload ?? {}
+          const leadEmailLower = lead.email.toLowerCase()
+          const replyData = replyMap.get(leadEmailLower)
 
           return {
             client_id: clientId,
@@ -202,9 +398,9 @@ export async function syncClientData(clientId: string): Promise<void> {
             website: lead.website,
             phone: lead.phone,
             lead_status: deriveLeadStatus(lead),
-            interest_status: null as string | null, // Set from Instantly's classification if available
+            interest_status: interestMap.get(leadEmailLower) ?? null,
             sender_account: lead.last_step_from,
-            email_sent_count: lead.email_open_count > 0 ? 1 : 0, // Approximate from available data
+            email_sent_count: lead.email_open_count > 0 ? 1 : 0,
             email_reply_count: lead.email_reply_count,
             linkedin_url: extractPayloadField(payload, [
               'LinkedIn',
@@ -219,9 +415,12 @@ export async function syncClientData(clientId: string): Promise<void> {
               'vacancy_url',
               'Vacature URL',
               'vacature_url',
+              'vactureUrl',
               'Vacancy',
               'vacature',
             ]),
+            reply_subject: replyData?.subject ?? null,
+            reply_content: replyData?.content ?? null,
             payload: lead.payload,
             last_synced_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
@@ -250,6 +449,82 @@ export async function syncClientData(clientId: string): Promise<void> {
               message: `Leads upsert mislukt voor campagne ${campaignId}`,
               details: { campaignId, error: leadsError.message },
             })
+          }
+        }
+
+        // Detect NEW positive leads and fire webhook notifications
+        const newPositiveLeads = leadRows.filter((row) => {
+          const oldStatus = existingStatusMap.get(row.email.toLowerCase())
+          return row.interest_status === 'positive' && oldStatus !== 'positive'
+        })
+
+        if (newPositiveLeads.length > 0) {
+          try {
+            const { data: clientData } = await supabase
+              .from('clients')
+              .select('notification_email, notifications_enabled, company_name')
+              .eq('id', clientId)
+              .single()
+
+            if (clientData?.notifications_enabled) {
+              // Resolve notification email: client setting or fallback to first user's login email
+              let notificationEmail = clientData.notification_email
+              if (!notificationEmail) {
+                const { data: profiles } = await supabase
+                  .from('profiles')
+                  .select('id')
+                  .eq('client_id', clientId)
+                  .eq('user_role', 'client')
+                  .limit(1)
+
+                if (profiles && profiles.length > 0) {
+                  const { data: { user } } = await supabase.auth.admin.getUserById(profiles[0].id)
+                  notificationEmail = user?.email ?? null
+                }
+              }
+
+              if (notificationEmail) {
+                const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
+
+                // Look up DB ids for the new positive leads so we can build deep links
+                const leadEmails = newPositiveLeads.map((l) => l.email)
+                const { data: leadIdRows } = await supabase
+                  .from('synced_leads')
+                  .select('id, email')
+                  .eq('client_id', clientId)
+                  .in('email', leadEmails)
+
+                const emailToId = new Map<string, string>()
+                for (const row of leadIdRows ?? []) {
+                  emailToId.set(row.email.toLowerCase(), row.id)
+                }
+
+                for (const lead of newPositiveLeads) {
+                  const leadDbId = emailToId.get(lead.email.toLowerCase())
+                  const dashboardUrl = leadDbId && appUrl
+                    ? `${appUrl}/dashboard/inbox/${leadDbId}`
+                    : null
+
+                  const vacatureUrl = lead.vacancy_url || null
+
+                  await sendLeadWebhook({
+                    notification_email: notificationEmail,
+                    lead_email: lead.email,
+                    status: 'Lead',
+                    response: lead.reply_content,
+                    lead_name: [lead.first_name, lead.last_name].filter(Boolean).join(' ') || lead.email,
+                    website: lead.website,
+                    company_name: lead.company_name,
+                    dashboard_url: dashboardUrl,
+                    vacature_url: vacatureUrl,
+                    geen_recruitment: !vacatureUrl,
+                  })
+                }
+              }
+            }
+          } catch (notifError) {
+            console.error('Failed to send positive lead webhooks:', notifError)
+            // Non-fatal: don't fail the sync for webhook errors
           }
         }
       }

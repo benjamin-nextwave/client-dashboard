@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import Papa from 'papaparse'
 
 interface Contact {
   email: string
@@ -112,6 +113,27 @@ export function ContactListModal({ contacts, isOpen, onClose }: ContactListModal
     }
   }, [isOpen])
 
+  function handleDownloadCsv() {
+    const csvData = filteredContacts.map((c) => ({
+      Naam: formatName(c),
+      Email: c.email,
+      Bedrijf: c.company_name ?? '',
+      Functie: c.job_title ?? '',
+      Sector: c.industry ?? '',
+      'Lead Status': c.lead_status ?? '',
+      'Interest Status': c.interest_status ?? '',
+    }))
+
+    const csv = Papa.unparse(csvData)
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `contacten-${new Date().toISOString().split('T')[0]}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
   if (!isOpen) return null
 
   return (
@@ -131,16 +153,31 @@ export function ContactListModal({ contacts, isOpen, onClose }: ContactListModal
         {/* Header */}
         <div className="flex items-center justify-between border-b px-6 py-4">
           <h2 className="text-lg font-semibold text-gray-900">Contacten in database</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-            aria-label="Sluiten"
-          >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleDownloadCsv}
+              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              aria-label="Download CSV"
+            >
+              <span className="flex items-center gap-1.5">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                </svg>
+                CSV
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+              aria-label="Sluiten"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {/* Search + count */}

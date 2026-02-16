@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation'
 import { getClientBranding } from '@/lib/client/get-client-branding'
+import { getUnansweredPositiveCount } from '@/lib/data/campaign-stats'
 import { SidebarNav } from '@/components/client/sidebar-nav'
+import { ChatWidget } from '@/components/client/chat-widget'
 import { createClient } from '@/lib/supabase/server'
 
 async function signOut() {
@@ -22,6 +24,7 @@ export default async function ClientLayout({
   }
 
   const brandColor = client.primary_color || '#3B82F6'
+  const inboxCount = await getUnansweredPositiveCount(client.id)
 
   return (
     <div
@@ -32,10 +35,13 @@ export default async function ClientLayout({
         companyName={client.company_name}
         logoUrl={client.logo_url}
         signOutAction={signOut}
+        inboxCount={inboxCount}
+        meetingUrl={client.meeting_url ?? undefined}
       />
       <main className="flex-1 px-6 py-8 overflow-auto">
         {children}
       </main>
+      <ChatWidget />
     </div>
   )
 }

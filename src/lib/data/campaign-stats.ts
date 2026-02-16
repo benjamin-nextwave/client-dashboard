@@ -80,23 +80,36 @@ function countDistinctByField<T extends Record<string, unknown>>(
 
 // --- Exported query functions ---
 
+interface PipelineStage {
+  label: string
+  count: number
+}
+
 /**
  * Get monthly stats: total replies, positive leads count, emails sent.
- * Replies and emails_sent are from campaign_analytics for the current month.
+ * Replies and emails_sent are from campaign_analytics for the given date range.
  * Positive leads is all-time count of leads with interest_status = 'positive'.
  */
 export async function getMonthlyStats(
-  clientId: string
+  clientId: string,
+  startDate?: string,
+  endDate?: string
 ): Promise<MonthlyStats> {
   const supabase = await createClient()
-  const monthStart = firstDayOfMonth()
+  const dateStart = startDate ?? firstDayOfMonth()
 
-  // Fetch analytics for current month
-  const { data: analytics } = await supabase
+  // Fetch analytics for date range
+  let query = supabase
     .from('campaign_analytics')
     .select('replies, emails_sent')
     .eq('client_id', clientId)
-    .gte('date', monthStart)
+    .gte('date', dateStart)
+
+  if (endDate) {
+    query = query.lte('date', endDate)
+  }
+
+  const { data: analytics } = await query
 
   const totalReplies = (analytics ?? []).reduce(
     (sum, row) => sum + (row.replies ?? 0),
@@ -294,4 +307,63 @@ export async function getPositiveLeadPatterns(
     industries: countDistinctByField(data, 'industry', 'email', 'Onbekend'),
     jobTitles: countDistinctByField(data, 'job_title', 'email', 'Onbekend'),
   }
+}
+
+/**
+ * Get pipeline data: counts for each stage of the lead funnel.
+ * Stages: Niet gemaild -> Gemaild -> Geopend -> Beantwoord -> Positief
+ */
+export async function getPipelineData(
+  clientId: string
+): Promise<PipelineStage[]> {
+  const supabase = await createClient()
+
+  const { data } = await supabase
+    .from('synced_leads')
+    .select('email, lead_status, interest_status')
+    .eq('client_id', clientId)
+
+  if (!data || data.length === 0) {
+    return [
+      { label: 'Niet gemaild', count: 0 },
+      { label: 'Gemaild', count: 0 },
+      { label: 'Geopend', count: 0 },
+      { label: 'Beantwoord', count: 0 },
+      { label: 'Positief', count: 0 },
+    ]
+  }
+
+  // Deduplicate by email
+  const seen = new Map<string, { lead_status: string | null; interest_status: string | null }>()
+  for (const row of data) {
+    if (!seen.has(row.email)) {
+      seen.set(row.email, { lead_status: row.lead_status, interest_status: row.interest_status })
+    }
+  }
+
+  let emailed = 0
+  let opened = 0
+  let replied = 0
+  let positive = 0
+
+  for (const lead of seen.values()) {
+    if (lead.interest_status === 'positive') positive++
+    if (lead.lead_status === 'replied') replied++
+    if (lead.lead_status === 'emailed' || lead.lead_status === 'replied') {
+      opened++ // emailed includes opened in Instantly's model
+    }
+    if (lead.lead_status !== 'not_yet_emailed') {
+      emailed++
+    }
+  }
+
+  // Cumulative funnel: each stage includes all downstream
+  const total = seen.size
+  return [
+    { label: 'Totaal', count: total },
+    { label: 'Gemaild', count: emailed },
+    { label: 'Geopend', count: opened },
+    { label: 'Beantwoord', count: replied },
+    { label: 'Positief', count: positive },
+  ]
 }

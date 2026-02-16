@@ -33,6 +33,11 @@ export async function middleware(request: NextRequest) {
 
   const path = request.nextUrl.pathname
 
+  // Allow API cron and CSV export routes without auth (they handle their own auth)
+  if (path.startsWith('/api/')) {
+    return supabaseResponse
+  }
+
   // Redirect unauthenticated users to login (except /login itself)
   if (!user && !path.startsWith('/login')) {
     const url = request.nextUrl.clone()

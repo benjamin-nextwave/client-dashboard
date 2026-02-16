@@ -30,18 +30,19 @@ export async function getSentEmails(
 ): Promise<SentEmail[]> {
   const supabase = await createClient()
 
-  // Query cached outbound emails (sender_account IS NOT NULL = outbound)
+  // Query cached outbound campaign emails (sender_account IS NOT NULL and not a reply)
   const { data: cached, error } = await supabase
     .from('cached_emails')
     .select(
       'id, to_address, from_address, subject, body_text, email_timestamp, sender_account'
     )
     .eq('client_id', clientId)
+    .eq('is_reply', false)
     .not('sender_account', 'is', null)
     .order('email_timestamp', { ascending: false })
 
   if (error) {
-    console.error('Failed to fetch sent emails:', error.message)
+    console.error('[sent-data] Failed to fetch sent emails from cache:', error.message)
   }
 
   if (cached && cached.length > 0) {
@@ -58,6 +59,7 @@ export async function getSentEmails(
       'id, to_address, from_address, subject, body_text, email_timestamp, sender_account'
     )
     .eq('client_id', clientId)
+    .eq('is_reply', false)
     .not('sender_account', 'is', null)
     .order('email_timestamp', { ascending: false })
 
@@ -134,44 +136,53 @@ async function populateSentEmailCache(clientId: string): Promise<void> {
 
   for (const campaign of campaigns) {
     try {
-      const response = await listEmails({
-        campaignId: campaign.campaign_id,
-        limit: 50,
-        sortOrder: 'desc',
-      })
+      let cursor: string | undefined
 
-      const emails = response.items
-      if (emails.length === 0) continue
+      do {
+        const response = await listEmails({
+          campaignId: campaign.campaign_id,
+          limit: 100,
+          startingAfter: cursor,
+          sortOrder: 'desc',
+        })
 
-      const cacheRows = emails.map((email) => ({
-        client_id: clientId,
-        instantly_email_id: email.id,
-        thread_id: email.thread_id,
-        lead_email: email.to_address_email_list,
-        from_address: email.from_address_email,
-        to_address: email.to_address_email_list,
-        subject: email.subject,
-        body_text: email.body?.text ?? null,
-        body_html: email.body?.html ?? null,
-        is_reply: email.is_reply,
-        sender_account: email.from_address_email,
-        email_timestamp: email.timestamp_email ?? email.timestamp_created,
-      }))
+        const emails = response.items
+        if (emails.length === 0) break
 
-      const { error: upsertError } = await admin
-        .from('cached_emails')
-        .upsert(cacheRows, { onConflict: 'instantly_email_id' })
+        const cacheRows = emails.map((email) => ({
+          client_id: clientId,
+          instantly_email_id: email.id,
+          thread_id: email.thread_id,
+          lead_email: email.is_reply
+            ? email.from_address_email
+            : email.to_address_email_list,
+          from_address: email.from_address_email,
+          to_address: email.to_address_email_list,
+          subject: email.subject,
+          body_text: email.body?.text ?? null,
+          body_html: email.body?.html ?? null,
+          is_reply: email.is_reply,
+          sender_account: email.is_reply ? null : email.from_address_email,
+          email_timestamp: email.timestamp_email ?? email.timestamp_created,
+        }))
 
-      if (upsertError) {
-        console.error(
-          `Failed to cache emails for campaign ${campaign.campaign_id}:`,
-          upsertError.message
-        )
-      }
+        const { error: upsertError } = await admin
+          .from('cached_emails')
+          .upsert(cacheRows, { onConflict: 'instantly_email_id' })
+
+        if (upsertError) {
+          console.error(
+            `[sent-data] Failed to cache emails for campaign ${campaign.campaign_id}:`,
+            upsertError.message
+          )
+        }
+
+        cursor = response.next_starting_after ?? undefined
+      } while (cursor)
     } catch (err) {
       console.error(
-        `Failed to fetch emails for campaign ${campaign.campaign_id}:`,
-        err
+        `[sent-data] Failed to fetch emails for campaign ${campaign.campaign_id}:`,
+        err instanceof Error ? err.message : String(err)
       )
     }
   }

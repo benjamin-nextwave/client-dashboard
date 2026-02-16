@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { getClientBranding } from '@/lib/client/get-client-branding'
 import { getDncEntries } from '@/lib/actions/dnc-actions'
@@ -5,6 +6,7 @@ import { DncAddForm } from './_components/dnc-add-form'
 import { DncCsvUpload } from './_components/dnc-csv-upload'
 import { DncList } from './_components/dnc-list'
 
+export const metadata: Metadata = { title: 'DNC Lijst' }
 export const dynamic = 'force-dynamic'
 
 export default async function DncPage() {
