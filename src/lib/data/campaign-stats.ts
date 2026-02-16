@@ -139,7 +139,7 @@ export async function getUnansweredPositiveCount(
     .select('email')
     .eq('client_id', clientId)
     .eq('interest_status', 'positive')
-    .eq('email_reply_count', 0)
+    .eq('client_has_replied', false)
 
   return new Set((data ?? []).map((l) => l.email)).size
 }
