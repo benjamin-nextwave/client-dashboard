@@ -111,12 +111,14 @@ interface EmailMapResult {
 }
 
 /**
- * Fetch all emails for a campaign to build interest_status map and reply data map.
- * Returns a map of lead email -> interest_status based on the most
- * positive i_status found across all their emails, plus the latest reply content per lead.
+ * Fetch all emails for a campaign in a single pass:
+ * 1. Builds interest_status map and reply data map (for leads sync)
+ * 2. Upserts emails into cached_emails table (for Verzonden page)
  */
-async function fetchEmailInterestMap(
-  campaignId: string
+async function fetchAndCacheEmails(
+  clientId: string,
+  campaignId: string,
+  supabase: ReturnType<typeof createAdminClient>
 ): Promise<EmailMapResult> {
   const interestMap = new Map<string, string>()
   const replyMap = new Map<string, { subject: string | null; content: string | null }>()
@@ -129,6 +131,7 @@ async function fetchEmailInterestMap(
       startingAfter: cursor,
     })
 
+    // Build interest and reply maps
     for (const email of response.items) {
       const leadEmail = extractLeadEmailFromEmail(email)
       if (!leadEmail) continue
@@ -162,48 +165,7 @@ async function fetchEmailInterestMap(
       }
     }
 
-    cursor = response.next_starting_after ?? undefined
-    if (cursor) {
-      await delay(RATE_LIMIT_DELAY_MS)
-    }
-  } while (cursor)
-
-  return { interestMap, replyMap }
-}
-
-/**
- * Extract the lead's email address from an Instantly email.
- * The lead email is in to_address_email_list for outbound,
- * or from_address_email for inbound replies.
- */
-function extractLeadEmailFromEmail(email: InstantlyEmail): string | null {
-  // If the email has an i_status, it's categorized by Instantly
-  // The from_address is the lead for reply emails
-  // The to_address is the lead for outbound emails
-  // i_status is typically set on reply emails from leads
-  if (email.from_address_email) {
-    return email.from_address_email.toLowerCase()
-  }
-  return null
-}
-
-/**
- * Fetch all emails for a campaign with pagination and upsert into cached_emails.
- */
-async function syncCampaignEmails(
-  clientId: string,
-  campaignId: string,
-  supabase: ReturnType<typeof createAdminClient>
-): Promise<void> {
-  let cursor: string | undefined
-
-  do {
-    const response = await listEmails({
-      campaignId,
-      limit: 100,
-      startingAfter: cursor,
-    })
-
+    // Cache emails into cached_emails table
     if (response.items.length > 0) {
       const cacheRows = response.items.map((email) => ({
         client_id: clientId,
@@ -239,6 +201,20 @@ async function syncCampaignEmails(
       await delay(RATE_LIMIT_DELAY_MS)
     }
   } while (cursor)
+
+  return { interestMap, replyMap }
+}
+
+/**
+ * Extract the lead's email address from an Instantly email.
+ * The lead email is in to_address_email_list for outbound,
+ * or from_address_email for inbound replies.
+ */
+function extractLeadEmailFromEmail(email: InstantlyEmail): string | null {
+  if (email.from_address_email) {
+    return email.from_address_email.toLowerCase()
+  }
+  return null
 }
 
 /**
@@ -329,32 +305,19 @@ export async function syncClientData(clientId: string): Promise<void> {
 
     await delay(RATE_LIMIT_DELAY_MS)
 
-    // 2. Fetch emails to build interest_status map and reply data (from i_status)
+    // 2. Fetch emails: build interest/reply maps AND cache into cached_emails (single pass)
     let interestMap = new Map<string, string>()
     let replyMap = new Map<string, { subject: string | null; content: string | null }>()
     try {
-      const emailMapResult = await fetchEmailInterestMap(campaignId)
+      const emailMapResult = await fetchAndCacheEmails(clientId, campaignId, supabase)
       interestMap = emailMapResult.interestMap
       replyMap = emailMapResult.replyMap
     } catch (error) {
       console.error(
-        `Failed to fetch email interest map for campaign ${campaignId}:`,
+        `Failed to fetch/cache emails for campaign ${campaignId}:`,
         error
       )
       // Non-fatal: continue with leads sync, interest_status will be null
-    }
-
-    await delay(RATE_LIMIT_DELAY_MS)
-
-    // 2b. Cache all emails into cached_emails table
-    try {
-      await syncCampaignEmails(clientId, campaignId, supabase)
-    } catch (error) {
-      console.error(
-        `Failed to cache emails for campaign ${campaignId}:`,
-        error
-      )
-      // Non-fatal: continue with leads sync
     }
 
     await delay(RATE_LIMIT_DELAY_MS)
