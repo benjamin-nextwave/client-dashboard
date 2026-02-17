@@ -2,8 +2,6 @@
 
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { format } from 'date-fns'
-import { nl } from 'date-fns/locale'
 import { excludeContact } from '@/lib/actions/preview-actions'
 import type { PreviewContact } from '@/lib/data/preview-data'
 
@@ -358,13 +356,10 @@ export function PreviewTable({ contacts, clientId, clientName }: Props) {
                 Bedrijfsnaam
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                Contactdatum
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                 Sector/Industrie
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                Functie
+                Functietitel
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
                 Actie
@@ -379,11 +374,6 @@ export function PreviewTable({ contacts, clientId, clientName }: Props) {
                 </td>
                 <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
                   {contact.companyName ?? '-'}
-                </td>
-                <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                  {format(new Date(contact.updatedAt), 'd MMM yyyy', {
-                    locale: nl,
-                  })}
                 </td>
                 <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
                   {contact.industry ?? '-'}
@@ -418,7 +408,7 @@ export function PreviewTable({ contacts, clientId, clientName }: Props) {
             {filtered.length === 0 && (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={5}
                   className="px-6 py-8 text-center text-sm text-gray-500"
                 >
                   Geen contacten gevonden voor &ldquo;{search}&rdquo;

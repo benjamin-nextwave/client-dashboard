@@ -7,6 +7,7 @@ export const CsvUploadMetaSchema = z.object({
   totalRows: z.number().int('Moet een geheel getal zijn').positive('Moet positief zijn'),
   emailColumn: z.string().optional(),
   contactDate: z.string().optional(),
+  columnMappings: z.record(z.string(), z.string()).optional(),
 })
 
 export const CsvBatchInsertSchema = z.object({

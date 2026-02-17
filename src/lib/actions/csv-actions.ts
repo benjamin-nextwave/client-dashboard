@@ -15,6 +15,7 @@ type CsvUpload = {
   total_rows: number
   email_column: string | null
   contact_date: string | null
+  column_mappings: Record<string, string> | null
   uploaded_by: string
   status: string
   created_at: string
@@ -38,7 +39,7 @@ export async function createCsvUpload(input: z.infer<typeof CsvUploadMetaSchema>
     return { error: parsed.error.errors[0]?.message ?? 'Ongeldige invoer.' }
   }
 
-  const { clientId, filename, headers, totalRows, emailColumn, contactDate } = parsed.data
+  const { clientId, filename, headers, totalRows, emailColumn, contactDate, columnMappings } = parsed.data
 
   // Auth check - only operators
   const supabase = await createClient()
@@ -58,6 +59,7 @@ export async function createCsvUpload(input: z.infer<typeof CsvUploadMetaSchema>
       total_rows: totalRows,
       email_column: emailColumn || null,
       contact_date: contactDate || null,
+      column_mappings: columnMappings || null,
       uploaded_by: user.id,
       status: 'uploading',
     })

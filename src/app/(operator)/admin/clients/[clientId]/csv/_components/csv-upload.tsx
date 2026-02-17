@@ -24,6 +24,7 @@ export function CsvUpload({ clientId }: CsvUploadProps) {
   const [parsedRows, setParsedRows] = useState<Record<string, string>[]>([])
   const [emailColumn, setEmailColumn] = useState<string | null>(null)
   const [contactDate, setContactDate] = useState<string>('')
+  const [columnMappings, setColumnMappings] = useState<Record<string, string>>({})
   const [manualEmailSelect, setManualEmailSelect] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -100,6 +101,7 @@ export function CsvUpload({ clientId }: CsvUploadProps) {
         totalRows: parsedRows.length,
         emailColumn: emailColumn ?? undefined,
         contactDate: contactDate || undefined,
+        columnMappings: Object.keys(columnMappings).length > 0 ? columnMappings : undefined,
       })
 
       if ('error' in createResult) {
@@ -138,6 +140,7 @@ export function CsvUpload({ clientId }: CsvUploadProps) {
       setParsedRows([])
       setEmailColumn(null)
       setManualEmailSelect(false)
+      setColumnMappings({})
       setFilename('')
       if (fileInputRef.current) {
         fileInputRef.current.value = ''
@@ -229,6 +232,54 @@ export function CsvUpload({ clientId }: CsvUploadProps) {
             onChange={(e) => setContactDate(e.target.value)}
             className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
+        </div>
+      )}
+
+      {/* Column mapping for preview */}
+      {parsedHeaders.length > 0 && (
+        <div className="mb-4">
+          <label className="mb-2 block text-sm font-medium text-gray-700">
+            Kolom mapping voor voorvertoning
+          </label>
+          <p className="mb-2 text-xs text-gray-500">
+            Koppel CSV-kolommen aan de voorvertoningsvelden. Niet-gekoppelde velden tonen &quot;-&quot;.
+          </p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {[
+              { key: 'full_name', label: 'Volledige naam' },
+              { key: 'company_name', label: 'Bedrijfsnaam' },
+              { key: 'industry', label: 'Sector/Industrie' },
+              { key: 'job_title', label: 'Functietitel' },
+            ].map(({ key, label }) => (
+              <div key={key}>
+                <label className="mb-1 block text-xs font-medium text-gray-600">
+                  {label}
+                </label>
+                <select
+                  value={columnMappings[key] ?? ''}
+                  onChange={(e) => {
+                    setColumnMappings((prev) => {
+                      const next = { ...prev }
+                      if (e.target.value) {
+                        next[key] = e.target.value
+                      } else {
+                        delete next[key]
+                      }
+                      return next
+                    })
+                  }}
+                  className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="">-- Niet mappen --</option>
+                  {parsedHeaders.map((h) => (
+                    <option key={h} value={h}>
+                      {h}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
