@@ -207,12 +207,15 @@ async function fetchAndCacheEmails(
 
 /**
  * Extract the lead's email address from an Instantly email.
- * The lead email is in to_address_email_list for outbound,
- * or from_address_email for inbound replies.
+ * For inbound replies (is_reply=true), the lead is the sender (from_address_email).
+ * For outbound emails, the lead is the recipient (to_address_email_list).
  */
 function extractLeadEmailFromEmail(email: InstantlyEmail): string | null {
-  if (email.from_address_email) {
+  if (email.is_reply && email.from_address_email) {
     return email.from_address_email.toLowerCase()
+  }
+  if (!email.is_reply && email.to_address_email_list) {
+    return email.to_address_email_list.toLowerCase()
   }
   return null
 }
@@ -327,18 +330,34 @@ export async function syncClientData(clientId: string): Promise<void> {
       const leads = await fetchAllLeads(campaignId)
 
       if (leads.length > 0) {
-        // Fetch existing interest statuses to detect NEW positive leads
+        // Fetch existing interest statuses to detect NEW positive leads.
+        // Batch the .in() query to avoid exceeding PostgREST URL length limits.
         const leadEmails = leads.map((l) => l.email.toLowerCase())
-        const { data: existingLeads } = await supabase
-          .from('synced_leads')
-          .select('email, interest_status')
-          .eq('client_id', clientId)
-          .eq('campaign_id', campaignId)
-          .in('email', leadEmails)
-
         const existingStatusMap = new Map<string, string | null>()
-        for (const el of existingLeads ?? []) {
-          existingStatusMap.set(el.email.toLowerCase(), el.interest_status)
+        let existingLeadsQueryFailed = false
+
+        const IN_BATCH_SIZE = 50
+        for (let i = 0; i < leadEmails.length; i += IN_BATCH_SIZE) {
+          const batch = leadEmails.slice(i, i + IN_BATCH_SIZE)
+          const { data: existingLeads, error: existingError } = await supabase
+            .from('synced_leads')
+            .select('email, interest_status')
+            .eq('client_id', clientId)
+            .eq('campaign_id', campaignId)
+            .in('email', batch)
+
+          if (existingError) {
+            console.error(
+              `Failed to fetch existing leads for campaign ${campaignId}:`,
+              existingError.message
+            )
+            existingLeadsQueryFailed = true
+            break
+          }
+
+          for (const el of existingLeads ?? []) {
+            existingStatusMap.set(el.email.toLowerCase(), el.interest_status)
+          }
         }
 
         const leadRows = leads.map((lead) => {
@@ -415,8 +434,16 @@ export async function syncClientData(clientId: string): Promise<void> {
           }
         }
 
-        // Detect NEW positive leads and fire webhook notifications
-        const newPositiveLeads = leadRows.filter((row) => {
+        // Detect NEW positive leads and fire webhook notifications.
+        // SAFETY: If we couldn't reliably fetch existing statuses, skip webhooks
+        // entirely to prevent duplicate notifications.
+        if (existingLeadsQueryFailed) {
+          console.warn(
+            `Skipping webhook detection for campaign ${campaignId} — existing leads query failed`
+          )
+        }
+
+        const newPositiveLeads = existingLeadsQueryFailed ? [] : leadRows.filter((row) => {
           const oldStatus = existingStatusMap.get(row.email.toLowerCase())
           return row.interest_status === 'positive' && oldStatus !== 'positive'
         })
