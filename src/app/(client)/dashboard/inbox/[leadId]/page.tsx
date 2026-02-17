@@ -40,6 +40,12 @@ export default async function LeadThreadPage({
   // Fetch email thread
   const emails = await getLeadThread(client.id, lead.email)
 
+  // Resolve sender account: prefer lead record, fallback to first outbound email in thread
+  const senderAccount =
+    lead.sender_account ||
+    emails.find((e) => e.sender_account)?.sender_account ||
+    ''
+
   // Check if recruitment client
   const { data: clientData } = await supabase
     .from('clients')
@@ -63,7 +69,7 @@ export default async function LeadThreadPage({
           <ThreadView
             emails={emails}
             leadEmail={lead.email}
-            senderAccount={lead.sender_account ?? ''}
+            senderAccount={senderAccount}
             leadId={lead.id}
             replySubject={lead.reply_subject ?? null}
           />

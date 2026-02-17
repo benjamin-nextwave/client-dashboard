@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { StatsCards } from './stats-cards'
 import { ContactStatusChart } from './contact-status-chart'
+import { EmailsPerDayChart } from './emails-per-day-chart'
 import { ICPCharts } from './icp-charts'
 import { ContactListModal } from './contact-list-modal'
 import { DateRangePicker } from './date-range-picker'
@@ -33,6 +34,7 @@ interface OverzichtDashboardProps {
     industries: { name: string; value: number }[]
     jobTitles: { name: string; value: number }[]
   }
+  dailyEmailsSent: { date: string; count: number }[]
   brandColor: string
   currentRange: string
   periodLabel: string
@@ -49,6 +51,7 @@ export function OverzichtDashboard({
   industryBreakdown,
   jobTitleBreakdown,
   positivePatterns,
+  dailyEmailsSent,
   brandColor,
   currentRange,
   periodLabel,
@@ -75,6 +78,10 @@ export function OverzichtDashboard({
     <div className="space-y-6">
       <DateRangePicker currentRange={currentRange} />
 
+      <ContactStatusChart data={contactStatus} />
+
+      <EmailsPerDayChart data={dailyEmailsSent} brandColor={brandColor} />
+
       <StatsCards
         unansweredPositive={unansweredPositive}
         totalReplies={totalReplies}
@@ -84,8 +91,6 @@ export function OverzichtDashboard({
         onOpenContactList={() => setIsModalOpen(true)}
         periodLabel={periodLabel}
       />
-
-      <ContactStatusChart data={contactStatus} />
 
       <ICPCharts
         industryData={industryBreakdown}

@@ -217,6 +217,9 @@ export async function getContactList(
 /**
  * Get lead status breakdown with Dutch labels.
  * Groups by lead_status, counts distinct emails per status.
+ * Deduplicates by email, keeping the most advanced status
+ * (replied > emailed > bounced > not_yet_emailed) to avoid
+ * double-counting contacts that appear across multiple campaigns.
  */
 export async function getContactStatusBreakdown(
   clientId: string
@@ -225,25 +228,31 @@ export async function getContactStatusBreakdown(
 
   const { data } = await supabase
     .from('synced_leads')
-    .select('email, lead_status')
+    .select('email, lead_status, updated_at')
     .eq('client_id', clientId)
+    .order('updated_at', { ascending: false })
 
   if (!data || data.length === 0) return []
 
-  // Group by lead_status, count distinct emails
-  const groups = new Map<string, Set<string>>()
+  // Deduplicate: keep the most recently updated status per email
+  const emailStatus = new Map<string, string>()
 
   for (const row of data) {
-    const status = row.lead_status ?? 'unknown'
-    if (!groups.has(status)) {
-      groups.set(status, new Set())
+    if (!emailStatus.has(row.email)) {
+      emailStatus.set(row.email, row.lead_status ?? 'unknown')
     }
-    groups.get(status)!.add(row.email)
   }
 
-  return Array.from(groups.entries()).map(([status, emails]) => ({
+  // Group by status and count
+  const groups = new Map<string, number>()
+
+  for (const status of emailStatus.values()) {
+    groups.set(status, (groups.get(status) ?? 0) + 1)
+  }
+
+  return Array.from(groups.entries()).map(([status, count]) => ({
     status: LEAD_STATUS_LABELS[status] ?? status,
-    count: emails.size,
+    count,
   }))
 }
 
@@ -307,6 +316,52 @@ export async function getPositiveLeadPatterns(
     industries: countDistinctByField(data, 'industry', 'email', 'Onbekend'),
     jobTitles: countDistinctByField(data, 'job_title', 'email', 'Onbekend'),
   }
+}
+
+// --- Daily email stats ---
+
+interface DailyEmailStat {
+  date: string
+  count: number
+}
+
+/**
+ * Get emails sent per day for the given date range.
+ * Aggregates across all campaigns for the client.
+ */
+export async function getDailyEmailsSent(
+  clientId: string,
+  startDate?: string,
+  endDate?: string
+): Promise<DailyEmailStat[]> {
+  const supabase = await createClient()
+  const dateStart = startDate ?? firstDayOfMonth()
+
+  let query = supabase
+    .from('campaign_analytics')
+    .select('date, emails_sent')
+    .eq('client_id', clientId)
+    .gte('date', dateStart)
+    .order('date', { ascending: true })
+
+  if (endDate) {
+    query = query.lte('date', endDate)
+  }
+
+  const { data } = await query
+
+  if (!data || data.length === 0) return []
+
+  // Aggregate by date (multiple campaigns may have entries for same date)
+  const dateMap = new Map<string, number>()
+
+  for (const row of data) {
+    dateMap.set(row.date, (dateMap.get(row.date) ?? 0) + (row.emails_sent ?? 0))
+  }
+
+  return Array.from(dateMap.entries())
+    .map(([date, count]) => ({ date, count }))
+    .sort((a, b) => a.date.localeCompare(b.date))
 }
 
 /**
