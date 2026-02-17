@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 // --- Types ---
 
@@ -62,4 +63,23 @@ export async function getPreviewContacts(
   }
 
   return contacts
+}
+
+/**
+ * Get the most recent contact date from CSV uploads for this client.
+ */
+export async function getContactDate(
+  clientId: string
+): Promise<string | null> {
+  const supabase = createAdminClient()
+
+  const { data } = await supabase
+    .from('csv_uploads')
+    .select('contact_date')
+    .eq('client_id', clientId)
+    .not('contact_date', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(1)
+
+  return data?.[0]?.contact_date ?? null
 }

@@ -86,6 +86,11 @@ export default async function CsvPage({ params }: CsvPageProps) {
                       <span className="text-sm text-gray-400">
                         {new Date(upload.created_at).toLocaleDateString('nl-NL')}
                       </span>
+                      {upload.contact_date && (
+                        <span className="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-800">
+                          Contactdatum: {new Date(upload.contact_date).toLocaleDateString('nl-NL')}
+                        </span>
+                      )}
                       <span className="text-sm text-gray-400">
                         Verloopt: {new Date(upload.expires_at).toLocaleDateString('nl-NL')}
                       </span>

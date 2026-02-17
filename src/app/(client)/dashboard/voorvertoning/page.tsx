@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { getClientBranding } from '@/lib/client/get-client-branding'
-import { getPreviewContacts } from '@/lib/data/preview-data'
+import { getPreviewContacts, getContactDate } from '@/lib/data/preview-data'
 import { EmptyState } from '@/components/ui/empty-state'
 import { PreviewTable } from './_components/preview-table'
 
@@ -12,7 +12,10 @@ export default async function VoorvertoningPage() {
   const client = await getClientBranding()
   if (!client) redirect('/login')
 
-  const contacts = await getPreviewContacts(client.id)
+  const [contacts, contactDate] = await Promise.all([
+    getPreviewContacts(client.id),
+    getContactDate(client.id),
+  ])
 
   return (
     <div>
@@ -21,6 +24,11 @@ export default async function VoorvertoningPage() {
       </h1>
       <p className="mt-1 text-sm text-gray-600">
         Contacten die binnenkort worden benaderd.
+        {contactDate && (
+          <span className="ml-2 inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-800">
+            Contactdatum: {new Date(contactDate).toLocaleDateString('nl-NL')}
+          </span>
+        )}
       </p>
 
       {contacts.length === 0 ? (

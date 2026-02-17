@@ -1,0 +1,16 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/sync-instantly",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/morning-check",
+      "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/cron/cleanup-csv",
+      "schedule": "0 3 * * *"
+    }
+  ]
+}

@@ -6,6 +6,7 @@ export const CsvUploadMetaSchema = z.object({
   headers: z.array(z.string()).min(1, 'Minimaal één kolom vereist'),
   totalRows: z.number().int('Moet een geheel getal zijn').positive('Moet positief zijn'),
   emailColumn: z.string().optional(),
+  contactDate: z.string().optional(),
 })
 
 export const CsvBatchInsertSchema = z.object({

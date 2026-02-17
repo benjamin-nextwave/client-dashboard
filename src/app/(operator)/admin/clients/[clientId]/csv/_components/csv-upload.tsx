@@ -23,6 +23,7 @@ export function CsvUpload({ clientId }: CsvUploadProps) {
   const [parsedHeaders, setParsedHeaders] = useState<string[]>([])
   const [parsedRows, setParsedRows] = useState<Record<string, string>[]>([])
   const [emailColumn, setEmailColumn] = useState<string | null>(null)
+  const [contactDate, setContactDate] = useState<string>('')
   const [manualEmailSelect, setManualEmailSelect] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -98,6 +99,7 @@ export function CsvUpload({ clientId }: CsvUploadProps) {
         headers: parsedHeaders,
         totalRows: parsedRows.length,
         emailColumn: emailColumn ?? undefined,
+        contactDate: contactDate || undefined,
       })
 
       if ('error' in createResult) {
@@ -209,6 +211,24 @@ export function CsvUpload({ clientId }: CsvUploadProps) {
               ))}
             </select>
           )}
+        </div>
+      )}
+
+      {/* Contact date picker */}
+      {parsedHeaders.length > 0 && (
+        <div className="mb-4">
+          <label className="mb-1 block text-sm font-medium text-gray-700">
+            Contactdatum
+          </label>
+          <p className="mb-1 text-xs text-gray-500">
+            Wanneer worden deze contacten benaderd?
+          </p>
+          <input
+            type="date"
+            value={contactDate}
+            onChange={(e) => setContactDate(e.target.value)}
+            className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
         </div>
       )}
 
