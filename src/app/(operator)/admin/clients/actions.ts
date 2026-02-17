@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { clientFormSchema, clientEditSchema } from '@/lib/validations/client'
-import { uploadClientLogo } from '@/lib/supabase/storage'
+import { uploadClientLogo, deleteClientLogo } from '@/lib/supabase/storage'
 
 export async function createClient(
   prevState: { error: string },
@@ -36,6 +36,7 @@ export async function createClient(
       primary_color: primaryColor,
       is_recruitment: isRecruitment,
       meeting_url: meetingUrl || null,
+      password,
     })
     .select('id')
     .single()
@@ -135,15 +136,19 @@ export async function updateClient(
 
   const supabase = createAdminClient()
 
-  // Update client record
+  // Update client record (include password if provided)
+  const clientUpdate: Record<string, unknown> = {
+    company_name: companyName,
+    primary_color: primaryColor,
+    is_recruitment: isRecruitment,
+    meeting_url: meetingUrl || null,
+  }
+  if (password && password.length > 0) {
+    clientUpdate.password = password
+  }
   const { error: clientError } = await supabase
     .from('clients')
-    .update({
-      company_name: companyName,
-      primary_color: primaryColor,
-      is_recruitment: isRecruitment,
-      meeting_url: meetingUrl || null,
-    })
+    .update(clientUpdate)
     .eq('id', clientId)
 
   if (clientError) {
@@ -226,4 +231,44 @@ export async function updateClient(
 
   revalidatePath('/admin')
   redirect('/admin')
+}
+
+export async function deleteClient(clientId: string): Promise<{ error?: string }> {
+  const supabase = createAdminClient()
+
+  // Step 1: Find the auth user linked to this client
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('client_id', clientId)
+    .eq('user_role', 'client')
+    .single()
+
+  // Step 2: Delete the auth user (cascades to profiles via ON DELETE CASCADE)
+  if (profile) {
+    const { error: authError } = await supabase.auth.admin.deleteUser(profile.id)
+    if (authError) {
+      return { error: `Gebruiker verwijderen mislukt: ${authError.message}` }
+    }
+  }
+
+  // Step 3: Delete logo from storage (non-fatal)
+  try {
+    await deleteClientLogo(clientId)
+  } catch (e) {
+    console.warn(`Logo verwijderen mislukt voor klant ${clientId}`, e)
+  }
+
+  // Step 4: Delete client record (cascades to client_campaigns, synced_leads, campaign_analytics)
+  const { error: clientError } = await supabase
+    .from('clients')
+    .delete()
+    .eq('id', clientId)
+
+  if (clientError) {
+    return { error: `Klant verwijderen mislukt: ${clientError.message}` }
+  }
+
+  revalidatePath('/admin')
+  return {}
 }

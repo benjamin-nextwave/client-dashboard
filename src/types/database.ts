@@ -13,6 +13,7 @@ export interface Client {
   logo_url: string | null
   meeting_url: string | null
   is_recruitment: boolean
+  password: string | null
   created_at: string
   updated_at: string
 }
