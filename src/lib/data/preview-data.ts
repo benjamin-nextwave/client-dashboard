@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 // --- Types ---
@@ -13,53 +12,115 @@ export interface PreviewContact {
   updatedAt: string
 }
 
+// --- Helpers ---
+
+/**
+ * Extract a value from a CSV row's data object using case-insensitive key matching.
+ */
+function extractField(
+  data: Record<string, string>,
+  variants: string[]
+): string | null {
+  for (const variant of variants) {
+    const key = Object.keys(data).find(
+      (k) => k.toLowerCase() === variant.toLowerCase()
+    )
+    if (key && data[key] != null && data[key].trim() !== '') {
+      return data[key].trim()
+    }
+  }
+  return null
+}
+
 // --- Exported query functions ---
 
 /**
- * Get all not_yet_emailed contacts for the preview view.
- * Excludes contacts the client has removed (is_excluded = true).
- * Deduplicates by email (keeps most recently updated per email).
+ * Get all non-filtered contacts from the most recent CSV upload for the preview view.
+ * Deduplicates by email (keeps first occurrence).
  */
 export async function getPreviewContacts(
   clientId: string
 ): Promise<PreviewContact[]> {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
-  const { data, error } = await supabase
-    .from('synced_leads')
-    .select(
-      'id, email, first_name, last_name, company_name, job_title, industry, updated_at'
-    )
+  // Find the most recent non-expired CSV upload that is ready or filtered
+  const { data: upload, error: uploadError } = await supabase
+    .from('csv_uploads')
+    .select('id, email_column, created_at')
     .eq('client_id', clientId)
-    .eq('lead_status', 'not_yet_emailed')
-    .eq('is_excluded', false)
-    .order('updated_at', { ascending: false })
+    .in('status', ['ready', 'filtered'])
+    .gt('expires_at', new Date().toISOString())
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single()
 
-  if (error) {
-    throw new Error(`Failed to fetch preview contacts: ${error.message}`)
+  if (uploadError || !upload) return []
+
+  const emailColumn = upload.email_column
+
+  // Fetch all non-filtered rows for this upload
+  const { data: rows, error: rowsError } = await supabase
+    .from('csv_rows')
+    .select('id, data')
+    .eq('upload_id', upload.id)
+    .eq('is_filtered', false)
+    .order('row_index', { ascending: true })
+
+  if (rowsError) {
+    throw new Error(`Failed to fetch preview contacts: ${rowsError.message}`)
   }
 
-  if (!data || data.length === 0) return []
+  if (!rows || rows.length === 0) return []
 
-  // Deduplicate: keep first occurrence per email (most recent due to ordering)
+  const uploadDate = upload.created_at
+
+  // Deduplicate by email, map to PreviewContact
   const seen = new Set<string>()
   const contacts: PreviewContact[] = []
 
-  for (const row of data) {
-    if (!seen.has(row.email)) {
-      seen.add(row.email)
-      contacts.push({
-        id: row.id,
-        fullName:
-          [row.first_name, row.last_name].filter(Boolean).join(' ') ||
-          row.email,
-        companyName: row.company_name,
-        jobTitle: row.job_title,
-        industry: row.industry,
-        email: row.email,
-        updatedAt: row.updated_at,
-      })
-    }
+  for (const row of rows) {
+    const data = row.data as Record<string, string>
+
+    // Extract email using the upload's configured email column, fallback to common variants
+    const email = emailColumn
+      ? data[emailColumn]?.trim() ?? null
+      : extractField(data, ['email', 'Email', 'E-mail', 'e-mail'])
+
+    if (!email) continue
+
+    const emailLower = email.toLowerCase()
+    if (seen.has(emailLower)) continue
+    seen.add(emailLower)
+
+    const firstName = extractField(data, [
+      'First Name', 'first_name', 'FirstName', 'Voornaam', 'voornaam',
+    ])
+    const lastName = extractField(data, [
+      'Last Name', 'last_name', 'LastName', 'Achternaam', 'achternaam',
+    ])
+    const fullNameDirect = extractField(data, ['Name', 'Naam', 'name', 'naam', 'Full Name', 'full_name'])
+
+    const fullName =
+      [firstName, lastName].filter(Boolean).join(' ') ||
+      fullNameDirect ||
+      email
+
+    contacts.push({
+      id: row.id,
+      fullName,
+      companyName: extractField(data, [
+        'Company', 'company_name', 'Company Name', 'Bedrijf', 'Bedrijfsnaam',
+        'bedrijf', 'bedrijfsnaam', 'company',
+      ]),
+      jobTitle: extractField(data, [
+        'Job Title', 'job_title', 'Functie', 'functie', 'Title', 'title',
+      ]),
+      industry: extractField(data, [
+        'Industry', 'industry', 'Branche', 'branche', 'Sector', 'sector',
+      ]),
+      email,
+      updatedAt: uploadDate,
+    })
   }
 
   return contacts
