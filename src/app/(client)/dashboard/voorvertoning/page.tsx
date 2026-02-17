@@ -43,7 +43,11 @@ export default async function VoorvertoningPage() {
           description="Contacten die binnenkort worden benaderd verschijnen hier."
         />
       ) : (
-        <PreviewTable contacts={contacts} />
+        <PreviewTable
+          contacts={contacts}
+          clientId={client.id}
+          clientName={client.company_name}
+        />
       )}
     </div>
   )
