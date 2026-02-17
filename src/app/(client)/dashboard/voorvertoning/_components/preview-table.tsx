@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { format } from 'date-fns'
 import { nl } from 'date-fns/locale'
 import { excludeContact } from '@/lib/actions/preview-actions'
@@ -24,7 +25,9 @@ interface Props {
 }
 
 export function PreviewTable({ contacts, clientId, clientName }: Props) {
+  const router = useRouter()
   const [removing, setRemoving] = useState<string | null>(null)
+  const [excludedIds, setExcludedIds] = useState<Set<string>>(new Set())
   const [notification, setNotification] = useState<{
     type: 'success' | 'error' | 'info'
     message: string
@@ -39,11 +42,12 @@ export function PreviewTable({ contacts, clientId, clientName }: Props) {
   const [industryFeedback, setIndustryFeedback] = useState('')
   const [generalNotes, setGeneralNotes] = useState('')
 
-  // Filter contacts by search query
+  // Filter contacts: remove excluded + apply search
   const filtered = useMemo(() => {
-    if (!search.trim()) return contacts
+    const visible = contacts.filter((c) => !excludedIds.has(c.id))
+    if (!search.trim()) return visible
     const q = search.toLowerCase()
-    return contacts.filter(
+    return visible.filter(
       (c) =>
         c.fullName.toLowerCase().includes(q) ||
         c.email.toLowerCase().includes(q) ||
@@ -51,7 +55,7 @@ export function PreviewTable({ contacts, clientId, clientName }: Props) {
         (c.jobTitle && c.jobTitle.toLowerCase().includes(q)) ||
         (c.industry && c.industry.toLowerCase().includes(q))
     )
-  }, [contacts, search])
+  }, [contacts, search, excludedIds])
 
   function showNotification(type: 'success' | 'error' | 'info', message: string) {
     setNotification({ type, message })
@@ -62,12 +66,22 @@ export function PreviewTable({ contacts, clientId, clientName }: Props) {
     setRemoving(contactId)
     setNotification(null)
 
+    // Optimistically remove from view immediately
+    setExcludedIds((prev) => new Set(prev).add(contactId))
+
     const result = await excludeContact(contactId)
 
     if ('error' in result) {
+      // Revert optimistic removal on error
+      setExcludedIds((prev) => {
+        const next = new Set(prev)
+        next.delete(contactId)
+        return next
+      })
       showNotification('error', result.error)
     } else {
       showNotification('success', 'Contact verwijderd uit voorvertoning.')
+      router.refresh()
     }
 
     setRemoving(null)
