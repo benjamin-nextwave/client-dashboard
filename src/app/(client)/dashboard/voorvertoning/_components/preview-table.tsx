@@ -26,7 +26,7 @@ interface Props {
 export function PreviewTable({ contacts, clientId, clientName }: Props) {
   const [removing, setRemoving] = useState<string | null>(null)
   const [notification, setNotification] = useState<{
-    type: 'success' | 'error'
+    type: 'success' | 'error' | 'info'
     message: string
   } | null>(null)
   const [search, setSearch] = useState('')
@@ -34,6 +34,10 @@ export function PreviewTable({ contacts, clientId, clientName }: Props) {
   const [rating, setRating] = useState('')
   const [feedbackText, setFeedbackText] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [wantsNewList, setWantsNewList] = useState(false)
+  const [jobTitleFeedback, setJobTitleFeedback] = useState('')
+  const [industryFeedback, setIndustryFeedback] = useState('')
+  const [generalNotes, setGeneralNotes] = useState('')
 
   // Filter contacts by search query
   const filtered = useMemo(() => {
@@ -49,7 +53,7 @@ export function PreviewTable({ contacts, clientId, clientName }: Props) {
     )
   }, [contacts, search])
 
-  function showNotification(type: 'success' | 'error', message: string) {
+  function showNotification(type: 'success' | 'error' | 'info', message: string) {
     setNotification({ type, message })
     setTimeout(() => setNotification(null), 4000)
   }
@@ -69,8 +73,27 @@ export function PreviewTable({ contacts, clientId, clientName }: Props) {
     setRemoving(null)
   }
 
+  function resetFeedbackForm() {
+    setShowFeedback(false)
+    setRating('')
+    setFeedbackText('')
+    setWantsNewList(false)
+    setJobTitleFeedback('')
+    setIndustryFeedback('')
+    setGeneralNotes('')
+  }
+
+  function handleRequestNewList() {
+    setWantsNewList(true)
+    showNotification(
+      'info',
+      'Des te inhoudelijker de feedback, des te beter de volgende lijst zal zijn.'
+    )
+  }
+
   async function handleFeedbackSubmit() {
     if (!rating) return
+    if (wantsNewList && (!jobTitleFeedback.trim() || !industryFeedback.trim())) return
 
     setSubmitting(true)
     try {
@@ -85,18 +108,27 @@ export function PreviewTable({ contacts, clientId, clientName }: Props) {
           rating_label: ratingOption?.label ?? '',
           rating_emoji: ratingOption?.emoji ?? '',
           feedback: feedbackText,
+          wants_new_list: wantsNewList,
+          job_title_feedback: wantsNewList ? jobTitleFeedback : '',
+          industry_feedback: wantsNewList ? industryFeedback : '',
+          general_notes: wantsNewList ? generalNotes : '',
           total_contacts: contacts.length,
           submitted_at: new Date().toISOString(),
         }),
       })
 
-      setShowFeedback(false)
-      setRating('')
-      setFeedbackText('')
-      showNotification(
-        'success',
-        'Bedankt voor je feedback! We gaan ernaar kijken.'
-      )
+      resetFeedbackForm()
+      if (wantsNewList) {
+        showNotification(
+          'success',
+          'Binnen 24 uur ontvangt u een nieuwe lijst binnen het dashboard.'
+        )
+      } else {
+        showNotification(
+          'success',
+          'Bedankt voor je feedback! We gaan ernaar kijken.'
+        )
+      }
     } catch {
       showNotification(
         'error',
@@ -114,7 +146,9 @@ export function PreviewTable({ contacts, clientId, clientName }: Props) {
           className={`mb-4 rounded-md p-3 text-sm ${
             notification.type === 'success'
               ? 'bg-green-50 text-green-700'
-              : 'bg-red-50 text-red-700'
+              : notification.type === 'info'
+                ? 'bg-blue-50 text-blue-700'
+                : 'bg-red-50 text-red-700'
           }`}
         >
           {notification.message}
@@ -170,7 +204,7 @@ export function PreviewTable({ contacts, clientId, clientName }: Props) {
       {/* Feedback modal */}
       {showFeedback && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="mx-4 w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+          <div className="mx-4 max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl bg-white p-6 shadow-xl">
             <h3 className="text-lg font-semibold text-gray-900">
               Feedback over de contactlijst
             </h3>
@@ -207,21 +241,81 @@ export function PreviewTable({ contacts, clientId, clientName }: Props) {
               className="mt-4 w-full rounded-lg border border-gray-300 p-3 text-sm text-gray-900 placeholder-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             />
 
+            {/* Request new list button */}
+            {!wantsNewList && (
+              <button
+                type="button"
+                onClick={handleRequestNewList}
+                className="mt-3 w-full rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700 transition-colors hover:bg-red-100"
+              >
+                Deze lijst is zo slecht dat ik een nieuwe wil
+              </button>
+            )}
+
+            {/* New list request fields */}
+            {wantsNewList && (
+              <div className="mt-4 space-y-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
+                <p className="text-sm font-medium text-amber-800">
+                  Help ons een betere lijst samen te stellen:
+                </p>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Wat moet er beter aan de functietitels? <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    placeholder="Bijv. meer C-level, minder junior posities..."
+                    value={jobTitleFeedback}
+                    onChange={(e) => setJobTitleFeedback(e.target.value)}
+                    rows={2}
+                    className="w-full rounded-lg border border-gray-300 p-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Wat moet er beter aan de sector/industrie? <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    placeholder="Bijv. meer focus op IT, geen overheid..."
+                    value={industryFeedback}
+                    onChange={(e) => setIndustryFeedback(e.target.value)}
+                    rows={2}
+                    className="w-full rounded-lg border border-gray-300 p-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Overige opmerkingen
+                  </label>
+                  <textarea
+                    placeholder="Andere wensen of opmerkingen..."
+                    value={generalNotes}
+                    onChange={(e) => setGeneralNotes(e.target.value)}
+                    rows={2}
+                    className="w-full rounded-lg border border-gray-300 p-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Actions */}
             <div className="mt-4 flex justify-end gap-2">
               <button
-                onClick={() => {
-                  setShowFeedback(false)
-                  setRating('')
-                  setFeedbackText('')
-                }}
+                onClick={resetFeedbackForm}
                 className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100"
               >
                 Annuleren
               </button>
               <button
                 onClick={handleFeedbackSubmit}
-                disabled={!rating || submitting}
+                disabled={
+                  !rating ||
+                  submitting ||
+                  (wantsNewList &&
+                    (!jobTitleFeedback.trim() || !industryFeedback.trim()))
+                }
                 className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
               >
                 {submitting ? 'Verzenden...' : 'Versturen'}
