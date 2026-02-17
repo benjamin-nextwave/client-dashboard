@@ -118,7 +118,7 @@ export function ClientOverviewList({ clients }: ClientOverviewListProps) {
           Geen klanten gevonden{search ? ` voor "${search}"` : ''}.
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-1.5">
           {filtered.map((client) => (
             <ClientCard key={client.id} client={client} />
           ))}
@@ -281,6 +281,7 @@ function DeleteConfirmDialog({
 
 function ClientCard({ client }: { client: ClientOverview }) {
   const router = useRouter()
+  const [expanded, setExpanded] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
@@ -299,121 +300,150 @@ function ClientCard({ client }: { client: ClientOverview }) {
   }, [client.id, router])
 
   return (
-    <div className={`rounded-lg border bg-white p-4 shadow-sm ${client.hasIssues ? 'border-yellow-300' : 'border-gray-200'}`}>
-      {/* Header row */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <HealthDot client={client} />
-          <div
-            className="h-5 w-5 rounded-full border border-gray-200"
-            style={{ backgroundColor: client.primaryColor ?? '#ccc' }}
-          />
-          <h3 className="text-sm font-semibold text-gray-900">{client.companyName}</h3>
-          {client.isRecruitment && (
-            <span className="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-800">
-              Recruitment
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-3">
-          {client.lastSyncedAt && (
-            <span className="text-xs text-gray-400" title={new Date(client.lastSyncedAt).toLocaleString('nl-NL')}>
-              Sync: {formatTimeAgo(client.lastSyncedAt)}
-            </span>
-          )}
-          <Link
-            href={`/admin/clients/${client.id}/edit`}
-            className="rounded-md bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200"
-          >
-            Bewerken
-          </Link>
-          <Link
-            href={`/admin/clients/${client.id}/csv`}
-            className="rounded-md bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200"
-          >
-            CSV
-          </Link>
-          <button
-            type="button"
-            onClick={() => setShowDeleteDialog(true)}
-            className="rounded-md bg-red-50 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-100"
-          >
-            Verwijderen
-          </button>
-        </div>
-      </div>
-
-      {deleteError && (
-        <div className="mt-2 rounded-md bg-red-50 px-3 py-2 text-xs text-red-700">
-          {deleteError}
-        </div>
-      )}
-
-      {showDeleteDialog && (
-        <DeleteConfirmDialog
-          clientName={client.companyName}
-          onConfirm={handleDelete}
-          onCancel={() => { setShowDeleteDialog(false); setDeleteError(null) }}
-          isDeleting={isDeleting}
+    <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
+      {/* Collapsed row — always visible */}
+      <button
+        type="button"
+        onClick={() => setExpanded(!expanded)}
+        className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors"
+      >
+        <div
+          className="h-4 w-4 flex-shrink-0 rounded-full border border-gray-200"
+          style={{ backgroundColor: client.primaryColor ?? '#ccc' }}
         />
-      )}
-
-      {/* Stats row */}
-      <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-gray-500">
-        <span>{client.totalLeads} contacten</span>
-        <span>{client.campaigns.length} campagne{client.campaigns.length !== 1 ? 's' : ''}</span>
-        <span className={client.hasLowEmails ? 'font-medium text-red-600' : ''}>
-          {client.totalEmailsYesterday} emails gisteren
-        </span>
-        {client.password && (
-          <PasswordReveal password={client.password} />
+        <span className="text-sm font-medium text-gray-900">{client.companyName}</span>
+        {client.isRecruitment && (
+          <span className="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-800">
+            Recruitment
+          </span>
         )}
-      </div>
+        {client.hasIssues && (
+          <span className="text-yellow-500" title={
+            [
+              client.hasLowEmails ? `Te weinig emails (${client.totalEmailsYesterday}/74)` : '',
+              client.hasLowContacts ? 'Contacten opraken' : '',
+            ].filter(Boolean).join(' + ')
+          }>
+            <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 2L1 21h22L12 2zm0 3.99L19.53 19H4.47L12 5.99zM11 16h2v2h-2v-2zm0-6h2v4h-2v-4z" />
+            </svg>
+          </span>
+        )}
+        <svg
+          className={`ml-auto h-4 w-4 flex-shrink-0 text-gray-400 transition-transform ${expanded ? 'rotate-180' : ''}`}
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={2}
+          stroke="currentColor"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+        </svg>
+      </button>
 
-      {/* Campaign breakdown */}
-      {client.campaigns.length > 0 && (
-        <div className="mt-3 space-y-1.5">
-          {client.campaigns.map((campaign) => {
-            const lowContacts = campaign.contactsRemaining < 180
-            return (
-              <div
-                key={campaign.campaignId}
-                className="flex items-center justify-between rounded-md bg-gray-50 px-3 py-2 text-xs"
-              >
-                <span className="truncate font-medium text-gray-700" title={campaign.campaignName}>
-                  {campaign.campaignName}
-                </span>
-                <div className="flex items-center gap-4 flex-shrink-0">
-                  <span className="text-gray-500">
-                    {campaign.emailsSentYesterday} emails gisteren
-                  </span>
-                  <span className={lowContacts ? 'font-medium text-red-600' : 'text-gray-500'}>
-                    {campaign.contactsRemaining} contacten over
-                    {lowContacts && (
-                      <span className="ml-1 inline-flex items-center rounded-full bg-red-100 px-1.5 py-0.5 text-xs text-red-700">
-                        laag
+      {/* Expanded details — dropdown */}
+      {expanded && (
+        <div className="border-t border-gray-100 px-4 pb-4 pt-3 space-y-3">
+          {/* Action buttons */}
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href={`/admin/clients/${client.id}/edit`}
+              className="rounded-md bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-200"
+            >
+              Bewerken
+            </Link>
+            <Link
+              href={`/admin/clients/${client.id}/csv`}
+              className="rounded-md bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-200"
+            >
+              CSV
+            </Link>
+            <button
+              type="button"
+              onClick={() => setShowDeleteDialog(true)}
+              className="rounded-md bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-100"
+            >
+              Verwijderen
+            </button>
+            {client.lastSyncedAt && (
+              <span className="ml-auto text-xs text-gray-400" title={new Date(client.lastSyncedAt).toLocaleString('nl-NL')}>
+                Sync: {formatTimeAgo(client.lastSyncedAt)}
+              </span>
+            )}
+          </div>
+
+          {/* Stats */}
+          <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500">
+            <span>{client.totalLeads} contacten</span>
+            <span>{client.campaigns.length} campagne{client.campaigns.length !== 1 ? 's' : ''}</span>
+            <span className={client.hasLowEmails ? 'font-medium text-red-600' : ''}>
+              {client.totalEmailsYesterday} emails gisteren
+            </span>
+            {client.password && (
+              <PasswordReveal password={client.password} />
+            )}
+          </div>
+
+          {/* Campaign breakdown */}
+          {client.campaigns.length > 0 && (
+            <div className="space-y-1.5">
+              {client.campaigns.map((campaign) => {
+                const lowContacts = campaign.contactsRemaining < 180
+                return (
+                  <div
+                    key={campaign.campaignId}
+                    className="flex items-center justify-between rounded-md bg-gray-50 px-3 py-2 text-xs"
+                  >
+                    <span className="truncate font-medium text-gray-700" title={campaign.campaignName}>
+                      {campaign.campaignName}
+                    </span>
+                    <div className="flex items-center gap-4 flex-shrink-0">
+                      <span className="text-gray-500">
+                        {campaign.emailsSentYesterday} emails gisteren
                       </span>
-                    )}
-                  </span>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      )}
-
-      {/* Alert badges */}
-      {client.hasIssues && (
-        <div className="mt-2 flex flex-wrap gap-2">
-          {client.hasLowEmails && (
-            <span className="inline-flex items-center rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800">
-              Te weinig emails ({client.totalEmailsYesterday}/74)
-            </span>
+                      <span className={lowContacts ? 'font-medium text-red-600' : 'text-gray-500'}>
+                        {campaign.contactsRemaining} contacten over
+                        {lowContacts && (
+                          <span className="ml-1 inline-flex items-center rounded-full bg-red-100 px-1.5 py-0.5 text-xs text-red-700">
+                            laag
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           )}
-          {client.hasLowContacts && (
-            <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">
-              Contacten opraken
-            </span>
+
+          {/* Alert badges */}
+          {client.hasIssues && (
+            <div className="flex flex-wrap gap-2">
+              {client.hasLowEmails && (
+                <span className="inline-flex items-center rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800">
+                  Te weinig emails ({client.totalEmailsYesterday}/74)
+                </span>
+              )}
+              {client.hasLowContacts && (
+                <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">
+                  Contacten opraken
+                </span>
+              )}
+            </div>
+          )}
+
+          {deleteError && (
+            <div className="rounded-md bg-red-50 px-3 py-2 text-xs text-red-700">
+              {deleteError}
+            </div>
+          )}
+
+          {showDeleteDialog && (
+            <DeleteConfirmDialog
+              clientName={client.companyName}
+              onConfirm={handleDelete}
+              onCancel={() => { setShowDeleteDialog(false); setDeleteError(null) }}
+              isDeleting={isDeleting}
+            />
           )}
         </div>
       )}
