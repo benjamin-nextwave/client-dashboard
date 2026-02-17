@@ -92,7 +92,7 @@ export function PreviewTable({ contacts, clientId, clientName }: Props) {
   }
 
   async function handleFeedbackSubmit() {
-    if (!rating) return
+    if (!wantsNewList && !rating) return
     if (wantsNewList && (!jobTitleFeedback.trim() || !industryFeedback.trim())) return
 
     setSubmitting(true)
@@ -248,7 +248,7 @@ export function PreviewTable({ contacts, clientId, clientName }: Props) {
                 onClick={handleRequestNewList}
                 className="mt-3 w-full rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700 transition-colors hover:bg-red-100"
               >
-                Deze lijst is zo slecht dat ik een nieuwe wil
+                <span className="text-base">{'\u{1F621}'}</span> Deze lijst is zo slecht dat ik een nieuwe wil
               </button>
             )}
 
@@ -311,8 +311,8 @@ export function PreviewTable({ contacts, clientId, clientName }: Props) {
               <button
                 onClick={handleFeedbackSubmit}
                 disabled={
-                  !rating ||
                   submitting ||
+                  (!wantsNewList && !rating) ||
                   (wantsNewList &&
                     (!jobTitleFeedback.trim() || !industryFeedback.trim()))
                 }
