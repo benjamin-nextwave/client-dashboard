@@ -10,15 +10,22 @@ interface InboxListProps {
   isRecruitment: boolean
 }
 
+type Folder = 'inbox' | 'archived'
 type StatusFilter = 'all' | 'action_required' | 'in_conversation'
 
 export function InboxList({ leads, isRecruitment }: InboxListProps) {
   const [showCompose, setShowCompose] = useState(false)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [folder, setFolder] = useState<Folder>('inbox')
+
+  const inboxLeads = useMemo(() => leads.filter((l) => !l.archived_at), [leads])
+  const archivedLeads = useMemo(() => leads.filter((l) => !!l.archived_at), [leads])
+
+  const activeLeads = folder === 'inbox' ? inboxLeads : archivedLeads
 
   const filteredLeads = useMemo(() => {
-    let result = leads
+    let result = activeLeads
 
     // Search filter
     if (search) {
@@ -32,20 +39,68 @@ export function InboxList({ leads, isRecruitment }: InboxListProps) {
       )
     }
 
-    // Status filter
-    if (statusFilter === 'action_required') {
-      result = result.filter((lead) => !lead.client_has_replied)
-    } else if (statusFilter === 'in_conversation') {
-      result = result.filter((lead) => lead.client_has_replied)
+    // Status filter (only for inbox folder)
+    if (folder === 'inbox') {
+      if (statusFilter === 'action_required') {
+        result = result.filter((lead) => !lead.client_has_replied)
+      } else if (statusFilter === 'in_conversation') {
+        result = result.filter((lead) => lead.client_has_replied)
+      }
     }
 
     return result
-  }, [leads, search, statusFilter])
+  }, [activeLeads, search, statusFilter, folder])
 
   return (
     <div>
+      {/* Folder tabs */}
+      <div className="mt-6 flex border-b border-gray-200">
+        <button
+          type="button"
+          onClick={() => setFolder('inbox')}
+          className={`relative px-4 py-2.5 text-sm font-medium transition-colors ${
+            folder === 'inbox'
+              ? 'text-[var(--brand-color)]'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Inbox
+          {inboxLeads.length > 0 && (
+            <span className={`ml-1.5 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+              folder === 'inbox' ? 'bg-[var(--brand-color)]/10 text-[var(--brand-color)]' : 'bg-gray-100 text-gray-600'
+            }`}>
+              {inboxLeads.length}
+            </span>
+          )}
+          {folder === 'inbox' && (
+            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[var(--brand-color)]" />
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={() => setFolder('archived')}
+          className={`relative px-4 py-2.5 text-sm font-medium transition-colors ${
+            folder === 'archived'
+              ? 'text-[var(--brand-color)]'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Afgehandeld
+          {archivedLeads.length > 0 && (
+            <span className={`ml-1.5 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+              folder === 'archived' ? 'bg-[var(--brand-color)]/10 text-[var(--brand-color)]' : 'bg-gray-100 text-gray-600'
+            }`}>
+              {archivedLeads.length}
+            </span>
+          )}
+          {folder === 'archived' && (
+            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[var(--brand-color)]" />
+          )}
+        </button>
+      </div>
+
       {/* Search and filter bar */}
-      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-1 gap-3">
           <div className="relative flex-1 max-w-md">
             <svg
@@ -69,34 +124,40 @@ export function InboxList({ leads, isRecruitment }: InboxListProps) {
               className="w-full rounded-md border border-gray-300 py-2 pl-9 pr-3 text-sm placeholder:text-gray-400 focus:border-[var(--brand-color)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-color)]"
             />
           </div>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-            className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:border-[var(--brand-color)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-color)]"
-          >
-            <option value="all">Alles</option>
-            <option value="action_required">Actie vereist</option>
-            <option value="in_conversation">In gesprek</option>
-          </select>
+          {folder === 'inbox' && (
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+              className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:border-[var(--brand-color)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-color)]"
+            >
+              <option value="all">Alles</option>
+              <option value="action_required">Actie vereist</option>
+              <option value="in_conversation">In gesprek</option>
+            </select>
+          )}
         </div>
-        <button
-          type="button"
-          onClick={() => setShowCompose(true)}
-          className="rounded-md bg-[var(--brand-color)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 transition-opacity"
-        >
-          Nieuwe e-mail
-        </button>
+        {folder === 'inbox' && (
+          <button
+            type="button"
+            onClick={() => setShowCompose(true)}
+            className="rounded-md bg-[var(--brand-color)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 transition-opacity"
+          >
+            Nieuwe e-mail
+          </button>
+        )}
       </div>
 
       {/* Results count */}
       <p className="mt-2 text-xs text-gray-500">
-        {filteredLeads.length} van {leads.length} leads
+        {filteredLeads.length} van {activeLeads.length} leads
       </p>
 
       <div className="mt-3 overflow-hidden rounded-lg border border-gray-200 bg-white">
         {filteredLeads.length === 0 ? (
           <div className="py-8 text-center text-sm text-gray-500">
-            Geen leads gevonden voor deze zoekopdracht.
+            {folder === 'archived'
+              ? 'Geen afgehandelde leads.'
+              : 'Geen leads gevonden voor deze zoekopdracht.'}
           </div>
         ) : (
           <div className="divide-y divide-gray-100">
@@ -105,6 +166,7 @@ export function InboxList({ leads, isRecruitment }: InboxListProps) {
                 key={lead.id}
                 lead={lead}
                 isRecruitment={isRecruitment}
+                isArchived={folder === 'archived'}
               />
             ))}
           </div>

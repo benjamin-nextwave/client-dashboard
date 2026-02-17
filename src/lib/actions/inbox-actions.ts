@@ -248,6 +248,62 @@ export async function deleteLeadFromInbox(leadId: string): Promise<ActionResult>
 }
 
 /**
+ * Move a lead to the "Afgehandeld" folder by setting archived_at.
+ */
+export async function archiveLead(leadId: string): Promise<ActionResult> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Niet ingelogd.' }
+
+  const { data: lead, error: leadError } = await supabase
+    .from('synced_leads')
+    .select('id')
+    .eq('id', leadId)
+    .single()
+
+  if (leadError || !lead) return { error: 'Lead niet gevonden.' }
+
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from('synced_leads')
+    .update({ archived_at: new Date().toISOString() })
+    .eq('id', leadId)
+
+  if (error) return { error: 'Fout bij het archiveren van de lead.' }
+
+  revalidatePath('/dashboard/inbox')
+  return { success: true }
+}
+
+/**
+ * Move a lead back from "Afgehandeld" to the main inbox.
+ */
+export async function unarchiveLead(leadId: string): Promise<ActionResult> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Niet ingelogd.' }
+
+  const { data: lead, error: leadError } = await supabase
+    .from('synced_leads')
+    .select('id')
+    .eq('id', leadId)
+    .single()
+
+  if (leadError || !lead) return { error: 'Lead niet gevonden.' }
+
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from('synced_leads')
+    .update({ archived_at: null })
+    .eq('id', leadId)
+
+  if (error) return { error: 'Fout bij het terugplaatsen van de lead.' }
+
+  revalidatePath('/dashboard/inbox')
+  return { success: true }
+}
+
+/**
  * Send a new email to any positive lead (from inbox compose).
  */
 export async function composeNewEmail(
