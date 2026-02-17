@@ -16,7 +16,7 @@ export async function createClient(
     password: formData.get('password') as string,
     primaryColor: formData.get('primaryColor') as string,
     isRecruitment: formData.get('isRecruitment') === 'on',
-    meetingUrl: formData.get('meetingUrl') as string,
+    meetingUrl: '',
   }
 
   const result = clientFormSchema.safeParse(raw)
@@ -24,8 +24,9 @@ export async function createClient(
     return { error: result.error.errors[0].message }
   }
 
-  const { companyName, email, password, primaryColor, isRecruitment, meetingUrl } = result.data
+  const { companyName, email, password, primaryColor, isRecruitment } = result.data
 
+  const DEFAULT_MEETING_URL = 'https://bespreking.neetocal.com/benjamin-steinschuld'
   const supabase = createAdminClient()
 
   // Step 1: Insert client record
@@ -35,7 +36,7 @@ export async function createClient(
       company_name: companyName,
       primary_color: primaryColor,
       is_recruitment: isRecruitment,
-      meeting_url: meetingUrl || null,
+      meeting_url: DEFAULT_MEETING_URL,
       password,
     })
     .select('id')
@@ -123,7 +124,7 @@ export async function updateClient(
     password: formData.get('password') as string,
     primaryColor: formData.get('primaryColor') as string,
     isRecruitment: formData.get('isRecruitment') === 'on',
-    meetingUrl: formData.get('meetingUrl') as string,
+    meetingUrl: '',
   }
 
   const result = clientEditSchema.safeParse(raw)
@@ -131,7 +132,7 @@ export async function updateClient(
     return { error: result.error.errors[0].message }
   }
 
-  const { companyName, email, primaryColor, isRecruitment, meetingUrl } = result.data
+  const { companyName, email, primaryColor, isRecruitment } = result.data
   const password = result.data.password
 
   const supabase = createAdminClient()
@@ -141,7 +142,6 @@ export async function updateClient(
     company_name: companyName,
     primary_color: primaryColor,
     is_recruitment: isRecruitment,
-    meeting_url: meetingUrl || null,
   }
   if (password && password.length > 0) {
     clientUpdate.password = password
