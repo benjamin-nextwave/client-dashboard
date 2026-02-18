@@ -108,12 +108,12 @@ export async function getCampaignDailyAnalytics(
 
 export async function listLeads(
   campaignId: string,
-  options?: { limit?: number; startingAfter?: string; interestStatus?: string }
+  options?: { limit?: number; startingAfter?: string; interestStatus?: number }
 ): Promise<InstantlyListResponse<InstantlyLead>> {
   const body: Record<string, unknown> = { campaign_id: campaignId }
   if (options?.limit) body.limit = options.limit
   if (options?.startingAfter) body.starting_after = options.startingAfter
-  if (options?.interestStatus) body.interest_status = options.interestStatus
+  if (options?.interestStatus !== undefined) body.interest_value = options.interestStatus
 
   const response = await fetch(`${BASE_URL}/leads/list`, {
     method: 'POST',

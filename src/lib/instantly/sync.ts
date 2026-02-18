@@ -84,7 +84,7 @@ function mapInterestStatus(iStatus: number | null | undefined): string | null {
 /**
  * Fetch all leads for a campaign using cursor pagination.
  */
-async function fetchAllLeads(campaignId: string): Promise<InstantlyLead[]> {
+async function fetchAllLeads(campaignId: string, interestStatus?: number): Promise<InstantlyLead[]> {
   const allLeads: InstantlyLead[] = []
   let cursor: string | undefined
 
@@ -92,6 +92,7 @@ async function fetchAllLeads(campaignId: string): Promise<InstantlyLead[]> {
     const response = await listLeads(campaignId, {
       limit: 100,
       startingAfter: cursor,
+      interestStatus,
     })
 
     allLeads.push(...response.items)
@@ -329,6 +330,26 @@ export async function syncClientData(clientId: string): Promise<void> {
     try {
       const leads = await fetchAllLeads(campaignId)
 
+      // 3b. Fetch leads labeled as "Interested" directly from Instantly API.
+      // This is the most reliable way to detect positive leads, since
+      // lt_interest_status may not be in the regular leads response and
+      // i_status on emails is unreliable.
+      const interestedLeadEmails = new Set<string>()
+      try {
+        const interestedLeads = await fetchAllLeads(campaignId, 1)
+        for (const lead of interestedLeads) {
+          interestedLeadEmails.add(lead.email.toLowerCase())
+        }
+      } catch (error) {
+        console.error(
+          `Failed to fetch interested leads for campaign ${campaignId}:`,
+          error
+        )
+        // Non-fatal: fall back to email-derived interest status
+      }
+
+      await delay(RATE_LIMIT_DELAY_MS)
+
       if (leads.length > 0) {
         // Fetch existing interest statuses to detect NEW positive leads.
         // Batch the .in() query to avoid exceeding PostgREST URL length limits.
@@ -381,9 +402,11 @@ export async function syncClientData(clientId: string): Promise<void> {
             phone: lead.phone,
             lead_status: deriveLeadStatus(lead),
             interest_status:
-              mapInterestStatus(lead.lt_interest_status) ??
-              interestMap.get(leadEmailLower) ??
-              null,
+              interestedLeadEmails.has(leadEmailLower)
+                ? 'positive'
+                : mapInterestStatus(lead.lt_interest_status) ??
+                  interestMap.get(leadEmailLower) ??
+                  null,
             sender_account: lead.last_step_from,
             email_sent_count: lead.email_open_count > 0 ? 1 : 0,
             email_reply_count: lead.email_reply_count,
