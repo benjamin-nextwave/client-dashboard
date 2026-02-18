@@ -3,6 +3,7 @@ import { getClientBranding } from '@/lib/client/get-client-branding'
 import { getUnansweredPositiveCount } from '@/lib/data/campaign-stats'
 import { SidebarNav } from '@/components/client/sidebar-nav'
 import { ChatWidget } from '@/components/client/chat-widget'
+import { BackgroundSync } from '@/components/client/background-sync'
 import { createClient } from '@/lib/supabase/server'
 
 async function signOut() {
@@ -42,6 +43,7 @@ export default async function ClientLayout({
         {children}
       </main>
       <ChatWidget />
+      <BackgroundSync />
     </div>
   )
 }

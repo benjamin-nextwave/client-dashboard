@@ -4,7 +4,7 @@ import { sendLeadWebhook } from '@/lib/webhooks/notify-lead'
 import { getCampaignDailyAnalytics, listLeads, listEmails } from './client'
 import type { InstantlyLead, InstantlyEmail } from './types'
 
-const RATE_LIMIT_DELAY_MS = 500
+const RATE_LIMIT_DELAY_MS = 200
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))

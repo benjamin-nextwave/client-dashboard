@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/cron/sync-instantly",
-      "schedule": "*/15 * * * *"
+      "schedule": "*/5 * * * *"
     },
     {
       "path": "/api/cron/morning-check",
