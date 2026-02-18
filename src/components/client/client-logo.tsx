@@ -15,13 +15,14 @@ export function ClientLogo({ logoUrl, companyName }: ClientLogoProps) {
   }
 
   return (
-    <Image
-      src={logoUrl}
-      alt={companyName + ' logo'}
-      width={160}
-      height={40}
-      className="h-10 w-auto object-contain"
-      unoptimized={logoUrl.endsWith('.svg')}
-    />
+    <div className="relative h-10 w-[160px]">
+      <Image
+        src={logoUrl}
+        alt={companyName + ' logo'}
+        fill
+        className="object-contain object-left"
+        unoptimized={logoUrl.endsWith('.svg')}
+      />
+    </div>
   )
 }
