@@ -45,11 +45,13 @@ export interface InstantlyEmail {
   body: { text?: string; html?: string }
   timestamp_created: string
   timestamp_email?: string
-  is_reply: boolean
+  is_reply?: boolean // Not returned by API v2; use ue_type instead
+  ue_type?: number // 1 = outbound, 2 = inbound reply
+  lead?: string // Lead's email address (most reliable identifier)
   campaign_id?: string
   subsequence_id?: string | null
-  i_status?: number
-  is_unread?: boolean
+  i_status?: number // -1 = not interested, 0 = neutral, 1 = interested
+  is_unread?: number | boolean
   attachments?: unknown[] | null
 }
 

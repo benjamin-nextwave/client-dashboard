@@ -153,7 +153,7 @@ async function fetchAndCacheEmails(
       }
 
       // Track latest reply content (from lead replies)
-      if (email.is_reply && email.from_address_email?.toLowerCase() === leadEmail) {
+      if (isInboundReply(email)) {
         const existing = replyMap.get(leadEmail)
         const emailTs = email.timestamp_email ?? email.timestamp_created
         if (!existing || (emailTs && emailTs > (email.timestamp_created ?? ''))) {
@@ -167,22 +167,23 @@ async function fetchAndCacheEmails(
 
     // Cache emails into cached_emails table
     if (response.items.length > 0) {
-      const cacheRows = response.items.map((email) => ({
-        client_id: clientId,
-        instantly_email_id: email.id,
-        thread_id: email.thread_id,
-        lead_email: email.is_reply
-          ? email.from_address_email
-          : email.to_address_email_list,
-        from_address: email.from_address_email,
-        to_address: email.to_address_email_list,
-        subject: email.subject,
-        body_text: email.body?.text ?? null,
-        body_html: email.body?.html ?? null,
-        is_reply: email.is_reply,
-        sender_account: email.is_reply ? null : email.from_address_email,
-        email_timestamp: email.timestamp_email ?? email.timestamp_created,
-      }))
+      const cacheRows = response.items.map((email) => {
+        const isReply = isInboundReply(email)
+        return {
+          client_id: clientId,
+          instantly_email_id: email.id,
+          thread_id: email.thread_id,
+          lead_email: extractLeadEmailFromEmail(email),
+          from_address: email.from_address_email,
+          to_address: email.to_address_email_list,
+          subject: email.subject,
+          body_text: email.body?.text ?? null,
+          body_html: email.body?.html ?? null,
+          is_reply: isReply,
+          sender_account: isReply ? null : email.from_address_email,
+          email_timestamp: email.timestamp_email ?? email.timestamp_created,
+        }
+      })
 
       const { error: upsertError } = await supabase
         .from('cached_emails')
@@ -207,17 +208,30 @@ async function fetchAndCacheEmails(
 
 /**
  * Extract the lead's email address from an Instantly email.
- * For inbound replies (is_reply=true), the lead is the sender (from_address_email).
- * For outbound emails, the lead is the recipient (to_address_email_list).
+ * Uses the `lead` field from the API (most reliable).
+ * Falls back to deriving from from/to addresses using ue_type.
  */
 function extractLeadEmailFromEmail(email: InstantlyEmail): string | null {
-  if (email.is_reply && email.from_address_email) {
+  // The `lead` field is the most reliable way to identify the lead
+  if (email.lead) {
+    return email.lead.toLowerCase()
+  }
+  // Fallback: ue_type 2 = inbound reply (lead is sender), 1 = outbound (lead is recipient)
+  if (email.ue_type === 2 && email.from_address_email) {
     return email.from_address_email.toLowerCase()
   }
-  if (!email.is_reply && email.to_address_email_list) {
+  if (email.to_address_email_list) {
     return email.to_address_email_list.toLowerCase()
   }
   return null
+}
+
+/**
+ * Check if an email is an inbound reply (from a lead).
+ * The API returns ue_type=2 for replies; is_reply is not returned by API v2.
+ */
+function isInboundReply(email: InstantlyEmail): boolean {
+  return email.ue_type === 2
 }
 
 /**
@@ -380,10 +394,7 @@ export async function syncClientData(clientId: string): Promise<void> {
             website: lead.website,
             phone: lead.phone,
             lead_status: deriveLeadStatus(lead),
-            interest_status:
-              interestMap.get(leadEmailLower) ??
-              mapInterestStatus(lead.lt_interest_status) ??
-              null,
+            interest_status: interestMap.get(leadEmailLower) ?? null,
             sender_account: lead.last_step_from,
             email_sent_count: lead.email_open_count > 0 ? 1 : 0,
             email_reply_count: lead.email_reply_count,

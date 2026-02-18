@@ -131,22 +131,25 @@ async function populateSentEmailCache(clientId: string): Promise<void> {
         const emails = response.items
         if (emails.length === 0) break
 
-        const cacheRows = emails.map((email) => ({
-          client_id: clientId,
-          instantly_email_id: email.id,
-          thread_id: email.thread_id,
-          lead_email: email.is_reply
-            ? email.from_address_email
-            : email.to_address_email_list,
-          from_address: email.from_address_email,
-          to_address: email.to_address_email_list,
-          subject: email.subject,
-          body_text: email.body?.text ?? null,
-          body_html: email.body?.html ?? null,
-          is_reply: email.is_reply,
-          sender_account: email.is_reply ? null : email.from_address_email,
-          email_timestamp: email.timestamp_email ?? email.timestamp_created,
-        }))
+        const cacheRows = emails.map((email) => {
+          const isReply = email.ue_type === 2
+          return {
+            client_id: clientId,
+            instantly_email_id: email.id,
+            thread_id: email.thread_id,
+            lead_email: email.lead?.toLowerCase() ?? (isReply
+              ? email.from_address_email
+              : email.to_address_email_list),
+            from_address: email.from_address_email,
+            to_address: email.to_address_email_list,
+            subject: email.subject,
+            body_text: email.body?.text ?? null,
+            body_html: email.body?.html ?? null,
+            is_reply: isReply,
+            sender_account: isReply ? null : email.from_address_email,
+            email_timestamp: email.timestamp_email ?? email.timestamp_created,
+          }
+        })
 
         const { error: upsertError } = await admin
           .from('cached_emails')

@@ -170,7 +170,7 @@ export async function getLeadThread(
       subject: email.subject,
       body_text: email.body?.text ?? null,
       body_html: email.body?.html ?? null,
-      is_reply: email.is_reply,
+      is_reply: email.ue_type === 2,
       sender_account: senderAccounts.has(email.from_address_email)
         ? email.from_address_email
         : null,
