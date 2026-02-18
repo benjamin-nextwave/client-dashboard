@@ -380,6 +380,21 @@ export async function syncClientData(clientId: string): Promise<void> {
           const leadEmailLower = lead.email.toLowerCase()
           const replyData = replyMap.get(leadEmailLower)
 
+          // Determine interest_status from multiple sources:
+          // 1. Email-level i_status (from interestMap)
+          // 2. Lead-level lt_interest_status (set by Instantly when classifying a lead)
+          const emailInterest = interestMap.get(leadEmailLower) ?? null
+          const leadInterest = mapInterestStatus(lead.lt_interest_status)
+          // Use the most positive status from either source
+          let interestStatus = emailInterest
+          if (!interestStatus) {
+            interestStatus = leadInterest
+          } else if (leadInterest === 'positive') {
+            interestStatus = 'positive'
+          } else if (leadInterest === 'neutral' && interestStatus === 'negative') {
+            interestStatus = 'neutral'
+          }
+
           return {
             client_id: clientId,
             instantly_lead_id: lead.id,
@@ -394,7 +409,7 @@ export async function syncClientData(clientId: string): Promise<void> {
             website: lead.website,
             phone: lead.phone,
             lead_status: deriveLeadStatus(lead),
-            interest_status: interestMap.get(leadEmailLower) ?? null,
+            interest_status: interestStatus,
             sender_account: lead.last_step_from,
             email_sent_count: lead.email_open_count > 0 ? 1 : 0,
             email_reply_count: lead.email_reply_count,
