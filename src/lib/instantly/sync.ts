@@ -244,9 +244,9 @@ export async function syncClientData(clientId: string): Promise<void> {
     return // No campaigns to sync
   }
 
-  // Date range: last 90 days to today
+  // Date range: last 365 days to today (covers full campaign history for most clients)
   const endDate = new Date().toISOString().split('T')[0]
-  const startDate = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
+  const startDate = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
     .toISOString()
     .split('T')[0]
 
@@ -380,7 +380,10 @@ export async function syncClientData(clientId: string): Promise<void> {
             website: lead.website,
             phone: lead.phone,
             lead_status: deriveLeadStatus(lead),
-            interest_status: interestMap.get(leadEmailLower) ?? null,
+            interest_status:
+              mapInterestStatus(lead.lt_interest_status) ??
+              interestMap.get(leadEmailLower) ??
+              null,
             sender_account: lead.last_step_from,
             email_sent_count: lead.email_open_count > 0 ? 1 : 0,
             email_reply_count: lead.email_reply_count,
