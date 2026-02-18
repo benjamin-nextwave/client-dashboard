@@ -75,8 +75,6 @@ export async function getPreviewContacts(
 
   const uploadDate = upload.created_at
 
-  // Deduplicate by email, map to PreviewContact
-  const seen = new Set<string>()
   const contacts: PreviewContact[] = []
 
   for (const row of rows) {
@@ -88,10 +86,6 @@ export async function getPreviewContacts(
       : extractField(data, ['email', 'Email', 'E-mail', 'e-mail'])
 
     if (!email) continue
-
-    const emailLower = email.toLowerCase()
-    if (seen.has(emailLower)) continue
-    seen.add(emailLower)
 
     let fullName: string
     let companyName: string | null
