@@ -65,8 +65,9 @@ function normalizeIcpFields(payload: Record<string, unknown>): {
  */
 function deriveLeadStatus(lead: InstantlyLead): string {
   if (lead.email_reply_count > 0) return 'replied'
+  if (lead.email_open_count > 0) return 'opened'
   if (lead.status === 0) return 'not_yet_emailed'
-  if (lead.email_open_count > 0 || lead.status === 1) return 'emailed'
+  if (lead.status >= 1) return 'emailed'
   return 'not_yet_emailed'
 }
 

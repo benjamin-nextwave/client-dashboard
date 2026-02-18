@@ -38,6 +38,7 @@ interface PositiveLeadPatterns {
 
 const LEAD_STATUS_LABELS: Record<string, string> = {
   emailed: 'Gemaild',
+  opened: 'Geopend',
   not_yet_emailed: 'Nog niet gemaild',
   replied: 'Beantwoord',
   bounced: 'Gebounced',
@@ -101,7 +102,7 @@ export async function getMonthlyStats(
   // Fetch analytics for date range
   let query = supabase
     .from('campaign_analytics')
-    .select('replies, emails_sent')
+    .select('unique_replies, emails_sent')
     .eq('client_id', clientId)
     .gte('date', dateStart)
 
@@ -112,7 +113,7 @@ export async function getMonthlyStats(
   const { data: analytics } = await query
 
   const totalReplies = (analytics ?? []).reduce(
-    (sum, row) => sum + (row.replies ?? 0),
+    (sum, row) => sum + (row.unique_replies ?? 0),
     0
   )
   const emailsSent = (analytics ?? []).reduce(
@@ -404,8 +405,8 @@ export async function getPipelineData(
   for (const lead of seen.values()) {
     if (lead.interest_status === 'positive') positive++
     if (lead.lead_status === 'replied') replied++
-    if (lead.lead_status === 'emailed' || lead.lead_status === 'replied') {
-      opened++ // emailed includes opened in Instantly's model
+    if (lead.lead_status === 'opened' || lead.lead_status === 'replied') {
+      opened++
     }
     if (lead.lead_status !== 'not_yet_emailed') {
       emailed++
