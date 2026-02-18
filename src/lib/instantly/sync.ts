@@ -334,11 +334,12 @@ export async function syncClientData(clientId: string): Promise<void> {
       // This is the most reliable way to detect positive leads, since
       // lt_interest_status may not be in the regular leads response and
       // i_status on emails is unreliable.
-      const interestedLeadEmails = new Set<string>()
+      // Uses lead IDs (unique per campaign) to prevent cross-campaign contamination.
+      const interestedLeadIds = new Set<string>()
       try {
         const interestedLeads = await fetchAllLeads(campaignId, 1)
         for (const lead of interestedLeads) {
-          interestedLeadEmails.add(lead.email.toLowerCase())
+          interestedLeadIds.add(lead.id)
         }
       } catch (error) {
         console.error(
@@ -402,7 +403,7 @@ export async function syncClientData(clientId: string): Promise<void> {
             phone: lead.phone,
             lead_status: deriveLeadStatus(lead),
             interest_status:
-              interestedLeadEmails.has(leadEmailLower)
+              interestedLeadIds.has(lead.id)
                 ? 'positive'
                 : mapInterestStatus(lead.lt_interest_status) ??
                   interestMap.get(leadEmailLower) ??
