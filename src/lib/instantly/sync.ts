@@ -538,6 +538,9 @@ export async function syncClientData(clientId: string): Promise<void> {
 /**
  * Sync data for all clients that have associated campaigns.
  * Processes clients sequentially to respect API rate limits.
+ * Prioritizes least-recently-synced clients so new clients (never synced)
+ * get synced first, and all clients get fair rotation even if the
+ * function hits the Vercel timeout.
  */
 export async function syncAllClients(): Promise<void> {
   const supabase = createAdminClient()
@@ -557,6 +560,28 @@ export async function syncAllClients(): Promise<void> {
 
   // Deduplicate client IDs
   const clientIds = [...new Set(clientCampaigns.map((cc) => cc.client_id))]
+
+  // Get last sync time per client to prioritize least-recently-synced
+  const { data: syncTimes } = await supabase
+    .from('synced_leads')
+    .select('client_id, last_synced_at')
+    .in('client_id', clientIds)
+    .order('last_synced_at', { ascending: false })
+
+  const lastSyncMap = new Map<string, string>()
+  for (const row of syncTimes ?? []) {
+    // Keep only the most recent sync time per client (first seen due to DESC order)
+    if (!lastSyncMap.has(row.client_id)) {
+      lastSyncMap.set(row.client_id, row.last_synced_at)
+    }
+  }
+
+  // Sort: never-synced clients first, then oldest-synced first
+  clientIds.sort((a, b) => {
+    const aTime = lastSyncMap.get(a) ?? ''
+    const bTime = lastSyncMap.get(b) ?? ''
+    return aTime.localeCompare(bTime)
+  })
 
   for (const clientId of clientIds) {
     try {
