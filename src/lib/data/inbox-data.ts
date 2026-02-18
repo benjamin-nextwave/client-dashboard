@@ -160,6 +160,14 @@ export async function getLeadThread(
 
   if (emails.length > 0) {
     // Cache results using admin client (bypasses RLS for INSERT)
+    // Determine sender accounts: from DB or from outbound emails (ue_type !== 2)
+    const outboundSenders = new Set(
+      emails
+        .filter((e) => e.ue_type !== 2 && e.from_address_email)
+        .map((e) => e.from_address_email)
+    )
+    const allSenderAccounts = new Set([...senderAccounts, ...outboundSenders])
+
     const cacheRows = emails.map((email) => ({
       client_id: clientId,
       instantly_email_id: email.id,
@@ -171,7 +179,7 @@ export async function getLeadThread(
       body_text: email.body?.text ?? null,
       body_html: email.body?.html ?? null,
       is_reply: email.ue_type === 2,
-      sender_account: senderAccounts.has(email.from_address_email)
+      sender_account: allSenderAccounts.has(email.from_address_email)
         ? email.from_address_email
         : null,
       email_timestamp: email.timestamp_email ?? email.timestamp_created,
@@ -188,7 +196,7 @@ export async function getLeadThread(
     // Check if client has replied (any email from a non-sender-account address)
     const clientReplied = emails.some(
       (email) =>
-        !senderAccounts.has(email.from_address_email) &&
+        !allSenderAccounts.has(email.from_address_email) &&
         email.from_address_email !== leadEmail
     )
 

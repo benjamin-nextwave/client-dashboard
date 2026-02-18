@@ -41,10 +41,12 @@ export default async function LeadThreadPage({
   // Fetch email thread
   const emails = await getLeadThread(client.id, lead.email)
 
-  // Resolve sender account: prefer lead record, fallback to first outbound email in thread
+  // Resolve sender account: prefer lead record, fallback to cached sender_account,
+  // then fallback to from_address of first outbound (non-reply) email in thread
   const senderAccount =
     lead.sender_account ||
     emails.find((e) => e.sender_account)?.sender_account ||
+    emails.find((e) => !e.is_reply)?.from_address ||
     ''
 
   // Check if recruitment client
