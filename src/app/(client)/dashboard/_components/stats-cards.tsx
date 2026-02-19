@@ -6,9 +6,7 @@ interface StatsCardsProps {
   unansweredPositive: number
   totalReplies: number
   positiveLeads: number
-  contactCount: number
   emailsSent: number
-  onOpenContactList: () => void
   periodLabel: string
 }
 
@@ -16,9 +14,7 @@ export function StatsCards({
   unansweredPositive,
   totalReplies,
   positiveLeads,
-  contactCount,
   emailsSent,
-  onOpenContactList,
   periodLabel,
 }: StatsCardsProps) {
   return (
@@ -52,7 +48,7 @@ export function StatsCards({
       )}
 
       {/* Stat cards grid */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {/* Total replies */}
         <div className="rounded-lg bg-white p-6 shadow-sm">
           <p className="text-sm text-gray-500">Totaal aantal reacties</p>
@@ -65,19 +61,6 @@ export function StatsCards({
           <p className="text-sm text-gray-500">Geleverde leads</p>
           <p className="mt-1 text-3xl font-bold text-gray-900">{positiveLeads}</p>
           <p className="mt-1 text-xs text-gray-400">positieve reacties totaal</p>
-        </div>
-
-        {/* Contacts in database */}
-        <div className="rounded-lg bg-white p-6 shadow-sm">
-          <p className="text-sm text-gray-500">Contacten in database</p>
-          <p className="mt-1 text-3xl font-bold text-gray-900">{contactCount}</p>
-          <button
-            type="button"
-            onClick={onOpenContactList}
-            className="mt-2 text-sm font-medium text-brand hover:opacity-80"
-          >
-            Bekijk lijst
-          </button>
         </div>
 
         {/* Emails sent */}

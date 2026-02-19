@@ -1,33 +1,16 @@
 'use client'
 
-import { useState } from 'react'
 import { StatsCards } from './stats-cards'
-import { ContactStatusChart } from './contact-status-chart'
 import { EmailsPerDayChart } from './emails-per-day-chart'
 import { ICPCharts } from './icp-charts'
-import { ContactListModal } from './contact-list-modal'
 import { DateRangePicker } from './date-range-picker'
 import { EmptyState } from '@/components/ui/empty-state'
-
-interface Contact {
-  email: string
-  first_name: string | null
-  last_name: string | null
-  company_name: string | null
-  job_title: string | null
-  industry: string | null
-  lead_status: string | null
-  interest_status: string | null
-}
 
 interface OverzichtDashboardProps {
   unansweredPositive: number
   totalReplies: number
   positiveLeads: number
-  contactCount: number
   emailsSent: number
-  contactList: Contact[]
-  contactStatus: { status: string; count: number }[]
   industryBreakdown: { name: string; value: number }[]
   jobTitleBreakdown: { name: string; value: number }[]
   positivePatterns: {
@@ -44,10 +27,7 @@ export function OverzichtDashboard({
   unansweredPositive,
   totalReplies,
   positiveLeads,
-  contactCount,
   emailsSent,
-  contactList,
-  contactStatus,
   industryBreakdown,
   jobTitleBreakdown,
   positivePatterns,
@@ -56,9 +36,7 @@ export function OverzichtDashboard({
   currentRange,
   periodLabel,
 }: OverzichtDashboardProps) {
-  const [isModalOpen, setIsModalOpen] = useState(false)
-
-  const hasData = contactCount > 0
+  const hasData = emailsSent > 0
 
   if (!hasData) {
     return (
@@ -80,15 +58,11 @@ export function OverzichtDashboard({
         unansweredPositive={unansweredPositive}
         totalReplies={totalReplies}
         positiveLeads={positiveLeads}
-        contactCount={contactCount}
         emailsSent={emailsSent}
-        onOpenContactList={() => setIsModalOpen(true)}
         periodLabel={periodLabel}
       />
 
       <DateRangePicker currentRange={currentRange} />
-
-      <ContactStatusChart data={contactStatus} />
 
       <EmailsPerDayChart data={dailyEmailsSent} brandColor={brandColor} />
 
@@ -97,12 +71,6 @@ export function OverzichtDashboard({
         jobTitleData={jobTitleBreakdown}
         positivePatterns={positivePatterns}
         brandColor={brandColor}
-      />
-
-      <ContactListModal
-        contacts={contactList}
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
       />
     </div>
   )

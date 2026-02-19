@@ -4,9 +4,6 @@ import { getClientBranding } from '@/lib/client/get-client-branding'
 import {
   getMonthlyStats,
   getUnansweredPositiveCount,
-  getContactCount,
-  getContactList,
-  getContactStatusBreakdown,
   getIndustryBreakdown,
   getJobTitleBreakdown,
   getPositiveLeadPatterns,
@@ -71,9 +68,6 @@ export default async function OverzichtPage({
   const [
     monthlyStats,
     unansweredPositive,
-    contactCount,
-    contactList,
-    contactStatus,
     industryBreakdown,
     jobTitleBreakdown,
     positivePatterns,
@@ -81,9 +75,6 @@ export default async function OverzichtPage({
   ] = await Promise.all([
     getMonthlyStats(client.id, startDate, endDate),
     getUnansweredPositiveCount(client.id),
-    getContactCount(client.id),
-    getContactList(client.id),
-    getContactStatusBreakdown(client.id),
     getIndustryBreakdown(client.id),
     getJobTitleBreakdown(client.id),
     getPositiveLeadPatterns(client.id),
@@ -97,10 +88,7 @@ export default async function OverzichtPage({
         unansweredPositive={unansweredPositive}
         totalReplies={monthlyStats.totalReplies}
         positiveLeads={monthlyStats.positiveLeads}
-        contactCount={contactCount}
         emailsSent={monthlyStats.emailsSent}
-        contactList={contactList}
-        contactStatus={contactStatus}
         industryBreakdown={industryBreakdown}
         jobTitleBreakdown={jobTitleBreakdown}
         positivePatterns={positivePatterns}
