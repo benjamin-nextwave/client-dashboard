@@ -165,12 +165,12 @@ export async function getContactCount(
 ): Promise<number> {
   const supabase = await createClient()
 
-  const { data } = await supabase
+  const { count } = await supabase
     .from('synced_leads')
-    .select('email')
+    .select('*', { count: 'exact', head: true })
     .eq('client_id', clientId)
 
-  return new Set((data ?? []).map((l) => l.email)).size
+  return count ?? 0
 }
 
 /**
