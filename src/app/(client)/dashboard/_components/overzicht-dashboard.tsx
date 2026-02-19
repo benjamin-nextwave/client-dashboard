@@ -76,12 +76,6 @@ export function OverzichtDashboard({
 
   return (
     <div className="space-y-6">
-      <DateRangePicker currentRange={currentRange} />
-
-      <ContactStatusChart data={contactStatus} />
-
-      <EmailsPerDayChart data={dailyEmailsSent} brandColor={brandColor} />
-
       <StatsCards
         unansweredPositive={unansweredPositive}
         totalReplies={totalReplies}
@@ -91,6 +85,12 @@ export function OverzichtDashboard({
         onOpenContactList={() => setIsModalOpen(true)}
         periodLabel={periodLabel}
       />
+
+      <DateRangePicker currentRange={currentRange} />
+
+      <ContactStatusChart data={contactStatus} />
+
+      <EmailsPerDayChart data={dailyEmailsSent} brandColor={brandColor} />
 
       <ICPCharts
         industryData={industryBreakdown}
