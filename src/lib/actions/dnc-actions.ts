@@ -122,11 +122,12 @@ export async function removeDncEntry(entryId: string): Promise<RemoveResult> {
     return { error: 'Niet ingelogd.' }
   }
 
-  const supabase = await createClient()
-  const { error } = await supabase
+  const admin = createAdminClient()
+  const { error } = await admin
     .from('dnc_entries')
     .delete()
     .eq('id', entryId)
+    .eq('client_id', clientId)
 
   if (error) {
     return { error: 'Fout bij het verwijderen. Probeer het opnieuw.' }
