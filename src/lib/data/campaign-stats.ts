@@ -38,7 +38,6 @@ interface PositiveLeadPatterns {
 
 const LEAD_STATUS_LABELS: Record<string, string> = {
   emailed: 'Gemaild',
-  opened: 'Geopend',
   not_yet_emailed: 'Nog niet gemaild',
   replied: 'Beantwoord',
   bounced: 'Gebounced',
@@ -405,7 +404,7 @@ export async function getPipelineData(
   for (const lead of seen.values()) {
     if (lead.interest_status === 'positive') positive++
     if (lead.lead_status === 'replied') replied++
-    if (lead.lead_status === 'opened' || lead.lead_status === 'replied') {
+    if (lead.lead_status === 'emailed' || lead.lead_status === 'replied') {
       opened++
     }
     if (lead.lead_status !== 'not_yet_emailed') {

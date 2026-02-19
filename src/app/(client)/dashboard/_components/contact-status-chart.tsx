@@ -16,7 +16,6 @@ interface ContactStatusChartProps {
 
 const STATUS_COLORS: Record<string, string> = {
   Gemaild: '#3B82F6',
-  Geopend: '#F59E0B',
   Beantwoord: '#22C55E',
   Gebounced: '#EF4444',
   'Nog niet gemaild': '#9CA3AF',
