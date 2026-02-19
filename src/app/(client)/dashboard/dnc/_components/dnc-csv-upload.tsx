@@ -4,20 +4,15 @@ import { useRef, useState } from 'react'
 import Papa from 'papaparse'
 import { bulkImportDnc } from '@/lib/actions/dnc-actions'
 
-const EMAIL_COLUMN_NAMES = [
-  'email',
-  'e-mail',
-  'email_address',
-  'emailaddress',
-  'e_mail',
-  'mail',
-]
-
 export function DncCsvUpload() {
   const fileRef = useRef<HTMLInputElement>(null)
   const [emails, setEmails] = useState<string[]>([])
+  const [parsedData, setParsedData] = useState<Record<string, string>[]>([])
+  const [columns, setColumns] = useState<string[]>([])
+  const [selectedColumn, setSelectedColumn] = useState<string | null>(null)
   const [status, setStatus] = useState<
     | { type: 'idle' }
+    | { type: 'pick_column' }
     | { type: 'preview'; count: number }
     | { type: 'importing' }
     | { type: 'success'; message: string }
@@ -30,6 +25,9 @@ export function DncCsvUpload() {
 
     setStatus({ type: 'idle' })
     setEmails([])
+    setParsedData([])
+    setColumns([])
+    setSelectedColumn(null)
 
     Papa.parse<Record<string, string>>(file, {
       header: true,
@@ -43,33 +41,10 @@ export function DncCsvUpload() {
           return
         }
 
-        // Auto-detect email column (case-insensitive)
-        const emailCol = results.meta.fields.find((f) =>
-          EMAIL_COLUMN_NAMES.includes(f.toLowerCase().trim())
-        )
-
-        if (!emailCol) {
-          setStatus({
-            type: 'error',
-            message: 'Geen e-mailkolom gevonden in het CSV-bestand.',
-          })
-          return
-        }
-
-        const extracted = results.data
-          .map((row) => (row[emailCol] ?? '').trim())
-          .filter((v) => v.length > 0)
-
-        if (extracted.length === 0) {
-          setStatus({
-            type: 'error',
-            message: 'Geen e-mailadressen gevonden in de kolom.',
-          })
-          return
-        }
-
-        setEmails(extracted)
-        setStatus({ type: 'preview', count: extracted.length })
+        setParsedData(results.data)
+        setColumns(results.meta.fields)
+        setSelectedColumn(results.meta.fields[0])
+        setStatus({ type: 'pick_column' })
       },
       error() {
         setStatus({
@@ -78,6 +53,29 @@ export function DncCsvUpload() {
         })
       },
     })
+  }
+
+  function extractEmails(data: Record<string, string>[], column: string): string[] {
+    return data
+      .map((row) => (row[column] ?? '').trim())
+      .filter((v) => v.length > 0)
+  }
+
+  function handleColumnConfirm() {
+    if (!selectedColumn) return
+
+    const extracted = extractEmails(parsedData, selectedColumn)
+    if (extracted.length === 0) {
+      setStatus({
+        type: 'error',
+        message: 'Geen e-mailadressen gevonden in de geselecteerde kolom.',
+      })
+      return
+    }
+
+    setEmails(extracted)
+    setParsedData([])
+    setStatus({ type: 'preview', count: extracted.length })
   }
 
   async function handleImport() {
@@ -102,6 +100,9 @@ export function DncCsvUpload() {
   function reset() {
     setStatus({ type: 'idle' })
     setEmails([])
+    setParsedData([])
+    setColumns([])
+    setSelectedColumn(null)
     if (fileRef.current) fileRef.current.value = ''
   }
 
@@ -124,6 +125,39 @@ export function DncCsvUpload() {
           className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-gray-100 file:px-4 file:py-2 file:text-sm file:font-medium file:text-gray-700 hover:file:bg-gray-200"
         />
       </div>
+
+      {status.type === 'pick_column' && (
+        <div className="mt-3 space-y-2">
+          <label className="block text-sm font-medium text-gray-700">
+            Selecteer de kolom met e-mailadressen
+          </label>
+          <select
+            value={selectedColumn ?? ''}
+            onChange={(e) => setSelectedColumn(e.target.value)}
+            className="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500"
+          >
+            {columns.map((col) => (
+              <option key={col} value={col}>
+                {col}
+              </option>
+            ))}
+          </select>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleColumnConfirm}
+              className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
+            >
+              Bevestigen
+            </button>
+            <button
+              onClick={reset}
+              className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Annuleren
+            </button>
+          </div>
+        </div>
+      )}
 
       {status.type === 'preview' && (
         <div className="mt-3 flex items-center gap-3">
