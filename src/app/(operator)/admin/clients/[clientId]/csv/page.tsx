@@ -4,6 +4,7 @@ import { getCsvUploads } from '@/lib/actions/csv-actions'
 import { CsvUpload } from './_components/csv-upload'
 import { CsvPreview } from './_components/csv-preview'
 import { CsvFilterExport } from './_components/csv-filter-export'
+import { CsvDeleteButton } from './_components/csv-delete-button'
 
 export const dynamic = 'force-dynamic'
 
@@ -94,6 +95,7 @@ export default async function CsvPage({ params }: CsvPageProps) {
                       <span className="text-sm text-gray-400">
                         Verloopt: {new Date(upload.expires_at).toLocaleDateString('nl-NL')}
                       </span>
+                      <CsvDeleteButton uploadId={upload.id} />
                     </div>
                   </summary>
                   <div className="mt-2">

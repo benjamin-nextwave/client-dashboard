@@ -371,6 +371,36 @@ export async function applyDncFilter(
   }
 }
 
+export async function deleteCsvUpload(uploadId: string): Promise<{ success: true } | { error: string }> {
+  const uuidSchema = z.string().uuid('Ongeldig upload ID')
+  const parsed = uuidSchema.safeParse(uploadId)
+  if (!parsed.success) {
+    return { error: 'Ongeldig upload ID.' }
+  }
+
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return { error: 'Niet ingelogd.' }
+  }
+
+  const admin = createAdminClient()
+
+  const { error } = await admin
+    .from('csv_uploads')
+    .delete()
+    .eq('id', uploadId)
+
+  if (error) {
+    return { error: `CSV verwijderen mislukt: ${error.message}` }
+  }
+
+  const { revalidatePath } = await import('next/cache')
+  revalidatePath('/admin/clients', 'layout')
+
+  return { success: true }
+}
+
 export async function setEmailColumn(
   uploadId: string,
   emailColumn: string
