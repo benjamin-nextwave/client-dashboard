@@ -4,9 +4,6 @@ import { getClientBranding } from '@/lib/client/get-client-branding'
 import {
   getMonthlyStats,
   getUnansweredPositiveCount,
-  getIndustryBreakdown,
-  getJobTitleBreakdown,
-  getPositiveLeadPatterns,
   getDailyEmailsSent,
 } from '@/lib/data/campaign-stats'
 import { OverzichtDashboard } from './_components/overzicht-dashboard'
@@ -68,16 +65,10 @@ export default async function OverzichtPage({
   const [
     monthlyStats,
     unansweredPositive,
-    industryBreakdown,
-    jobTitleBreakdown,
-    positivePatterns,
     dailyEmailsSent,
   ] = await Promise.all([
     getMonthlyStats(client.id, startDate, endDate),
     getUnansweredPositiveCount(client.id),
-    getIndustryBreakdown(client.id),
-    getJobTitleBreakdown(client.id),
-    getPositiveLeadPatterns(client.id),
     getDailyEmailsSent(client.id, startDate, endDate),
   ])
 
@@ -89,9 +80,6 @@ export default async function OverzichtPage({
         totalReplies={monthlyStats.totalReplies}
         positiveLeads={monthlyStats.positiveLeads}
         emailsSent={monthlyStats.emailsSent}
-        industryBreakdown={industryBreakdown}
-        jobTitleBreakdown={jobTitleBreakdown}
-        positivePatterns={positivePatterns}
         dailyEmailsSent={dailyEmailsSent}
         brandColor={client.primary_color ?? '#3B82F6'}
         currentRange={params.range ?? ''}

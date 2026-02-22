@@ -2,7 +2,7 @@
 
 import { StatsCards } from './stats-cards'
 import { EmailsPerDayChart } from './emails-per-day-chart'
-import { ICPCharts } from './icp-charts'
+import { ComingSoonCharts } from './coming-soon-charts'
 import { DateRangePicker } from './date-range-picker'
 import { EmptyState } from '@/components/ui/empty-state'
 
@@ -11,12 +11,6 @@ interface OverzichtDashboardProps {
   totalReplies: number
   positiveLeads: number
   emailsSent: number
-  industryBreakdown: { name: string; value: number }[]
-  jobTitleBreakdown: { name: string; value: number }[]
-  positivePatterns: {
-    industries: { name: string; value: number }[]
-    jobTitles: { name: string; value: number }[]
-  }
   dailyEmailsSent: { date: string; count: number }[]
   brandColor: string
   currentRange: string
@@ -28,9 +22,6 @@ export function OverzichtDashboard({
   totalReplies,
   positiveLeads,
   emailsSent,
-  industryBreakdown,
-  jobTitleBreakdown,
-  positivePatterns,
   dailyEmailsSent,
   brandColor,
   currentRange,
@@ -66,12 +57,7 @@ export function OverzichtDashboard({
 
       <EmailsPerDayChart data={dailyEmailsSent} brandColor={brandColor} />
 
-      <ICPCharts
-        industryData={industryBreakdown}
-        jobTitleData={jobTitleBreakdown}
-        positivePatterns={positivePatterns}
-        brandColor={brandColor}
-      />
+      <ComingSoonCharts />
     </div>
   )
 }
