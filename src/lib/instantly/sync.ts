@@ -335,7 +335,7 @@ export async function syncClientData(clientId: string): Promise<void> {
         `Failed to fetch/cache emails for campaign ${campaignId}:`,
         error
       )
-      // Non-fatal: continue with leads sync, interest_status will be null
+      // Non-fatal: continue with leads sync, existing interest_status will be preserved
     }
 
     await delay(RATE_LIMIT_DELAY_MS)
@@ -381,6 +381,12 @@ export async function syncClientData(clientId: string): Promise<void> {
           const leadEmailLower = lead.email.toLowerCase()
           const replyData = replyMap.get(leadEmailLower)
 
+          // Determine interest_status: use API value if available,
+          // otherwise preserve the existing DB value to prevent data loss.
+          const apiInterestStatus = interestMap.get(leadEmailLower) ?? null
+          const existingInterestStatus = existingStatusMap.get(leadEmailLower) ?? null
+          const interest_status = apiInterestStatus ?? existingInterestStatus
+
           return {
             client_id: clientId,
             instantly_lead_id: lead.id,
@@ -395,7 +401,7 @@ export async function syncClientData(clientId: string): Promise<void> {
             website: lead.website,
             phone: lead.phone,
             lead_status: deriveLeadStatus(lead),
-            interest_status: interestMap.get(leadEmailLower) ?? null,
+            interest_status,
             sender_account: lead.last_step_from,
             email_sent_count: lead.email_open_count > 0 ? 1 : 0,
             email_reply_count: lead.email_reply_count,
