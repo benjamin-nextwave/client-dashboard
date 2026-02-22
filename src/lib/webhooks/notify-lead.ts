@@ -13,9 +13,15 @@ export interface LeadWebhookPayload {
 
 /**
  * Fire-and-forget webhook to Make.com for new positive lead notifications.
+ * Disabled by default — Instantly sends notifications directly to Make.com.
+ * Set ENABLE_LEAD_WEBHOOK=true in .env to re-enable as a backup.
  * Errors are logged but never thrown — webhook failures must not block sync.
  */
 export async function sendLeadWebhook(payload: LeadWebhookPayload): Promise<void> {
+  if (process.env.ENABLE_LEAD_WEBHOOK !== 'true') {
+    return
+  }
+
   const webhookUrl = process.env.MAKE_WEBHOOK_URL
   if (!webhookUrl) {
     console.warn('MAKE_WEBHOOK_URL is not set — skipping lead webhook')
