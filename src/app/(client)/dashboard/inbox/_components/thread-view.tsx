@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { refreshThread } from '@/lib/actions/inbox-actions'
 import { ThreadMessage } from './thread-message'
 import { ReplyForm } from './reply-form'
+import { RefreshOverlay } from './refresh-overlay'
 
 interface CachedEmail {
   id: string
@@ -86,6 +87,12 @@ export function ThreadView({
         />
       </div>
 
+      {isRefreshing && (
+        <div className="mb-4">
+          <RefreshOverlay isRefreshing={isRefreshing} />
+        </div>
+      )}
+
       {emails.length === 0 ? (
         <div className="rounded-lg border border-gray-200 bg-white p-8 text-center">
           <p className="text-gray-500">
@@ -93,7 +100,7 @@ export function ThreadView({
           </p>
         </div>
       ) : (
-        <div className="rounded-lg border border-gray-200 bg-white p-4">
+        <div className={`rounded-lg border border-gray-200 bg-white p-4 ${isRefreshing ? 'pointer-events-none opacity-40 blur-[1px] transition-all duration-300' : ''}`}>
           <div className="max-h-[60vh] overflow-y-auto">
             {reversedEmails.map((email) => {
               const isFromClient = email.from_address === senderAccount

@@ -6,6 +6,7 @@ import type { InboxLead } from '@/lib/data/inbox-data'
 import { refreshInbox } from '@/lib/actions/inbox-actions'
 import { InboxItem } from './inbox-item'
 import { ComposeModal } from './compose-modal'
+import { RefreshOverlay } from './refresh-overlay'
 
 interface InboxListProps {
   leads: InboxLead[]
@@ -182,7 +183,13 @@ export function InboxList({ leads, isRecruitment }: InboxListProps) {
         {filteredLeads.length} van {activeLeads.length} leads
       </p>
 
-      <div className="mt-3 overflow-hidden rounded-lg border border-gray-200 bg-white">
+      {isRefreshing && (
+        <div className="mt-3">
+          <RefreshOverlay isRefreshing={isRefreshing} />
+        </div>
+      )}
+
+      <div className={`mt-3 overflow-hidden rounded-lg border border-gray-200 bg-white ${isRefreshing ? 'pointer-events-none opacity-40 blur-[1px] transition-all duration-300' : ''}`}>
         {filteredLeads.length === 0 ? (
           <div className="py-8 text-center text-sm text-gray-500">
             {folder === 'archived'
