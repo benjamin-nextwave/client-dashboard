@@ -13,7 +13,7 @@ import { syncClientData } from '@/lib/instantly/sync'
  * Requires authentication — syncs only the logged-in client's data.
  * Returns immediately if data was synced within the last 2 minutes.
  */
-export async function POST() {
+export async function POST(request: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -26,20 +26,26 @@ export async function POST() {
     return NextResponse.json({ error: 'No client' }, { status: 400 })
   }
 
-  // Check if data was synced recently (within 2 minutes) — skip if so
-  const admin = createAdminClient()
-  const { data: recentSync } = await admin
-    .from('synced_leads')
-    .select('last_synced_at')
-    .eq('client_id', clientId)
-    .order('last_synced_at', { ascending: false })
-    .limit(1)
-    .single()
+  // Allow ?force=true to bypass the 2-minute debounce
+  const { searchParams } = new URL(request.url)
+  const force = searchParams.get('force') === 'true'
 
-  if (recentSync?.last_synced_at) {
-    const age = Date.now() - new Date(recentSync.last_synced_at).getTime()
-    if (age < 2 * 60 * 1000) {
-      return NextResponse.json({ synced: false, reason: 'fresh' })
+  if (!force) {
+    // Check if data was synced recently (within 2 minutes) — skip if so
+    const admin = createAdminClient()
+    const { data: recentSync } = await admin
+      .from('synced_leads')
+      .select('last_synced_at')
+      .eq('client_id', clientId)
+      .order('last_synced_at', { ascending: false })
+      .limit(1)
+      .single()
+
+    if (recentSync?.last_synced_at) {
+      const age = Date.now() - new Date(recentSync.last_synced_at).getTime()
+      if (age < 2 * 60 * 1000) {
+        return NextResponse.json({ synced: false, reason: 'fresh' })
+      }
     }
   }
 

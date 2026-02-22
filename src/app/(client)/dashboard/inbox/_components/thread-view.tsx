@@ -1,5 +1,8 @@
 'use client'
 
+import { useTransition } from 'react'
+import { useRouter } from 'next/navigation'
+import { refreshThread } from '@/lib/actions/inbox-actions'
 import { ThreadMessage } from './thread-message'
 import { ReplyForm } from './reply-form'
 
@@ -34,6 +37,9 @@ export function ThreadView({
   leadId,
   replySubject,
 }: ThreadViewProps) {
+  const [isRefreshing, startRefresh] = useTransition()
+  const router = useRouter()
+
   // Most recent email's ID for replying (last in chronological order)
   const lastEmailId =
     emails.length > 0 ? emails[emails.length - 1].instantly_email_id : null
@@ -43,7 +49,33 @@ export function ThreadView({
 
   return (
     <div>
-      <h2 className="mb-4 text-xl font-bold text-gray-900">Gesprek</h2>
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-xl font-bold text-gray-900">Gesprek</h2>
+        <button
+          type="button"
+          onClick={() => {
+            startRefresh(async () => {
+              await refreshThread(leadId)
+              router.refresh()
+            })
+          }}
+          disabled={isRefreshing}
+          title="Mist u recente berichten? Klik hier om te verversen."
+          className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 px-2.5 py-1.5 text-sm text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
+        >
+          {isRefreshing ? (
+            <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+          ) : (
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          )}
+          <span>{isRefreshing ? 'Verversen...' : 'Verversen'}</span>
+        </button>
+      </div>
 
       <div className="mb-4">
         <ReplyForm

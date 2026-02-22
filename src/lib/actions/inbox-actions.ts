@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { replyToEmail, listEmails } from '@/lib/instantly/client'
+import { syncClientData } from '@/lib/instantly/sync'
 
 // --- Zod Schemas ---
 
@@ -60,7 +61,7 @@ export async function sendReply(input: SendReplyInput): Promise<ActionResult> {
   // Verify lead belongs to this client (RLS handles isolation)
   const { data: lead, error: leadError } = await supabase
     .from('synced_leads')
-    .select('id')
+    .select('id, email')
     .eq('id', leadId)
     .single()
 
@@ -90,6 +91,16 @@ export async function sendReply(input: SendReplyInput): Promise<ActionResult> {
 
   if (updateError) {
     console.error('Failed to update client_has_replied:', updateError.message)
+  }
+
+  // Invalidate cached emails so next thread view fetches fresh from API
+  const clientId = user.app_metadata?.client_id as string | undefined
+  if (clientId) {
+    await admin
+      .from('cached_emails')
+      .delete()
+      .eq('client_id', clientId)
+      .eq('lead_email', lead.email)
   }
 
   revalidatePath('/dashboard/inbox')
@@ -162,6 +173,16 @@ export async function composeReply(
 
   if (updateError) {
     console.error('Failed to update client_has_replied:', updateError.message)
+  }
+
+  // Invalidate cached emails so next thread view fetches fresh from API
+  const clientId = user.app_metadata?.client_id as string | undefined
+  if (clientId) {
+    await admin
+      .from('cached_emails')
+      .delete()
+      .eq('client_id', clientId)
+      .eq('lead_email', leadEmail)
   }
 
   revalidatePath('/dashboard/inbox')
@@ -342,6 +363,59 @@ export async function composeNewEmail(
     return { error: 'Fout bij het verzenden. Probeer het opnieuw.' }
   }
 
+  revalidatePath('/dashboard/inbox')
+  return { success: true }
+}
+
+/**
+ * Force a full re-sync and revalidate the inbox.
+ */
+export async function refreshInbox(): Promise<ActionResult> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Niet ingelogd.' }
+
+  const clientId = user.app_metadata?.client_id as string | undefined
+  if (!clientId) return { error: 'Geen client gevonden.' }
+
+  try {
+    await syncClientData(clientId)
+  } catch (err) {
+    console.error('Failed to force sync:', err)
+    return { error: 'Sync mislukt. Probeer het opnieuw.' }
+  }
+
+  revalidatePath('/dashboard/inbox')
+  return { success: true }
+}
+
+/**
+ * Delete cached emails for a lead and revalidate the thread view.
+ */
+export async function refreshThread(leadId: string): Promise<ActionResult> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Niet ingelogd.' }
+
+  const clientId = user.app_metadata?.client_id as string | undefined
+  if (!clientId) return { error: 'Geen client gevonden.' }
+
+  const { data: lead } = await supabase
+    .from('synced_leads')
+    .select('email')
+    .eq('id', leadId)
+    .single()
+
+  if (!lead) return { error: 'Lead niet gevonden.' }
+
+  const admin = createAdminClient()
+  await admin
+    .from('cached_emails')
+    .delete()
+    .eq('client_id', clientId)
+    .eq('lead_email', lead.email)
+
+  revalidatePath(`/dashboard/inbox/${leadId}`)
   revalidatePath('/dashboard/inbox')
   return { success: true }
 }

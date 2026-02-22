@@ -38,8 +38,8 @@ interface CachedEmail {
   created_at: string
 }
 
-// Cache freshness threshold: 5 minutes
-const CACHE_TTL_MS = 5 * 60 * 1000
+// Cache freshness threshold: 1 minute
+const CACHE_TTL_MS = 60 * 1000
 
 // --- Exported query functions ---
 

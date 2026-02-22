@@ -18,10 +18,9 @@ export function BackgroundSync() {
 
     fetch('/api/sync-client', { method: 'POST' })
       .then((res) => res.json())
-      .then((data) => {
-        if (data.synced) {
-          router.refresh()
-        }
+      .then(() => {
+        // Always refresh to show latest data, even if sync was skipped
+        router.refresh()
       })
       .catch(() => {
         // Non-critical — cron will pick it up
