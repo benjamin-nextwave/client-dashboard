@@ -2,16 +2,32 @@
 
 import { useState, useEffect } from 'react'
 
-// Total estimated time: ~45 seconds for incremental sync
-const TOTAL_ESTIMATED_MS = 45 * 1000
+// Phase 1: quick estimate for incremental syncs (~45s)
+const QUICK_ESTIMATE_MS = 45 * 1000
+// Phase 2: if sync exceeds quick estimate, switch to long mode (~7 min total)
+const LONG_ESTIMATE_MS = 7 * 60 * 1000
 
-const STEPS = [
+const QUICK_STEPS = [
   { message: 'Verbinding maken...', atPercent: 0 },
   { message: 'Nieuwe berichten ophalen...', atPercent: 15 },
   { message: 'Gesprekken bijwerken...', atPercent: 35 },
   { message: 'Leads synchroniseren...', atPercent: 55 },
   { message: 'Statistieken bijwerken...', atPercent: 75 },
   { message: 'Bijna klaar...', atPercent: 90 },
+]
+
+const LONG_STEPS = [
+  { message: 'Verbinding maken...', atPercent: 0 },
+  { message: 'E-mails ophalen...', atPercent: 5 },
+  { message: 'Nieuwe berichten verwerken...', atPercent: 12 },
+  { message: 'Gesprekken synchroniseren...', atPercent: 20 },
+  { message: 'Contactgegevens bijwerken...', atPercent: 30 },
+  { message: 'Leads importeren...', atPercent: 40 },
+  { message: 'Statistieken berekenen...', atPercent: 52 },
+  { message: 'Campagnedata ophalen...', atPercent: 64 },
+  { message: 'Alles op orde brengen...', atPercent: 76 },
+  { message: 'Laatste controles...', atPercent: 88 },
+  { message: 'Bijna klaar...', atPercent: 95 },
 ]
 
 interface RefreshOverlayProps {
@@ -42,22 +58,28 @@ export function RefreshOverlay({ isRefreshing, mode = 'fullcard' }: RefreshOverl
 
   if (!isRefreshing) return null
 
+  // Detect long sync: if we've passed the quick estimate, switch to long mode
+  const isLongSync = elapsed > QUICK_ESTIMATE_MS
+  const steps = isLongSync ? LONG_STEPS : QUICK_STEPS
+  const totalEstimate = isLongSync ? LONG_ESTIMATE_MS : QUICK_ESTIMATE_MS
+
   // Progress capped at 95%
-  const progress = Math.min((elapsed / TOTAL_ESTIMATED_MS) * 100, 95)
+  const progress = Math.min((elapsed / totalEstimate) * 100, 95)
 
   // Find current step based on progress
   let currentStepIndex = 0
-  for (let i = STEPS.length - 1; i >= 0; i--) {
-    if (progress >= STEPS[i].atPercent) {
+  for (let i = steps.length - 1; i >= 0; i--) {
+    if (progress >= steps[i].atPercent) {
       currentStepIndex = i
       break
     }
   }
-  const step = STEPS[currentStepIndex]
+  const step = steps[currentStepIndex]
 
-  // Remaining time in seconds
-  const remainingMs = Math.max(TOTAL_ESTIMATED_MS - elapsed, 0)
+  // Remaining time display
+  const remainingMs = Math.max(totalEstimate - elapsed, 0)
   const remainingSeconds = Math.ceil(remainingMs / 1000)
+  const remainingMinutes = Math.ceil(remainingMs / 60000)
 
   if (mode === 'inline') {
     return (
@@ -101,7 +123,7 @@ export function RefreshOverlay({ isRefreshing, mode = 'fullcard' }: RefreshOverl
             Inbox wordt vernieuwd
           </p>
           <p
-            key={currentStepIndex}
+            key={`${isLongSync}-${currentStepIndex}`}
             className="mt-1.5 text-sm text-gray-500 animate-fadeIn"
           >
             {step.message}
@@ -116,11 +138,27 @@ export function RefreshOverlay({ isRefreshing, mode = 'fullcard' }: RefreshOverl
           <span className="text-sm font-medium text-gray-600">
             {progress >= 95
               ? 'Bijna klaar...'
-              : remainingSeconds <= 5
-                ? 'Nog een paar seconden...'
-                : `Nog ongeveer ${remainingSeconds} seconden`}
+              : isLongSync
+                ? remainingMinutes <= 1
+                  ? 'Nog een paar seconden...'
+                  : `Nog ongeveer ${remainingMinutes} ${remainingMinutes === 1 ? 'minuut' : 'minuten'}`
+                : remainingSeconds <= 5
+                  ? 'Nog een paar seconden...'
+                  : `Nog ongeveer ${remainingSeconds} seconden`}
           </span>
         </div>
+
+        {/* Coffee tip — only shown during long syncs */}
+        {isLongSync && (
+          <div
+            className="mx-auto mt-3 flex max-w-sm items-center justify-center gap-2 rounded-lg bg-amber-50 px-4 py-2 animate-fadeIn"
+          >
+            <span className="text-base">&#9749;</span>
+            <span className="text-xs text-amber-700">
+              Dit is een volledige sync — pak een kopje koffie of beantwoord alvast je eigen inbox!
+            </span>
+          </div>
+        )}
 
         {/* Progress bar */}
         <div className="mx-auto mt-5 max-w-sm">
@@ -131,14 +169,14 @@ export function RefreshOverlay({ isRefreshing, mode = 'fullcard' }: RefreshOverl
             />
           </div>
           <div className="mt-2 flex items-center justify-between text-xs text-gray-400">
-            <span>Stap {currentStepIndex + 1} van {STEPS.length}</span>
+            <span>Stap {currentStepIndex + 1} van {steps.length}</span>
             <span>{Math.round(progress)}%</span>
           </div>
         </div>
 
         {/* Step indicators */}
         <div className="mx-auto mt-4 flex max-w-sm justify-center gap-1.5">
-          {STEPS.map((_, i) => (
+          {steps.map((_, i) => (
             <div
               key={i}
               className={`h-1 rounded-full transition-all duration-500 ${
