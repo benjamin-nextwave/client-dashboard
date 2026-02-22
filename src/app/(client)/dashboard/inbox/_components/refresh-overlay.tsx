@@ -2,21 +2,16 @@
 
 import { useState, useEffect } from 'react'
 
-// Total estimated time: ~7 minutes (420 seconds)
-const TOTAL_ESTIMATED_MS = 7 * 60 * 1000
+// Total estimated time: ~45 seconds for incremental sync
+const TOTAL_ESTIMATED_MS = 45 * 1000
 
 const STEPS = [
-  { message: 'Verbinding maken met uw mailbox...', atPercent: 0 },
-  { message: 'Accounts verifi\u00EBren...', atPercent: 5 },
-  { message: 'Nieuwe berichten ophalen...', atPercent: 10 },
-  { message: 'Gesprekken koppelen...', atPercent: 20 },
-  { message: 'Contactgegevens bijwerken...', atPercent: 30 },
-  { message: 'Reacties verwerken...', atPercent: 40 },
-  { message: 'Leads classificeren...', atPercent: 50 },
-  { message: 'Statistieken berekenen...', atPercent: 60 },
-  { message: 'Dashboard gegevens bijwerken...', atPercent: 70 },
-  { message: 'Laatste controles uitvoeren...', atPercent: 80 },
-  { message: 'Bijna klaar, nog even geduld...', atPercent: 90 },
+  { message: 'Verbinding maken...', atPercent: 0 },
+  { message: 'Nieuwe berichten ophalen...', atPercent: 15 },
+  { message: 'Gesprekken bijwerken...', atPercent: 35 },
+  { message: 'Leads synchroniseren...', atPercent: 55 },
+  { message: 'Statistieken bijwerken...', atPercent: 75 },
+  { message: 'Bijna klaar...', atPercent: 90 },
 ]
 
 interface RefreshOverlayProps {
@@ -47,9 +42,8 @@ export function RefreshOverlay({ isRefreshing, mode = 'fullcard' }: RefreshOverl
 
   if (!isRefreshing) return null
 
-  // Progress uses an easing curve so it slows down toward the end, capped at 95%
-  const linearProgress = elapsed / TOTAL_ESTIMATED_MS
-  const progress = Math.min(linearProgress * 100, 95)
+  // Progress capped at 95%
+  const progress = Math.min((elapsed / TOTAL_ESTIMATED_MS) * 100, 95)
 
   // Find current step based on progress
   let currentStepIndex = 0
@@ -61,9 +55,9 @@ export function RefreshOverlay({ isRefreshing, mode = 'fullcard' }: RefreshOverl
   }
   const step = STEPS[currentStepIndex]
 
-  // Remaining time in minutes (minimum 1 minute shown until 95%)
+  // Remaining time in seconds
   const remainingMs = Math.max(TOTAL_ESTIMATED_MS - elapsed, 0)
-  const remainingMinutes = Math.ceil(remainingMs / 60000)
+  const remainingSeconds = Math.ceil(remainingMs / 1000)
 
   if (mode === 'inline') {
     return (
@@ -122,9 +116,9 @@ export function RefreshOverlay({ isRefreshing, mode = 'fullcard' }: RefreshOverl
           <span className="text-sm font-medium text-gray-600">
             {progress >= 95
               ? 'Bijna klaar...'
-              : remainingMinutes === 1
-                ? 'Nog ongeveer 1 minuut'
-                : `Nog ongeveer ${remainingMinutes} minuten`}
+              : remainingSeconds <= 5
+                ? 'Nog een paar seconden...'
+                : `Nog ongeveer ${remainingSeconds} seconden`}
           </span>
         </div>
 
@@ -156,18 +150,6 @@ export function RefreshOverlay({ isRefreshing, mode = 'fullcard' }: RefreshOverl
               }`}
             />
           ))}
-        </div>
-
-        {/* Friendly tip */}
-        <div className="mx-auto mt-6 max-w-sm rounded-lg bg-blue-50 px-4 py-3">
-          <div className="flex gap-3">
-            <svg className="mt-0.5 h-5 w-5 shrink-0 text-blue-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
-            </svg>
-            <p className="text-sm text-blue-700">
-              Dit is een volledige synchronisatie van al uw dashboard-gegevens. Pak gerust een kop koffie of beantwoord ondertussen uw eigen e-mails — wij laten alles netjes voor u klaarzetten.
-            </p>
-          </div>
         </div>
       </div>
     </div>

@@ -43,7 +43,7 @@ export async function POST(request: Request) {
 
     if (recentSync?.last_synced_at) {
       const age = Date.now() - new Date(recentSync.last_synced_at).getTime()
-      if (age < 2 * 60 * 1000) {
+      if (age < 10 * 60 * 1000) {
         return NextResponse.json({ synced: false, reason: 'fresh' })
       }
     }
