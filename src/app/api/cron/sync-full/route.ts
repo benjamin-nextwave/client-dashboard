@@ -11,6 +11,15 @@ import { syncAllClientsFull } from '@/lib/instantly/sync'
  * Syncs everything: analytics, all emails, all leads for all clients.
  */
 export async function GET(request: Request) {
+  // ⛔ DISABLED: listLeads returns global lead pool, not per-campaign.
+  // Cron sync writes corrupt data (all leads to every client).
+  // Re-enable only after syncClientData is rewritten to use getCampaignsForEmail.
+  return NextResponse.json({
+    disabled: true,
+    reason: 'listLeads returns global pool, not per-campaign — sync writes corrupt data',
+    timestamp: new Date().toISOString(),
+  })
+
   const cronSecret = process.env.CRON_SECRET
   if (cronSecret) {
     const authHeader = request.headers.get('authorization')

@@ -7,6 +7,15 @@ import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: Request) {
+  // ⛔ DISABLED: listLeads returns global lead pool, not per-campaign.
+  // Cron sync writes corrupt data (all leads to every client).
+  // Re-enable only after syncInboxData is rewritten to use getCampaignsForEmail.
+  return NextResponse.json({
+    disabled: true,
+    reason: 'listLeads returns global pool, not per-campaign — sync writes corrupt data',
+    timestamp: new Date().toISOString(),
+  })
+
   // Validate CRON_SECRET if set
   const cronSecret = process.env.CRON_SECRET
   if (cronSecret) {
