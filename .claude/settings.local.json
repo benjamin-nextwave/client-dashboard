@@ -92,7 +92,8 @@
       "Bash(SUPABASE_SERVICE_ROLE_KEY=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFia2FtZ21qbXF6dmR3dHJrZ3FlIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MTE4NTA4NywiZXhwIjoyMDg2NzYxMDg3fQ.GNDzbQJCfz-D7F5aPUQyPjP7V-rm-61Yls7vofwLBYI\" npx tsx:*)",
       "Bash(git checkout:*)",
       "Bash(git merge:*)",
-      "Bash(set:*)"
+      "Bash(set:*)",
+      "WebFetch(domain:app.theneo.io)"
     ]
   }
 }
