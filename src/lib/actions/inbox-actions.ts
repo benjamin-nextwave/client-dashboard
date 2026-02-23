@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { replyToEmail, listEmails } from '@/lib/instantly/client'
-import { syncClientData } from '@/lib/instantly/sync'
+import { syncInboxData } from '@/lib/instantly/sync'
 
 // --- Zod Schemas ---
 
@@ -379,10 +379,10 @@ export async function refreshInbox(): Promise<ActionResult> {
   if (!clientId) return { error: 'Geen client gevonden.' }
 
   try {
-    // Always full sync — inbox accuracy is critical
-    await syncClientData(clientId, true)
+    // Inbox-only sync: emails + recent leads, skips analytics
+    await syncInboxData(clientId)
   } catch (err) {
-    console.error('Failed to force sync:', err)
+    console.error('Failed to inbox sync:', err)
     return { error: 'Sync mislukt. Probeer het opnieuw.' }
   }
 

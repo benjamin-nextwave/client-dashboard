@@ -757,6 +757,89 @@ export async function syncClientData(clientId: string, forceFullSync = false): P
 }
 
 /**
+ * Lightweight inbox-only sync for a single client.
+ * Skips analytics entirely. Fetches only emails (incremental) and recent leads.
+ * Used by the inbox "Verversen" button for fast refresh (~10-30 seconds).
+ */
+export async function syncInboxData(clientId: string): Promise<void> {
+  const supabase = createAdminClient()
+
+  const { data: campaigns, error: campaignError } = await supabase
+    .from('client_campaigns')
+    .select('campaign_id')
+    .eq('client_id', clientId)
+
+  if (campaignError) {
+    throw new Error(`Failed to fetch campaigns for client ${clientId}: ${campaignError.message}`)
+  }
+
+  if (!campaigns || campaigns.length === 0) return
+
+  for (const { campaign_id: campaignId } of campaigns) {
+    const syncState = await getSyncState(supabase, clientId, campaignId)
+
+    console.log(`Inbox sync for campaign ${campaignId} (client ${clientId})`)
+
+    // 1. Fetch emails (incremental when possible) — updates interest_status + cached_emails
+    let interestMap = new Map<string, string>()
+    let replyMap = new Map<string, { subject: string | null; content: string | null }>()
+    let latestEmailTimestamp: string | null = null
+
+    try {
+      const sinceTimestamp = syncState?.last_email_timestamp ?? null
+      const emailMapResult = await fetchAndCacheEmails(
+        clientId,
+        campaignId,
+        supabase,
+        sinceTimestamp
+      )
+      interestMap = emailMapResult.interestMap
+      replyMap = emailMapResult.replyMap
+      latestEmailTimestamp = emailMapResult.latestTimestamp
+
+      // Merge existing interest data for leads we didn't fetch new emails for
+      if (sinceTimestamp) {
+        const { data: existingInterest } = await supabase
+          .from('synced_leads')
+          .select('email, interest_status')
+          .eq('client_id', clientId)
+          .eq('campaign_id', campaignId)
+          .not('interest_status', 'is', null)
+
+        for (const row of existingInterest ?? []) {
+          const email = row.email.toLowerCase()
+          if (!interestMap.has(email) && row.interest_status) {
+            interestMap.set(email, row.interest_status)
+          }
+        }
+      }
+    } catch (error) {
+      console.error(`Inbox sync: failed to fetch emails for campaign ${campaignId}:`, error)
+    }
+
+    await delay(RATE_LIMIT_DELAY_MS)
+
+    // 2. Fetch recent leads only (3 pages) — catches new leads without paginating everything
+    try {
+      const leads = await fetchRecentLeads(campaignId, INCREMENTAL_LEAD_PAGES)
+
+      console.log(`Inbox sync: fetched ${leads.length} recent leads for campaign ${campaignId}`)
+
+      await processLeads(leads, clientId, campaignId, interestMap, replyMap, supabase)
+    } catch (error) {
+      console.error(`Inbox sync: failed to sync leads for campaign ${campaignId}:`, error)
+    }
+
+    // 3. Update email timestamp (but not analytics or full sync timestamps)
+    await updateSyncState(supabase, clientId, campaignId, {
+      last_email_timestamp: latestEmailTimestamp ?? syncState?.last_email_timestamp ?? null,
+    })
+
+    await delay(RATE_LIMIT_DELAY_MS)
+  }
+}
+
+/**
  * Sync data for all clients that have associated campaigns.
  * Processes clients sequentially to respect API rate limits.
  * Prioritizes least-recently-synced clients so new clients (never synced)
