@@ -68,7 +68,7 @@ export interface InstantlyLead {
   email_open_count: number
   email_reply_count: number
   email_click_count: number
-  lt_interest_status?: number | null
+  lt_interest_status?: number | string | null
   label_ids?: string[] | null
   payload: Record<string, unknown>
   timestamp_created: string

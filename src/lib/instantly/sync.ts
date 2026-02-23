@@ -81,13 +81,20 @@ function deriveLeadStatus(lead: InstantlyLead): string {
 }
 
 /**
- * Map Instantly email i_status to interest_status.
- * i_status: -1 = not interested, 0 = neutral, 1 = interested
+ * Map Instantly interest status to our interest_status string.
+ * i_status / lt_interest_status: -1 = not interested, 0 = neutral, 1 = interested
+ * Uses loose equality (==) because the API may return strings instead of numbers.
  */
-function mapInterestStatus(iStatus: number | null | undefined): string | null {
-  if (iStatus === 1) return 'positive'
-  if (iStatus === 0) return 'neutral'
-  if (iStatus === -1) return 'negative'
+function mapInterestStatus(iStatus: number | string | null | undefined): string | null {
+  if (iStatus == null) return null
+  // eslint-disable-next-line eqeqeq
+  if (iStatus == 1) return 'positive'
+  // eslint-disable-next-line eqeqeq
+  if (iStatus == 0) return 'neutral'
+  // eslint-disable-next-line eqeqeq
+  if (iStatus == -1) return 'negative'
+  // Unknown value — log it so we can debug
+  console.warn(`mapInterestStatus: unexpected value ${JSON.stringify(iStatus)} (type: ${typeof iStatus})`)
   return null
 }
 
@@ -432,6 +439,17 @@ async function processLeads(
     } else {
       // For non-positive: prefer email-level, then existing, then lead-level
       interest_status = emailInterestStatus ?? existingInterestStatus ?? leadInterestStatus
+    }
+
+    // Log interest derivation for any lead that has interest signals
+    if (leadInterestStatus || emailInterestStatus || existingInterestStatus) {
+      console.log(
+        `Interest status for ${lead.email}: ` +
+        `lt_interest_status=${JSON.stringify(lead.lt_interest_status)} → ${leadInterestStatus}, ` +
+        `email_i_status=${emailInterestStatus}, ` +
+        `existing_db=${existingInterestStatus} → ` +
+        `RESULT: ${interest_status}`
+      )
     }
 
     return {
