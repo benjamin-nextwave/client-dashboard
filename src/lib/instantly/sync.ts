@@ -14,6 +14,8 @@ const ANALYTICS_DAYS_FULL = 365
 const FULL_SYNC_INTERVAL_MS = 6 * 60 * 60 * 1000
 // Max pages of leads to fetch on incremental sync (newest leads first)
 const INCREMENTAL_LEAD_PAGES = 3
+// Rate limit for getCampaignsForEmail verification calls (max 2/sec)
+const VERIFY_DELAY_MS = 500
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -98,63 +100,11 @@ function mapInterestStatus(iStatus: number | string | null | undefined): string 
   return null
 }
 
-/**
- * Fetch all leads for a campaign using cursor pagination.
- * Optionally filter by interest status (1 = positive, 0 = neutral, -1 = negative).
- */
-async function fetchAllLeads(campaignId: string, interestStatus?: number): Promise<InstantlyLead[]> {
-  const allLeads: InstantlyLead[] = []
-  let cursor: string | undefined
-
-  do {
-    const response = await listLeads(campaignId, {
-      limit: 100,
-      startingAfter: cursor,
-      interestStatus,
-    })
-
-    allLeads.push(...response.items)
-    cursor = response.next_starting_after ?? undefined
-
-    if (cursor) {
-      await delay(RATE_LIMIT_DELAY_MS)
-    }
-  } while (cursor)
-
-  return allLeads
-}
-
-/**
- * Fetch only recent leads (limited pages) for incremental sync.
- * Returns the leads from the most recent N pages.
- */
-async function fetchRecentLeads(campaignId: string, maxPages: number): Promise<InstantlyLead[]> {
-  const allLeads: InstantlyLead[] = []
-  let cursor: string | undefined
-  let page = 0
-
-  do {
-    const response = await listLeads(campaignId, {
-      limit: 100,
-      startingAfter: cursor,
-    })
-
-    allLeads.push(...response.items)
-    cursor = response.next_starting_after ?? undefined
-    page++
-
-    if (cursor && page < maxPages) {
-      await delay(RATE_LIMIT_DELAY_MS)
-    }
-  } while (cursor && page < maxPages)
-
-  return allLeads
-}
-
 interface EmailMapResult {
   interestMap: Map<string, string>
   replyMap: Map<string, { subject: string | null; content: string | null }>
   latestTimestamp: string | null
+  allLeadEmails: Set<string>
 }
 
 /**
@@ -170,6 +120,7 @@ async function fetchAndCacheEmails(
 ): Promise<EmailMapResult> {
   const interestMap = new Map<string, string>()
   const replyMap = new Map<string, { subject: string | null; content: string | null }>()
+  const allLeadEmails = new Set<string>()
   let latestTimestamp: string | null = null
   let cursor: string | undefined
   let totalFetched = 0
@@ -201,6 +152,8 @@ async function fetchAndCacheEmails(
 
       const leadEmail = extractLeadEmailFromEmail(email)
       if (!leadEmail) continue
+
+      allLeadEmails.add(leadEmail)
 
       // Track interest status
       if (email.i_status != null) {
@@ -280,7 +233,7 @@ async function fetchAndCacheEmails(
       (sinceTimestamp ? ` (incremental since ${sinceTimestamp})` : ' (full)')
   )
 
-  return { interestMap, replyMap, latestTimestamp }
+  return { interestMap, replyMap, latestTimestamp, allLeadEmails }
 }
 
 /**
@@ -610,24 +563,146 @@ async function processLeads(
 }
 
 /**
+ * Verify and sync a set of leads for a specific client.
+ * Uses getCampaignsForEmail as the single source of truth for campaign membership.
+ *
+ * For each email:
+ * 1. getCampaignsForEmail → which Instantly campaigns is this lead in?
+ * 2. Cross-reference with this client's campaigns
+ * 3. If verified: fetch lead object via listLeads(search=email), then processLeads
+ * 4. If not verified (lead not in any of client's campaigns): delete stale data
+ *
+ * Rate limited to max 2 getCampaignsForEmail calls per second.
+ */
+async function verifyAndSyncLeads(
+  clientId: string,
+  clientCampaignIds: Set<string>,
+  leadEmails: string[],
+  interestMaps: Map<string, Map<string, string>>,
+  replyMaps: Map<string, Map<string, { subject: string | null; content: string | null }>>,
+  supabase: ReturnType<typeof createAdminClient>
+): Promise<{ verified: number; removed: number; errors: number }> {
+  let verified = 0
+  let removed = 0
+  let errors = 0
+
+  for (let i = 0; i < leadEmails.length; i++) {
+    const email = leadEmails[i]
+    if (i > 0) await delay(VERIFY_DELAY_MS)
+
+    // Step 1: Ask Instantly which campaigns this lead belongs to
+    let instantlyCampaignIds: string[]
+    try {
+      instantlyCampaignIds = await getCampaignsForEmail(email)
+      console.log(
+        `verifyAndSyncLeads [${i + 1}/${leadEmails.length}]: ${email} → ` +
+        `${instantlyCampaignIds.length} campaign(s)`
+      )
+    } catch (error) {
+      console.error(`verifyAndSyncLeads: getCampaignsForEmail failed for ${email}:`, error)
+      errors++
+      continue
+    }
+
+    const instantlySet = new Set(instantlyCampaignIds)
+
+    // Step 2: Which of THIS client's campaigns contain this lead?
+    const validCampaignIds = [...clientCampaignIds].filter((c) => instantlySet.has(c))
+
+    if (validCampaignIds.length === 0) {
+      // Lead does NOT belong to this client — remove stale data
+      const { data: staleLeads } = await supabase
+        .from('synced_leads')
+        .select('id')
+        .eq('client_id', clientId)
+        .eq('email', email)
+
+      if (staleLeads?.length) {
+        await supabase
+          .from('synced_leads')
+          .delete()
+          .in('id', staleLeads.map((l) => l.id))
+
+        // Clean up orphaned cached_emails if no more synced_leads for this client+email
+        const { data: remaining } = await supabase
+          .from('synced_leads')
+          .select('id')
+          .eq('client_id', clientId)
+          .eq('email', email)
+          .limit(1)
+
+        if (!remaining?.length) {
+          await supabase
+            .from('cached_emails')
+            .delete()
+            .eq('client_id', clientId)
+            .eq('lead_email', email)
+        }
+
+        console.log(
+          `verifyAndSyncLeads: REMOVED ${staleLeads.length} stale lead(s) for ${email} ` +
+          `from client ${clientId} (not in any of client's ${clientCampaignIds.size} campaigns)`
+        )
+        removed += staleLeads.length
+      }
+      continue
+    }
+
+    // Step 3: Fetch lead object from Instantly via listLeads(search=email)
+    let foundLead: InstantlyLead | null = null
+    for (const campaignId of validCampaignIds) {
+      try {
+        const response = await listLeads(campaignId, { search: email, limit: 10 })
+        const exactMatch = response.items.find(
+          (l) => l.email.toLowerCase().trim() === email
+        )
+        if (exactMatch) {
+          foundLead = exactMatch
+          break
+        }
+      } catch (error) {
+        console.error(
+          `verifyAndSyncLeads: listLeads search failed for ${email} in campaign ${campaignId}:`,
+          error
+        )
+      }
+      await delay(RATE_LIMIT_DELAY_MS)
+    }
+
+    if (!foundLead) {
+      console.log(`verifyAndSyncLeads: verified ${email} but could not fetch lead object — skipping`)
+      continue
+    }
+
+    // Step 4: Upsert for each valid campaign
+    for (const campaignId of validCampaignIds) {
+      const interestMap = interestMaps.get(campaignId) ?? new Map()
+      const replyMap = replyMaps.get(campaignId) ?? new Map()
+
+      console.log(
+        `verifyAndSyncLeads: upserting ${email} → client=${clientId}, campaign=${campaignId}`
+      )
+      await processLeads([foundLead], clientId, campaignId, interestMap, replyMap, supabase)
+    }
+
+    verified++
+  }
+
+  return { verified, removed, errors }
+}
+
+/**
  * Sync all campaign data for a single client.
- * Uses incremental sync when possible (fetches only new data since last sync).
- * Falls back to full sync on first run or every 24 hours.
+ * Uses getCampaignsForEmail to verify every lead before upserting.
  *
- * Incremental sync:
- * - Analytics: last 7 days only
- * - Emails: only emails newer than last fetched timestamp
- * - Leads: only first 3 pages (most recent ~300 leads)
- *
- * Full sync:
- * - Analytics: last 365 days
- * - Emails: all emails
- * - Leads: all leads
+ * 1. Per campaign: sync analytics (unchanged — analytics API is campaign-scoped)
+ * 2. Per campaign: fetch emails → build interest/reply maps + cache emails
+ * 3. Collect unique lead emails from: (a) fetched emails + (b) existing DB leads
+ * 4. For each unique email: verify via getCampaignsForEmail, then sync or cleanup
  */
 export async function syncClientData(clientId: string, forceFullSync = false): Promise<void> {
   const supabase = createAdminClient()
 
-  // Get campaign IDs for this client
   const { data: campaigns, error: campaignError } = await supabase
     .from('client_campaigns')
     .select('campaign_id')
@@ -637,20 +712,26 @@ export async function syncClientData(clientId: string, forceFullSync = false): P
     throw new Error(`Failed to fetch campaigns for client ${clientId}: ${campaignError.message}`)
   }
 
-  if (!campaigns || campaigns.length === 0) {
-    return // No campaigns to sync
-  }
+  if (!campaigns || campaigns.length === 0) return
+
+  const clientCampaignIds = new Set(campaigns.map((c) => c.campaign_id))
+  const interestMaps = new Map<string, Map<string, string>>()
+  const replyMaps = new Map<string, Map<string, { subject: string | null; content: string | null }>>()
+  const leadEmailsFromEmails = new Set<string>()
+
+  console.log(
+    `syncClientData: client=${clientId}, ${campaigns.length} campaign(s), forceFullSync=${forceFullSync}`
+  )
 
   for (const { campaign_id: campaignId } of campaigns) {
-    // Get sync state for this campaign
     const syncState = await getSyncState(supabase, clientId, campaignId)
     const isFullSync = forceFullSync || needsFullSync(syncState)
 
     console.log(
-      `Syncing campaign ${campaignId} for client ${clientId} — ${isFullSync ? 'FULL' : 'INCREMENTAL'}`
+      `syncClientData: campaign ${campaignId} — ${isFullSync ? 'FULL' : 'INCREMENTAL'}`
     )
 
-    // 1. Sync daily analytics
+    // 1. Sync daily analytics (campaign-scoped, works correctly)
     const analyticsDays = isFullSync ? ANALYTICS_DAYS_FULL : ANALYTICS_DAYS_INCREMENTAL
     const endDate = new Date().toISOString().split('T')[0]
     const startDate = new Date(Date.now() - analyticsDays * 24 * 60 * 60 * 1000)
@@ -658,11 +739,7 @@ export async function syncClientData(clientId: string, forceFullSync = false): P
       .split('T')[0]
 
     try {
-      const dailyAnalytics = await getCampaignDailyAnalytics(
-        campaignId,
-        startDate,
-        endDate
-      )
+      const dailyAnalytics = await getCampaignDailyAnalytics(campaignId, startDate, endDate)
 
       if (dailyAnalytics.length > 0) {
         const analyticsRows = dailyAnalytics.map((day) => ({
@@ -681,9 +758,7 @@ export async function syncClientData(clientId: string, forceFullSync = false): P
 
         const { error: analyticsError } = await supabase
           .from('campaign_analytics')
-          .upsert(analyticsRows, {
-            onConflict: 'client_id,campaign_id,date',
-          })
+          .upsert(analyticsRows, { onConflict: 'client_id,campaign_id,date' })
 
         if (analyticsError) {
           console.error(
@@ -699,10 +774,7 @@ export async function syncClientData(clientId: string, forceFullSync = false): P
         }
       }
     } catch (error) {
-      console.error(
-        `Failed to sync analytics for campaign ${campaignId}:`,
-        error
-      )
+      console.error(`Failed to sync analytics for campaign ${campaignId}:`, error)
       await logError({
         clientId,
         errorType: 'api_failure',
@@ -714,24 +786,19 @@ export async function syncClientData(clientId: string, forceFullSync = false): P
     await delay(RATE_LIMIT_DELAY_MS)
 
     // 2. Fetch emails: build interest/reply maps AND cache into cached_emails
-    let interestMap = new Map<string, string>()
-    let replyMap = new Map<string, { subject: string | null; content: string | null }>()
-    let latestEmailTimestamp: string | null = null
-
     try {
       const sinceTimestamp = isFullSync ? null : syncState?.last_email_timestamp
-      const emailMapResult = await fetchAndCacheEmails(
-        clientId,
-        campaignId,
-        supabase,
-        sinceTimestamp
-      )
-      interestMap = emailMapResult.interestMap
-      replyMap = emailMapResult.replyMap
-      latestEmailTimestamp = emailMapResult.latestTimestamp
+      const emailResult = await fetchAndCacheEmails(clientId, campaignId, supabase, sinceTimestamp)
 
-      // For incremental sync, we also need interest data from existing DB records
-      // since we didn't fetch all emails this time
+      interestMaps.set(campaignId, emailResult.interestMap)
+      replyMaps.set(campaignId, emailResult.replyMap)
+
+      // Collect all lead emails discovered from this campaign's emails
+      for (const email of emailResult.allLeadEmails) {
+        leadEmailsFromEmails.add(email)
+      }
+
+      // For incremental sync, merge existing DB interest data
       if (!isFullSync) {
         const { data: existingInterest } = await supabase
           .from('synced_leads')
@@ -740,82 +807,61 @@ export async function syncClientData(clientId: string, forceFullSync = false): P
           .eq('campaign_id', campaignId)
           .not('interest_status', 'is', null)
 
+        const campaignInterestMap = interestMaps.get(campaignId)!
         for (const row of existingInterest ?? []) {
-          const email = row.email.toLowerCase()
-          // Don't overwrite interest from new emails — those take priority
-          if (!interestMap.has(email) && row.interest_status) {
-            interestMap.set(email, row.interest_status)
-          }
-        }
-      }
-    } catch (error) {
-      console.error(
-        `Failed to fetch/cache emails for campaign ${campaignId}:`,
-        error
-      )
-      // Non-fatal: continue with leads sync, existing interest_status will be preserved
-    }
-
-    await delay(RATE_LIMIT_DELAY_MS)
-
-    // 3. Sync leads
-    try {
-      let leads: InstantlyLead[]
-
-      if (isFullSync) {
-        leads = await fetchAllLeads(campaignId)
-      } else {
-        // Incremental: fetch recent leads + positive-interest leads to catch
-        // leads whose interest was manually changed in Instantly
-        const [recentLeads, positiveLeads] = await Promise.all([
-          fetchRecentLeads(campaignId, INCREMENTAL_LEAD_PAGES),
-          fetchAllLeads(campaignId, 1),
-        ])
-
-        const seenIds = new Set<string>()
-        leads = []
-        for (const lead of [...recentLeads, ...positiveLeads]) {
-          if (!seenIds.has(lead.id)) {
-            seenIds.add(lead.id)
-            leads.push(lead)
+          const rowEmail = row.email.toLowerCase()
+          if (!campaignInterestMap.has(rowEmail) && row.interest_status) {
+            campaignInterestMap.set(rowEmail, row.interest_status)
           }
         }
       }
 
-      console.log(
-        `Fetched ${leads.length} leads for campaign ${campaignId}` +
-          (isFullSync ? ' (full)' : ` (incremental, ${INCREMENTAL_LEAD_PAGES} pages + positive)`)
-      )
-
-      await processLeads(leads, clientId, campaignId, interestMap, replyMap, supabase)
-    } catch (error) {
-      console.error(
-        `Failed to sync leads for campaign ${campaignId}:`,
-        error
-      )
-      await logError({
-        clientId,
-        errorType: 'api_failure',
-        message: `Sync leads mislukt voor campagne ${campaignId}`,
-        details: { campaignId, error: error instanceof Error ? error.message : String(error) },
+      await updateSyncState(supabase, clientId, campaignId, {
+        last_email_timestamp: emailResult.latestTimestamp ?? syncState?.last_email_timestamp ?? null,
+        last_analytics_sync: new Date().toISOString(),
+        ...(isFullSync ? { last_full_sync: new Date().toISOString() } : {}),
       })
+    } catch (error) {
+      console.error(`Failed to fetch/cache emails for campaign ${campaignId}:`, error)
     }
-
-    // 4. Update sync state
-    await updateSyncState(supabase, clientId, campaignId, {
-      last_email_timestamp: latestEmailTimestamp ?? syncState?.last_email_timestamp ?? null,
-      last_analytics_sync: new Date().toISOString(),
-      ...(isFullSync ? { last_full_sync: new Date().toISOString() } : {}),
-    })
 
     await delay(RATE_LIMIT_DELAY_MS)
   }
+
+  // 3. Get existing leads from DB
+  const { data: existingLeads } = await supabase
+    .from('synced_leads')
+    .select('email')
+    .eq('client_id', clientId)
+
+  const allEmails = new Set<string>()
+  for (const lead of existingLeads ?? []) allEmails.add(lead.email.toLowerCase())
+  for (const email of leadEmailsFromEmails) allEmails.add(email)
+
+  const uniqueEmails = [...allEmails]
+  console.log(
+    `syncClientData: ${uniqueEmails.length} unique emails to verify ` +
+    `(${existingLeads?.length ?? 0} in DB, ${leadEmailsFromEmails.size} from emails)`
+  )
+
+  // 4. Verify and sync all leads via getCampaignsForEmail
+  const result = await verifyAndSyncLeads(
+    clientId, clientCampaignIds, uniqueEmails,
+    interestMaps, replyMaps, supabase
+  )
+
+  console.log(
+    `syncClientData: DONE for client ${clientId} — ` +
+    `${result.verified} verified, ${result.removed} removed, ${result.errors} errors`
+  )
 }
 
 /**
  * Lightweight inbox-only sync for a single client.
- * Skips analytics entirely. Fetches only emails (incremental) and recent leads.
- * Used by the inbox "Verversen" button for fast refresh (~10-30 seconds).
+ * Skips analytics. Fetches emails (incremental) per campaign, then verifies
+ * all leads via getCampaignsForEmail before upserting.
+ *
+ * Used by the inbox "Verversen" button and 15-minute cron.
  */
 export async function syncInboxData(clientId: string): Promise<void> {
   const supabase = createAdminClient()
@@ -831,29 +877,29 @@ export async function syncInboxData(clientId: string): Promise<void> {
 
   if (!campaigns || campaigns.length === 0) return
 
+  const clientCampaignIds = new Set(campaigns.map((c) => c.campaign_id))
+  const interestMaps = new Map<string, Map<string, string>>()
+  const replyMaps = new Map<string, Map<string, { subject: string | null; content: string | null }>>()
+  const leadEmailsFromEmails = new Set<string>()
+
+  console.log(`syncInboxData: client=${clientId}, ${campaigns.length} campaign(s)`)
+
+  // Step 1: Per campaign, fetch emails to build interest/reply maps and cache
   for (const { campaign_id: campaignId } of campaigns) {
     const syncState = await getSyncState(supabase, clientId, campaignId)
 
-    console.log(`Inbox sync for campaign ${campaignId} (client ${clientId})`)
-
-    // 1. Fetch emails (incremental when possible) — updates interest_status + cached_emails
-    let interestMap = new Map<string, string>()
-    let replyMap = new Map<string, { subject: string | null; content: string | null }>()
-    let latestEmailTimestamp: string | null = null
-
     try {
       const sinceTimestamp = syncState?.last_email_timestamp ?? null
-      const emailMapResult = await fetchAndCacheEmails(
-        clientId,
-        campaignId,
-        supabase,
-        sinceTimestamp
-      )
-      interestMap = emailMapResult.interestMap
-      replyMap = emailMapResult.replyMap
-      latestEmailTimestamp = emailMapResult.latestTimestamp
+      const emailResult = await fetchAndCacheEmails(clientId, campaignId, supabase, sinceTimestamp)
 
-      // Merge existing interest data for leads we didn't fetch new emails for
+      interestMaps.set(campaignId, emailResult.interestMap)
+      replyMaps.set(campaignId, emailResult.replyMap)
+
+      for (const email of emailResult.allLeadEmails) {
+        leadEmailsFromEmails.add(email)
+      }
+
+      // Merge existing DB interest data for leads without new emails
       if (sinceTimestamp) {
         const { data: existingInterest } = await supabase
           .from('synced_leads')
@@ -862,56 +908,51 @@ export async function syncInboxData(clientId: string): Promise<void> {
           .eq('campaign_id', campaignId)
           .not('interest_status', 'is', null)
 
+        const campaignInterestMap = interestMaps.get(campaignId)!
         for (const row of existingInterest ?? []) {
-          const email = row.email.toLowerCase()
-          if (!interestMap.has(email) && row.interest_status) {
-            interestMap.set(email, row.interest_status)
+          const rowEmail = row.email.toLowerCase()
+          if (!campaignInterestMap.has(rowEmail) && row.interest_status) {
+            campaignInterestMap.set(rowEmail, row.interest_status)
           }
         }
       }
+
+      await updateSyncState(supabase, clientId, campaignId, {
+        last_email_timestamp: emailResult.latestTimestamp ?? syncState?.last_email_timestamp ?? null,
+      })
     } catch (error) {
-      console.error(`Inbox sync: failed to fetch emails for campaign ${campaignId}:`, error)
+      console.error(`syncInboxData: failed to fetch emails for campaign ${campaignId}:`, error)
     }
-
-    await delay(RATE_LIMIT_DELAY_MS)
-
-    // 2. Fetch recent leads (3 pages) + positive-interest leads specifically.
-    // The recent pages catch new leads; the positive fetch catches leads whose
-    // interest_status was manually changed in Instantly but are too old to appear
-    // in the first few pages of the paginated list.
-    try {
-      const [recentLeads, positiveLeads] = await Promise.all([
-        fetchRecentLeads(campaignId, INCREMENTAL_LEAD_PAGES),
-        fetchAllLeads(campaignId, 1), // interest_value=1 (positive)
-      ])
-
-      // Merge and deduplicate by lead ID
-      const seenIds = new Set<string>()
-      const leads: InstantlyLead[] = []
-      for (const lead of [...recentLeads, ...positiveLeads]) {
-        if (!seenIds.has(lead.id)) {
-          seenIds.add(lead.id)
-          leads.push(lead)
-        }
-      }
-
-      console.log(
-        `Inbox sync: fetched ${recentLeads.length} recent + ${positiveLeads.length} positive leads ` +
-        `(${leads.length} unique) for campaign ${campaignId}`
-      )
-
-      await processLeads(leads, clientId, campaignId, interestMap, replyMap, supabase)
-    } catch (error) {
-      console.error(`Inbox sync: failed to sync leads for campaign ${campaignId}:`, error)
-    }
-
-    // 3. Update email timestamp (but not analytics or full sync timestamps)
-    await updateSyncState(supabase, clientId, campaignId, {
-      last_email_timestamp: latestEmailTimestamp ?? syncState?.last_email_timestamp ?? null,
-    })
 
     await delay(RATE_LIMIT_DELAY_MS)
   }
+
+  // Step 2: Get existing leads from DB + combine with emails
+  const { data: existingLeads } = await supabase
+    .from('synced_leads')
+    .select('email')
+    .eq('client_id', clientId)
+
+  const allEmails = new Set<string>()
+  for (const lead of existingLeads ?? []) allEmails.add(lead.email.toLowerCase())
+  for (const email of leadEmailsFromEmails) allEmails.add(email)
+
+  const uniqueEmails = [...allEmails]
+  console.log(
+    `syncInboxData: ${uniqueEmails.length} unique emails to verify ` +
+    `(${existingLeads?.length ?? 0} in DB, ${leadEmailsFromEmails.size} from emails)`
+  )
+
+  // Step 3: Verify and sync all leads via getCampaignsForEmail
+  const result = await verifyAndSyncLeads(
+    clientId, clientCampaignIds, uniqueEmails,
+    interestMaps, replyMaps, supabase
+  )
+
+  console.log(
+    `syncInboxData: DONE for client ${clientId} — ` +
+    `${result.verified} verified, ${result.removed} removed, ${result.errors} errors`
+  )
 }
 
 /**
