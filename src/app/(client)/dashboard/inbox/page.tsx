@@ -5,6 +5,7 @@ import { getPositiveLeadsForInbox } from '@/lib/data/inbox-data'
 import { createClient } from '@/lib/supabase/server'
 import { EmptyState } from '@/components/ui/empty-state'
 import { InboxList } from './_components/inbox-list'
+import { InboxRealtimeProvider } from './_components/inbox-realtime-provider'
 
 export const metadata: Metadata = { title: 'Inbox' }
 export const dynamic = 'force-dynamic'
@@ -34,6 +35,8 @@ export default async function InboxPage() {
       <p className="mt-1 text-sm text-gray-600">
         Uw positieve leads en gesprekken
       </p>
+
+      <InboxRealtimeProvider clientId={client.id} />
 
       {positiveLeads.length === 0 ? (
         <EmptyState

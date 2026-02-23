@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/server'
 import { ThreadView } from '../_components/thread-view'
 import { LeadContactCard } from '../_components/lead-contact-card'
 import { ArchiveButton } from '../_components/archive-button'
+import { ThreadRealtimeProvider } from '../_components/thread-realtime-provider'
 
 export const dynamic = 'force-dynamic'
 
@@ -65,6 +66,7 @@ export default async function LeadThreadPage({
 
   return (
     <div>
+      <ThreadRealtimeProvider clientId={client.id} leadEmail={lead.email} />
       <div className="mb-4 flex items-center justify-between">
         <Link
           href="/dashboard/inbox"

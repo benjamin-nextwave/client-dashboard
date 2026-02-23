@@ -391,7 +391,8 @@ export async function refreshInbox(): Promise<ActionResult> {
 }
 
 /**
- * Delete cached emails for a lead and revalidate the thread view.
+ * Re-fetch emails for a lead from the Instantly API and update the cache.
+ * This ensures the thread view shows fresh data instead of going blank.
  */
 export async function refreshThread(leadId: string): Promise<ActionResult> {
   const supabase = await createClient()
@@ -410,11 +411,38 @@ export async function refreshThread(leadId: string): Promise<ActionResult> {
   if (!lead) return { error: 'Lead niet gevonden.' }
 
   const admin = createAdminClient()
-  await admin
-    .from('cached_emails')
-    .delete()
-    .eq('client_id', clientId)
-    .eq('lead_email', lead.email)
+
+  // Fetch fresh emails from Instantly API for this specific lead
+  try {
+    const response = await listEmails({ lead: lead.email, limit: 100 })
+
+    if (response.items.length > 0) {
+      const cacheRows = response.items.map((email) => {
+        const isReply = email.ue_type === 2
+        return {
+          client_id: clientId,
+          instantly_email_id: email.id,
+          thread_id: email.thread_id,
+          lead_email: email.lead?.toLowerCase() ?? lead.email.toLowerCase(),
+          from_address: email.from_address_email,
+          to_address: email.to_address_email_list,
+          subject: email.subject,
+          body_text: email.body?.text ?? null,
+          body_html: email.body?.html ?? null,
+          is_reply: isReply,
+          sender_account: isReply ? null : email.from_address_email,
+          email_timestamp: email.timestamp_email ?? email.timestamp_created,
+        }
+      })
+
+      await admin
+        .from('cached_emails')
+        .upsert(cacheRows, { onConflict: 'instantly_email_id' })
+    }
+  } catch (err) {
+    console.error('Failed to refresh thread emails from API:', err)
+    return { error: 'Fout bij het ophalen van e-mails. Probeer het opnieuw.' }
+  }
 
   revalidatePath(`/dashboard/inbox/${leadId}`)
   revalidatePath('/dashboard/inbox')

@@ -443,14 +443,11 @@ async function processLeads(
       interest_status = emailInterestStatus ?? existingInterestStatus ?? leadInterestStatus
     }
 
-    // Log interest derivation for any lead that has interest signals
-    if (leadInterestStatus || emailInterestStatus || existingInterestStatus) {
+    // Log only when interest becomes positive (reduces noise)
+    if (interest_status === 'positive' && existingInterestStatus !== 'positive') {
       console.log(
-        `Interest status for ${lead.email}: ` +
-        `lt_interest_status=${JSON.stringify(lead.lt_interest_status)} → ${leadInterestStatus}, ` +
-        `email_i_status=${emailInterestStatus}, ` +
-        `existing_db=${existingInterestStatus} → ` +
-        `RESULT: ${interest_status}`
+        `New positive lead ${lead.email}: ` +
+        `lt=${leadInterestStatus}, email=${emailInterestStatus}, db=${existingInterestStatus}`
       )
     }
 
@@ -909,6 +906,202 @@ export async function syncInboxData(clientId: string): Promise<void> {
     })
 
     await delay(RATE_LIMIT_DELAY_MS)
+  }
+}
+
+/**
+ * Targeted sync for a single lead by email address.
+ * Used by webhook when Make.com sends a specific lead email.
+ * Only fetches data for this one lead — completes in ~2-5 seconds.
+ */
+export async function syncSingleLeadByEmail(leadEmail: string): Promise<{
+  synced: boolean
+  clientIds: string[]
+}> {
+  const supabase = createAdminClient()
+  const emailLower = leadEmail.toLowerCase()
+
+  // 1. Find all (client_id, campaign_id) pairs for this lead
+  const { data: existingLeads } = await supabase
+    .from('synced_leads')
+    .select('client_id, campaign_id, interest_status')
+    .eq('email', emailLower)
+
+  // Also check client_campaigns to find campaigns the lead might be in
+  // even if we haven't synced them yet
+  let campaignPairs: { client_id: string; campaign_id: string; existing_interest: string | null }[] = []
+
+  if (existingLeads && existingLeads.length > 0) {
+    campaignPairs = existingLeads.map((l) => ({
+      client_id: l.client_id,
+      campaign_id: l.campaign_id,
+      existing_interest: l.interest_status,
+    }))
+  } else {
+    // Lead not in DB yet — search all campaigns across all clients
+    const { data: allCampaigns } = await supabase
+      .from('client_campaigns')
+      .select('client_id, campaign_id')
+
+    if (!allCampaigns || allCampaigns.length === 0) {
+      return { synced: false, clientIds: [] }
+    }
+    campaignPairs = allCampaigns.map((c) => ({
+      client_id: c.client_id,
+      campaign_id: c.campaign_id,
+      existing_interest: null,
+    }))
+  }
+
+  if (campaignPairs.length === 0) {
+    return { synced: false, clientIds: [] }
+  }
+
+  // 2. Fetch emails for this lead from Instantly (one API call covers all campaigns)
+  let emails: InstantlyEmail[] = []
+  try {
+    const emailResponse = await listEmails({ lead: emailLower, limit: 100 })
+    emails = emailResponse.items
+  } catch (error) {
+    console.error(`syncSingleLeadByEmail: failed to fetch emails for ${emailLower}:`, error)
+  }
+
+  // Build interest map and reply map from emails
+  const interestMap = new Map<string, string>()
+  const replyMap = new Map<string, { subject: string | null; content: string | null }>()
+
+  for (const email of emails) {
+    if (email.i_status != null) {
+      const newStatus = mapInterestStatus(email.i_status)
+      if (newStatus) {
+        const existing = interestMap.get(emailLower)
+        if (!existing || newStatus === 'positive' || (newStatus === 'neutral' && existing === 'negative')) {
+          interestMap.set(emailLower, newStatus)
+        }
+      }
+    }
+
+    if (isInboundReply(email)) {
+      const emailTs = email.timestamp_email ?? email.timestamp_created
+      const existingReply = replyMap.get(emailLower)
+      if (!existingReply || (emailTs && emailTs > (email.timestamp_created ?? ''))) {
+        replyMap.set(emailLower, {
+          subject: email.subject ?? null,
+          content: email.body?.html ?? email.body?.text ?? null,
+        })
+      }
+    }
+  }
+
+  // 3. Pick a unique set of campaign IDs to search for the lead object
+  const uniqueCampaignIds = [...new Set(campaignPairs.map((p) => p.campaign_id))]
+
+  // Fetch lead object from Instantly (search by email in each campaign)
+  let foundLead: InstantlyLead | null = null
+  let foundCampaignId: string | null = null
+
+  for (const campaignId of uniqueCampaignIds) {
+    try {
+      const leadResponse = await listLeads(campaignId, { search: emailLower, limit: 10 })
+      const match = leadResponse.items.find((l) => l.email.toLowerCase() === emailLower)
+      if (match) {
+        foundLead = match
+        foundCampaignId = campaignId
+        break
+      }
+    } catch (error) {
+      console.error(`syncSingleLeadByEmail: failed to search leads in campaign ${campaignId}:`, error)
+    }
+    await delay(RATE_LIMIT_DELAY_MS)
+  }
+
+  if (!foundLead) {
+    // Lead not found in any campaign — still cache the emails if we got any
+    if (emails.length > 0) {
+      const clientIds = [...new Set(campaignPairs.map((p) => p.client_id))]
+      for (const clientId of clientIds) {
+        await cacheEmailsForClient(clientId, emails, supabase)
+      }
+      return { synced: true, clientIds }
+    }
+    return { synced: false, clientIds: [] }
+  }
+
+  // 4. Process lead for each (client_id, campaign_id) pair that matches
+  const syncedClientIds = new Set<string>()
+
+  // Group by client_id
+  const clientCampaignMap = new Map<string, string[]>()
+  for (const pair of campaignPairs) {
+    const campaigns = clientCampaignMap.get(pair.client_id) ?? []
+    campaigns.push(pair.campaign_id)
+    clientCampaignMap.set(pair.client_id, campaigns)
+  }
+
+  for (const [clientId, campaignIds] of clientCampaignMap) {
+    // Cache emails for this client
+    await cacheEmailsForClient(clientId, emails, supabase)
+
+    // Process the lead for each campaign this client has
+    for (const campaignId of campaignIds) {
+      // If the lead was found in a different campaign, we still upsert with the data we have
+      await processLeads(
+        [foundLead],
+        clientId,
+        campaignId,
+        interestMap,
+        replyMap,
+        supabase
+      )
+    }
+
+    syncedClientIds.add(clientId)
+  }
+
+  const clientIds = [...syncedClientIds]
+  console.log(
+    `syncSingleLeadByEmail: synced ${emailLower} for ${clientIds.length} client(s), ` +
+    `found in campaign ${foundCampaignId}, ${emails.length} emails cached`
+  )
+
+  return { synced: true, clientIds }
+}
+
+/**
+ * Cache emails into cached_emails table for a specific client.
+ * Helper used by syncSingleLeadByEmail.
+ */
+async function cacheEmailsForClient(
+  clientId: string,
+  emails: InstantlyEmail[],
+  supabase: ReturnType<typeof createAdminClient>
+): Promise<void> {
+  if (emails.length === 0) return
+
+  const cacheRows = emails.map((email) => {
+    const isReply = isInboundReply(email)
+    return {
+      client_id: clientId,
+      instantly_email_id: email.id,
+      thread_id: email.thread_id,
+      lead_email: extractLeadEmailFromEmail(email),
+      from_address: email.from_address_email,
+      to_address: email.to_address_email_list,
+      subject: email.subject,
+      body_text: email.body?.text ?? null,
+      body_html: email.body?.html ?? null,
+      is_reply: isReply,
+      sender_account: isReply ? null : email.from_address_email,
+      email_timestamp: email.timestamp_email ?? email.timestamp_created,
+    }
+  })
+
+  const { error } = await supabase
+    .from('cached_emails')
+    .upsert(cacheRows, { onConflict: 'instantly_email_id' })
+
+  if (error) {
+    console.error(`Failed to cache emails for client ${clientId}:`, error.message)
   }
 }
 
