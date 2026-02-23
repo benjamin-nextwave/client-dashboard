@@ -1,13 +1,16 @@
 export const runtime = 'nodejs'
 export const maxDuration = 300
-
-import { syncAllClientsInbox } from '@/lib/instantly/sync'
-import { NextResponse } from 'next/server'
-
 export const dynamic = 'force-dynamic'
 
+import { NextResponse } from 'next/server'
+import { syncAllClientsFull } from '@/lib/instantly/sync'
+
+/**
+ * Daily full sync cron job.
+ * Runs at 06:00 Amsterdam time (05:00 UTC).
+ * Syncs everything: analytics, all emails, all leads for all clients.
+ */
 export async function GET(request: Request) {
-  // Validate CRON_SECRET if set
   const cronSecret = process.env.CRON_SECRET
   if (cronSecret) {
     const authHeader = request.headers.get('authorization')
@@ -20,7 +23,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    await syncAllClientsInbox()
+    await syncAllClientsFull()
 
     return NextResponse.json({
       success: true,
@@ -29,8 +32,7 @@ export async function GET(request: Request) {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'Unknown error occurred'
-
-    console.error('Cron sync failed:', error)
+    console.error('Daily full sync failed:', error)
 
     return NextResponse.json(
       { success: false, error: message },

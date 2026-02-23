@@ -58,6 +58,10 @@ export function OverzichtDashboard({
       <EmailsPerDayChart data={dailyEmailsSent} brandColor={brandColor} />
 
       <ComingSoonCharts />
+
+      <p className="text-center text-xs text-gray-400">
+        Statistieken worden eenmaal per dag bijgewerkt (06:00).
+      </p>
     </div>
   )
 }

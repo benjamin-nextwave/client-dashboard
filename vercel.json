@@ -5,6 +5,10 @@
       "schedule": "*/15 * * * *"
     },
     {
+      "path": "/api/cron/sync-full",
+      "schedule": "0 5 * * *"
+    },
+    {
       "path": "/api/cron/morning-check",
       "schedule": "0 5 * * *"
     },

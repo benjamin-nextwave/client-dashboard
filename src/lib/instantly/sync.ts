@@ -840,16 +840,11 @@ export async function syncInboxData(clientId: string): Promise<void> {
 }
 
 /**
- * Sync data for all clients that have associated campaigns.
- * Processes clients sequentially to respect API rate limits.
- * Prioritizes least-recently-synced clients so new clients (never synced)
- * get synced first, and all clients get fair rotation even if the
- * function hits the Vercel timeout.
+ * Get all client IDs that have campaigns, sorted by least-recently-synced first.
  */
-export async function syncAllClients(): Promise<void> {
-  const supabase = createAdminClient()
-
-  // Get all distinct client IDs that have campaigns
+async function getClientIdsSortedBySyncTime(
+  supabase: ReturnType<typeof createAdminClient>
+): Promise<string[]> {
   const { data: clientCampaigns, error } = await supabase
     .from('client_campaigns')
     .select('client_id')
@@ -858,14 +853,10 @@ export async function syncAllClients(): Promise<void> {
     throw new Error(`Failed to fetch client campaigns: ${error.message}`)
   }
 
-  if (!clientCampaigns || clientCampaigns.length === 0) {
-    return
-  }
+  if (!clientCampaigns || clientCampaigns.length === 0) return []
 
-  // Deduplicate client IDs
   const clientIds = [...new Set(clientCampaigns.map((cc) => cc.client_id))]
 
-  // Get last sync time per client to prioritize least-recently-synced
   const { data: syncTimes } = await supabase
     .from('synced_leads')
     .select('client_id, last_synced_at')
@@ -874,24 +865,59 @@ export async function syncAllClients(): Promise<void> {
 
   const lastSyncMap = new Map<string, string>()
   for (const row of syncTimes ?? []) {
-    // Keep only the most recent sync time per client (first seen due to DESC order)
     if (!lastSyncMap.has(row.client_id)) {
       lastSyncMap.set(row.client_id, row.last_synced_at)
     }
   }
 
-  // Sort: never-synced clients first, then oldest-synced first
   clientIds.sort((a, b) => {
     const aTime = lastSyncMap.get(a) ?? ''
     const bTime = lastSyncMap.get(b) ?? ''
     return aTime.localeCompare(bTime)
   })
 
+  return clientIds
+}
+
+/**
+ * Inbox-only sync for all clients (used by the 15-minute cron).
+ * Only syncs emails + recent leads. Skips analytics entirely.
+ * All syncing power goes to keeping the inbox up-to-date.
+ */
+export async function syncAllClientsInbox(): Promise<void> {
+  const supabase = createAdminClient()
+  const clientIds = await getClientIdsSortedBySyncTime(supabase)
+
   for (const clientId of clientIds) {
     try {
-      await syncClientData(clientId)
+      await syncInboxData(clientId)
     } catch (error) {
-      console.error(`Failed to sync client ${clientId}:`, error)
+      console.error(`Inbox sync failed for client ${clientId}:`, error)
+      await logError({
+        clientId,
+        errorType: 'sync_error',
+        message: `Inbox sync mislukt voor klant ${clientId}`,
+        details: { error: error instanceof Error ? error.message : String(error) },
+      })
+    }
+
+    await delay(RATE_LIMIT_DELAY_MS)
+  }
+}
+
+/**
+ * Full sync for all clients (used by the daily 6 AM cron).
+ * Syncs everything: analytics, all emails, all leads.
+ */
+export async function syncAllClientsFull(): Promise<void> {
+  const supabase = createAdminClient()
+  const clientIds = await getClientIdsSortedBySyncTime(supabase)
+
+  for (const clientId of clientIds) {
+    try {
+      await syncClientData(clientId, true)
+    } catch (error) {
+      console.error(`Full sync failed for client ${clientId}:`, error)
       await logError({
         clientId,
         errorType: 'sync_error',

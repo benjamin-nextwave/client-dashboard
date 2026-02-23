@@ -19,6 +19,7 @@ export default async function VerzondenPage() {
       <h1 className="text-2xl font-bold text-gray-900">Verzonden</h1>
       <p className="mt-1 text-sm text-gray-600">
         Alle verzonden campagne e-mails.
+        <span className="ml-1 text-xs text-gray-400">(Wordt eenmaal per dag bijgewerkt om 06:00)</span>
       </p>
 
       {emails.length === 0 ? (
