@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { listLeads } from '@/lib/instantly/client'
+import { getCampaignsForEmail } from '@/lib/instantly/client'
 
 const RATE_LIMIT_DELAY_MS = 500
 
@@ -14,11 +14,12 @@ function delay(ms: number): Promise<void> {
 }
 
 /**
- * Bulk cleanup: verify every (campaign_id, email) in synced_leads against the
- * Instantly API. Removes rows where the lead does NOT actually exist in that campaign.
+ * Bulk cleanup: for every unique email in synced_leads, ask Instantly which
+ * campaigns that email actually belongs to (via search-by-contact API).
+ * Then delete any synced_leads rows where the campaign_id is NOT in the
+ * Instantly response.
  *
- * Efficient: fetches ALL leads per campaign (1 API call per campaign), then
- * cross-references with synced_leads in bulk.
+ * This is 1 API call per unique email (not per campaign).
  *
  * Protected: operator-only.
  *
@@ -48,218 +49,163 @@ export async function POST(request: Request) {
 
   console.log(`=== cleanup-leads: starting${dryRun ? ' (DRY RUN)' : ''}${filterClientId ? ` for client ${filterClientId}` : ''} ===`)
 
-  // 1. Get all unique campaign_ids from synced_leads (optionally filtered by client)
-  let campaignQuery = admin
+  // 1. Get all unique emails from synced_leads (optionally filtered by client)
+  let emailQuery = admin
     .from('synced_leads')
-    .select('campaign_id, client_id')
+    .select('email')
 
   if (filterClientId) {
-    campaignQuery = campaignQuery.eq('client_id', filterClientId)
+    emailQuery = emailQuery.eq('client_id', filterClientId)
   }
 
-  const { data: allPairs, error: pairsError } = await campaignQuery
+  const { data: allLeadRows, error: queryError } = await emailQuery
 
-  if (pairsError) {
-    return NextResponse.json({ error: `Failed to query synced_leads: ${pairsError.message}` }, { status: 500 })
+  if (queryError) {
+    return NextResponse.json({ error: `Failed to query synced_leads: ${queryError.message}` }, { status: 500 })
   }
 
-  if (!allPairs || allPairs.length === 0) {
+  if (!allLeadRows || allLeadRows.length === 0) {
     return NextResponse.json({ message: 'No synced_leads to check', results: [] })
   }
 
-  // Get unique campaign_ids
-  const uniqueCampaignIds = [...new Set(allPairs.map((p) => p.campaign_id))]
+  const uniqueEmails = [...new Set(allLeadRows.map((r) => r.email.toLowerCase().trim()))]
 
-  console.log(`cleanup-leads: ${allPairs.length} total (client_id, campaign_id) pairs across ${uniqueCampaignIds.length} unique campaigns`)
-
-  const results: Array<{
-    campaign_id: string
-    instantly_lead_count: number
-    synced_lead_count: number
-    kept: number
-    removed: number
-    removed_emails: string[]
-  }> = []
+  console.log(`cleanup-leads: found ${uniqueEmails.length} unique emails to verify`)
 
   let totalRemoved = 0
   let totalKept = 0
   let totalEmailsRemoved = 0
+  let totalApiErrors = 0
 
-  // 2. Process each campaign sequentially
-  for (const campaignId of uniqueCampaignIds) {
-    console.log(`cleanup-leads: processing campaign ${campaignId}...`)
+  const removedDetails: Array<{
+    email: string
+    removed_pairs: Array<{ client_id: string; campaign_id: string }>
+    instantly_campaigns: string[]
+  }> = []
 
-    // Fetch ALL leads from Instantly for this campaign
-    let instantlyEmails: Set<string>
-    try {
-      const allLeads = await fetchAllLeadsForCampaign(campaignId)
-      instantlyEmails = new Set(allLeads.map((l) => l.email.toLowerCase().trim()))
-      console.log(`cleanup-leads: campaign ${campaignId} has ${instantlyEmails.size} leads in Instantly`)
-    } catch (error) {
-      console.error(`cleanup-leads: failed to fetch leads for campaign ${campaignId}:`, error)
-      results.push({
-        campaign_id: campaignId,
-        instantly_lead_count: -1,
-        synced_lead_count: 0,
-        kept: 0,
-        removed: 0,
-        removed_emails: [`ERROR: ${error instanceof Error ? error.message : String(error)}`],
-      })
+  // 2. Process each email sequentially (1 API call per email, max 2/sec)
+  for (let i = 0; i < uniqueEmails.length; i++) {
+    const email = uniqueEmails[i]
+
+    // Rate limit: max 2 calls per second (500ms between calls)
+    if (i > 0) {
       await delay(RATE_LIMIT_DELAY_MS)
+    }
+
+    // Ask Instantly which campaigns this email belongs to
+    let instantlyCampaignIds: string[]
+    try {
+      instantlyCampaignIds = await getCampaignsForEmail(email)
+    } catch (error) {
+      console.error(`cleanup-leads: getCampaignsForEmail failed for ${email}:`, error)
+      totalApiErrors++
       continue
     }
 
-    // Fetch all synced_leads for this campaign (optionally filtered by client)
-    let syncedQuery = admin
+    const instantlyCampaignSet = new Set(instantlyCampaignIds)
+
+    // Get all synced_leads for this email (optionally filtered by client)
+    let leadsQuery = admin
       .from('synced_leads')
-      .select('id, client_id, email')
-      .eq('campaign_id', campaignId)
+      .select('id, client_id, campaign_id')
+      .eq('email', email)
 
     if (filterClientId) {
-      syncedQuery = syncedQuery.eq('client_id', filterClientId)
+      leadsQuery = leadsQuery.eq('client_id', filterClientId)
     }
 
-    const { data: syncedLeads, error: syncedError } = await syncedQuery
+    const { data: syncedLeads } = await leadsQuery
 
-    if (syncedError) {
-      console.error(`cleanup-leads: failed to query synced_leads for campaign ${campaignId}:`, syncedError.message)
-      await delay(RATE_LIMIT_DELAY_MS)
-      continue
-    }
+    if (!syncedLeads || syncedLeads.length === 0) continue
 
-    if (!syncedLeads || syncedLeads.length === 0) {
-      await delay(RATE_LIMIT_DELAY_MS)
-      continue
-    }
+    // Split into valid and stale
+    const validLeads = syncedLeads.filter((sl) => instantlyCampaignSet.has(sl.campaign_id))
+    const staleLeads = syncedLeads.filter((sl) => !instantlyCampaignSet.has(sl.campaign_id))
 
-    // Compare: find synced_leads NOT in Instantly
-    const toRemove = syncedLeads.filter(
-      (sl) => !instantlyEmails.has(sl.email.toLowerCase().trim())
-    )
-    const toKeep = syncedLeads.length - toRemove.length
+    totalKept += validLeads.length
 
+    if (staleLeads.length === 0) continue
+
+    // Log every removal
     console.log(
-      `cleanup-leads: campaign ${campaignId} — ` +
-      `${syncedLeads.length} in DB, ${toKeep} valid, ${toRemove.length} to remove`
+      `cleanup-leads: ${email} — Instantly has ${instantlyCampaignIds.length} campaign(s) [${instantlyCampaignIds.join(', ')}], ` +
+      `DB has ${syncedLeads.length} row(s), removing ${staleLeads.length} stale row(s)`
     )
 
-    if (toRemove.length > 0) {
-      const removedEmails = toRemove.map((r) => r.email)
+    const removedPairs = staleLeads.map((sl) => ({
+      client_id: sl.client_id,
+      campaign_id: sl.campaign_id,
+    }))
 
-      if (!dryRun) {
-        // Delete in batches of 50 to avoid oversized requests
-        const BATCH_SIZE = 50
-        for (let i = 0; i < toRemove.length; i += BATCH_SIZE) {
-          const batch = toRemove.slice(i, i + BATCH_SIZE)
-          const ids = batch.map((r) => r.id)
+    if (!dryRun) {
+      // Delete stale synced_leads
+      const staleIds = staleLeads.map((sl) => sl.id)
+      const { error: delError } = await admin
+        .from('synced_leads')
+        .delete()
+        .in('id', staleIds)
 
-          const { error: delError } = await admin
-            .from('synced_leads')
-            .delete()
-            .in('id', ids)
-
-          if (delError) {
-            console.error(`cleanup-leads: failed to delete batch:`, delError.message)
-          }
-        }
-
-        // Clean up orphaned cached_emails for each removed lead
-        // Group by client_id to batch the cleanup
-        const clientLeadMap = new Map<string, string[]>()
-        for (const removed of toRemove) {
-          const leads = clientLeadMap.get(removed.client_id) ?? []
-          leads.push(removed.email)
-          clientLeadMap.set(removed.client_id, leads)
-        }
-
-        let emailsRemoved = 0
-        for (const [clientId, leadEmails] of clientLeadMap) {
-          // Only delete cached_emails if there are NO remaining synced_leads for this client/email
-          for (const leadEmail of leadEmails) {
-            const { data: remaining } = await admin
-              .from('synced_leads')
-              .select('id')
-              .eq('client_id', clientId)
-              .eq('email', leadEmail)
-              .limit(1)
-
-            if (!remaining || remaining.length === 0) {
-              const { error: ceDelError } = await admin
-                .from('cached_emails')
-                .delete()
-                .eq('client_id', clientId)
-                .eq('lead_email', leadEmail)
-
-              if (ceDelError) {
-                console.error(`cleanup-leads: failed to delete cached_emails for ${clientId}/${leadEmail}:`, ceDelError.message)
-              } else {
-                emailsRemoved++
-              }
-            }
-          }
-        }
-
-        totalEmailsRemoved += emailsRemoved
-        console.log(`cleanup-leads: campaign ${campaignId} — removed ${toRemove.length} leads + ${emailsRemoved} cached emails`)
-      } else {
-        console.log(`cleanup-leads: DRY RUN — would remove ${toRemove.length} leads from campaign ${campaignId}: [${removedEmails.slice(0, 10).join(', ')}${removedEmails.length > 10 ? '...' : ''}]`)
+      if (delError) {
+        console.error(`cleanup-leads: failed to delete stale synced_leads for ${email}:`, delError.message)
       }
 
-      results.push({
-        campaign_id: campaignId,
-        instantly_lead_count: instantlyEmails.size,
-        synced_lead_count: syncedLeads.length,
-        kept: toKeep,
-        removed: toRemove.length,
-        removed_emails: removedEmails,
-      })
+      // Clean up orphaned cached_emails
+      const affectedClientIds = [...new Set(staleLeads.map((sl) => sl.client_id))]
+      for (const clientId of affectedClientIds) {
+        // Only delete cached_emails if no synced_leads remain for this client/email
+        const { data: remaining } = await admin
+          .from('synced_leads')
+          .select('id')
+          .eq('client_id', clientId)
+          .eq('email', email)
+          .limit(1)
 
-      totalRemoved += toRemove.length
+        if (!remaining || remaining.length === 0) {
+          const { error: ceDelError } = await admin
+            .from('cached_emails')
+            .delete()
+            .eq('client_id', clientId)
+            .eq('lead_email', email)
+
+          if (ceDelError) {
+            console.error(`cleanup-leads: failed to delete cached_emails for ${clientId}/${email}:`, ceDelError.message)
+          } else {
+            totalEmailsRemoved++
+          }
+        }
+      }
     }
 
-    totalKept += toKeep
+    totalRemoved += staleLeads.length
 
-    await delay(RATE_LIMIT_DELAY_MS)
+    removedDetails.push({
+      email,
+      removed_pairs: removedPairs,
+      instantly_campaigns: instantlyCampaignIds,
+    })
+
+    // Progress log every 50 emails
+    if ((i + 1) % 50 === 0) {
+      console.log(`cleanup-leads: progress — ${i + 1}/${uniqueEmails.length} emails processed, ${totalRemoved} removed so far`)
+    }
   }
 
   const summary = {
     dry_run: dryRun,
-    campaigns_checked: uniqueCampaignIds.length,
+    unique_emails_checked: uniqueEmails.length,
     total_kept: totalKept,
     total_removed: totalRemoved,
-    total_cached_emails_removed: totalEmailsRemoved,
-    campaigns_with_removals: results.length,
-    details: results,
+    total_cached_emails_cleaned: totalEmailsRemoved,
+    api_errors: totalApiErrors,
+    emails_with_removals: removedDetails.length,
+    details: removedDetails,
   }
 
   console.log(
-    `=== cleanup-leads: DONE — ${totalRemoved} leads removed, ${totalKept} kept, ` +
-    `${totalEmailsRemoved} cached emails removed${dryRun ? ' (DRY RUN)' : ''} ===`
+    `=== cleanup-leads: DONE — ${totalRemoved} synced_leads removed, ${totalKept} kept, ` +
+    `${totalEmailsRemoved} cached_emails cleaned, ${totalApiErrors} API errors` +
+    `${dryRun ? ' (DRY RUN)' : ''} ===`
   )
 
   return NextResponse.json(summary)
-}
-
-/**
- * Fetch ALL leads for a campaign using cursor pagination.
- */
-async function fetchAllLeadsForCampaign(campaignId: string): Promise<Array<{ email: string }>> {
-  const allLeads: Array<{ email: string }> = []
-  let cursor: string | undefined
-
-  do {
-    const response = await listLeads(campaignId, {
-      limit: 100,
-      startingAfter: cursor,
-    })
-
-    allLeads.push(...response.items.map((l) => ({ email: l.email })))
-    cursor = response.next_starting_after ?? undefined
-
-    if (cursor) {
-      await delay(200)
-    }
-  } while (cursor)
-
-  return allLeads
 }

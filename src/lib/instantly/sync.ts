@@ -1,7 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logError } from '@/lib/errors/log-error'
 import { sendLeadWebhook } from '@/lib/webhooks/notify-lead'
-import { getCampaignDailyAnalytics, listLeads, listEmails } from './client'
+import { getCampaignDailyAnalytics, listLeads, listEmails, getCampaignsForEmail } from './client'
 import type { InstantlyLead, InstantlyEmail } from './types'
 
 const RATE_LIMIT_DELAY_MS = 200
@@ -919,8 +919,13 @@ export async function syncInboxData(clientId: string): Promise<void> {
  * Used by webhook when Make.com sends a specific lead email.
  * Only fetches data for this one lead — completes in ~2-5 seconds.
  *
- * When campaignHint is provided (from webhook payload), skips the expensive
- * campaign search and goes directly to the correct client.
+ * Uses getCampaignsForEmail (search-by-contact API) as the single source of
+ * truth for which campaigns a lead belongs to. This is 1 API call regardless
+ * of how many campaigns exist.
+ *
+ * campaignHint is still accepted: if provided AND it's in the API results,
+ * we skip looking up other campaigns (optimization only, never used to BYPASS
+ * the API check).
  */
 export async function syncSingleLeadByEmail(
   leadEmail: string,
@@ -935,7 +940,63 @@ export async function syncSingleLeadByEmail(
   console.log(`syncSingleLeadByEmail: starting for ${emailLower}` +
     (campaignHint ? ` (campaign hint: ${campaignHint})` : ''))
 
-  // 1. Fetch emails for this lead from Instantly (one API call)
+  // ── Step 1: Ask Instantly which campaigns this lead is in (1 API call) ──
+  let instantlyCampaignIds: string[]
+  try {
+    instantlyCampaignIds = await getCampaignsForEmail(emailLower)
+    console.log(
+      `syncSingleLeadByEmail: getCampaignsForEmail(${emailLower}) → ` +
+      `${instantlyCampaignIds.length} campaign(s): [${instantlyCampaignIds.join(', ')}]`
+    )
+  } catch (error) {
+    console.error(`syncSingleLeadByEmail: getCampaignsForEmail failed for ${emailLower}:`, error)
+    return { synced: false, clientIds: [] }
+  }
+
+  if (instantlyCampaignIds.length === 0) {
+    console.log(`syncSingleLeadByEmail: ${emailLower} not found in any Instantly campaign`)
+
+    // Clean up any stale DB entries for this lead
+    await cleanupStaleLeadData(emailLower, new Set(), supabase)
+
+    return { synced: false, clientIds: [] }
+  }
+
+  // If campaign hint is provided and it's in the results, we can trust it
+  if (campaignHint && instantlyCampaignIds.includes(campaignHint)) {
+    console.log(`syncSingleLeadByEmail: campaign hint ${campaignHint} confirmed by API`)
+  }
+
+  // ── Step 2: Cross-reference with client_campaigns to get (client_id, campaign_id) pairs ──
+  const instantlyCampaignSet = new Set(instantlyCampaignIds)
+
+  const { data: clientCampaigns } = await supabase
+    .from('client_campaigns')
+    .select('client_id, campaign_id')
+    .in('campaign_id', instantlyCampaignIds)
+
+  type CampaignPair = { client_id: string; campaign_id: string }
+  const confirmedPairs: CampaignPair[] = (clientCampaigns ?? []).map((cc) => ({
+    client_id: cc.client_id,
+    campaign_id: cc.campaign_id,
+  }))
+
+  console.log(
+    `syncSingleLeadByEmail: ${instantlyCampaignIds.length} Instantly campaign(s) → ` +
+    `${confirmedPairs.length} client_campaigns match(es): ` +
+    `[${confirmedPairs.map((p) => `client=${p.client_id}/campaign=${p.campaign_id}`).join(', ')}]`
+  )
+
+  // ── Step 3: Clean up stale DB entries ──
+  // Any existing synced_leads for this email that are NOT in a confirmed campaign must go
+  await cleanupStaleLeadData(emailLower, instantlyCampaignSet, supabase)
+
+  if (confirmedPairs.length === 0) {
+    console.log(`syncSingleLeadByEmail: ${emailLower} is in Instantly campaigns but none are in client_campaigns`)
+    return { synced: false, clientIds: [] }
+  }
+
+  // ── Step 4: Fetch emails for this lead (1 API call) ──
   let emails: InstantlyEmail[] = []
   try {
     const emailResponse = await listEmails({ lead: emailLower, limit: 100 })
@@ -971,206 +1032,8 @@ export async function syncSingleLeadByEmail(
     }
   }
 
-  // 2. Determine which (client_id, campaign_id) pairs this lead belongs to
-  type CampaignPair = { client_id: string; campaign_id: string }
-  let confirmedPairs: CampaignPair[] = []
-
-  // --- Fast path: campaign_id hint from webhook ---
-  if (campaignHint) {
-    const { data: hintMatches } = await supabase
-      .from('client_campaigns')
-      .select('client_id, campaign_id')
-      .eq('campaign_id', campaignHint)
-
-    if (hintMatches && hintMatches.length > 0) {
-      // Verify the lead actually exists in this campaign with EXACT email match
-      try {
-        const leadResponse = await listLeads(campaignHint, { search: emailLower, limit: 10 })
-        const exactMatch = leadResponse.items.find(
-          (l) => l.email.toLowerCase().trim() === emailLower
-        )
-        if (exactMatch) {
-          confirmedPairs = hintMatches.map((m) => ({
-            client_id: m.client_id,
-            campaign_id: m.campaign_id,
-          }))
-          console.log(
-            `syncSingleLeadByEmail: campaign hint matched — ` +
-            `${emailLower} confirmed in campaign ${campaignHint} for ${confirmedPairs.length} client(s): ` +
-            `[${confirmedPairs.map((p) => p.client_id).join(', ')}]`
-          )
-        } else {
-          console.log(
-            `syncSingleLeadByEmail: campaign hint ${campaignHint} did NOT contain exact match for ${emailLower}, ` +
-            `API returned ${leadResponse.items.length} results: [${leadResponse.items.map((l) => l.email).join(', ')}]`
-          )
-        }
-      } catch (error) {
-        console.error(`syncSingleLeadByEmail: failed to verify lead in hinted campaign ${campaignHint}:`, error)
-      }
-    } else {
-      console.log(`syncSingleLeadByEmail: campaign hint ${campaignHint} not found in client_campaigns`)
-    }
-  }
-
-  // --- If hint didn't resolve, check existing DB records ---
-  if (confirmedPairs.length === 0) {
-    const { data: existingLeads } = await supabase
-      .from('synced_leads')
-      .select('client_id, campaign_id')
-      .eq('email', emailLower)
-
-    if (existingLeads && existingLeads.length > 0) {
-      console.log(
-        `syncSingleLeadByEmail: ${emailLower} found in DB with ${existingLeads.length} pair(s), ` +
-        `verifying each against Instantly API...`
-      )
-
-      // Verify each pair against Instantly API — the lead must actually exist in the campaign.
-      // Group by campaign_id to avoid duplicate API calls when multiple clients share a campaign.
-      const uniqueCampaignIds = [...new Set(existingLeads.map((l) => l.campaign_id))]
-      const verifiedCampaigns = new Set<string>()
-
-      // Process campaigns in batches of 5 to limit parallel API calls
-      const BATCH_SIZE = 5
-      for (let i = 0; i < uniqueCampaignIds.length; i += BATCH_SIZE) {
-        const batch = uniqueCampaignIds.slice(i, i + BATCH_SIZE)
-        const results = await Promise.allSettled(
-          batch.map(async (campaignId) => {
-            const leadResponse = await listLeads(campaignId, { search: emailLower, limit: 10 })
-            const exactMatch = leadResponse.items.find(
-              (l) => l.email.toLowerCase().trim() === emailLower
-            )
-            return { campaignId, found: !!exactMatch }
-          })
-        )
-
-        for (const result of results) {
-          if (result.status === 'fulfilled' && result.value.found) {
-            verifiedCampaigns.add(result.value.campaignId)
-          } else if (result.status === 'rejected') {
-            console.error(`syncSingleLeadByEmail: API verification failed for a campaign:`, result.reason)
-          }
-        }
-
-        if (i + BATCH_SIZE < uniqueCampaignIds.length) {
-          await delay(RATE_LIMIT_DELAY_MS)
-        }
-      }
-
-      // Split into verified and stale pairs
-      const stalePairs = existingLeads.filter((l) => !verifiedCampaigns.has(l.campaign_id))
-      confirmedPairs = existingLeads.filter((l) => verifiedCampaigns.has(l.campaign_id))
-
-      // Delete stale pairs — the lead doesn't actually exist in these campaigns
-      if (stalePairs.length > 0) {
-        console.warn(
-          `syncSingleLeadByEmail: removing ${stalePairs.length} stale pair(s) for ${emailLower} — ` +
-          `NOT found in Instantly: [${stalePairs.map((p) => `client=${p.client_id}/campaign=${p.campaign_id}`).join(', ')}]`
-        )
-
-        for (const stale of stalePairs) {
-          const { error: delError } = await supabase
-            .from('synced_leads')
-            .delete()
-            .eq('client_id', stale.client_id)
-            .eq('campaign_id', stale.campaign_id)
-            .eq('email', emailLower)
-
-          if (delError) {
-            console.error(`syncSingleLeadByEmail: failed to delete stale lead:`, delError.message)
-          }
-
-          // Also clean up cached_emails for this client/lead if no other synced_leads remain
-          const { data: remaining } = await supabase
-            .from('synced_leads')
-            .select('id')
-            .eq('client_id', stale.client_id)
-            .eq('email', emailLower)
-            .limit(1)
-
-          if (!remaining || remaining.length === 0) {
-            const { error: emailDelError } = await supabase
-              .from('cached_emails')
-              .delete()
-              .eq('client_id', stale.client_id)
-              .eq('lead_email', emailLower)
-
-            if (emailDelError) {
-              console.error(`syncSingleLeadByEmail: failed to delete stale cached_emails:`, emailDelError.message)
-            } else {
-              console.log(`syncSingleLeadByEmail: cleaned up cached_emails for stale client=${stale.client_id}`)
-            }
-          }
-        }
-      }
-
-      if (confirmedPairs.length > 0) {
-        console.log(
-          `syncSingleLeadByEmail: ${emailLower} verified in DB — ` +
-          `${confirmedPairs.length} valid pair(s): [${confirmedPairs.map((p) => `${p.client_id}/${p.campaign_id}`).join(', ')}]`
-        )
-      }
-    }
-  }
-
-  // --- Slow path: search all campaigns (only for truly new leads with no hint) ---
-  if (confirmedPairs.length === 0) {
-    console.log(`syncSingleLeadByEmail: ${emailLower} not in DB, searching all campaigns...`)
-
-    const { data: allCampaigns } = await supabase
-      .from('client_campaigns')
-      .select('client_id, campaign_id')
-
-    if (!allCampaigns || allCampaigns.length === 0) {
-      console.log(`syncSingleLeadByEmail: no client_campaigns found at all`)
-      return { synced: false, clientIds: [] }
-    }
-
-    // Dedupe campaign IDs (a campaign should only belong to one client, but be safe)
-    const uniqueCampaignIds = [...new Set(allCampaigns.map((c) => c.campaign_id))]
-    const campaignsWithLead = new Set<string>()
-
-    for (const campaignId of uniqueCampaignIds) {
-      try {
-        const leadResponse = await listLeads(campaignId, { search: emailLower, limit: 10 })
-        // STRICT exact email match — Instantly's search is fuzzy, so we must verify
-        const exactMatch = leadResponse.items.find(
-          (l) => l.email.toLowerCase().trim() === emailLower
-        )
-        if (exactMatch) {
-          campaignsWithLead.add(campaignId)
-          console.log(
-            `syncSingleLeadByEmail: EXACT match for ${emailLower} in campaign ${campaignId}`
-          )
-        } else if (leadResponse.items.length > 0) {
-          console.log(
-            `syncSingleLeadByEmail: campaign ${campaignId} returned ${leadResponse.items.length} results ` +
-            `but NONE matched exactly. Got: [${leadResponse.items.map((l) => l.email).join(', ')}]`
-          )
-        }
-      } catch (error) {
-        console.error(`syncSingleLeadByEmail: failed to search campaign ${campaignId}:`, error)
-      }
-      await delay(RATE_LIMIT_DELAY_MS)
-    }
-
-    // Map confirmed campaigns back to their client(s) via client_campaigns
-    confirmedPairs = allCampaigns.filter((c) => campaignsWithLead.has(c.campaign_id))
-
-    console.log(
-      `syncSingleLeadByEmail: search complete — ${emailLower} found in ` +
-      `${campaignsWithLead.size} campaign(s), mapped to ${confirmedPairs.length} pair(s): ` +
-      `[${confirmedPairs.map((p) => `client=${p.client_id}/campaign=${p.campaign_id}`).join(', ')}]`
-    )
-  }
-
-  if (confirmedPairs.length === 0) {
-    console.log(`syncSingleLeadByEmail: ${emailLower} not found in any campaign`)
-    return { synced: false, clientIds: [] }
-  }
-
-  // 3. Find the lead object from Instantly (search in the first confirmed campaign)
+  // ── Step 5: Find the lead object from Instantly ──
+  // Use listLeads with search on the first confirmed campaign to get full lead data
   const uniqueConfirmedCampaignIds = [...new Set(confirmedPairs.map((p) => p.campaign_id))]
   let foundLead: InstantlyLead | null = null
   let foundCampaignId: string | null = null
@@ -1178,7 +1041,6 @@ export async function syncSingleLeadByEmail(
   for (const campaignId of uniqueConfirmedCampaignIds) {
     try {
       const leadResponse = await listLeads(campaignId, { search: emailLower, limit: 10 })
-      // STRICT exact email match
       const exactMatch = leadResponse.items.find(
         (l) => l.email.toLowerCase().trim() === emailLower
       )
@@ -1194,11 +1056,11 @@ export async function syncSingleLeadByEmail(
   }
 
   if (!foundLead) {
-    console.log(`syncSingleLeadByEmail: could not fetch lead object for ${emailLower}`)
+    console.log(`syncSingleLeadByEmail: could not fetch lead object for ${emailLower} (search-by-contact found campaigns but listLeads returned nothing)`)
     return { synced: false, clientIds: [] }
   }
 
-  // 4. Process lead ONLY for confirmed (client_id, campaign_id) pairs
+  // ── Step 6: Upsert lead ONLY for confirmed (client_id, campaign_id) pairs ──
   const syncedClientIds = new Set<string>()
 
   // Group by client_id
@@ -1238,6 +1100,70 @@ export async function syncSingleLeadByEmail(
   )
 
   return { synced: true, clientIds }
+}
+
+/**
+ * Remove synced_leads and cached_emails for a lead email where the campaign_id
+ * is NOT in the set of valid Instantly campaign IDs.
+ */
+async function cleanupStaleLeadData(
+  emailLower: string,
+  validCampaignIds: Set<string>,
+  supabase: ReturnType<typeof createAdminClient>
+): Promise<void> {
+  const { data: existingLeads } = await supabase
+    .from('synced_leads')
+    .select('id, client_id, campaign_id')
+    .eq('email', emailLower)
+
+  if (!existingLeads || existingLeads.length === 0) return
+
+  const stalePairs = existingLeads.filter(
+    (l) => !validCampaignIds.has(l.campaign_id)
+  )
+
+  if (stalePairs.length === 0) return
+
+  console.warn(
+    `cleanupStaleLeadData: removing ${stalePairs.length} stale pair(s) for ${emailLower} — ` +
+    `campaign NOT in Instantly: [${stalePairs.map((p) => `client=${p.client_id}/campaign=${p.campaign_id}`).join(', ')}]`
+  )
+
+  // Delete stale synced_leads rows
+  const staleIds = stalePairs.map((p) => p.id)
+  const { error: delError } = await supabase
+    .from('synced_leads')
+    .delete()
+    .in('id', staleIds)
+
+  if (delError) {
+    console.error(`cleanupStaleLeadData: failed to delete stale synced_leads:`, delError.message)
+  }
+
+  // Clean up cached_emails for clients that no longer have any synced_leads for this email
+  const affectedClientIds = [...new Set(stalePairs.map((p) => p.client_id))]
+  for (const clientId of affectedClientIds) {
+    const { data: remaining } = await supabase
+      .from('synced_leads')
+      .select('id')
+      .eq('client_id', clientId)
+      .eq('email', emailLower)
+      .limit(1)
+
+    if (!remaining || remaining.length === 0) {
+      const { error: emailDelError } = await supabase
+        .from('cached_emails')
+        .delete()
+        .eq('client_id', clientId)
+        .eq('lead_email', emailLower)
+
+      if (emailDelError) {
+        console.error(`cleanupStaleLeadData: failed to delete cached_emails for client=${clientId}:`, emailDelError.message)
+      } else {
+        console.log(`cleanupStaleLeadData: cleaned up cached_emails for client=${clientId}`)
+      }
+    }
+  }
 }
 
 /**

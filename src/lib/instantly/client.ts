@@ -172,6 +172,40 @@ export async function listEmails(
   return response.json()
 }
 
+/**
+ * Search campaigns that contain a specific lead email.
+ * Uses GET /api/v2/campaigns/search-by-contact
+ * Returns an array of campaign IDs where this email actually exists.
+ */
+export async function getCampaignsForEmail(email: string): Promise<string[]> {
+  const params = new URLSearchParams({
+    search: email,
+  })
+
+  const response = await fetch(
+    `${BASE_URL}/campaigns/search-by-contact?${params.toString()}`,
+    {
+      headers: getHeaders(),
+      cache: 'no-store',
+    }
+  )
+
+  if (!response.ok) {
+    throw new Error(
+      `Instantly API error: ${response.status} ${response.statusText}`
+    )
+  }
+
+  // The response may be a list of campaign objects or an array
+  const data = await response.json()
+
+  // Handle both possible response formats:
+  // Format 1: { items: [{ id: "...", name: "..." }, ...] }
+  // Format 2: [{ id: "...", name: "..." }, ...]
+  const items = Array.isArray(data) ? data : (data.items ?? [])
+  return items.map((c: { id: string }) => c.id)
+}
+
 interface ReplyEmailOptions {
   eaccount: string
   replyToUuid: string
