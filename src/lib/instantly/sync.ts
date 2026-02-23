@@ -1021,30 +1021,93 @@ export async function syncSingleLeadByEmail(
       .eq('email', emailLower)
 
     if (existingLeads && existingLeads.length > 0) {
-      // Re-validate existing pairs against client_campaigns to prevent stale data
-      const { data: validCampaigns } = await supabase
-        .from('client_campaigns')
-        .select('client_id, campaign_id')
-
-      const validSet = new Set(
-        (validCampaigns ?? []).map((c) => `${c.client_id}::${c.campaign_id}`)
+      console.log(
+        `syncSingleLeadByEmail: ${emailLower} found in DB with ${existingLeads.length} pair(s), ` +
+        `verifying each against Instantly API...`
       )
 
-      confirmedPairs = existingLeads.filter((l) =>
-        validSet.has(`${l.client_id}::${l.campaign_id}`)
-      )
+      // Verify each pair against Instantly API — the lead must actually exist in the campaign.
+      // Group by campaign_id to avoid duplicate API calls when multiple clients share a campaign.
+      const uniqueCampaignIds = [...new Set(existingLeads.map((l) => l.campaign_id))]
+      const verifiedCampaigns = new Set<string>()
 
-      const invalidCount = existingLeads.length - confirmedPairs.length
-      if (invalidCount > 0) {
-        console.warn(
-          `syncSingleLeadByEmail: ${invalidCount} existing DB pairs for ${emailLower} ` +
-          `are NOT in client_campaigns (orphaned). Only using ${confirmedPairs.length} valid pair(s).`
+      // Process campaigns in batches of 5 to limit parallel API calls
+      const BATCH_SIZE = 5
+      for (let i = 0; i < uniqueCampaignIds.length; i += BATCH_SIZE) {
+        const batch = uniqueCampaignIds.slice(i, i + BATCH_SIZE)
+        const results = await Promise.allSettled(
+          batch.map(async (campaignId) => {
+            const leadResponse = await listLeads(campaignId, { search: emailLower, limit: 10 })
+            const exactMatch = leadResponse.items.find(
+              (l) => l.email.toLowerCase().trim() === emailLower
+            )
+            return { campaignId, found: !!exactMatch }
+          })
         )
+
+        for (const result of results) {
+          if (result.status === 'fulfilled' && result.value.found) {
+            verifiedCampaigns.add(result.value.campaignId)
+          } else if (result.status === 'rejected') {
+            console.error(`syncSingleLeadByEmail: API verification failed for a campaign:`, result.reason)
+          }
+        }
+
+        if (i + BATCH_SIZE < uniqueCampaignIds.length) {
+          await delay(RATE_LIMIT_DELAY_MS)
+        }
+      }
+
+      // Split into verified and stale pairs
+      const stalePairs = existingLeads.filter((l) => !verifiedCampaigns.has(l.campaign_id))
+      confirmedPairs = existingLeads.filter((l) => verifiedCampaigns.has(l.campaign_id))
+
+      // Delete stale pairs — the lead doesn't actually exist in these campaigns
+      if (stalePairs.length > 0) {
+        console.warn(
+          `syncSingleLeadByEmail: removing ${stalePairs.length} stale pair(s) for ${emailLower} — ` +
+          `NOT found in Instantly: [${stalePairs.map((p) => `client=${p.client_id}/campaign=${p.campaign_id}`).join(', ')}]`
+        )
+
+        for (const stale of stalePairs) {
+          const { error: delError } = await supabase
+            .from('synced_leads')
+            .delete()
+            .eq('client_id', stale.client_id)
+            .eq('campaign_id', stale.campaign_id)
+            .eq('email', emailLower)
+
+          if (delError) {
+            console.error(`syncSingleLeadByEmail: failed to delete stale lead:`, delError.message)
+          }
+
+          // Also clean up cached_emails for this client/lead if no other synced_leads remain
+          const { data: remaining } = await supabase
+            .from('synced_leads')
+            .select('id')
+            .eq('client_id', stale.client_id)
+            .eq('email', emailLower)
+            .limit(1)
+
+          if (!remaining || remaining.length === 0) {
+            const { error: emailDelError } = await supabase
+              .from('cached_emails')
+              .delete()
+              .eq('client_id', stale.client_id)
+              .eq('lead_email', emailLower)
+
+            if (emailDelError) {
+              console.error(`syncSingleLeadByEmail: failed to delete stale cached_emails:`, emailDelError.message)
+            } else {
+              console.log(`syncSingleLeadByEmail: cleaned up cached_emails for stale client=${stale.client_id}`)
+            }
+          }
+        }
       }
 
       if (confirmedPairs.length > 0) {
         console.log(
-          `syncSingleLeadByEmail: ${emailLower} already in DB — ` +
+          `syncSingleLeadByEmail: ${emailLower} verified in DB — ` +
           `${confirmedPairs.length} valid pair(s): [${confirmedPairs.map((p) => `${p.client_id}/${p.campaign_id}`).join(', ')}]`
         )
       }
