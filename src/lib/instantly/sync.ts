@@ -499,6 +499,11 @@ async function processLeads(
   for (let i = 0; i < leadRows.length; i += BATCH_SIZE) {
     const batch = leadRows.slice(i, i + BATCH_SIZE)
 
+    console.log(
+      `processLeads: upserting ${batch.length} leads for client=${clientId}, campaign=${campaignId} ` +
+      `(emails: [${batch.slice(0, 5).map((l) => l.email).join(', ')}]${batch.length > 5 ? '...' : ''})`
+    )
+
     const { error: leadsError } = await supabase
       .from('synced_leads')
       .upsert(batch, {
@@ -913,21 +918,24 @@ export async function syncInboxData(clientId: string): Promise<void> {
  * Targeted sync for a single lead by email address.
  * Used by webhook when Make.com sends a specific lead email.
  * Only fetches data for this one lead — completes in ~2-5 seconds.
+ *
+ * When campaignHint is provided (from webhook payload), skips the expensive
+ * campaign search and goes directly to the correct client.
  */
-export async function syncSingleLeadByEmail(leadEmail: string): Promise<{
+export async function syncSingleLeadByEmail(
+  leadEmail: string,
+  campaignHint?: string
+): Promise<{
   synced: boolean
   clientIds: string[]
 }> {
   const supabase = createAdminClient()
-  const emailLower = leadEmail.toLowerCase()
+  const emailLower = leadEmail.toLowerCase().trim()
 
-  // 1. Check if this lead already exists in synced_leads
-  const { data: existingLeads } = await supabase
-    .from('synced_leads')
-    .select('client_id, campaign_id, interest_status')
-    .eq('email', emailLower)
+  console.log(`syncSingleLeadByEmail: starting for ${emailLower}` +
+    (campaignHint ? ` (campaign hint: ${campaignHint})` : ''))
 
-  // 2. Fetch emails for this lead from Instantly (one API call)
+  // 1. Fetch emails for this lead from Instantly (one API call)
   let emails: InstantlyEmail[] = []
   try {
     const emailResponse = await listEmails({ lead: emailLower, limit: 100 })
@@ -963,53 +971,143 @@ export async function syncSingleLeadByEmail(leadEmail: string): Promise<{
     }
   }
 
-  // 3. Determine which (client_id, campaign_id) pairs this lead actually belongs to
+  // 2. Determine which (client_id, campaign_id) pairs this lead belongs to
   type CampaignPair = { client_id: string; campaign_id: string }
   let confirmedPairs: CampaignPair[] = []
 
-  if (existingLeads && existingLeads.length > 0) {
-    // Lead already in DB — we know exactly which clients/campaigns it belongs to
-    confirmedPairs = existingLeads.map((l) => ({
-      client_id: l.client_id,
-      campaign_id: l.campaign_id,
-    }))
-  } else {
-    // Lead not in DB yet — search each campaign to find where it actually exists.
-    // Get all campaigns, but only add pairs where the lead is actually found.
+  // --- Fast path: campaign_id hint from webhook ---
+  if (campaignHint) {
+    const { data: hintMatches } = await supabase
+      .from('client_campaigns')
+      .select('client_id, campaign_id')
+      .eq('campaign_id', campaignHint)
+
+    if (hintMatches && hintMatches.length > 0) {
+      // Verify the lead actually exists in this campaign with EXACT email match
+      try {
+        const leadResponse = await listLeads(campaignHint, { search: emailLower, limit: 10 })
+        const exactMatch = leadResponse.items.find(
+          (l) => l.email.toLowerCase().trim() === emailLower
+        )
+        if (exactMatch) {
+          confirmedPairs = hintMatches.map((m) => ({
+            client_id: m.client_id,
+            campaign_id: m.campaign_id,
+          }))
+          console.log(
+            `syncSingleLeadByEmail: campaign hint matched — ` +
+            `${emailLower} confirmed in campaign ${campaignHint} for ${confirmedPairs.length} client(s): ` +
+            `[${confirmedPairs.map((p) => p.client_id).join(', ')}]`
+          )
+        } else {
+          console.log(
+            `syncSingleLeadByEmail: campaign hint ${campaignHint} did NOT contain exact match for ${emailLower}, ` +
+            `API returned ${leadResponse.items.length} results: [${leadResponse.items.map((l) => l.email).join(', ')}]`
+          )
+        }
+      } catch (error) {
+        console.error(`syncSingleLeadByEmail: failed to verify lead in hinted campaign ${campaignHint}:`, error)
+      }
+    } else {
+      console.log(`syncSingleLeadByEmail: campaign hint ${campaignHint} not found in client_campaigns`)
+    }
+  }
+
+  // --- If hint didn't resolve, check existing DB records ---
+  if (confirmedPairs.length === 0) {
+    const { data: existingLeads } = await supabase
+      .from('synced_leads')
+      .select('client_id, campaign_id')
+      .eq('email', emailLower)
+
+    if (existingLeads && existingLeads.length > 0) {
+      // Re-validate existing pairs against client_campaigns to prevent stale data
+      const { data: validCampaigns } = await supabase
+        .from('client_campaigns')
+        .select('client_id, campaign_id')
+
+      const validSet = new Set(
+        (validCampaigns ?? []).map((c) => `${c.client_id}::${c.campaign_id}`)
+      )
+
+      confirmedPairs = existingLeads.filter((l) =>
+        validSet.has(`${l.client_id}::${l.campaign_id}`)
+      )
+
+      const invalidCount = existingLeads.length - confirmedPairs.length
+      if (invalidCount > 0) {
+        console.warn(
+          `syncSingleLeadByEmail: ${invalidCount} existing DB pairs for ${emailLower} ` +
+          `are NOT in client_campaigns (orphaned). Only using ${confirmedPairs.length} valid pair(s).`
+        )
+      }
+
+      if (confirmedPairs.length > 0) {
+        console.log(
+          `syncSingleLeadByEmail: ${emailLower} already in DB — ` +
+          `${confirmedPairs.length} valid pair(s): [${confirmedPairs.map((p) => `${p.client_id}/${p.campaign_id}`).join(', ')}]`
+        )
+      }
+    }
+  }
+
+  // --- Slow path: search all campaigns (only for truly new leads with no hint) ---
+  if (confirmedPairs.length === 0) {
+    console.log(`syncSingleLeadByEmail: ${emailLower} not in DB, searching all campaigns...`)
+
     const { data: allCampaigns } = await supabase
       .from('client_campaigns')
       .select('client_id, campaign_id')
 
     if (!allCampaigns || allCampaigns.length === 0) {
+      console.log(`syncSingleLeadByEmail: no client_campaigns found at all`)
       return { synced: false, clientIds: [] }
     }
 
-    // Dedupe campaign IDs (multiple clients may share a campaign)
+    // Dedupe campaign IDs (a campaign should only belong to one client, but be safe)
     const uniqueCampaignIds = [...new Set(allCampaigns.map((c) => c.campaign_id))]
     const campaignsWithLead = new Set<string>()
 
     for (const campaignId of uniqueCampaignIds) {
       try {
         const leadResponse = await listLeads(campaignId, { search: emailLower, limit: 10 })
-        const match = leadResponse.items.find((l) => l.email.toLowerCase() === emailLower)
-        if (match) {
+        // STRICT exact email match — Instantly's search is fuzzy, so we must verify
+        const exactMatch = leadResponse.items.find(
+          (l) => l.email.toLowerCase().trim() === emailLower
+        )
+        if (exactMatch) {
           campaignsWithLead.add(campaignId)
+          console.log(
+            `syncSingleLeadByEmail: EXACT match for ${emailLower} in campaign ${campaignId}`
+          )
+        } else if (leadResponse.items.length > 0) {
+          console.log(
+            `syncSingleLeadByEmail: campaign ${campaignId} returned ${leadResponse.items.length} results ` +
+            `but NONE matched exactly. Got: [${leadResponse.items.map((l) => l.email).join(', ')}]`
+          )
         }
       } catch (error) {
-        console.error(`syncSingleLeadByEmail: failed to search leads in campaign ${campaignId}:`, error)
+        console.error(`syncSingleLeadByEmail: failed to search campaign ${campaignId}:`, error)
       }
       await delay(RATE_LIMIT_DELAY_MS)
     }
 
-    // Only include client/campaign pairs where the lead was actually found
+    // Map confirmed campaigns back to their client(s) via client_campaigns
     confirmedPairs = allCampaigns.filter((c) => campaignsWithLead.has(c.campaign_id))
+
+    console.log(
+      `syncSingleLeadByEmail: search complete — ${emailLower} found in ` +
+      `${campaignsWithLead.size} campaign(s), mapped to ${confirmedPairs.length} pair(s): ` +
+      `[${confirmedPairs.map((p) => `client=${p.client_id}/campaign=${p.campaign_id}`).join(', ')}]`
+    )
   }
 
   if (confirmedPairs.length === 0) {
+    console.log(`syncSingleLeadByEmail: ${emailLower} not found in any campaign`)
     return { synced: false, clientIds: [] }
   }
 
-  // 4. Find the lead object from Instantly (search in the first confirmed campaign)
+  // 3. Find the lead object from Instantly (search in the first confirmed campaign)
   const uniqueConfirmedCampaignIds = [...new Set(confirmedPairs.map((p) => p.campaign_id))]
   let foundLead: InstantlyLead | null = null
   let foundCampaignId: string | null = null
@@ -1017,23 +1115,27 @@ export async function syncSingleLeadByEmail(leadEmail: string): Promise<{
   for (const campaignId of uniqueConfirmedCampaignIds) {
     try {
       const leadResponse = await listLeads(campaignId, { search: emailLower, limit: 10 })
-      const match = leadResponse.items.find((l) => l.email.toLowerCase() === emailLower)
-      if (match) {
-        foundLead = match
+      // STRICT exact email match
+      const exactMatch = leadResponse.items.find(
+        (l) => l.email.toLowerCase().trim() === emailLower
+      )
+      if (exactMatch) {
+        foundLead = exactMatch
         foundCampaignId = campaignId
         break
       }
     } catch (error) {
-      console.error(`syncSingleLeadByEmail: failed to search leads in campaign ${campaignId}:`, error)
+      console.error(`syncSingleLeadByEmail: failed to fetch lead from campaign ${campaignId}:`, error)
     }
     await delay(RATE_LIMIT_DELAY_MS)
   }
 
   if (!foundLead) {
+    console.log(`syncSingleLeadByEmail: could not fetch lead object for ${emailLower}`)
     return { synced: false, clientIds: [] }
   }
 
-  // 5. Process lead ONLY for confirmed (client_id, campaign_id) pairs
+  // 4. Process lead ONLY for confirmed (client_id, campaign_id) pairs
   const syncedClientIds = new Set<string>()
 
   // Group by client_id
@@ -1050,6 +1152,9 @@ export async function syncSingleLeadByEmail(leadEmail: string): Promise<{
 
     // Process the lead for each campaign this client actually has the lead in
     for (const campaignId of campaignIds) {
+      console.log(
+        `syncSingleLeadByEmail: upserting lead ${emailLower} → client=${clientId}, campaign=${campaignId}`
+      )
       await processLeads(
         [foundLead],
         clientId,
@@ -1065,8 +1170,8 @@ export async function syncSingleLeadByEmail(leadEmail: string): Promise<{
 
   const clientIds = [...syncedClientIds]
   console.log(
-    `syncSingleLeadByEmail: synced ${emailLower} for ${clientIds.length} client(s), ` +
-    `found in campaign ${foundCampaignId}, ${emails.length} emails cached`
+    `syncSingleLeadByEmail: DONE — synced ${emailLower} for ${clientIds.length} client(s): ` +
+    `[${clientIds.join(', ')}], found in campaign ${foundCampaignId}, ${emails.length} emails cached`
   )
 
   return { synced: true, clientIds }
@@ -1082,6 +1187,8 @@ async function cacheEmailsForClient(
   supabase: ReturnType<typeof createAdminClient>
 ): Promise<void> {
   if (emails.length === 0) return
+
+  console.log(`cacheEmailsForClient: caching ${emails.length} emails for client=${clientId}`)
 
   const cacheRows = emails.map((email) => {
     const isReply = isInboundReply(email)

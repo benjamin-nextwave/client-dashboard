@@ -11,15 +11,18 @@ import { syncInboxData, syncSingleLeadByEmail } from '@/lib/instantly/sync'
  * Webhook endpoint for triggering a sync from Make.com (or any external service).
  * Protected by CRON_SECRET. No user session required.
  *
- * Two modes:
+ * Three modes:
  *
- * 1. **Targeted sync** (preferred for Make.com):
+ * 1. **Targeted sync with campaign hint** (fastest, preferred for Make.com):
+ *    Body: { "email": "lead@example.com", "campaign_id": "abc-123" }
+ *    Uses campaign_id to look up the client directly via client_campaigns,
+ *    skipping the expensive full-campaign search.
+ *
+ * 2. **Targeted sync without campaign** (fallback):
  *    Body: { "email": "lead@example.com" }
- *    Runs syncSingleLeadByEmail() SYNCHRONOUSLY (~2-5 seconds).
- *    Returns only after the lead is in the DB — Make.com can then send the
- *    notification email knowing the dashboard is ready.
+ *    Searches all campaigns to find the lead — slower but works.
  *
- * 2. **Full client sync** (backward compat):
+ * 3. **Full client sync** (backward compat):
  *    Body: { "client_id": "<uuid>" }
  *    Runs syncInboxData() in the background via after().
  *    Returns immediately with 200.
@@ -47,17 +50,24 @@ export async function POST(request: Request) {
     body[key.toLowerCase()] = value
   }
 
-  // --- Mode 1: Targeted single-lead sync (by email) ---
+  // --- Mode 1 & 2: Targeted single-lead sync (by email) ---
   if (body.email) {
     const email = String(body.email).toLowerCase().trim()
+    const campaignHint = body.campaign_id ? String(body.campaign_id).trim() : undefined
+
+    console.log(
+      `Webhook: targeted sync for ${email}` +
+      (campaignHint ? ` (campaign_id hint: ${campaignHint})` : ' (no campaign hint)')
+    )
 
     try {
-      const result = await syncSingleLeadByEmail(email)
+      const result = await syncSingleLeadByEmail(email, campaignHint)
 
       if (!result.synced) {
         return NextResponse.json({
           synced: false,
           email,
+          campaign_id: campaignHint ?? null,
           message: 'Lead not found in any campaign',
         }, { status: 200 })
       }
@@ -65,6 +75,7 @@ export async function POST(request: Request) {
       return NextResponse.json({
         synced: true,
         email,
+        campaign_id: campaignHint ?? null,
         client_ids: result.clientIds,
         message: `Lead synced for ${result.clientIds.length} client(s)`,
       })
@@ -78,7 +89,7 @@ export async function POST(request: Request) {
     }
   }
 
-  // --- Mode 2: Full client sync (backward compat) ---
+  // --- Mode 3: Full client sync (backward compat) ---
   if (!body.client_id) {
     return NextResponse.json(
       { error: 'email or client_id required' },
