@@ -412,14 +412,27 @@ async function processLeads(
     const leadEmailLower = lead.email.toLowerCase()
     const replyData = replyMap.get(leadEmailLower)
 
-    // Determine interest_status from multiple sources (priority order):
-    // 1. Lead-level lt_interest_status from Instantly API (most authoritative — set manually or by automation)
-    // 2. Email-level i_status from interestMap (derived from email interactions)
-    // 3. Existing DB value (preserve to prevent data loss)
+    // Determine interest_status from multiple sources.
+    // Rules:
+    // - If ANY source says 'positive', the lead is positive (never miss a lead)
+    // - Lead-level lt_interest_status can only ADD positive, never downgrade
+    // - Email i_status and existing DB value fill in the rest
     const leadInterestStatus = mapInterestStatus(lead.lt_interest_status)
     const emailInterestStatus = interestMap.get(leadEmailLower) ?? null
     const existingInterestStatus = existingStatusMap.get(leadEmailLower) ?? null
-    const interest_status = leadInterestStatus ?? emailInterestStatus ?? existingInterestStatus
+
+    let interest_status: string | null
+    if (
+      leadInterestStatus === 'positive' ||
+      emailInterestStatus === 'positive' ||
+      existingInterestStatus === 'positive'
+    ) {
+      // Once positive from any source, stays positive
+      interest_status = 'positive'
+    } else {
+      // For non-positive: prefer email-level, then existing, then lead-level
+      interest_status = emailInterestStatus ?? existingInterestStatus ?? leadInterestStatus
+    }
 
     return {
       client_id: clientId,
