@@ -3,12 +3,16 @@ export const maxDuration = 120
 export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
+import { after } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { syncClientData } from '@/lib/instantly/sync'
 
 /**
  * Webhook endpoint for triggering a sync from Make.com (or any external service).
  * Protected by CRON_SECRET. No user session required.
+ *
+ * Returns immediately with 200 and runs the sync in the background
+ * (using Next.js `after()`) so Make.com doesn't timeout.
  *
  * Usage from Make.com HTTP module:
  *   POST https://dashboard.nextwave-solutions.nl/api/webhook-sync
@@ -68,18 +72,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Client not found' }, { status: 404 })
   }
 
-  try {
-    await syncClientData(clientId, true)
-    return NextResponse.json({
-      synced: true,
-      client_id: clientId,
-      company_name: client.company_name,
-    })
-  } catch (error) {
-    console.error(`Webhook sync failed for client ${clientId}:`, error)
-    return NextResponse.json(
-      { error: 'Sync failed' },
-      { status: 500 }
-    )
-  }
+  // Run sync in the background — respond immediately so Make.com doesn't timeout
+  after(async () => {
+    try {
+      await syncClientData(clientId!, true)
+      console.log(`Webhook sync completed for client ${clientId} (${client.company_name})`)
+    } catch (error) {
+      console.error(`Webhook sync failed for client ${clientId}:`, error)
+    }
+  })
+
+  return NextResponse.json({
+    accepted: true,
+    client_id: clientId,
+    company_name: client.company_name,
+    message: 'Sync started in background',
+  })
 }
