@@ -10,8 +10,8 @@ const RATE_LIMIT_DELAY_MS = 200
 const ANALYTICS_DAYS_INCREMENTAL = 7
 // How many days of analytics to fetch on full syncs (first sync or weekly refresh)
 const ANALYTICS_DAYS_FULL = 365
-// Force a full sync (all emails + leads) every 24 hours per campaign
-const FULL_SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000
+// Force a full sync (all emails + leads) every 6 hours per campaign
+const FULL_SYNC_INTERVAL_MS = 6 * 60 * 60 * 1000
 // Max pages of leads to fetch on incremental sync (newest leads first)
 const INCREMENTAL_LEAD_PAGES = 3
 

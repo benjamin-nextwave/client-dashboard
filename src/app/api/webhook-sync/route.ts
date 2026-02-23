@@ -69,7 +69,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    await syncClientData(clientId)
+    await syncClientData(clientId, true)
     return NextResponse.json({
       synced: true,
       client_id: clientId,

@@ -379,7 +379,8 @@ export async function refreshInbox(): Promise<ActionResult> {
   if (!clientId) return { error: 'Geen client gevonden.' }
 
   try {
-    await syncClientData(clientId)
+    // Always full sync — inbox accuracy is critical
+    await syncClientData(clientId, true)
   } catch (err) {
     console.error('Failed to force sync:', err)
     return { error: 'Sync mislukt. Probeer het opnieuw.' }
