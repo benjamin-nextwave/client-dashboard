@@ -412,11 +412,14 @@ async function processLeads(
     const leadEmailLower = lead.email.toLowerCase()
     const replyData = replyMap.get(leadEmailLower)
 
-    // Determine interest_status: use API value if available,
-    // otherwise preserve the existing DB value to prevent data loss.
-    const apiInterestStatus = interestMap.get(leadEmailLower) ?? null
+    // Determine interest_status from multiple sources (priority order):
+    // 1. Lead-level lt_interest_status from Instantly API (most authoritative — set manually or by automation)
+    // 2. Email-level i_status from interestMap (derived from email interactions)
+    // 3. Existing DB value (preserve to prevent data loss)
+    const leadInterestStatus = mapInterestStatus(lead.lt_interest_status)
+    const emailInterestStatus = interestMap.get(leadEmailLower) ?? null
     const existingInterestStatus = existingStatusMap.get(leadEmailLower) ?? null
-    const interest_status = apiInterestStatus ?? existingInterestStatus
+    const interest_status = leadInterestStatus ?? emailInterestStatus ?? existingInterestStatus
 
     return {
       client_id: clientId,
