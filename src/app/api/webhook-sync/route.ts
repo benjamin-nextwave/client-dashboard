@@ -34,11 +34,17 @@ export async function POST(request: Request) {
     }
   }
 
-  let body: Record<string, unknown>
+  let rawBody: Record<string, unknown>
   try {
-    body = await request.json()
+    rawBody = await request.json()
   } catch {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+  }
+
+  // Normalize keys to lowercase so "Email", "EMAIL", "email" all work
+  const body: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(rawBody)) {
+    body[key.toLowerCase()] = value
   }
 
   // --- Mode 1: Targeted single-lead sync (by email) ---
