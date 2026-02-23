@@ -38,8 +38,13 @@ export default async function LeadThreadPage({
   // Mark as opened
   await markLeadAsOpened(leadId)
 
-  // Fetch email thread
-  const emails = await getLeadThread(client.id, lead.email)
+  // Fetch email thread — wrapped in try/catch to prevent server component crash
+  let emails: Awaited<ReturnType<typeof getLeadThread>> = []
+  try {
+    emails = await getLeadThread(client.id, lead.email)
+  } catch (err) {
+    console.error('Failed to fetch lead thread:', err)
+  }
 
   // Resolve sender account: prefer lead record, fallback to cached sender_account,
   // then fallback to from_address of first outbound (non-reply) email in thread
