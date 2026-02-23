@@ -40,52 +40,55 @@ export async function POST(request: Request) {
   }
 
   const admin = createAdminClient()
-  let clientId = body.client_id as string | undefined
+  let clientIds: string[] = []
 
-  // If no client_id provided, try to look it up by lead email
-  if (!clientId && body.email) {
-    const { data: lead } = await admin
+  if (body.client_id) {
+    clientIds = [body.client_id as string]
+  } else if (body.email) {
+    // Find ALL clients that have this lead — a lead can appear across many clients
+    const { data: leads } = await admin
       .from('synced_leads')
       .select('client_id')
       .eq('email', String(body.email).toLowerCase())
-      .limit(1)
-      .single()
 
-    clientId = lead?.client_id
+    if (leads && leads.length > 0) {
+      clientIds = [...new Set(leads.map((l) => l.client_id))]
+    }
   }
 
-  if (!clientId) {
+  if (clientIds.length === 0) {
     return NextResponse.json(
-      { error: 'client_id or email required' },
+      { error: 'client_id or email required (no matching clients found)' },
       { status: 400 }
     )
   }
 
-  // Verify client exists
-  const { data: client } = await admin
+  // Verify clients exist
+  const { data: clients } = await admin
     .from('clients')
     .select('id, company_name')
-    .eq('id', clientId)
-    .single()
+    .in('id', clientIds)
 
-  if (!client) {
-    return NextResponse.json({ error: 'Client not found' }, { status: 404 })
+  if (!clients || clients.length === 0) {
+    return NextResponse.json({ error: 'No clients found' }, { status: 404 })
   }
 
-  // Run sync in the background — respond immediately so Make.com doesn't timeout
+  // Run sync in the background for ALL matching clients
   after(async () => {
-    try {
-      await syncInboxData(clientId!)
-      console.log(`Webhook sync completed for client ${clientId} (${client.company_name})`)
-    } catch (error) {
-      console.error(`Webhook sync failed for client ${clientId}:`, error)
+    for (const client of clients) {
+      try {
+        await syncInboxData(client.id)
+        console.log(`Webhook sync completed for client ${client.id} (${client.company_name})`)
+      } catch (error) {
+        console.error(`Webhook sync failed for client ${client.id}:`, error)
+      }
     }
   })
 
   return NextResponse.json({
     accepted: true,
-    client_id: clientId,
-    company_name: client.company_name,
-    message: 'Sync started in background',
+    client_ids: clients.map((c) => c.id),
+    client_names: clients.map((c) => c.company_name),
+    message: `Sync started in background for ${clients.length} client(s)`,
   })
 }

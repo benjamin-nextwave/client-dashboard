@@ -100,8 +100,9 @@ function mapInterestStatus(iStatus: number | string | null | undefined): string 
 
 /**
  * Fetch all leads for a campaign using cursor pagination.
+ * Optionally filter by interest status (1 = positive, 0 = neutral, -1 = negative).
  */
-async function fetchAllLeads(campaignId: string): Promise<InstantlyLead[]> {
+async function fetchAllLeads(campaignId: string, interestStatus?: number): Promise<InstantlyLead[]> {
   const allLeads: InstantlyLead[] = []
   let cursor: string | undefined
 
@@ -109,6 +110,7 @@ async function fetchAllLeads(campaignId: string): Promise<InstantlyLead[]> {
     const response = await listLeads(campaignId, {
       limit: 100,
       startingAfter: cursor,
+      interestStatus,
     })
 
     allLeads.push(...response.items)
@@ -756,13 +758,31 @@ export async function syncClientData(clientId: string, forceFullSync = false): P
 
     // 3. Sync leads
     try {
-      const leads = isFullSync
-        ? await fetchAllLeads(campaignId)
-        : await fetchRecentLeads(campaignId, INCREMENTAL_LEAD_PAGES)
+      let leads: InstantlyLead[]
+
+      if (isFullSync) {
+        leads = await fetchAllLeads(campaignId)
+      } else {
+        // Incremental: fetch recent leads + positive-interest leads to catch
+        // leads whose interest was manually changed in Instantly
+        const [recentLeads, positiveLeads] = await Promise.all([
+          fetchRecentLeads(campaignId, INCREMENTAL_LEAD_PAGES),
+          fetchAllLeads(campaignId, 1),
+        ])
+
+        const seenIds = new Set<string>()
+        leads = []
+        for (const lead of [...recentLeads, ...positiveLeads]) {
+          if (!seenIds.has(lead.id)) {
+            seenIds.add(lead.id)
+            leads.push(lead)
+          }
+        }
+      }
 
       console.log(
         `Fetched ${leads.length} leads for campaign ${campaignId}` +
-          (isFullSync ? ' (full)' : ` (incremental, ${INCREMENTAL_LEAD_PAGES} pages)`)
+          (isFullSync ? ' (full)' : ` (incremental, ${INCREMENTAL_LEAD_PAGES} pages + positive)`)
       )
 
       await processLeads(leads, clientId, campaignId, interestMap, replyMap, supabase)
@@ -853,11 +873,30 @@ export async function syncInboxData(clientId: string): Promise<void> {
 
     await delay(RATE_LIMIT_DELAY_MS)
 
-    // 2. Fetch recent leads only (3 pages) — catches new leads without paginating everything
+    // 2. Fetch recent leads (3 pages) + positive-interest leads specifically.
+    // The recent pages catch new leads; the positive fetch catches leads whose
+    // interest_status was manually changed in Instantly but are too old to appear
+    // in the first few pages of the paginated list.
     try {
-      const leads = await fetchRecentLeads(campaignId, INCREMENTAL_LEAD_PAGES)
+      const [recentLeads, positiveLeads] = await Promise.all([
+        fetchRecentLeads(campaignId, INCREMENTAL_LEAD_PAGES),
+        fetchAllLeads(campaignId, 1), // interest_value=1 (positive)
+      ])
 
-      console.log(`Inbox sync: fetched ${leads.length} recent leads for campaign ${campaignId}`)
+      // Merge and deduplicate by lead ID
+      const seenIds = new Set<string>()
+      const leads: InstantlyLead[] = []
+      for (const lead of [...recentLeads, ...positiveLeads]) {
+        if (!seenIds.has(lead.id)) {
+          seenIds.add(lead.id)
+          leads.push(lead)
+        }
+      }
+
+      console.log(
+        `Inbox sync: fetched ${recentLeads.length} recent + ${positiveLeads.length} positive leads ` +
+        `(${leads.length} unique) for campaign ${campaignId}`
+      )
 
       await processLeads(leads, clientId, campaignId, interestMap, replyMap, supabase)
     } catch (error) {
