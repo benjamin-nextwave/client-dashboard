@@ -10,7 +10,7 @@ import { ArchiveButton } from '../_components/archive-button'
 import { ThreadRealtimeProvider } from '../_components/thread-realtime-provider'
 
 // ── Maintenance mode toggle (keep in sync with ../page.tsx) ─────────
-const MAINTENANCE_MODE = true
+const MAINTENANCE_MODE = false
 // ─────────────────────────────────────────────────────────────────────
 
 export const dynamic = 'force-dynamic'

@@ -10,7 +10,7 @@ import { InboxRealtimeProvider } from './_components/inbox-realtime-provider'
 // ── Maintenance mode toggle ─────────────────────────────────────────
 // Set to `true` to show a maintenance banner instead of the inbox.
 // Set back to `false` and redeploy to restore normal operation.
-const MAINTENANCE_MODE = true
+const MAINTENANCE_MODE = false
 // ─────────────────────────────────────────────────────────────────────
 
 export const metadata: Metadata = { title: 'Inbox' }
