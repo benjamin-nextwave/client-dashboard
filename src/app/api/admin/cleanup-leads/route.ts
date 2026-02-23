@@ -8,6 +8,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getCampaignsForEmail } from '@/lib/instantly/client'
 
 const RATE_LIMIT_DELAY_MS = 500
+const DEFAULT_LIMIT = 50
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -19,13 +20,16 @@ function delay(ms: number): Promise<void> {
  * Then delete any synced_leads rows where the campaign_id is NOT in the
  * Instantly response.
  *
- * This is 1 API call per unique email (not per campaign).
+ * Supports cursor-based pagination to avoid Vercel timeout:
+ *   ?limit=50          — max emails per batch (default 50)
+ *   ?cursor=email@x.com — start after this email (from previous response's next_cursor)
+ *   ?dry_run=true      — only report, don't delete
+ *   ?client_id=X       — only clean up a specific client
  *
- * Protected: operator-only.
- *
- * Optional query params:
- *   ?dry_run=true  — only report, don't delete
- *   ?client_id=X   — only clean up a specific client
+ * Call repeatedly until next_cursor is null:
+ *   POST /api/admin/cleanup-leads?limit=50
+ *   POST /api/admin/cleanup-leads?limit=50&cursor=john@example.com
+ *   ...until next_cursor is null
  */
 export async function POST(request: Request) {
   // Auth check — operator only
@@ -44,12 +48,20 @@ export async function POST(request: Request) {
   const { searchParams } = new URL(request.url)
   const dryRun = searchParams.get('dry_run') === 'true'
   const filterClientId = searchParams.get('client_id') ?? null
+  const limit = Math.min(Math.max(parseInt(searchParams.get('limit') ?? '', 10) || DEFAULT_LIMIT, 1), 500)
+  const cursor = searchParams.get('cursor')?.toLowerCase().trim() ?? null
 
   const admin = createAdminClient()
 
-  console.log(`=== cleanup-leads: starting${dryRun ? ' (DRY RUN)' : ''}${filterClientId ? ` for client ${filterClientId}` : ''} ===`)
+  console.log(
+    `=== cleanup-leads: starting batch` +
+    `${dryRun ? ' (DRY RUN)' : ''}` +
+    `${filterClientId ? ` for client ${filterClientId}` : ''}` +
+    `, limit=${limit}` +
+    `${cursor ? `, cursor=${cursor}` : ''} ===`
+  )
 
-  // 1. Get all unique emails from synced_leads (optionally filtered by client)
+  // 1. Get all unique emails from synced_leads, sorted alphabetically for stable cursor
   let emailQuery = admin
     .from('synced_leads')
     .select('email')
@@ -65,12 +77,47 @@ export async function POST(request: Request) {
   }
 
   if (!allLeadRows || allLeadRows.length === 0) {
-    return NextResponse.json({ message: 'No synced_leads to check', results: [] })
+    return NextResponse.json({ message: 'No synced_leads to check', next_cursor: null, results: [] })
   }
 
-  const uniqueEmails = [...new Set(allLeadRows.map((r) => r.email.toLowerCase().trim()))]
+  // Dedupe and sort for stable pagination
+  const allUniqueEmails = [...new Set(allLeadRows.map((r) => r.email.toLowerCase().trim()))].sort()
 
-  console.log(`cleanup-leads: found ${uniqueEmails.length} unique emails to verify`)
+  // Apply cursor: skip emails up to and including the cursor
+  let startIndex = 0
+  if (cursor) {
+    const cursorIndex = allUniqueEmails.indexOf(cursor)
+    if (cursorIndex >= 0) {
+      startIndex = cursorIndex + 1
+    } else {
+      // Cursor not found — find first email that sorts after cursor
+      startIndex = allUniqueEmails.findIndex((e) => e > cursor)
+      if (startIndex < 0) startIndex = allUniqueEmails.length
+    }
+  }
+
+  // Slice the batch
+  const batchEmails = allUniqueEmails.slice(startIndex, startIndex + limit)
+  const hasMore = startIndex + limit < allUniqueEmails.length
+  const nextCursor = hasMore ? batchEmails[batchEmails.length - 1] : null
+
+  console.log(
+    `cleanup-leads: ${allUniqueEmails.length} total unique emails, ` +
+    `processing batch of ${batchEmails.length} (index ${startIndex}–${startIndex + batchEmails.length - 1})` +
+    `${hasMore ? `, next_cursor=${nextCursor}` : ', this is the last batch'}`
+  )
+
+  if (batchEmails.length === 0) {
+    return NextResponse.json({
+      message: 'No more emails to process',
+      next_cursor: null,
+      unique_emails_total: allUniqueEmails.length,
+      batch_size: 0,
+      total_kept: 0,
+      total_removed: 0,
+      details: [],
+    })
+  }
 
   let totalRemoved = 0
   let totalKept = 0
@@ -83,11 +130,11 @@ export async function POST(request: Request) {
     instantly_campaigns: string[]
   }> = []
 
-  // 2. Process each email sequentially (1 API call per email, max 2/sec)
-  for (let i = 0; i < uniqueEmails.length; i++) {
-    const email = uniqueEmails[i]
+  // 2. Process each email in the batch sequentially
+  for (let i = 0; i < batchEmails.length; i++) {
+    const email = batchEmails[i]
 
-    // Rate limit: max 2 calls per second (500ms between calls)
+    // Rate limit: max 2 calls per second
     if (i > 0) {
       await delay(RATE_LIMIT_DELAY_MS)
     }
@@ -104,7 +151,7 @@ export async function POST(request: Request) {
 
     const instantlyCampaignSet = new Set(instantlyCampaignIds)
 
-    // Get all synced_leads for this email (optionally filtered by client)
+    // Get all synced_leads for this email
     let leadsQuery = admin
       .from('synced_leads')
       .select('id, client_id, campaign_id')
@@ -126,7 +173,6 @@ export async function POST(request: Request) {
 
     if (staleLeads.length === 0) continue
 
-    // Log every removal
     console.log(
       `cleanup-leads: ${email} — Instantly has ${instantlyCampaignIds.length} campaign(s) [${instantlyCampaignIds.join(', ')}], ` +
       `DB has ${syncedLeads.length} row(s), removing ${staleLeads.length} stale row(s)`
@@ -152,7 +198,6 @@ export async function POST(request: Request) {
       // Clean up orphaned cached_emails
       const affectedClientIds = [...new Set(staleLeads.map((sl) => sl.client_id))]
       for (const clientId of affectedClientIds) {
-        // Only delete cached_emails if no synced_leads remain for this client/email
         const { data: remaining } = await admin
           .from('synced_leads')
           .select('id')
@@ -183,16 +228,14 @@ export async function POST(request: Request) {
       removed_pairs: removedPairs,
       instantly_campaigns: instantlyCampaignIds,
     })
-
-    // Progress log every 50 emails
-    if ((i + 1) % 50 === 0) {
-      console.log(`cleanup-leads: progress — ${i + 1}/${uniqueEmails.length} emails processed, ${totalRemoved} removed so far`)
-    }
   }
 
   const summary = {
     dry_run: dryRun,
-    unique_emails_checked: uniqueEmails.length,
+    next_cursor: nextCursor,
+    unique_emails_total: allUniqueEmails.length,
+    batch_size: batchEmails.length,
+    batch_start_index: startIndex,
     total_kept: totalKept,
     total_removed: totalRemoved,
     total_cached_emails_cleaned: totalEmailsRemoved,
@@ -202,9 +245,9 @@ export async function POST(request: Request) {
   }
 
   console.log(
-    `=== cleanup-leads: DONE — ${totalRemoved} synced_leads removed, ${totalKept} kept, ` +
-    `${totalEmailsRemoved} cached_emails cleaned, ${totalApiErrors} API errors` +
-    `${dryRun ? ' (DRY RUN)' : ''} ===`
+    `=== cleanup-leads: batch done — ${totalRemoved} removed, ${totalKept} kept` +
+    `${dryRun ? ' (DRY RUN)' : ''}` +
+    `${nextCursor ? `, next_cursor=${nextCursor}` : ', ALL DONE'} ===`
   )
 
   return NextResponse.json(summary)
