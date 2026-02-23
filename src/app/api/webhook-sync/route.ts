@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { after } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { syncClientData } from '@/lib/instantly/sync'
+import { syncInboxData } from '@/lib/instantly/sync'
 
 /**
  * Webhook endpoint for triggering a sync from Make.com (or any external service).
@@ -75,7 +75,7 @@ export async function POST(request: Request) {
   // Run sync in the background — respond immediately so Make.com doesn't timeout
   after(async () => {
     try {
-      await syncClientData(clientId!, true)
+      await syncInboxData(clientId!)
       console.log(`Webhook sync completed for client ${clientId} (${client.company_name})`)
     } catch (error) {
       console.error(`Webhook sync failed for client ${clientId}:`, error)
