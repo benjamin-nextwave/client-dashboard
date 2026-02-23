@@ -69,7 +69,30 @@
       "Bash(npx next build:*)",
       "Bash(source:*)",
       "Bash(gh auth status:*)",
-      "Bash(gh repo create:*)"
+      "Bash(gh repo create:*)",
+      "Bash(git push:*)",
+      "Bash(npx vercel:*)",
+      "Bash(gh api:*)",
+      "Bash(nslookup:*)",
+      "Bash(printf:*)",
+      "Bash(echo:*)",
+      "Bash(ls:*)",
+      "Bash(wc -l:*)",
+      "Bash(xargs:*)",
+      "WebFetch(domain:developer.instantly.ai)",
+      "WebFetch(domain:dashboard.nextwave-solutions.nl)",
+      "Bash(SB_KEY=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFia2FtZ21qbXF6dmR3dHJrZ3FlIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MTE4NTA4NywiZXhwIjoyMDg2NzYxMDg3fQ.GNDzbQJCfz-D7F5aPUQyPjP7V-rm-61Yls7vofwLBYI\")",
+      "Bash(__NEW_LINE_73ccab20d25bb840__ curl -s -X PATCH \"https://abkamgmjmqzvdwtrkgqe.supabase.co/rest/v1/synced_leads?last_synced_at=gt.2020-01-01\" -H \"apikey: $SB_KEY\" -H \"Authorization: Bearer $SB_KEY\" -H \"Content-Type: application/json\" -H \"Prefer: return=minimal\" -d \"{\"\"last_synced_at\"\": \"\"2026-02-18T10:00:00Z\"\"}\")",
+      "Bash(curl.exe:*)",
+      "Bash(where:*)",
+      "Bash(/c/Windows/System32/curl.exe:*)",
+      "WebFetch(domain:client-dashboard-fn5gcrstg-next-wave-ais-projects-9af589b5.vercel.app)",
+      "Bash(npx tsx:*)",
+      "Bash(npm ls:*)",
+      "Bash(SUPABASE_SERVICE_ROLE_KEY=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFia2FtZ21qbXF6dmR3dHJrZ3FlIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MTE4NTA4NywiZXhwIjoyMDg2NzYxMDg3fQ.GNDzbQJCfz-D7F5aPUQyPjP7V-rm-61Yls7vofwLBYI\" npx tsx:*)",
+      "Bash(git checkout:*)",
+      "Bash(git merge:*)",
+      "Bash(set:*)"
     ]
   }
 }
