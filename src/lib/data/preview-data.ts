@@ -66,6 +66,7 @@ export async function getPreviewContacts(
     .eq('upload_id', upload.id)
     .eq('is_filtered', false)
     .order('row_index', { ascending: true })
+    .limit(5000)
 
   if (rowsError) {
     throw new Error(`Failed to fetch preview contacts: ${rowsError.message}`)

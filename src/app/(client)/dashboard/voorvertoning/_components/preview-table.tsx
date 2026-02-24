@@ -338,11 +338,11 @@ export function PreviewTable({ contacts, clientId, clientName }: Props) {
       )}
 
       {/* Results count */}
-      {search.trim() && (
-        <p className="mb-2 text-sm text-gray-500">
-          {filtered.length} van {contacts.length} contacten gevonden
-        </p>
-      )}
+      <p className="mb-2 text-sm text-gray-500">
+        {search.trim()
+          ? `${filtered.length} van ${contacts.length} contacten gevonden`
+          : `${filtered.length} contacten`}
+      </p>
 
       {/* Table */}
       <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
