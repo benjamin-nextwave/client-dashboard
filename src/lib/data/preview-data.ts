@@ -35,108 +35,100 @@ function extractField(
 // --- Exported query functions ---
 
 /**
- * Get all non-filtered contacts from the most recent CSV upload for the preview view.
- * Deduplicates by email (keeps first occurrence).
+ * Get all contacts from the most recent CSV upload for the preview view.
+ * Finds the latest upload that actually has rows, regardless of status or expiry.
  */
 export async function getPreviewContacts(
   clientId: string
 ): Promise<PreviewContact[]> {
   const supabase = createAdminClient()
 
-  // Find the most recent non-expired CSV upload that is ready or filtered
-  const { data: upload, error: uploadError } = await supabase
+  // Find the most recent CSV upload for this client (any status, ignore expiry)
+  const { data: uploads } = await supabase
     .from('csv_uploads')
     .select('id, email_column, column_mappings, created_at')
     .eq('client_id', clientId)
-    .in('status', ['ready', 'filtered'])
-    .gt('expires_at', new Date().toISOString())
     .order('created_at', { ascending: false })
-    .limit(1)
-    .single()
+    .limit(5)
 
-  if (uploadError || !upload) return []
+  if (!uploads || uploads.length === 0) return []
 
-  const emailColumn = upload.email_column
-  const mappings = (upload.column_mappings as Record<string, string> | null) ?? null
+  // Try each upload until we find one with rows
+  for (const upload of uploads) {
+    const emailColumn = upload.email_column
+    const mappings = (upload.column_mappings as Record<string, string> | null) ?? null
 
-  // Fetch all non-filtered rows for this upload
-  const { data: rows, error: rowsError } = await supabase
-    .from('csv_rows')
-    .select('id, data')
-    .eq('upload_id', upload.id)
-    .eq('is_filtered', false)
-    .order('row_index', { ascending: true })
-    .limit(5000)
+    // Fetch ALL rows for this upload (ignore is_filtered)
+    const { data: rows, error: rowsError } = await supabase
+      .from('csv_rows')
+      .select('id, data, is_filtered')
+      .eq('upload_id', upload.id)
+      .order('row_index', { ascending: true })
+      .limit(5000)
 
-  if (rowsError) {
-    throw new Error(`Failed to fetch preview contacts: ${rowsError.message}`)
-  }
+    if (rowsError || !rows || rows.length === 0) continue
 
-  if (!rows || rows.length === 0) return []
+    const contacts: PreviewContact[] = []
 
-  const uploadDate = upload.created_at
+    for (const row of rows) {
+      const data = row.data as Record<string, string>
 
-  const contacts: PreviewContact[] = []
+      const email = emailColumn
+        ? data[emailColumn]?.trim() ?? null
+        : extractField(data, ['email', 'Email', 'E-mail', 'e-mail'])
 
-  for (const row of rows) {
-    const data = row.data as Record<string, string>
+      if (!email) continue
 
-    // Extract email using the upload's configured email column, fallback to common variants
-    const email = emailColumn
-      ? data[emailColumn]?.trim() ?? null
-      : extractField(data, ['email', 'Email', 'E-mail', 'e-mail'])
+      let fullName: string
+      let companyName: string | null
+      let jobTitle: string | null
+      let industry: string | null
 
-    if (!email) continue
+      if (mappings) {
+        fullName = (mappings.full_name && data[mappings.full_name]?.trim()) || email
+        companyName = (mappings.company_name && data[mappings.company_name]?.trim()) || null
+        industry = (mappings.industry && data[mappings.industry]?.trim()) || null
+        jobTitle = (mappings.job_title && data[mappings.job_title]?.trim()) || null
+      } else {
+        const firstName = extractField(data, [
+          'First Name', 'first_name', 'FirstName', 'Voornaam', 'voornaam',
+        ])
+        const lastName = extractField(data, [
+          'Last Name', 'last_name', 'LastName', 'Achternaam', 'achternaam',
+        ])
+        const fullNameDirect = extractField(data, ['Name', 'Naam', 'name', 'naam', 'Full Name', 'full_name'])
 
-    let fullName: string
-    let companyName: string | null
-    let jobTitle: string | null
-    let industry: string | null
+        fullName =
+          [firstName, lastName].filter(Boolean).join(' ') ||
+          fullNameDirect ||
+          email
+        companyName = extractField(data, [
+          'Company', 'company_name', 'Company Name', 'Bedrijf', 'Bedrijfsnaam',
+          'bedrijf', 'bedrijfsnaam', 'company',
+        ])
+        jobTitle = extractField(data, [
+          'Job Title', 'job_title', 'Functie', 'functie', 'Title', 'title',
+        ])
+        industry = extractField(data, [
+          'Industry', 'industry', 'Branche', 'branche', 'Sector', 'sector',
+        ])
+      }
 
-    if (mappings) {
-      // Use explicit column mappings
-      fullName = (mappings.full_name && data[mappings.full_name]?.trim()) || email
-      companyName = (mappings.company_name && data[mappings.company_name]?.trim()) || null
-      industry = (mappings.industry && data[mappings.industry]?.trim()) || null
-      jobTitle = (mappings.job_title && data[mappings.job_title]?.trim()) || null
-    } else {
-      // Fallback: guess columns for older uploads without mappings
-      const firstName = extractField(data, [
-        'First Name', 'first_name', 'FirstName', 'Voornaam', 'voornaam',
-      ])
-      const lastName = extractField(data, [
-        'Last Name', 'last_name', 'LastName', 'Achternaam', 'achternaam',
-      ])
-      const fullNameDirect = extractField(data, ['Name', 'Naam', 'name', 'naam', 'Full Name', 'full_name'])
-
-      fullName =
-        [firstName, lastName].filter(Boolean).join(' ') ||
-        fullNameDirect ||
-        email
-      companyName = extractField(data, [
-        'Company', 'company_name', 'Company Name', 'Bedrijf', 'Bedrijfsnaam',
-        'bedrijf', 'bedrijfsnaam', 'company',
-      ])
-      jobTitle = extractField(data, [
-        'Job Title', 'job_title', 'Functie', 'functie', 'Title', 'title',
-      ])
-      industry = extractField(data, [
-        'Industry', 'industry', 'Branche', 'branche', 'Sector', 'sector',
-      ])
+      contacts.push({
+        id: row.id,
+        fullName,
+        companyName,
+        jobTitle,
+        industry,
+        email,
+        updatedAt: upload.created_at,
+      })
     }
 
-    contacts.push({
-      id: row.id,
-      fullName,
-      companyName,
-      jobTitle,
-      industry,
-      email,
-      updatedAt: uploadDate,
-    })
+    if (contacts.length > 0) return contacts
   }
 
-  return contacts
+  return []
 }
 
 /**
