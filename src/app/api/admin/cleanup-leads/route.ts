@@ -165,9 +165,25 @@ export async function POST(request: Request) {
 
     if (!syncedLeads || syncedLeads.length === 0) continue
 
-    // Split into valid and stale
-    const validLeads = syncedLeads.filter((sl) => instantlyCampaignSet.has(sl.campaign_id))
-    const staleLeads = syncedLeads.filter((sl) => !instantlyCampaignSet.has(sl.campaign_id))
+    // Get valid (client_id, campaign_id) pairs from client_campaigns
+    // A row is valid ONLY if BOTH:
+    //   1. campaign_id is in Instantly response (lead actually in that campaign)
+    //   2. (client_id, campaign_id) is in client_campaigns (campaign belongs to that client)
+    const { data: validPairs } = await admin
+      .from('client_campaigns')
+      .select('client_id, campaign_id')
+      .in('campaign_id', instantlyCampaignIds)
+
+    const validPairSet = new Set(
+      (validPairs ?? []).map((p) => `${p.client_id}:${p.campaign_id}`)
+    )
+
+    const validLeads = syncedLeads.filter(
+      (sl) => instantlyCampaignSet.has(sl.campaign_id) && validPairSet.has(`${sl.client_id}:${sl.campaign_id}`)
+    )
+    const staleLeads = syncedLeads.filter(
+      (sl) => !instantlyCampaignSet.has(sl.campaign_id) || !validPairSet.has(`${sl.client_id}:${sl.campaign_id}`)
+    )
 
     totalKept += validLeads.length
 

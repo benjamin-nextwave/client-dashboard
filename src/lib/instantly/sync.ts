@@ -607,43 +607,48 @@ async function verifyAndSyncLeads(
     const instantlySet = new Set(instantlyCampaignIds)
 
     // Step 2: Which of THIS client's campaigns contain this lead?
+    // A campaign is valid ONLY if it's both in the Instantly response AND in clientCampaignIds
     const validCampaignIds = [...clientCampaignIds].filter((c) => instantlySet.has(c))
+    const validCampaignSet = new Set(validCampaignIds)
 
+    // Step 2b: Delete synced_leads rows where campaign_id is NOT in the valid set
+    // This catches rows where: campaign belongs to client but lead is NOT in that campaign
+    const { data: existingRows } = await supabase
+      .from('synced_leads')
+      .select('id, campaign_id')
+      .eq('client_id', clientId)
+      .eq('email', email)
+
+    const staleRows = (existingRows ?? []).filter((r) => !validCampaignSet.has(r.campaign_id))
+    if (staleRows.length > 0) {
+      await supabase
+        .from('synced_leads')
+        .delete()
+        .in('id', staleRows.map((r) => r.id))
+
+      console.log(
+        `verifyAndSyncLeads: REMOVED ${staleRows.length} row(s) with wrong campaign_id for ${email} ` +
+        `from client ${clientId} (valid campaigns: [${validCampaignIds.join(', ')}], ` +
+        `removed campaigns: [${staleRows.map((r) => r.campaign_id).join(', ')}])`
+      )
+      removed += staleRows.length
+    }
+
+    // If no valid campaigns remain, also clean up cached_emails
     if (validCampaignIds.length === 0) {
-      // Lead does NOT belong to this client — remove stale data
-      const { data: staleLeads } = await supabase
+      const { data: remaining } = await supabase
         .from('synced_leads')
         .select('id')
         .eq('client_id', clientId)
         .eq('email', email)
+        .limit(1)
 
-      if (staleLeads?.length) {
+      if (!remaining?.length) {
         await supabase
-          .from('synced_leads')
+          .from('cached_emails')
           .delete()
-          .in('id', staleLeads.map((l) => l.id))
-
-        // Clean up orphaned cached_emails if no more synced_leads for this client+email
-        const { data: remaining } = await supabase
-          .from('synced_leads')
-          .select('id')
           .eq('client_id', clientId)
-          .eq('email', email)
-          .limit(1)
-
-        if (!remaining?.length) {
-          await supabase
-            .from('cached_emails')
-            .delete()
-            .eq('client_id', clientId)
-            .eq('lead_email', email)
-        }
-
-        console.log(
-          `verifyAndSyncLeads: REMOVED ${staleLeads.length} stale lead(s) for ${email} ` +
-          `from client ${clientId} (not in any of client's ${clientCampaignIds.size} campaigns)`
-        )
-        removed += staleLeads.length
+          .eq('lead_email', email)
       }
       continue
     }
