@@ -375,17 +375,6 @@ export async function refreshInbox(): Promise<ActionResult> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Niet ingelogd.' }
 
-  const clientId = user.app_metadata?.client_id as string | undefined
-  if (!clientId) return { error: 'Geen client gevonden.' }
-
-  try {
-    // Inbox-only sync: emails + recent leads, skips analytics
-    await syncInboxData(clientId)
-  } catch (err) {
-    console.error('Failed to inbox sync:', err)
-    return { error: 'Sync mislukt. Probeer het opnieuw.' }
-  }
-
   revalidatePath('/dashboard/inbox')
   return { success: true }
 }
