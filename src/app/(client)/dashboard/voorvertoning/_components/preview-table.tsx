@@ -40,12 +40,11 @@ export function PreviewTable({ contacts, clientId, clientName }: Props) {
   const [industryFeedback, setIndustryFeedback] = useState('')
   const [generalNotes, setGeneralNotes] = useState('')
 
-  // Filter contacts: remove excluded + apply search
+  // Filter contacts: apply search (excluded contacts stay visible but marked red)
   const filtered = useMemo(() => {
-    const visible = contacts.filter((c) => !excludedIds.has(c.id))
-    if (!search.trim()) return visible
+    if (!search.trim()) return contacts
     const q = search.toLowerCase()
-    return visible.filter(
+    return contacts.filter(
       (c) =>
         c.fullName.toLowerCase().includes(q) ||
         c.email.toLowerCase().includes(q) ||
@@ -53,7 +52,7 @@ export function PreviewTable({ contacts, clientId, clientName }: Props) {
         (c.jobTitle && c.jobTitle.toLowerCase().includes(q)) ||
         (c.industry && c.industry.toLowerCase().includes(q))
     )
-  }, [contacts, search, excludedIds])
+  }, [contacts, search])
 
   function showNotification(type: 'success' | 'error' | 'info', message: string) {
     setNotification({ type, message })
@@ -64,13 +63,13 @@ export function PreviewTable({ contacts, clientId, clientName }: Props) {
     setRemoving(contactId)
     setNotification(null)
 
-    // Optimistically remove from view immediately
+    // Optimistically mark as excluded (show red) immediately
     setExcludedIds((prev) => new Set(prev).add(contactId))
 
     const result = await excludeContact(contactId)
 
     if ('error' in result) {
-      // Revert optimistic removal on error
+      // Revert optimistic exclusion on error
       setExcludedIds((prev) => {
         const next = new Set(prev)
         next.delete(contactId)
@@ -78,7 +77,7 @@ export function PreviewTable({ contacts, clientId, clientName }: Props) {
       })
       showNotification('error', result.error)
     } else {
-      showNotification('success', 'Contact verwijderd uit voorvertoning.')
+      showNotification('success', 'Contact verwijderd uit de lijst.')
       router.refresh()
     }
 
@@ -341,7 +340,7 @@ export function PreviewTable({ contacts, clientId, clientName }: Props) {
       <p className="mb-2 text-sm text-gray-500">
         {search.trim()
           ? `${filtered.length} van ${contacts.length} contacten gevonden`
-          : `${filtered.length} contacten`}
+          : `${filtered.filter((c) => !c.isExcluded && !excludedIds.has(c.id)).length} actieve contacten${excludedIds.size > 0 || contacts.some((c) => c.isExcluded) ? ` (${contacts.filter((c) => c.isExcluded || excludedIds.has(c.id)).length} verwijderd)` : ''}`}
       </p>
 
       {/* Table */}
@@ -367,44 +366,51 @@ export function PreviewTable({ contacts, clientId, clientName }: Props) {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {filtered.map((contact) => (
-              <tr key={contact.id}>
-                <td className="truncate px-3 py-3 text-sm text-gray-900" title={contact.fullName}>
-                  {contact.fullName}
-                </td>
-                <td className="truncate px-3 py-3 text-sm text-gray-900" title={contact.companyName ?? '-'}>
-                  {contact.companyName ?? '-'}
-                </td>
-                <td className="truncate px-3 py-3 text-sm text-gray-900" title={contact.industry ?? '-'}>
-                  {contact.industry ?? '-'}
-                </td>
-                <td className="truncate px-3 py-3 text-sm text-gray-900" title={contact.jobTitle ?? '-'}>
-                  {contact.jobTitle ?? '-'}
-                </td>
-                <td className="whitespace-nowrap px-2 py-3 text-right text-sm">
-                  <button
-                    onClick={() => handleExclude(contact.id)}
-                    disabled={removing === contact.id}
-                    className="inline-flex items-center text-red-600 hover:text-red-800 disabled:opacity-50"
-                    title="Verwijderen"
-                  >
-                    <svg
-                      className="h-4 w-4"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
-                      />
-                    </svg>
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {filtered.map((contact) => {
+              const isExcluded = contact.isExcluded || excludedIds.has(contact.id)
+              return (
+                <tr key={contact.id} className={isExcluded ? 'bg-red-50' : ''}>
+                  <td className={`truncate px-3 py-3 text-sm ${isExcluded ? 'text-red-400 line-through' : 'text-gray-900'}`} title={contact.fullName}>
+                    {contact.fullName}
+                  </td>
+                  <td className={`truncate px-3 py-3 text-sm ${isExcluded ? 'text-red-400 line-through' : 'text-gray-900'}`} title={contact.companyName ?? '-'}>
+                    {contact.companyName ?? '-'}
+                  </td>
+                  <td className={`truncate px-3 py-3 text-sm ${isExcluded ? 'text-red-400 line-through' : 'text-gray-900'}`} title={contact.industry ?? '-'}>
+                    {contact.industry ?? '-'}
+                  </td>
+                  <td className={`truncate px-3 py-3 text-sm ${isExcluded ? 'text-red-400 line-through' : 'text-gray-900'}`} title={contact.jobTitle ?? '-'}>
+                    {contact.jobTitle ?? '-'}
+                  </td>
+                  <td className="whitespace-nowrap px-2 py-3 text-right text-sm">
+                    {isExcluded ? (
+                      <span className="text-xs text-red-400">Verwijderd</span>
+                    ) : (
+                      <button
+                        onClick={() => handleExclude(contact.id)}
+                        disabled={removing === contact.id}
+                        className="inline-flex items-center text-red-600 hover:text-red-800 disabled:opacity-50"
+                        title="Verwijderen"
+                      >
+                        <svg
+                          className="h-4 w-4"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={2}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
+                          />
+                        </svg>
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              )
+            })}
             {filtered.length === 0 && (
               <tr>
                 <td

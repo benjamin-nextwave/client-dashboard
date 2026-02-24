@@ -230,11 +230,12 @@ export async function applyDncFilter(
   const emailColumn = upload.email_column as string
   const clientId = upload.client_id as string
 
-  // Step 1: Reset any previous filtering
+  // Step 1: Reset any previous filtering (preserve client exclusions)
   const { error: resetError } = await admin
     .from('csv_rows')
     .update({ is_filtered: false, filter_reason: null })
     .eq('upload_id', uploadId)
+    .neq('filter_reason', 'client_excluded')
 
   if (resetError) {
     return { error: `Filter resetten mislukt: ${resetError.message}` }

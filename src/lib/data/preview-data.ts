@@ -10,6 +10,7 @@ export interface PreviewContact {
   industry: string | null
   email: string
   updatedAt: string
+  isExcluded: boolean
 }
 
 // --- Helpers ---
@@ -61,7 +62,7 @@ export async function getPreviewContacts(
     // Fetch ALL rows for this upload (ignore is_filtered)
     const { data: rows, error: rowsError } = await supabase
       .from('csv_rows')
-      .select('id, data, is_filtered')
+      .select('id, data, is_filtered, filter_reason')
       .eq('upload_id', upload.id)
       .order('row_index', { ascending: true })
       .limit(5000)
@@ -122,6 +123,7 @@ export async function getPreviewContacts(
         industry,
         email,
         updatedAt: upload.created_at,
+        isExcluded: !!(row.is_filtered && row.filter_reason === 'client_excluded'),
       })
     }
 
