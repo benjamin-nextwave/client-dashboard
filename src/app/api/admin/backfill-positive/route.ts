@@ -6,7 +6,6 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { listLeads, listEmails, getCampaignsForEmail } from '@/lib/instantly/client'
-import type { InstantlyLead, InstantlyEmail } from '@/lib/instantly/types'
 
 const RATE_LIMIT_DELAY_MS = 500
 const DEFAULT_LIMIT = 10
@@ -100,6 +99,19 @@ export async function POST(request: Request) {
     `${nextCursor ? `, next_cursor=${nextCursor}` : ', no more pages'}`
   )
 
+  // Log the client_campaigns mapping for debugging
+  console.log(
+    `backfill-positive: client_campaigns mapping has ${campaignToClient.size} entries: ` +
+    `[${[...campaignToClient.entries()].map(([cid, clid]) => `${cid.slice(0, 8)}→${clid.slice(0, 8)}`).join(', ')}]`
+  )
+
+  // Log each lead's email and lt_interest_status for debugging
+  for (const lead of leads) {
+    console.log(
+      `backfill-positive: lead ${lead.email} — lt_interest_status=${JSON.stringify(lead.lt_interest_status)}, id=${lead.id}`
+    )
+  }
+
   let totalInserted = 0
   let totalEmailsCached = 0
   let totalSkipped = 0
@@ -107,8 +119,11 @@ export async function POST(request: Request) {
 
   const details: Array<{
     email: string
-    campaigns: Array<{ campaign_id: string; client_id: string }>
-    emails_cached: number
+    campaigns?: Array<{ campaign_id: string; client_id: string }>
+    emails_cached?: number
+    skip_reason?: string
+    instantly_campaigns?: string[]
+    api_error?: string
   }> = []
 
   for (let i = 0; i < leads.length; i++) {
@@ -122,14 +137,17 @@ export async function POST(request: Request) {
     try {
       instantlyCampaignIds = await getCampaignsForEmail(emailLower)
     } catch (error) {
+      const errMsg = error instanceof Error ? error.message : String(error)
       console.error(`backfill-positive: getCampaignsForEmail failed for ${emailLower}:`, error)
       totalApiErrors++
+      details.push({ email: emailLower, skip_reason: 'getCampaignsForEmail API error', api_error: errMsg })
       continue
     }
 
     if (instantlyCampaignIds.length === 0) {
       console.log(`backfill-positive: ${emailLower} not found in any campaign — skipping`)
       totalSkipped++
+      details.push({ email: emailLower, skip_reason: 'no campaigns returned by getCampaignsForEmail', instantly_campaigns: [] })
       continue
     }
 
@@ -148,6 +166,7 @@ export async function POST(request: Request) {
         `but none are in client_campaigns — skipping`
       )
       totalSkipped++
+      details.push({ email: emailLower, skip_reason: 'no matching client_campaigns', instantly_campaigns: instantlyCampaignIds })
       continue
     }
 
