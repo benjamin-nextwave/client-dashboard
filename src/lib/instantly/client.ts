@@ -110,9 +110,11 @@ export async function listLeads(
   campaignId: string,
   options?: { limit?: number; startingAfter?: string; interestStatus?: number; search?: string }
 ): Promise<InstantlyListResponse<InstantlyLead>> {
-  const body: Record<string, unknown> = { campaign_id: campaignId }
+  const body: Record<string, unknown> = { campaign: campaignId }
   if (options?.limit) body.limit = options.limit
   if (options?.startingAfter) body.starting_after = options.startingAfter
+  // Note: interest_value does NOT filter server-side. Filter client-side on lt_interest_status instead.
+  // Kept for backward compat but has no effect.
   if (options?.interestStatus !== undefined) body.interest_value = options.interestStatus
   if (options?.search) body.search = options.search
 

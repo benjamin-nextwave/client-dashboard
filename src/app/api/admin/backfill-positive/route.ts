@@ -5,27 +5,31 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { listLeads, listEmails, getCampaignsForEmail } from '@/lib/instantly/client'
+import { listLeads, listEmails } from '@/lib/instantly/client'
 
-const RATE_LIMIT_DELAY_MS = 500
-const DEFAULT_LIMIT = 10
+const RATE_LIMIT_DELAY_MS = 300
+const DEFAULT_CAMPAIGN_LIMIT = 5
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 /**
- * Backfill only positive-interest leads from the Instantly global pool.
+ * Backfill positive-interest leads per campaign from Instantly.
  *
- * 1. Fetch positive leads via listLeads (interest_value=1) — paginated from global pool
- * 2. Per lead: getCampaignsForEmail → which campaigns?
- * 3. Per campaign: look up client_id in client_campaigns
- * 4. INSERT into synced_leads with correct (client_id, campaign_id)
- * 5. Cache emails for the lead
+ * Now that listLeads uses the correct "campaign" parameter, we can:
+ * 1. Iterate over campaigns in client_campaigns
+ * 2. Per campaign: paginate through ALL leads via listLeads
+ * 3. Filter client-side on lt_interest_status == 1
+ * 4. Upsert positive leads into synced_leads with correct (client_id, campaign_id)
+ * 5. Cache emails per positive lead
  *
- * Supports cursor-based pagination:
- *   ?limit=10          — leads per batch (default 10)
- *   ?cursor=<id>       — Instantly pagination cursor (from previous next_cursor)
+ * No getCampaignsForEmail needed — campaign filtering works directly.
+ *
+ * Supports:
+ *   ?limit=5           — max campaigns per batch (default 5, for Vercel timeout)
+ *   ?offset=0          — skip first N campaigns (for pagination)
+ *   ?campaign_id=X     — only backfill a specific campaign
  *
  * POST /api/admin/backfill-positive
  */
@@ -42,20 +46,16 @@ export async function POST(request: Request) {
   }
 
   const { searchParams } = new URL(request.url)
-  const limit = Math.min(
-    Math.max(parseInt(searchParams.get('limit') ?? '', 10) || DEFAULT_LIMIT, 1),
-    100
+  const campaignLimit = Math.min(
+    Math.max(parseInt(searchParams.get('limit') ?? '', 10) || DEFAULT_CAMPAIGN_LIMIT, 1),
+    50
   )
-  const cursor = searchParams.get('cursor') ?? undefined
+  const offset = Math.max(parseInt(searchParams.get('offset') ?? '', 10) || 0, 0)
+  const filterCampaignId = searchParams.get('campaign_id') ?? null
 
   const admin = createAdminClient()
 
-  console.log(
-    `backfill-positive: starting batch, limit=${limit}` +
-    `${cursor ? `, cursor=${cursor}` : ''}`
-  )
-
-  // Pre-load client_campaigns mapping: campaign_id → client_id
+  // Load all client_campaigns
   const { data: allClientCampaigns, error: ccError } = await admin
     .from('client_campaigns')
     .select('client_id, campaign_id')
@@ -66,245 +66,231 @@ export async function POST(request: Request) {
     }, { status: 500 })
   }
 
-  const campaignToClient = new Map<string, string>()
-  for (const cc of allClientCampaigns) {
-    campaignToClient.set(cc.campaign_id, cc.client_id)
-  }
+  // Filter to specific campaign if requested
+  let campaignsToProcess = filterCampaignId
+    ? allClientCampaigns.filter((cc) => cc.campaign_id === filterCampaignId)
+    : allClientCampaigns
 
-  // Fetch positive leads from Instantly (global pool, interest_value=1)
-  // We pass a dummy campaign_id since the API ignores it anyway
-  const dummyCampaignId = allClientCampaigns[0]?.campaign_id
-  if (!dummyCampaignId) {
-    return NextResponse.json({ error: 'No campaigns found' }, { status: 500 })
-  }
+  const totalCampaigns = campaignsToProcess.length
 
-  let leadsResponse
-  try {
-    leadsResponse = await listLeads(dummyCampaignId, {
-      limit,
-      startingAfter: cursor,
-      interestStatus: 1, // positive only
-    })
-  } catch (error) {
+  // Apply offset and limit for pagination
+  campaignsToProcess = campaignsToProcess.slice(offset, offset + campaignLimit)
+  const hasMore = offset + campaignLimit < totalCampaigns
+
+  console.log(
+    `backfill-positive: ${totalCampaigns} total campaigns, ` +
+    `processing ${campaignsToProcess.length} (offset=${offset}, limit=${campaignLimit})` +
+    `${filterCampaignId ? `, filter=${filterCampaignId}` : ''}`
+  )
+
+  if (campaignsToProcess.length === 0) {
     return NextResponse.json({
-      error: `Failed to fetch positive leads: ${error instanceof Error ? error.message : String(error)}`,
-    }, { status: 500 })
-  }
-
-  const leads = leadsResponse.items
-  const nextCursor = leadsResponse.next_starting_after ?? null
-
-  console.log(
-    `backfill-positive: fetched ${leads.length} positive leads` +
-    `${nextCursor ? `, next_cursor=${nextCursor}` : ', no more pages'}`
-  )
-
-  // Log the client_campaigns mapping for debugging
-  console.log(
-    `backfill-positive: client_campaigns mapping has ${campaignToClient.size} entries: ` +
-    `[${[...campaignToClient.entries()].map(([cid, clid]) => `${cid.slice(0, 8)}→${clid.slice(0, 8)}`).join(', ')}]`
-  )
-
-  // Log each lead's email and lt_interest_status for debugging
-  for (const lead of leads) {
-    console.log(
-      `backfill-positive: lead ${lead.email} — lt_interest_status=${JSON.stringify(lead.lt_interest_status)}, id=${lead.id}`
-    )
+      message: 'No campaigns to process',
+      total_campaigns: totalCampaigns,
+      campaigns_processed: 0,
+      next_offset: null,
+    })
   }
 
   let totalInserted = 0
   let totalEmailsCached = 0
-  let totalSkipped = 0
-  let totalApiErrors = 0
+  let totalLeadsScanned = 0
+  let totalPositiveFound = 0
 
-  const details: Array<{
-    email: string
-    campaigns?: Array<{ campaign_id: string; client_id: string }>
-    emails_cached?: number
-    skip_reason?: string
-    instantly_campaigns?: string[]
-    api_error?: string
+  const campaignDetails: Array<{
+    campaign_id: string
+    client_id: string
+    total_leads: number
+    positive_leads: number
+    inserted: number
+    emails_cached: number
+    positive_emails: string[]
   }> = []
 
-  for (let i = 0; i < leads.length; i++) {
-    const lead = leads[i]
-    const emailLower = lead.email.toLowerCase().trim()
+  for (let ci = 0; ci < campaignsToProcess.length; ci++) {
+    const { client_id: clientId, campaign_id: campaignId } = campaignsToProcess[ci]
 
-    if (i > 0) await delay(RATE_LIMIT_DELAY_MS)
+    if (ci > 0) await delay(RATE_LIMIT_DELAY_MS)
 
-    // Get campaigns for this lead from Instantly
-    let instantlyCampaignIds: string[]
+    console.log(
+      `backfill-positive [${ci + 1}/${campaignsToProcess.length}]: ` +
+      `campaign=${campaignId}, client=${clientId}`
+    )
+
+    // Paginate through ALL leads for this campaign
+    let cursor: string | undefined
+    let campaignTotalLeads = 0
+    let campaignPositive = 0
+    let campaignInserted = 0
+    let campaignEmailsCached = 0
+    const positiveEmails: string[] = []
+
     try {
-      instantlyCampaignIds = await getCampaignsForEmail(emailLower)
-    } catch (error) {
-      const errMsg = error instanceof Error ? error.message : String(error)
-      console.error(`backfill-positive: getCampaignsForEmail failed for ${emailLower}:`, error)
-      totalApiErrors++
-      details.push({ email: emailLower, skip_reason: 'getCampaignsForEmail API error', api_error: errMsg })
-      continue
-    }
+      do {
+        const response = await listLeads(campaignId, {
+          limit: 100,
+          startingAfter: cursor,
+        })
 
-    if (instantlyCampaignIds.length === 0) {
-      console.log(`backfill-positive: ${emailLower} not found in any campaign — skipping`)
-      totalSkipped++
-      details.push({ email: emailLower, skip_reason: 'no campaigns returned by getCampaignsForEmail', instantly_campaigns: [] })
-      continue
-    }
+        const leads = response.items
+        campaignTotalLeads += leads.length
 
-    // Map to (client_id, campaign_id) pairs
-    const pairs: Array<{ client_id: string; campaign_id: string }> = []
-    for (const campaignId of instantlyCampaignIds) {
-      const clientId = campaignToClient.get(campaignId)
-      if (clientId) {
-        pairs.push({ client_id: clientId, campaign_id: campaignId })
-      }
-    }
+        // Filter client-side on positive interest
+        // eslint-disable-next-line eqeqeq
+        const positiveLeads = leads.filter((l) => l.lt_interest_status == 1)
+        campaignPositive += positiveLeads.length
 
-    if (pairs.length === 0) {
-      console.log(
-        `backfill-positive: ${emailLower} is in campaigns [${instantlyCampaignIds.join(', ')}] ` +
-        `but none are in client_campaigns — skipping`
-      )
-      totalSkipped++
-      details.push({ email: emailLower, skip_reason: 'no matching client_campaigns', instantly_campaigns: instantlyCampaignIds })
-      continue
-    }
+        for (const lead of positiveLeads) {
+          const emailLower = lead.email.toLowerCase().trim()
+          positiveEmails.push(emailLower)
 
-    // Build lead rows for each valid pair
-    const payload = lead.payload ?? {}
-    const icpFields = normalizeIcpFields(payload)
+          const payload = lead.payload ?? {}
+          const icpFields = normalizeIcpFields(payload)
 
-    for (const pair of pairs) {
-      const row = {
-        client_id: pair.client_id,
-        instantly_lead_id: lead.id,
-        campaign_id: pair.campaign_id,
-        email: lead.email,
-        first_name: lead.first_name,
-        last_name: lead.last_name,
-        company_name: lead.company_name,
-        job_title: icpFields.job_title,
-        industry: icpFields.industry,
-        company_size: icpFields.company_size,
-        website: lead.website,
-        phone: lead.phone,
-        lead_status: lead.email_reply_count > 0 ? 'replied' : 'emailed',
-        interest_status: 'positive',
-        sender_account: lead.last_step_from,
-        email_sent_count: lead.email_open_count > 0 ? 1 : 0,
-        email_reply_count: lead.email_reply_count,
-        linkedin_url: extractField(payload, ['LinkedIn', 'linkedin', 'linkedin_url', 'LinkedIn URL']),
-        vacancy_url: extractField(payload, ['Vacancy URL', 'vacancy_url', 'Vacature URL', 'vacature_url']),
-        payload: lead.payload,
-        last_synced_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }
-
-      const { error: upsertError } = await admin
-        .from('synced_leads')
-        .upsert(row, { onConflict: 'client_id,instantly_lead_id,campaign_id' })
-
-      if (upsertError) {
-        console.error(
-          `backfill-positive: upsert failed for ${emailLower} → ` +
-          `client=${pair.client_id}, campaign=${pair.campaign_id}: ${upsertError.message}`
-        )
-      } else {
-        totalInserted++
-      }
-    }
-
-    // Cache emails for this lead
-    let emailsCached = 0
-    try {
-      const emailResponse = await listEmails({ lead: emailLower, limit: 100 })
-      const emails = emailResponse.items
-
-      if (emails.length > 0) {
-        // Cache for each client that has this lead
-        const clientIds = [...new Set(pairs.map((p) => p.client_id))]
-        for (const clientId of clientIds) {
-          const cacheRows = emails.map((email) => ({
+          const row = {
             client_id: clientId,
-            instantly_email_id: email.id,
-            thread_id: email.thread_id,
-            lead_email: email.lead?.toLowerCase() ?? emailLower,
-            from_address: email.from_address_email,
-            to_address: email.to_address_email_list,
-            subject: email.subject,
-            body_text: email.body?.text ?? null,
-            body_html: email.body?.html ?? null,
-            is_reply: email.ue_type === 2,
-            sender_account: email.ue_type === 2 ? null : email.from_address_email,
-            email_timestamp: email.timestamp_email ?? email.timestamp_created,
-          }))
-
-          const { error: cacheError } = await admin
-            .from('cached_emails')
-            .upsert(cacheRows, { onConflict: 'instantly_email_id' })
-
-          if (cacheError) {
-            console.error(`backfill-positive: cache emails failed for ${emailLower}:`, cacheError.message)
-          } else {
-            emailsCached += cacheRows.length
+            instantly_lead_id: lead.id,
+            campaign_id: campaignId,
+            email: lead.email,
+            first_name: lead.first_name,
+            last_name: lead.last_name,
+            company_name: lead.company_name,
+            job_title: icpFields.job_title,
+            industry: icpFields.industry,
+            company_size: icpFields.company_size,
+            website: lead.website,
+            phone: lead.phone,
+            lead_status: lead.email_reply_count > 0 ? 'replied' : 'emailed',
+            interest_status: 'positive',
+            sender_account: lead.last_step_from,
+            email_sent_count: lead.email_open_count > 0 ? 1 : 0,
+            email_reply_count: lead.email_reply_count,
+            linkedin_url: extractField(payload, ['LinkedIn', 'linkedin', 'linkedin_url', 'LinkedIn URL']),
+            vacancy_url: extractField(payload, ['Vacancy URL', 'vacancy_url', 'Vacature URL', 'vacature_url']),
+            payload: lead.payload,
+            last_synced_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
           }
-        }
-      }
 
-      // Also extract reply data and update synced_leads
-      const latestReply = emails
-        .filter((e) => e.ue_type === 2)
-        .sort((a, b) => (b.timestamp_email ?? b.timestamp_created).localeCompare(
-          a.timestamp_email ?? a.timestamp_created
-        ))[0]
-
-      if (latestReply) {
-        for (const pair of pairs) {
-          await admin
+          const { error: upsertError } = await admin
             .from('synced_leads')
-            .update({
-              reply_subject: latestReply.subject ?? null,
-              reply_content: latestReply.body?.html ?? latestReply.body?.text ?? null,
-              client_has_replied: false,
-            })
-            .eq('client_id', pair.client_id)
-            .eq('campaign_id', pair.campaign_id)
-            .eq('email', lead.email)
+            .upsert(row, { onConflict: 'client_id,instantly_lead_id,campaign_id' })
+
+          if (upsertError) {
+            console.error(
+              `backfill-positive: upsert failed for ${emailLower} → ` +
+              `client=${clientId}, campaign=${campaignId}: ${upsertError.message}`
+            )
+          } else {
+            campaignInserted++
+          }
+
+          // Cache emails for this lead
+          try {
+            const emailResponse = await listEmails({ lead: emailLower, limit: 100 })
+            const emails = emailResponse.items
+
+            if (emails.length > 0) {
+              const cacheRows = emails.map((e) => ({
+                client_id: clientId,
+                instantly_email_id: e.id,
+                thread_id: e.thread_id,
+                lead_email: e.lead?.toLowerCase() ?? emailLower,
+                from_address: e.from_address_email,
+                to_address: e.to_address_email_list,
+                subject: e.subject,
+                body_text: e.body?.text ?? null,
+                body_html: e.body?.html ?? null,
+                is_reply: e.ue_type === 2,
+                sender_account: e.ue_type === 2 ? null : e.from_address_email,
+                email_timestamp: e.timestamp_email ?? e.timestamp_created,
+              }))
+
+              const { error: cacheError } = await admin
+                .from('cached_emails')
+                .upsert(cacheRows, { onConflict: 'instantly_email_id' })
+
+              if (cacheError) {
+                console.error(`backfill-positive: cache emails failed for ${emailLower}:`, cacheError.message)
+              } else {
+                campaignEmailsCached += cacheRows.length
+              }
+
+              // Update reply data on synced_leads
+              const latestReply = emails
+                .filter((e) => e.ue_type === 2)
+                .sort((a, b) => (b.timestamp_email ?? b.timestamp_created).localeCompare(
+                  a.timestamp_email ?? a.timestamp_created
+                ))[0]
+
+              if (latestReply) {
+                await admin
+                  .from('synced_leads')
+                  .update({
+                    reply_subject: latestReply.subject ?? null,
+                    reply_content: latestReply.body?.html ?? latestReply.body?.text ?? null,
+                    client_has_replied: false,
+                  })
+                  .eq('client_id', clientId)
+                  .eq('campaign_id', campaignId)
+                  .eq('email', lead.email)
+              }
+            }
+          } catch (error) {
+            console.error(`backfill-positive: emails fetch failed for ${emailLower}:`, error)
+          }
+
+          await delay(RATE_LIMIT_DELAY_MS)
         }
-      }
+
+        cursor = response.next_starting_after ?? undefined
+        if (cursor) await delay(RATE_LIMIT_DELAY_MS)
+      } while (cursor)
     } catch (error) {
-      console.error(`backfill-positive: emails fetch failed for ${emailLower}:`, error)
+      console.error(
+        `backfill-positive: listLeads failed for campaign ${campaignId}:`,
+        error instanceof Error ? error.message : error
+      )
     }
 
-    totalEmailsCached += emailsCached
+    totalLeadsScanned += campaignTotalLeads
+    totalPositiveFound += campaignPositive
+    totalInserted += campaignInserted
+    totalEmailsCached += campaignEmailsCached
 
-    details.push({
-      email: emailLower,
-      campaigns: pairs,
-      emails_cached: emailsCached,
+    campaignDetails.push({
+      campaign_id: campaignId,
+      client_id: clientId,
+      total_leads: campaignTotalLeads,
+      positive_leads: campaignPositive,
+      inserted: campaignInserted,
+      emails_cached: campaignEmailsCached,
+      positive_emails: positiveEmails,
     })
 
     console.log(
-      `backfill-positive [${i + 1}/${leads.length}]: ${emailLower} → ` +
-      `${pairs.length} pair(s), ${emailsCached} emails cached`
+      `backfill-positive: campaign ${campaignId} done — ` +
+      `${campaignTotalLeads} leads scanned, ${campaignPositive} positive, ` +
+      `${campaignInserted} inserted, ${campaignEmailsCached} emails cached`
     )
   }
 
   const summary = {
-    next_cursor: nextCursor,
-    batch_size: leads.length,
+    total_campaigns: totalCampaigns,
+    campaigns_processed: campaignsToProcess.length,
+    next_offset: hasMore ? offset + campaignLimit : null,
+    total_leads_scanned: totalLeadsScanned,
+    total_positive_found: totalPositiveFound,
     total_inserted: totalInserted,
     total_emails_cached: totalEmailsCached,
-    total_skipped: totalSkipped,
-    api_errors: totalApiErrors,
-    details,
+    campaigns: campaignDetails,
   }
 
   console.log(
-    `backfill-positive: batch done — ${totalInserted} inserted, ` +
-    `${totalEmailsCached} emails cached, ${totalSkipped} skipped, ` +
-    `${totalApiErrors} API errors` +
-    `${nextCursor ? `, next_cursor=${nextCursor}` : ', ALL DONE'}`
+    `backfill-positive: batch done — ${campaignsToProcess.length} campaigns, ` +
+    `${totalLeadsScanned} leads scanned, ${totalPositiveFound} positive, ` +
+    `${totalInserted} inserted, ${totalEmailsCached} emails cached` +
+    `${hasMore ? `, next_offset=${offset + campaignLimit}` : ', ALL DONE'}`
   )
 
   return NextResponse.json(summary)
