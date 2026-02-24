@@ -4,8 +4,7 @@ import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { replyToEmail, listEmails } from '@/lib/instantly/client'
-import { syncInboxData } from '@/lib/instantly/sync'
+import { replyToEmail, listEmails, listLeads } from '@/lib/instantly/client'
 
 // --- Zod Schemas ---
 
@@ -368,15 +367,167 @@ export async function composeNewEmail(
 }
 
 /**
- * Force a full re-sync and revalidate the inbox.
+ * Scan all campaigns linked to this client for positive leads.
+ * Upserts any new positive leads into synced_leads and caches their emails.
+ * This is the primary way new leads appear in the dashboard outside of webhooks.
  */
 export async function refreshInbox(): Promise<ActionResult> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Niet ingelogd.' }
 
+  const clientId = user.app_metadata?.client_id as string | undefined
+  if (!clientId) return { error: 'Geen client gevonden.' }
+
+  const admin = createAdminClient()
+
+  // Get all campaigns for this client
+  const { data: campaigns, error: ccError } = await admin
+    .from('client_campaigns')
+    .select('campaign_id')
+    .eq('client_id', clientId)
+
+  if (ccError || !campaigns || campaigns.length === 0) {
+    revalidatePath('/dashboard/inbox')
+    return { success: true }
+  }
+
+  // Get existing lead emails so we know which are new
+  const { data: existingLeads } = await admin
+    .from('synced_leads')
+    .select('email')
+    .eq('client_id', clientId)
+    .eq('interest_status', 'positive')
+
+  const existingEmails = new Set(
+    (existingLeads ?? []).map((l) => l.email.toLowerCase())
+  )
+
+  let newLeadsFound = 0
+
+  try {
+    for (const { campaign_id: campaignId } of campaigns) {
+      // Paginate through all leads for this campaign
+      let cursor: string | undefined
+
+      do {
+        const response = await listLeads(campaignId, {
+          limit: 100,
+          startingAfter: cursor,
+        })
+
+        // Filter client-side on positive interest
+        // eslint-disable-next-line eqeqeq
+        const positiveLeads = response.items.filter((l) => l.lt_interest_status == 1)
+
+        for (const lead of positiveLeads) {
+          const emailLower = lead.email.toLowerCase().trim()
+          const payload = lead.payload ?? {}
+
+          const row = {
+            client_id: clientId,
+            instantly_lead_id: lead.id,
+            campaign_id: campaignId,
+            email: lead.email,
+            first_name: lead.first_name,
+            last_name: lead.last_name,
+            company_name: lead.company_name,
+            job_title: extractField(payload, ['Job Title', 'job_title', 'Functie', 'functie']),
+            industry: extractField(payload, ['Industry', 'industry', 'Branche', 'branche']),
+            company_size: extractField(payload, ['Company Size', 'company_size', 'Bedrijfsgrootte', 'bedrijfsgrootte']),
+            website: lead.website,
+            phone: lead.phone,
+            lead_status: lead.email_reply_count > 0 ? 'replied' : 'emailed',
+            interest_status: 'positive',
+            sender_account: lead.last_step_from,
+            email_sent_count: lead.email_open_count > 0 ? 1 : 0,
+            email_reply_count: lead.email_reply_count,
+            linkedin_url: extractField(payload, ['LinkedIn', 'linkedin', 'linkedin_url', 'LinkedIn URL']),
+            vacancy_url: extractField(payload, ['Vacancy URL', 'vacancy_url', 'Vacature URL', 'vacature_url']),
+            payload: lead.payload,
+            last_synced_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }
+
+          await admin
+            .from('synced_leads')
+            .upsert(row, { onConflict: 'client_id,instantly_lead_id,campaign_id' })
+
+          // Cache emails for new leads
+          if (!existingEmails.has(emailLower)) {
+            newLeadsFound++
+            existingEmails.add(emailLower) // prevent duplicate fetches
+
+            try {
+              const emailResponse = await listEmails({ lead: emailLower, limit: 100 })
+              if (emailResponse.items.length > 0) {
+                const cacheRows = emailResponse.items.map((e) => ({
+                  client_id: clientId,
+                  instantly_email_id: e.id,
+                  thread_id: e.thread_id,
+                  lead_email: e.lead?.toLowerCase() ?? emailLower,
+                  from_address: e.from_address_email,
+                  to_address: e.to_address_email_list,
+                  subject: e.subject,
+                  body_text: e.body?.text ?? null,
+                  body_html: e.body?.html ?? null,
+                  is_reply: e.ue_type === 2,
+                  sender_account: e.ue_type === 2 ? null : e.from_address_email,
+                  email_timestamp: e.timestamp_email ?? e.timestamp_created,
+                }))
+
+                await admin
+                  .from('cached_emails')
+                  .upsert(cacheRows, { onConflict: 'instantly_email_id' })
+
+                // Update reply data
+                const latestReply = emailResponse.items
+                  .filter((e) => e.ue_type === 2)
+                  .sort((a, b) => (b.timestamp_email ?? b.timestamp_created).localeCompare(
+                    a.timestamp_email ?? a.timestamp_created
+                  ))[0]
+
+                if (latestReply) {
+                  await admin
+                    .from('synced_leads')
+                    .update({
+                      reply_subject: latestReply.subject ?? null,
+                      reply_content: latestReply.body?.html ?? latestReply.body?.text ?? null,
+                    })
+                    .eq('client_id', clientId)
+                    .eq('email', lead.email)
+                }
+              }
+            } catch (emailErr) {
+              console.error(`refreshInbox: email cache failed for ${emailLower}:`, emailErr)
+            }
+          }
+        }
+
+        cursor = response.next_starting_after ?? undefined
+      } while (cursor)
+    }
+  } catch (err) {
+    console.error('refreshInbox: scan failed:', err)
+  }
+
+  if (newLeadsFound > 0) {
+    console.log(`refreshInbox: found ${newLeadsFound} new positive lead(s) for client ${clientId}`)
+  }
+
   revalidatePath('/dashboard/inbox')
   return { success: true }
+}
+
+/** Extract a field from payload using case-insensitive key matching */
+function extractField(payload: Record<string, unknown>, variants: string[]): string | null {
+  for (const variant of variants) {
+    const key = Object.keys(payload).find((k) => k.toLowerCase() === variant.toLowerCase())
+    if (key && payload[key] != null && String(payload[key]).trim() !== '') {
+      return String(payload[key]).trim()
+    }
+  }
+  return null
 }
 
 /**
