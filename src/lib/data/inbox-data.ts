@@ -123,24 +123,19 @@ export async function getLeadThread(
 
   if (!data || data.length === 0) return []
 
-  // When we know the sender account, filter to only threads involving that sender.
-  // This isolates the correct campaign conversation when the same lead email
-  // exists across multiple campaigns with different sender accounts.
+  // When we know the sender account, keep only emails that directly involve
+  // that sender. This filters out sent emails from other campaigns/clients.
+  // - Outbound emails: from_address matches the sender account
+  // - Lead replies: to_address contains the sender account
   if (senderAccount) {
-    const relevantThreadIds = new Set(
-      data
-        .filter(
-          (e) =>
-            e.sender_account === senderAccount ||
-            e.from_address === senderAccount ||
-            (e.to_address && e.to_address.includes(senderAccount))
-        )
-        .map((e) => e.thread_id)
+    const sa = senderAccount.toLowerCase()
+    const filtered = data.filter(
+      (e) =>
+        e.from_address?.toLowerCase() === sa ||
+        e.to_address?.toLowerCase().includes(sa)
     )
 
-    if (relevantThreadIds.size > 0) {
-      return data.filter((e) => relevantThreadIds.has(e.thread_id))
-    }
+    if (filtered.length > 0) return filtered
   }
 
   return data

@@ -52,11 +52,11 @@ export default async function LeadThreadPage({
 
   const supabase = await createClient()
 
-  // Fetch lead details
+  // Fetch lead details (include campaign_id for sender_account fallback)
   const { data: lead, error: leadError } = await supabase
     .from('synced_leads')
     .select(
-      'id, email, first_name, last_name, company_name, job_title, linkedin_url, vacancy_url, sender_account, client_has_replied, reply_subject, archived_at'
+      'id, email, first_name, last_name, company_name, job_title, linkedin_url, vacancy_url, sender_account, campaign_id, client_has_replied, reply_subject, archived_at'
     )
     .eq('id', leadId)
     .single()
@@ -68,21 +68,60 @@ export default async function LeadThreadPage({
   // Mark as opened
   await markLeadAsOpened(leadId)
 
-  // Fetch email thread — wrapped in try/catch to prevent server component crash
-  let emails: Awaited<ReturnType<typeof getLeadThread>> = []
+  // Fetch ALL emails for this lead (unfiltered) so we can resolve sender account
+  let allEmails: Awaited<ReturnType<typeof getLeadThread>> = []
   try {
-    emails = await getLeadThread(client.id, lead.email, lead.sender_account)
+    allEmails = await getLeadThread(client.id, lead.email)
   } catch (err) {
     console.error('Failed to fetch lead thread:', err)
   }
 
-  // Resolve sender account: prefer lead record, fallback to cached sender_account,
-  // then fallback to from_address of first outbound (non-reply) email in thread
-  const senderAccount =
-    lead.sender_account ||
-    emails.find((e) => e.sender_account)?.sender_account ||
-    emails.find((e) => !e.is_reply)?.from_address ||
-    ''
+  // Resolve sender account using multiple strategies:
+  // 1. From lead record (synced_leads.sender_account)
+  // 2. From reply emails: the lead replied TO the correct sender
+  // 3. From campaign fallback: another lead in the same campaign
+  // 4. From any outbound email in the cache
+  let senderAccount = lead.sender_account
+
+  if (!senderAccount) {
+    // Strategy 2: find the sender from lead's reply (to_address = correct sender)
+    const replyFromLead = allEmails.find(
+      (e) => e.is_reply && e.from_address?.toLowerCase() === lead.email.toLowerCase()
+    )
+    senderAccount = replyFromLead?.to_address ?? null
+  }
+
+  if (!senderAccount && lead.campaign_id) {
+    // Strategy 3: find sender from another lead in the same campaign
+    const { data: campLead } = await supabase
+      .from('synced_leads')
+      .select('sender_account')
+      .eq('campaign_id', lead.campaign_id)
+      .not('sender_account', 'is', null)
+      .limit(1)
+      .maybeSingle()
+    senderAccount = campLead?.sender_account ?? null
+  }
+
+  if (!senderAccount) {
+    // Strategy 4: fallback to first outbound email's sender
+    senderAccount =
+      allEmails.find((e) => e.sender_account)?.sender_account ||
+      allEmails.find((e) => !e.is_reply)?.from_address ||
+      ''
+  }
+
+  // Filter emails to only show the correct campaign's conversation
+  let emails = allEmails
+  if (senderAccount) {
+    const sa = senderAccount.toLowerCase()
+    const filtered = allEmails.filter(
+      (e) =>
+        e.from_address?.toLowerCase() === sa ||
+        e.to_address?.toLowerCase().includes(sa)
+    )
+    if (filtered.length > 0) emails = filtered
+  }
 
   // Check if recruitment client
   const { data: clientData } = await supabase
