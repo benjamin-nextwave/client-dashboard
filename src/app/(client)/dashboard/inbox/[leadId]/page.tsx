@@ -71,7 +71,7 @@ export default async function LeadThreadPage({
   // Fetch email thread — wrapped in try/catch to prevent server component crash
   let emails: Awaited<ReturnType<typeof getLeadThread>> = []
   try {
-    emails = await getLeadThread(client.id, lead.email)
+    emails = await getLeadThread(client.id, lead.email, lead.sender_account)
   } catch (err) {
     console.error('Failed to fetch lead thread:', err)
   }
