@@ -97,10 +97,15 @@ export async function getPositiveLeadsForInbox(
  * Get email thread for a specific lead.
  * Reads directly from cached_emails in Supabase — no live Instantly API calls.
  * The sync process (cron + webhook + manual refresh) keeps this data fresh.
+ *
+ * When senderAccount is provided, only emails belonging to threads that involve
+ * that sender are returned. This prevents mixing emails from different campaigns
+ * when the same lead email appears in multiple campaigns.
  */
 export async function getLeadThread(
   clientId: string,
-  leadEmail: string
+  leadEmail: string,
+  senderAccount?: string | null
 ): Promise<CachedEmail[]> {
   const supabase = await createClient()
 
@@ -116,5 +121,27 @@ export async function getLeadThread(
     return []
   }
 
-  return data ?? []
+  if (!data || data.length === 0) return []
+
+  // When we know the sender account, filter to only threads involving that sender.
+  // This isolates the correct campaign conversation when the same lead email
+  // exists across multiple campaigns with different sender accounts.
+  if (senderAccount) {
+    const relevantThreadIds = new Set(
+      data
+        .filter(
+          (e) =>
+            e.sender_account === senderAccount ||
+            e.from_address === senderAccount ||
+            (e.to_address && e.to_address.includes(senderAccount))
+        )
+        .map((e) => e.thread_id)
+    )
+
+    if (relevantThreadIds.size > 0) {
+      return data.filter((e) => relevantThreadIds.has(e.thread_id))
+    }
+  }
+
+  return data
 }
