@@ -54,23 +54,34 @@ export async function getPreviewContacts(
   if (!uploads || uploads.length === 0) return []
 
   const allContacts: PreviewContact[] = []
-  const seenEmails = new Set<string>()
 
   // Aggregate contacts from all uploads
   for (const upload of uploads) {
     const emailColumn = upload.email_column
     const mappings = (upload.column_mappings as Record<string, string> | null) ?? null
 
-    // Fetch ALL rows for this upload (ignore is_filtered)
-    const { data: rows, error: rowsError } = await supabase
-      .from('csv_rows')
-      .select('id, data, is_filtered, filter_reason')
-      .eq('upload_id', upload.id)
-      .order('row_index', { ascending: true })
+    // Fetch rows in batches to bypass Supabase default row limit
+    let offset = 0
+    const batchSize = 1000
+    let allRows: { id: string; data: Record<string, string>; is_filtered: boolean; filter_reason: string | null }[] = []
 
-    if (rowsError || !rows || rows.length === 0) continue
+    while (true) {
+      const { data: batch, error: batchError } = await supabase
+        .from('csv_rows')
+        .select('id, data, is_filtered, filter_reason')
+        .eq('upload_id', upload.id)
+        .order('row_index', { ascending: true })
+        .range(offset, offset + batchSize - 1)
 
-    for (const row of rows) {
+      if (batchError || !batch || batch.length === 0) break
+      allRows = allRows.concat(batch as typeof allRows)
+      if (batch.length < batchSize) break
+      offset += batchSize
+    }
+
+    if (allRows.length === 0) continue
+
+    for (const row of allRows) {
       const data = row.data as Record<string, string>
 
       const email = emailColumn
@@ -78,11 +89,6 @@ export async function getPreviewContacts(
         : extractField(data, ['email', 'Email', 'E-mail', 'e-mail'])
 
       if (!email) continue
-
-      // Skip duplicate emails across uploads (keep the earliest occurrence)
-      const emailLower = email.toLowerCase()
-      if (seenEmails.has(emailLower)) continue
-      seenEmails.add(emailLower)
 
       let fullName: string
       let companyName: string | null
