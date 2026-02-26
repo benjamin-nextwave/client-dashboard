@@ -36,25 +36,27 @@ function extractField(
 // --- Exported query functions ---
 
 /**
- * Get all contacts from the most recent CSV upload for the preview view.
- * Finds the latest upload that actually has rows, regardless of status or expiry.
+ * Get all contacts from all CSV uploads for the preview view.
+ * Aggregates rows from every upload that has data, regardless of status or expiry.
  */
 export async function getPreviewContacts(
   clientId: string
 ): Promise<PreviewContact[]> {
   const supabase = createAdminClient()
 
-  // Find the most recent CSV upload for this client (any status, ignore expiry)
+  // Find all CSV uploads for this client (any status, ignore expiry)
   const { data: uploads } = await supabase
     .from('csv_uploads')
     .select('id, email_column, column_mappings, created_at')
     .eq('client_id', clientId)
-    .order('created_at', { ascending: false })
-    .limit(5)
+    .order('created_at', { ascending: true })
 
   if (!uploads || uploads.length === 0) return []
 
-  // Try each upload until we find one with rows
+  const allContacts: PreviewContact[] = []
+  const seenEmails = new Set<string>()
+
+  // Aggregate contacts from all uploads
   for (const upload of uploads) {
     const emailColumn = upload.email_column
     const mappings = (upload.column_mappings as Record<string, string> | null) ?? null
@@ -65,11 +67,8 @@ export async function getPreviewContacts(
       .select('id, data, is_filtered, filter_reason')
       .eq('upload_id', upload.id)
       .order('row_index', { ascending: true })
-      .limit(5000)
 
     if (rowsError || !rows || rows.length === 0) continue
-
-    const contacts: PreviewContact[] = []
 
     for (const row of rows) {
       const data = row.data as Record<string, string>
@@ -79,6 +78,11 @@ export async function getPreviewContacts(
         : extractField(data, ['email', 'Email', 'E-mail', 'e-mail'])
 
       if (!email) continue
+
+      // Skip duplicate emails across uploads (keep the earliest occurrence)
+      const emailLower = email.toLowerCase()
+      if (seenEmails.has(emailLower)) continue
+      seenEmails.add(emailLower)
 
       let fullName: string
       let companyName: string | null
@@ -115,7 +119,7 @@ export async function getPreviewContacts(
         ])
       }
 
-      contacts.push({
+      allContacts.push({
         id: row.id,
         fullName,
         companyName,
@@ -126,11 +130,9 @@ export async function getPreviewContacts(
         isExcluded: !!(row.is_filtered && row.filter_reason === 'client_excluded'),
       })
     }
-
-    if (contacts.length > 0) return contacts
   }
 
-  return []
+  return allContacts
 }
 
 /**
