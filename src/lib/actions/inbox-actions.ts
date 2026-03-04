@@ -446,7 +446,6 @@ export async function refreshInbox(): Promise<ActionResult> {
             vacancy_url: extractField(payload, ['Vacancy URL', 'vacancy_url', 'Vacature URL', 'vacature_url']),
             payload: lead.payload,
             last_synced_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
           }
 
           await admin
@@ -493,6 +492,7 @@ export async function refreshInbox(): Promise<ActionResult> {
                     .update({
                       reply_subject: latestReply.subject ?? null,
                       reply_content: latestReply.body?.html ?? latestReply.body?.text ?? null,
+                      reply_received_at: latestReply.timestamp_email ?? latestReply.timestamp_created ?? null,
                     })
                     .eq('client_id', clientId)
                     .eq('email', lead.email)
@@ -513,6 +513,171 @@ export async function refreshInbox(): Promise<ActionResult> {
 
   if (newLeadsFound > 0) {
     console.log(`refreshInbox: found ${newLeadsFound} new positive lead(s) for client ${clientId}`)
+  }
+
+  revalidatePath('/dashboard/inbox')
+  return { success: true }
+}
+
+/**
+ * Create a new custom inbox folder (max 6 per client).
+ */
+export async function createFolder(name: string, color: string): Promise<ActionResult> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Niet ingelogd.' }
+
+  const clientId = user.app_metadata?.client_id as string | undefined
+  if (!clientId) return { error: 'Geen client gevonden.' }
+
+  const trimmedName = name.trim().slice(0, 20)
+  if (!trimmedName) return { error: 'Naam is verplicht.' }
+
+  const admin = createAdminClient()
+
+  // Check max 6 folders
+  const { count } = await admin
+    .from('inbox_folders')
+    .select('id', { count: 'exact', head: true })
+    .eq('client_id', clientId)
+
+  if ((count ?? 0) >= 6) return { error: 'Maximaal 6 mappen toegestaan.' }
+
+  const { error } = await admin
+    .from('inbox_folders')
+    .insert({ client_id: clientId, name: trimmedName, color, position: count ?? 0 })
+
+  if (error) return { error: 'Fout bij het aanmaken van de map.' }
+
+  revalidatePath('/dashboard/inbox')
+  return { success: true }
+}
+
+/**
+ * Update a custom inbox folder's name and/or color.
+ */
+export async function updateFolder(folderId: string, name: string, color: string): Promise<ActionResult> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Niet ingelogd.' }
+
+  const clientId = user.app_metadata?.client_id as string | undefined
+  if (!clientId) return { error: 'Geen client gevonden.' }
+
+  const trimmedName = name.trim().slice(0, 20)
+  if (!trimmedName) return { error: 'Naam is verplicht.' }
+
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from('inbox_folders')
+    .update({ name: trimmedName, color })
+    .eq('id', folderId)
+    .eq('client_id', clientId)
+
+  if (error) return { error: 'Fout bij het bijwerken van de map.' }
+
+  revalidatePath('/dashboard/inbox')
+  return { success: true }
+}
+
+/**
+ * Delete a custom inbox folder. Leads in it return to Inbox.
+ */
+export async function deleteFolder(folderId: string): Promise<ActionResult> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Niet ingelogd.' }
+
+  const clientId = user.app_metadata?.client_id as string | undefined
+  if (!clientId) return { error: 'Geen client gevonden.' }
+
+  const admin = createAdminClient()
+
+  // Move leads back to inbox first
+  await admin
+    .from('synced_leads')
+    .update({ folder_id: null })
+    .eq('folder_id', folderId)
+
+  const { error } = await admin
+    .from('inbox_folders')
+    .delete()
+    .eq('id', folderId)
+    .eq('client_id', clientId)
+
+  if (error) return { error: 'Fout bij het verwijderen van de map.' }
+
+  revalidatePath('/dashboard/inbox')
+  return { success: true }
+}
+
+/**
+ * Move a lead to a folder (or back to Inbox/Afgehandeld).
+ * folderId = null → Inbox (clears archived_at)
+ * folderId = 'archived' → Afgehandeld
+ * folderId = UUID → Custom folder (clears archived_at)
+ */
+export async function moveLeadToFolder(leadId: string, folderId: string | null): Promise<ActionResult> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Niet ingelogd.' }
+
+  const { data: lead, error: leadError } = await supabase
+    .from('synced_leads')
+    .select('id')
+    .eq('id', leadId)
+    .single()
+
+  if (leadError || !lead) return { error: 'Lead niet gevonden.' }
+
+  const admin = createAdminClient()
+
+  if (folderId === 'archived') {
+    // Move to Afgehandeld
+    const { error } = await admin
+      .from('synced_leads')
+      .update({ folder_id: null, archived_at: new Date().toISOString() })
+      .eq('id', leadId)
+    if (error) return { error: 'Fout bij het verplaatsen.' }
+  } else if (folderId === null) {
+    // Move to Inbox
+    const { error } = await admin
+      .from('synced_leads')
+      .update({ folder_id: null, archived_at: null })
+      .eq('id', leadId)
+    if (error) return { error: 'Fout bij het verplaatsen.' }
+  } else {
+    // Move to custom folder
+    const { error } = await admin
+      .from('synced_leads')
+      .update({ folder_id: folderId, archived_at: null })
+      .eq('id', leadId)
+    if (error) return { error: 'Fout bij het verplaatsen.' }
+  }
+
+  revalidatePath('/dashboard/inbox')
+  return { success: true }
+}
+
+/**
+ * Reorder custom inbox folders by updating their position values.
+ */
+export async function reorderFolders(folderIds: string[]): Promise<ActionResult> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Niet ingelogd.' }
+
+  const clientId = user.app_metadata?.client_id as string | undefined
+  if (!clientId) return { error: 'Geen client gevonden.' }
+
+  const admin = createAdminClient()
+
+  for (let i = 0; i < folderIds.length; i++) {
+    await admin
+      .from('inbox_folders')
+      .update({ position: i })
+      .eq('id', folderIds[i])
+      .eq('client_id', clientId)
   }
 
   revalidatePath('/dashboard/inbox')

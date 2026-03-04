@@ -1,7 +1,7 @@
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { getClientBranding } from '@/lib/client/get-client-branding'
-import { getLeadThread } from '@/lib/data/inbox-data'
+import { getLeadThread, getInboxFolders } from '@/lib/data/inbox-data'
 import { markLeadAsOpened } from '@/lib/actions/inbox-actions'
 import { createClient } from '@/lib/supabase/server'
 import { ThreadView } from '../_components/thread-view'
@@ -56,7 +56,7 @@ export default async function LeadThreadPage({
   const { data: lead, error: leadError } = await supabase
     .from('synced_leads')
     .select(
-      'id, email, first_name, last_name, company_name, job_title, linkedin_url, vacancy_url, sender_account, campaign_id, client_has_replied, reply_subject, archived_at'
+      'id, email, first_name, last_name, company_name, job_title, linkedin_url, vacancy_url, sender_account, campaign_id, client_has_replied, reply_subject, archived_at, folder_id'
     )
     .eq('id', leadId)
     .single()
@@ -132,6 +132,8 @@ export default async function LeadThreadPage({
 
   const isRecruitment = clientData?.is_recruitment ?? false
 
+  const folders = await getInboxFolders(client.id)
+
   return (
     <div>
       <ThreadRealtimeProvider clientId={client.id} leadEmail={lead.email} />
@@ -142,7 +144,7 @@ export default async function LeadThreadPage({
         >
           &larr; Terug naar inbox
         </Link>
-        <ArchiveButton leadId={lead.id} isArchived={!!lead.archived_at} />
+        <ArchiveButton leadId={lead.id} isArchived={!!lead.archived_at} folderId={lead.folder_id ?? null} folders={folders} />
       </div>
 
       <div className="lg:grid lg:grid-cols-3 lg:gap-6">

@@ -1,33 +1,56 @@
 'use client'
 
-import { useState, useMemo, useTransition } from 'react'
+import { useState, useMemo, useTransition, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import type { InboxLead } from '@/lib/data/inbox-data'
-import { refreshInbox } from '@/lib/actions/inbox-actions'
+import type { InboxLead, InboxFolder } from '@/lib/data/inbox-data'
+import { refreshInbox, reorderFolders } from '@/lib/actions/inbox-actions'
 import { InboxItem } from './inbox-item'
 import { ComposeModal } from './compose-modal'
 import { RefreshOverlay } from './refresh-overlay'
+import { FolderModal } from './folder-modal'
 
 interface InboxListProps {
   leads: InboxLead[]
   isRecruitment: boolean
+  folders: InboxFolder[]
 }
 
-type Folder = 'inbox' | 'archived'
 type StatusFilter = 'all' | 'action_required' | 'in_conversation'
 
-export function InboxList({ leads, isRecruitment }: InboxListProps) {
+export function InboxList({ leads, isRecruitment, folders }: InboxListProps) {
   const [showCompose, setShowCompose] = useState(false)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
-  const [folder, setFolder] = useState<Folder>('inbox')
+  // 'inbox' | 'archived' | folder UUID
+  const [activeTab, setActiveTab] = useState<string>('inbox')
   const [isRefreshing, startRefresh] = useTransition()
   const router = useRouter()
 
-  const inboxLeads = useMemo(() => leads.filter((l) => !l.archived_at), [leads])
+  // Folder modal state
+  const [folderModalOpen, setFolderModalOpen] = useState(false)
+  const [editingFolder, setEditingFolder] = useState<InboxFolder | null>(null)
+
+  // Drag-and-drop state for folder tabs
+  const [draggedFolderId, setDraggedFolderId] = useState<string | null>(null)
+  const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null)
+  const [, startReorder] = useTransition()
+
+  const inboxLeads = useMemo(() => leads.filter((l) => !l.archived_at && !l.folder_id), [leads])
   const archivedLeads = useMemo(() => leads.filter((l) => !!l.archived_at), [leads])
 
-  const activeLeads = folder === 'inbox' ? inboxLeads : archivedLeads
+  const folderLeadCounts = useMemo(() => {
+    const counts: Record<string, number> = {}
+    for (const f of folders) {
+      counts[f.id] = leads.filter((l) => l.folder_id === f.id).length
+    }
+    return counts
+  }, [leads, folders])
+
+  const activeLeads = useMemo(() => {
+    if (activeTab === 'inbox') return inboxLeads
+    if (activeTab === 'archived') return archivedLeads
+    return leads.filter((l) => l.folder_id === activeTab)
+  }, [activeTab, inboxLeads, archivedLeads, leads])
 
   const filteredLeads = useMemo(() => {
     let result = activeLeads
@@ -45,7 +68,7 @@ export function InboxList({ leads, isRecruitment }: InboxListProps) {
     }
 
     // Status filter (only for inbox folder)
-    if (folder === 'inbox') {
+    if (activeTab === 'inbox') {
       if (statusFilter === 'action_required') {
         result = result.filter((lead) => !lead.client_has_replied)
       } else if (statusFilter === 'in_conversation') {
@@ -54,17 +77,87 @@ export function InboxList({ leads, isRecruitment }: InboxListProps) {
     }
 
     return result
-  }, [activeLeads, search, statusFilter, folder])
+  }, [activeLeads, search, statusFilter, activeTab])
+
+  function handleFolderContextMenu(e: React.MouseEvent, folder: InboxFolder) {
+    e.preventDefault()
+    setEditingFolder(folder)
+    setFolderModalOpen(true)
+  }
+
+  function handleCreateFolder() {
+    setEditingFolder(null)
+    setFolderModalOpen(true)
+  }
+
+  function handleCloseFolderModal() {
+    setFolderModalOpen(false)
+    setEditingFolder(null)
+  }
+
+  function handleDragStart(e: React.DragEvent, folderId: string) {
+    setDraggedFolderId(folderId)
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  function handleDragOver(e: React.DragEvent, folderId: string) {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    if (folderId !== draggedFolderId) {
+      setDragOverFolderId(folderId)
+    }
+  }
+
+  function handleDragLeave() {
+    setDragOverFolderId(null)
+  }
+
+  function handleDrop(e: React.DragEvent, targetFolderId: string) {
+    e.preventDefault()
+    setDragOverFolderId(null)
+    if (!draggedFolderId || draggedFolderId === targetFolderId) {
+      setDraggedFolderId(null)
+      return
+    }
+
+    // Compute new order
+    const currentOrder = folders.map((f) => f.id)
+    const fromIndex = currentOrder.indexOf(draggedFolderId)
+    const toIndex = currentOrder.indexOf(targetFolderId)
+    if (fromIndex === -1 || toIndex === -1) return
+
+    const newOrder = [...currentOrder]
+    newOrder.splice(fromIndex, 1)
+    newOrder.splice(toIndex, 0, draggedFolderId)
+
+    setDraggedFolderId(null)
+    startReorder(async () => {
+      await reorderFolders(newOrder)
+      router.refresh()
+    })
+  }
+
+  function handleDragEnd() {
+    setDraggedFolderId(null)
+    setDragOverFolderId(null)
+  }
+
+  const emptyMessage = activeTab === 'archived'
+    ? 'Geen afgehandelde leads.'
+    : activeTab === 'inbox'
+      ? 'Geen leads gevonden voor deze zoekopdracht.'
+      : 'Geen leads in deze map.'
 
   return (
     <div>
       {/* Folder tabs */}
-      <div className="mt-6 flex border-b border-gray-200">
+      <div className="mt-6 flex items-center border-b border-gray-200 overflow-x-auto">
+        {/* Inbox tab */}
         <button
           type="button"
-          onClick={() => setFolder('inbox')}
-          className={`relative px-4 py-2.5 text-sm font-medium transition-colors ${
-            folder === 'inbox'
+          onClick={() => setActiveTab('inbox')}
+          className={`relative flex-shrink-0 px-4 py-2.5 text-sm font-medium transition-colors ${
+            activeTab === 'inbox'
               ? 'text-[var(--brand-color)]'
               : 'text-gray-500 hover:text-gray-700'
           }`}
@@ -72,36 +165,88 @@ export function InboxList({ leads, isRecruitment }: InboxListProps) {
           Inbox
           {inboxLeads.length > 0 && (
             <span className={`ml-1.5 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-              folder === 'inbox' ? 'bg-[var(--brand-color)]/10 text-[var(--brand-color)]' : 'bg-gray-100 text-gray-600'
+              activeTab === 'inbox' ? 'bg-[var(--brand-color)]/10 text-[var(--brand-color)]' : 'bg-gray-100 text-gray-600'
             }`}>
               {inboxLeads.length}
             </span>
           )}
-          {folder === 'inbox' && (
+          {activeTab === 'inbox' && (
             <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[var(--brand-color)]" />
           )}
         </button>
+
+        {/* Afgehandeld tab */}
         <button
           type="button"
-          onClick={() => setFolder('archived')}
-          className={`relative px-4 py-2.5 text-sm font-medium transition-colors ${
-            folder === 'archived'
-              ? 'text-[var(--brand-color)]'
+          onClick={() => setActiveTab('archived')}
+          className={`relative flex-shrink-0 px-4 py-2.5 text-sm font-medium transition-colors ${
+            activeTab === 'archived'
+              ? 'text-gray-700'
               : 'text-gray-500 hover:text-gray-700'
           }`}
         >
           Afgehandeld
           {archivedLeads.length > 0 && (
             <span className={`ml-1.5 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-              folder === 'archived' ? 'bg-[var(--brand-color)]/10 text-[var(--brand-color)]' : 'bg-gray-100 text-gray-600'
+              activeTab === 'archived' ? 'bg-gray-200 text-gray-700' : 'bg-gray-100 text-gray-600'
             }`}>
               {archivedLeads.length}
             </span>
           )}
-          {folder === 'archived' && (
-            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[var(--brand-color)]" />
+          {activeTab === 'archived' && (
+            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-400" />
           )}
         </button>
+
+        {/* Custom folder tabs (draggable) */}
+        {folders.map((f) => (
+          <button
+            key={f.id}
+            type="button"
+            draggable
+            onClick={() => setActiveTab(f.id)}
+            onContextMenu={(e) => handleFolderContextMenu(e, f)}
+            onDragStart={(e) => handleDragStart(e, f.id)}
+            onDragOver={(e) => handleDragOver(e, f.id)}
+            onDragLeave={handleDragLeave}
+            onDrop={(e) => handleDrop(e, f.id)}
+            onDragEnd={handleDragEnd}
+            className={`relative flex-shrink-0 px-4 py-2.5 text-sm font-medium transition-colors cursor-grab active:cursor-grabbing ${
+              activeTab === f.id
+                ? 'text-gray-900'
+                : 'text-gray-500 hover:text-gray-700'
+            } ${draggedFolderId === f.id ? 'opacity-40' : ''} ${
+              dragOverFolderId === f.id ? 'border-l-2 border-[var(--brand-color)]' : ''
+            }`}
+          >
+            <span className="mr-1.5 inline-block h-2 w-2 rounded-full" style={{ backgroundColor: f.color }} />
+            {f.name}
+            {(folderLeadCounts[f.id] ?? 0) > 0 && (
+              <span className={`ml-1.5 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                activeTab === f.id ? 'bg-gray-200 text-gray-700' : 'bg-gray-100 text-gray-600'
+              }`}>
+                {folderLeadCounts[f.id]}
+              </span>
+            )}
+            {activeTab === f.id && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5" style={{ backgroundColor: f.color }} />
+            )}
+          </button>
+        ))}
+
+        {/* Add folder button */}
+        {folders.length < 6 && (
+          <button
+            type="button"
+            onClick={handleCreateFolder}
+            title="Nieuwe map aanmaken"
+            className="flex-shrink-0 px-3 py-2.5 text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* Search and filter bar */}
@@ -129,7 +274,7 @@ export function InboxList({ leads, isRecruitment }: InboxListProps) {
               className="w-full rounded-md border border-gray-300 py-2 pl-9 pr-3 text-sm placeholder:text-gray-400 focus:border-[var(--brand-color)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-color)]"
             />
           </div>
-          {folder === 'inbox' && (
+          {activeTab === 'inbox' && (
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
@@ -166,7 +311,7 @@ export function InboxList({ leads, isRecruitment }: InboxListProps) {
             )}
             <span>{isRefreshing ? 'Verversen...' : 'Verversen'}</span>
           </button>
-          {folder === 'inbox' && (
+          {activeTab === 'inbox' && (
             <button
               type="button"
               onClick={() => setShowCompose(true)}
@@ -189,12 +334,10 @@ export function InboxList({ leads, isRecruitment }: InboxListProps) {
         </div>
       )}
 
-      <div className={`mt-3 overflow-hidden rounded-lg border border-gray-200 bg-white ${isRefreshing ? 'pointer-events-none opacity-40 blur-[1px] transition-all duration-300' : ''}`}>
+      <div className={`mt-3 rounded-lg border border-gray-200 bg-white ${isRefreshing ? 'pointer-events-none opacity-40 blur-[1px] transition-all duration-300' : ''}`}>
         {filteredLeads.length === 0 ? (
           <div className="py-8 text-center text-sm text-gray-500">
-            {folder === 'archived'
-              ? 'Geen afgehandelde leads.'
-              : 'Geen leads gevonden voor deze zoekopdracht.'}
+            {emptyMessage}
           </div>
         ) : (
           <div className="divide-y divide-gray-100">
@@ -203,7 +346,8 @@ export function InboxList({ leads, isRecruitment }: InboxListProps) {
                 key={lead.id}
                 lead={lead}
                 isRecruitment={isRecruitment}
-                isArchived={folder === 'archived'}
+                isArchived={activeTab === 'archived'}
+                folders={folders}
               />
             ))}
           </div>
@@ -214,6 +358,12 @@ export function InboxList({ leads, isRecruitment }: InboxListProps) {
         isOpen={showCompose}
         onClose={() => setShowCompose(false)}
         leads={leads}
+      />
+
+      <FolderModal
+        isOpen={folderModalOpen}
+        onClose={handleCloseFolderModal}
+        folder={editingFolder}
       />
     </div>
   )

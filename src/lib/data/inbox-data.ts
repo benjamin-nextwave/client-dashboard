@@ -2,6 +2,15 @@ import { createClient } from '@/lib/supabase/server'
 
 // --- Types ---
 
+export interface InboxFolder {
+  id: string
+  client_id: string
+  name: string
+  color: string
+  position: number
+  created_at: string
+}
+
 export interface InboxLead {
   id: string
   email: string
@@ -18,6 +27,7 @@ export interface InboxLead {
   client_has_replied: boolean
   opened_at: string | null
   archived_at: string | null
+  folder_id: string | null
 }
 
 export interface CachedEmail {
@@ -51,11 +61,11 @@ export async function getPositiveLeadsForInbox(
   const { data, error } = await supabase
     .from('synced_leads')
     .select(
-      'id, email, first_name, last_name, company_name, job_title, linkedin_url, vacancy_url, sender_account, updated_at, reply_subject, reply_content, client_has_replied, opened_at, archived_at'
+      'id, email, first_name, last_name, company_name, job_title, linkedin_url, vacancy_url, sender_account, updated_at, reply_subject, reply_content, client_has_replied, opened_at, archived_at, folder_id, reply_received_at'
     )
     .eq('client_id', clientId)
     .eq('interest_status', 'positive')
-    .order('updated_at', { ascending: false })
+    .order('reply_received_at', { ascending: false, nullsFirst: false })
 
   if (error) {
     throw new Error(`Failed to fetch positive leads: ${error.message}`)
@@ -80,17 +90,40 @@ export async function getPositiveLeadsForInbox(
         linkedin_url: row.linkedin_url,
         vacancy_url: row.vacancy_url,
         sender_account: row.sender_account,
-        reply_date: row.updated_at,
+        reply_date: row.reply_received_at ?? row.updated_at,
         reply_subject: row.reply_subject,
         reply_content: row.reply_content,
         client_has_replied: row.client_has_replied ?? false,
         opened_at: row.opened_at ?? null,
         archived_at: row.archived_at ?? null,
+        folder_id: row.folder_id ?? null,
       })
     }
   }
 
   return leads
+}
+
+/**
+ * Get all custom inbox folders for a client.
+ */
+export async function getInboxFolders(
+  clientId: string
+): Promise<InboxFolder[]> {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('inbox_folders')
+    .select('*')
+    .eq('client_id', clientId)
+    .order('position', { ascending: true })
+
+  if (error) {
+    console.error('Failed to fetch inbox folders:', error.message)
+    return []
+  }
+
+  return data ?? []
 }
 
 /**
