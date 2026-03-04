@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { formatDistanceToNow } from 'date-fns'
+import { format, isToday, isThisYear } from 'date-fns'
 import { nl } from 'date-fns/locale/nl'
 import type { InboxLead } from '@/lib/data/inbox-data'
 import { dismissLead, deleteLeadFromInbox, archiveLead, unarchiveLead } from '@/lib/actions/inbox-actions'
@@ -22,12 +22,17 @@ export function InboxItem({ lead, isArchived = false }: InboxItemProps) {
   const name = [lead.first_name, lead.last_name].filter(Boolean).join(' ') || lead.email
   const previewText = lead.reply_content?.replace(/<[^>]*>/g, '').trim() ?? ''
 
-  const relativeDate = lead.reply_date
-    ? formatDistanceToNow(new Date(lead.reply_date), {
-        addSuffix: true,
-        locale: nl,
-      })
-    : ''
+  const formattedDate = (() => {
+    if (!lead.reply_date) return ''
+    try {
+      const date = new Date(lead.reply_date)
+      if (isToday(date)) return format(date, 'HH:mm', { locale: nl })
+      if (isThisYear(date)) return format(date, 'd MMM, HH:mm', { locale: nl })
+      return format(date, 'd MMM yyyy, HH:mm', { locale: nl })
+    } catch {
+      return ''
+    }
+  })()
 
   function handleDismiss(e: React.MouseEvent) {
     e.preventDefault()
@@ -102,7 +107,7 @@ export function InboxItem({ lead, isArchived = false }: InboxItemProps) {
               {name}
             </span>
             <span className="flex-shrink-0 text-xs text-gray-500">
-              {relativeDate}
+              {formattedDate}
             </span>
           </div>
 

@@ -90,6 +90,38 @@ export async function getPositiveLeadsForInbox(
     }
   }
 
+  // Fetch the actual email timestamps from cached_emails so the inbox shows
+  // when the latest email was sent, not when the lead was last synced.
+  const leadEmails = leads.map((l) => l.email)
+  const { data: emailRows } = await supabase
+    .from('cached_emails')
+    .select('lead_email, email_timestamp')
+    .eq('client_id', clientId)
+    .in('lead_email', leadEmails)
+    .order('email_timestamp', { ascending: false })
+
+  if (emailRows && emailRows.length > 0) {
+    // Build a map: lead_email → latest email_timestamp
+    const latestTimestamp = new Map<string, string>()
+    for (const row of emailRows) {
+      if (row.email_timestamp && !latestTimestamp.has(row.lead_email)) {
+        latestTimestamp.set(row.lead_email, row.email_timestamp)
+      }
+    }
+    // Override reply_date with the real email timestamp
+    for (const lead of leads) {
+      const ts = latestTimestamp.get(lead.email)
+      if (ts) lead.reply_date = ts
+    }
+  }
+
+  // Sort by reply_date descending so the most recent email appears first
+  leads.sort((a, b) => {
+    if (!a.reply_date) return 1
+    if (!b.reply_date) return -1
+    return new Date(b.reply_date).getTime() - new Date(a.reply_date).getTime()
+  })
+
   return leads
 }
 
