@@ -60,7 +60,7 @@ export async function sendReply(input: SendReplyInput): Promise<ActionResult> {
   // Verify lead belongs to this client (RLS handles isolation)
   const { data: lead, error: leadError } = await supabase
     .from('synced_leads')
-    .select('id, email')
+    .select('id, email, instantly_lead_id')
     .eq('id', leadId)
     .single()
 
@@ -92,9 +92,11 @@ export async function sendReply(input: SendReplyInput): Promise<ActionResult> {
     console.error('Failed to update client_has_replied:', updateError.message)
   }
 
-  // Invalidate cached emails so next thread view fetches fresh from API
+  // Invalidate cached emails so next thread view fetches fresh from API.
+  // For manually-added leads, keep the cache intact since Instantly won't have their emails.
+  const isManualLead = lead.instantly_lead_id?.startsWith('manual:')
   const clientId = user.app_metadata?.client_id as string | undefined
-  if (clientId) {
+  if (clientId && !isManualLead) {
     await admin
       .from('cached_emails')
       .delete()
@@ -129,7 +131,7 @@ export async function composeReply(
   // Verify lead belongs to this client (RLS handles isolation)
   const { data: lead, error: leadError } = await supabase
     .from('synced_leads')
-    .select('id')
+    .select('id, instantly_lead_id')
     .eq('id', leadId)
     .single()
 
@@ -174,9 +176,11 @@ export async function composeReply(
     console.error('Failed to update client_has_replied:', updateError.message)
   }
 
-  // Invalidate cached emails so next thread view fetches fresh from API
+  // Invalidate cached emails so next thread view fetches fresh from API.
+  // For manually-added leads, keep the cache intact since Instantly won't have their emails.
+  const isManualLead = lead.instantly_lead_id?.startsWith('manual:')
   const clientId = user.app_metadata?.client_id as string | undefined
-  if (clientId) {
+  if (clientId && !isManualLead) {
     await admin
       .from('cached_emails')
       .delete()
@@ -423,6 +427,7 @@ export async function refreshInbox(): Promise<ActionResult> {
         for (const lead of positiveLeads) {
           const emailLower = lead.email.toLowerCase().trim()
           const payload = lead.payload ?? {}
+          console.log(`[refreshInbox] Lead ${lead.email} payload keys:`, Object.keys(payload), 'vacancy extract:', extractField(payload, ['Vacancy URL', 'vacancy_url', 'Vacature URL', 'vacature_url', 'vacatureUrl', 'VacatureUrl']))
 
           const row = {
             client_id: clientId,
@@ -443,7 +448,7 @@ export async function refreshInbox(): Promise<ActionResult> {
             email_sent_count: lead.email_open_count > 0 ? 1 : 0,
             email_reply_count: lead.email_reply_count,
             linkedin_url: extractField(payload, ['LinkedIn', 'linkedin', 'linkedin_url', 'LinkedIn URL']),
-            vacancy_url: extractField(payload, ['Vacancy URL', 'vacancy_url', 'Vacature URL', 'vacature_url']),
+            vacancy_url: extractField(payload, ['Vacancy URL', 'vacancy_url', 'Vacature URL', 'vacature_url', 'vacatureUrl', 'VacatureUrl']),
             payload: lead.payload,
             last_synced_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
@@ -544,13 +549,14 @@ export async function refreshThread(leadId: string): Promise<ActionResult> {
 
   const { data: lead } = await supabase
     .from('synced_leads')
-    .select('email')
+    .select('email, instantly_lead_id')
     .eq('id', leadId)
     .single()
 
   if (!lead) return { error: 'Lead niet gevonden.' }
 
   const admin = createAdminClient()
+  const isManualLead = lead.instantly_lead_id?.startsWith('manual:')
 
   // Fetch fresh emails from Instantly API for this specific lead
   try {
@@ -563,7 +569,7 @@ export async function refreshThread(leadId: string): Promise<ActionResult> {
           client_id: clientId,
           instantly_email_id: email.id,
           thread_id: email.thread_id,
-          lead_email: email.lead?.toLowerCase() ?? lead.email.toLowerCase(),
+          lead_email: lead.email.toLowerCase(),
           from_address: email.from_address_email,
           to_address: email.to_address_email_list,
           subject: email.subject,
@@ -578,10 +584,16 @@ export async function refreshThread(leadId: string): Promise<ActionResult> {
       await admin
         .from('cached_emails')
         .upsert(cacheRows, { onConflict: 'instantly_email_id' })
+    } else if (isManualLead) {
+      // Manual leads may not have emails under their own address in Instantly.
+      // Skip cache clearing — keep existing cached emails intact.
+      console.log(`refreshThread: manual lead ${lead.email} has no emails in Instantly — keeping existing cache`)
     }
   } catch (err) {
     console.error('Failed to refresh thread emails from API:', err)
-    return { error: 'Fout bij het ophalen van e-mails. Probeer het opnieuw.' }
+    if (!isManualLead) {
+      return { error: 'Fout bij het ophalen van e-mails. Probeer het opnieuw.' }
+    }
   }
 
   revalidatePath(`/dashboard/inbox/${leadId}`)

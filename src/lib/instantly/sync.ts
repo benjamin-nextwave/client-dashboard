@@ -212,7 +212,7 @@ async function updateExistingLeads(
   // Get all existing leads for this client
   const { data: existingLeads, error: leadsError } = await supabase
     .from('synced_leads')
-    .select('id, email, campaign_id, interest_status')
+    .select('id, email, campaign_id, interest_status, instantly_lead_id')
     .eq('client_id', clientId)
 
   if (leadsError) {
@@ -224,12 +224,20 @@ async function updateExistingLeads(
     return
   }
 
+  // Separate manually-added leads (not in Instantly) from synced leads
+  const manualLeads = existingLeads.filter((l) => l.instantly_lead_id?.startsWith('manual:'))
+  const syncedLeads = existingLeads.filter((l) => !l.instantly_lead_id?.startsWith('manual:'))
+
+  if (manualLeads.length > 0) {
+    console.log(`updateExistingLeads: client=${clientId} has ${manualLeads.length} manually-added lead(s) — skipping sync for those`)
+  }
+
   // Deduplicate by email (a lead may have multiple campaign rows)
-  const uniqueEmails = [...new Set(existingLeads.map((l) => l.email.toLowerCase()))]
+  const uniqueEmails = [...new Set(syncedLeads.map((l) => l.email.toLowerCase()))]
 
   console.log(
-    `updateExistingLeads: client=${clientId}, ${existingLeads.length} rows, ` +
-    `${uniqueEmails.length} unique emails`
+    `updateExistingLeads: client=${clientId}, ${syncedLeads.length} synced rows, ` +
+    `${manualLeads.length} manual rows, ${uniqueEmails.length} unique emails`
   )
 
   let updated = 0
@@ -252,8 +260,8 @@ async function updateExistingLeads(
 
     const instantlySet = new Set(instantlyCampaignIds)
 
-    // Get this lead's rows for this client
-    const leadRows = existingLeads.filter((l) => l.email.toLowerCase() === email)
+    // Get this lead's synced rows for this client (manual leads already excluded)
+    const leadRows = syncedLeads.filter((l) => l.email.toLowerCase() === email)
 
     for (const row of leadRows) {
       if (!instantlySet.has(row.campaign_id)) {
