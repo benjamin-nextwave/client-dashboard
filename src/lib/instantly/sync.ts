@@ -2,7 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { logError } from '@/lib/errors/log-error'
 import { getCampaignDailyAnalytics, listLeads, listEmails, getCampaignsForEmail } from './client'
 
-const RATE_LIMIT_DELAY_MS = 200
+const RATE_LIMIT_DELAY_MS = 1000
 
 // How many days of analytics to fetch on incremental syncs
 const ANALYTICS_DAYS_INCREMENTAL = 7
@@ -11,7 +11,7 @@ const ANALYTICS_DAYS_FULL = 365
 // Force a full sync (all emails + leads) every 6 hours per campaign
 const FULL_SYNC_INTERVAL_MS = 6 * 60 * 60 * 1000
 // Rate limit for getCampaignsForEmail verification calls (max 2/sec)
-const VERIFY_DELAY_MS = 500
+const VERIFY_DELAY_MS = 1000
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
