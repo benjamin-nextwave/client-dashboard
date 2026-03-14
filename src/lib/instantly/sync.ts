@@ -311,6 +311,7 @@ async function updateExistingLeads(
     }
 
     // Refresh cached emails for this lead
+    await delay(RATE_LIMIT_DELAY_MS)
     try {
       const emailResponse = await listEmails({ lead: email, limit: 100 })
       if (emailResponse.items.length > 0) {
