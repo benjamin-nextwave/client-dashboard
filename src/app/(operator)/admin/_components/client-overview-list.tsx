@@ -317,6 +317,11 @@ function ClientCard({ client }: { client: ClientOverview }) {
             Recruitment
           </span>
         )}
+        {client.onboardingStatus === 'onboarding' && (
+          <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+            Onboarding
+          </span>
+        )}
         {client.hasIssues && (
           <span className="text-yellow-500" title={
             [
@@ -356,6 +361,12 @@ function ClientCard({ client }: { client: ClientOverview }) {
               className="rounded-md bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-200"
             >
               CSV
+            </Link>
+            <Link
+              href={`/admin/clients/${client.id}/onboarding`}
+              className="rounded-md bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100"
+            >
+              Onboarding
             </Link>
             <button
               type="button"

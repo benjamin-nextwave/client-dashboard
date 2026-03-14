@@ -15,6 +15,7 @@ export interface ClientOverview {
   primaryColor: string | null
   logoUrl: string | null
   isRecruitment: boolean
+  onboardingStatus: string
   password: string | null
   createdAt: string
   campaigns: CampaignStats[]
@@ -53,7 +54,7 @@ export async function getClientOverviews(): Promise<ClientOverview[]> {
   ] = await Promise.all([
     supabase
       .from('clients')
-      .select('id, company_name, primary_color, logo_url, is_recruitment, password, created_at')
+      .select('id, company_name, primary_color, logo_url, is_recruitment, onboarding_status, password, created_at')
       .order('company_name', { ascending: true }),
     supabase
       .from('client_campaigns')
@@ -141,6 +142,7 @@ export async function getClientOverviews(): Promise<ClientOverview[]> {
       primaryColor: client.primary_color,
       logoUrl: client.logo_url,
       isRecruitment: client.is_recruitment,
+      onboardingStatus: client.onboarding_status ?? 'live',
       password: client.password ?? null,
       createdAt: client.created_at,
       campaigns: campaignStats,
