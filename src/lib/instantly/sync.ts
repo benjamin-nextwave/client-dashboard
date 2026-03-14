@@ -241,7 +241,6 @@ async function updateExistingLeads(
   )
 
   let updated = 0
-  let removed = 0
   let errors = 0
 
   for (let i = 0; i < uniqueEmails.length; i++) {
@@ -265,10 +264,8 @@ async function updateExistingLeads(
 
     for (const row of leadRows) {
       if (!instantlySet.has(row.campaign_id)) {
-        // Lead no longer in this campaign — delete
-        await supabase.from('synced_leads').delete().eq('id', row.id)
-        console.log(`updateExistingLeads: removed ${email} from campaign ${row.campaign_id} (not in Instantly)`)
-        removed++
+        // Lead no longer in this campaign — skip update but keep in dashboard
+        console.log(`updateExistingLeads: ${email} not found in campaign ${row.campaign_id} — keeping in dashboard`)
         continue
       }
 
@@ -280,15 +277,7 @@ async function updateExistingLeads(
         if (lead) {
           const interestStatus = mapInterestStatus(lead.lt_interest_status)
 
-          // If lead is no longer positive, remove from inbox
-          if (interestStatus !== 'positive' && row.interest_status === 'positive') {
-            await supabase.from('synced_leads').delete().eq('id', row.id)
-            console.log(`updateExistingLeads: removed ${email} — no longer positive (now: ${interestStatus})`)
-            removed++
-            continue
-          }
-
-          // Update the lead with fresh data
+          // Update the lead with fresh data (never auto-delete)
           await supabase
             .from('synced_leads')
             .update({
@@ -359,29 +348,9 @@ async function updateExistingLeads(
     }
   }
 
-  // Clean up orphaned cached_emails for removed leads
-  if (removed > 0) {
-    const { data: remainingLeads } = await supabase
-      .from('synced_leads')
-      .select('email')
-      .eq('client_id', clientId)
-
-    const remainingEmails = new Set((remainingLeads ?? []).map((l) => l.email.toLowerCase()))
-
-    for (const email of uniqueEmails) {
-      if (!remainingEmails.has(email)) {
-        await supabase
-          .from('cached_emails')
-          .delete()
-          .eq('client_id', clientId)
-          .eq('lead_email', email)
-      }
-    }
-  }
-
   console.log(
     `updateExistingLeads: DONE for client ${clientId} — ` +
-    `${updated} updated, ${removed} removed, ${errors} errors`
+    `${updated} updated, ${errors} errors`
   )
 }
 
