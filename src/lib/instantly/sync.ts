@@ -97,11 +97,9 @@ function needsFullSync(syncState: { last_full_sync: string | null } | null): boo
 
 /**
  * Sync all campaign data for a single client.
- * Syncs analytics + updates existing leads. Does NOT discover new leads (webhook does that).
+ * Syncs analytics only. Lead updates happen via webhook-sync and /api/refresh.
  *
  * 1. Per campaign: sync analytics
- * 2. Per existing lead: fetch latest status from Instantly, update in DB
- * 3. Remove leads that are no longer positive
  */
 export async function syncClientData(clientId: string, forceFullSync = false): Promise<void> {
   const supabase = createAdminClient()
@@ -121,7 +119,6 @@ export async function syncClientData(clientId: string, forceFullSync = false): P
     `syncClientData: client=${clientId}, ${campaigns.length} campaign(s), forceFullSync=${forceFullSync}`
   )
 
-  // 1. Sync analytics per campaign
   for (const { campaign_id: campaignId } of campaigns) {
     const syncState = await getSyncState(supabase, clientId, campaignId)
     const isFullSync = forceFullSync || needsFullSync(syncState)
@@ -180,9 +177,6 @@ export async function syncClientData(clientId: string, forceFullSync = false): P
 
     await delay(RATE_LIMIT_DELAY_MS)
   }
-
-  // 2. Update existing leads (same logic as syncInboxData)
-  await updateExistingLeads(clientId, supabase)
 }
 
 /**
@@ -426,34 +420,8 @@ async function getClientIdsSortedBySyncTime(
 }
 
 /**
- * Inbox-only sync for all clients (used by the 15-minute cron).
- * Only syncs emails + recent leads. Skips analytics entirely.
- * All syncing power goes to keeping the inbox up-to-date.
- */
-export async function syncAllClientsInbox(): Promise<void> {
-  const supabase = createAdminClient()
-  const clientIds = await getClientIdsSortedBySyncTime(supabase)
-
-  for (const clientId of clientIds) {
-    try {
-      await syncInboxData(clientId)
-    } catch (error) {
-      console.error(`Inbox sync failed for client ${clientId}:`, error)
-      await logError({
-        clientId,
-        errorType: 'sync_error',
-        message: `Inbox sync mislukt voor klant ${clientId}`,
-        details: { error: error instanceof Error ? error.message : String(error) },
-      })
-    }
-
-    await delay(RATE_LIMIT_DELAY_MS)
-  }
-}
-
-/**
  * Full sync for all clients (used by the daily 6 AM cron).
- * Syncs everything: analytics, all emails, all leads.
+ * Syncs analytics only. Lead/email updates happen via webhook-sync and /api/refresh.
  */
 export async function syncAllClientsFull(): Promise<void> {
   const supabase = createAdminClient()
