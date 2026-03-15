@@ -363,6 +363,12 @@ function ClientCard({ client }: { client: ClientOverview }) {
               CSV
             </Link>
             <Link
+              href={`/admin/clients/${client.id}/voorvertoning`}
+              className="rounded-md bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-200"
+            >
+              Voorvertoning
+            </Link>
+            <Link
               href={`/admin/clients/${client.id}/onboarding`}
               className="rounded-md bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100"
             >
