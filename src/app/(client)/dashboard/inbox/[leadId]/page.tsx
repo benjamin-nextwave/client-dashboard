@@ -8,6 +8,7 @@ import { ThreadView } from '../_components/thread-view'
 import { LeadContactCard } from '../_components/lead-contact-card'
 import { ArchiveButton } from '../_components/archive-button'
 import { ObjectionButton } from '../_components/objection-form'
+import { VacancySnippets } from '../_components/vacancy-snippets'
 import { ThreadRealtimeProvider } from '../_components/thread-realtime-provider'
 
 // ── Maintenance mode toggle (keep in sync with ../page.tsx) ─────────
@@ -151,6 +152,7 @@ export default async function LeadThreadPage({
         </div>
         <div className="mt-6 lg:col-span-1 lg:mt-0 space-y-4">
           <LeadContactCard lead={lead} isRecruitment={isRecruitment} />
+          {isRecruitment && <VacancySnippets />}
           <ObjectionButton leadId={lead.id} objectionStatus={lead.objection_status ?? null} objectionData={lead.objection_data as { response?: string; reviewed_at?: string } | null} />
         </div>
       </div>
