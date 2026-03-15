@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { getClientBranding } from '@/lib/client/get-client-branding'
-import { getPositiveLeadsForInbox } from '@/lib/data/inbox-data'
+import { getPositiveLeadsForInbox, getInboxFolders } from '@/lib/data/inbox-data'
 import { createClient } from '@/lib/supabase/server'
 import { EmptyState } from '@/components/ui/empty-state'
 import { InboxList } from './_components/inbox-list'
@@ -40,7 +40,7 @@ export default async function InboxPage() {
     )
   }
 
-  const [positiveLeads, clientInfoResult] = await Promise.all([
+  const [positiveLeads, clientInfoResult, folders] = await Promise.all([
     getPositiveLeadsForInbox(client.id),
     (async () => {
       const supabase = await createClient()
@@ -51,6 +51,7 @@ export default async function InboxPage() {
         .single()
       return data
     })(),
+    getInboxFolders(client.id),
   ])
 
   const isRecruitment = clientInfoResult?.is_recruitment ?? false
@@ -75,7 +76,7 @@ export default async function InboxPage() {
           description="Zodra leads positief reageren op uw campagnes verschijnen ze hier."
         />
       ) : (
-        <InboxList leads={positiveLeads} isRecruitment={isRecruitment} />
+        <InboxList leads={positiveLeads} isRecruitment={isRecruitment} folders={folders} />
       )}
     </div>
   )

@@ -1,21 +1,25 @@
 'use client'
 
 import Link from 'next/link'
-import { useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatDistanceToNow } from 'date-fns'
 import { nl } from 'date-fns/locale/nl'
-import type { InboxLead } from '@/lib/data/inbox-data'
+import type { InboxLead, InboxFolder } from '@/lib/data/inbox-data'
 import { dismissLead, deleteLeadFromInbox, archiveLead, unarchiveLead } from '@/lib/actions/inbox-actions'
+import { moveLeadToFolder } from '@/lib/actions/folder-actions'
 
 interface InboxItemProps {
   lead: InboxLead
   isRecruitment: boolean
   isArchived?: boolean
+  folders: InboxFolder[]
+  currentFolderId: string | null
 }
 
-export function InboxItem({ lead, isArchived = false }: InboxItemProps) {
+export function InboxItem({ lead, isArchived = false, folders, currentFolderId }: InboxItemProps) {
   const [isPending, startTransition] = useTransition()
+  const [showMoveMenu, setShowMoveMenu] = useState(false)
   const router = useRouter()
   const needsAction = !lead.client_has_replied
   const isUnopened = !lead.opened_at
@@ -62,6 +66,16 @@ export function InboxItem({ lead, isArchived = false }: InboxItemProps) {
     e.stopPropagation()
     startTransition(async () => {
       await unarchiveLead(lead.id)
+      router.refresh()
+    })
+  }
+
+  function handleMove(e: React.MouseEvent, folderId: string | null) {
+    e.preventDefault()
+    e.stopPropagation()
+    startTransition(async () => {
+      await moveLeadToFolder(lead.id, folderId)
+      setShowMoveMenu(false)
       router.refresh()
     })
   }
@@ -141,6 +155,50 @@ export function InboxItem({ lead, isArchived = false }: InboxItemProps) {
 
         {/* Action buttons */}
         <div className="flex flex-shrink-0 items-center gap-1">
+          {/* Move to folder button */}
+          {folders.length > 0 && !isArchived && (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowMoveMenu(!showMoveMenu) }}
+                title="Verplaats naar mapje"
+                className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
+                </svg>
+              </button>
+              {showMoveMenu && (
+                <div
+                  className="absolute right-0 top-full z-20 mt-1 w-44 rounded-md border border-gray-200 bg-white py-1 shadow-lg"
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation() }}
+                >
+                  {currentFolderId && (
+                    <button
+                      type="button"
+                      onClick={(e) => handleMove(e, null)}
+                      className="block w-full px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-50"
+                    >
+                      Inbox (standaard)
+                    </button>
+                  )}
+                  {folders
+                    .filter((f) => f.id !== currentFolderId)
+                    .map((f) => (
+                      <button
+                        key={f.id}
+                        type="button"
+                        onClick={(e) => handleMove(e, f.id)}
+                        className="block w-full px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-50"
+                      >
+                        {f.name}
+                      </button>
+                    ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {isArchived ? (
             <button
               type="button"

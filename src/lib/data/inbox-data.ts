@@ -19,6 +19,13 @@ export interface InboxLead {
   opened_at: string | null
   archived_at: string | null
   objection_status: string | null
+  folder_id: string | null
+}
+
+export interface InboxFolder {
+  id: string
+  name: string
+  sort_order: number
 }
 
 export interface CachedEmail {
@@ -52,7 +59,7 @@ export async function getPositiveLeadsForInbox(
   const { data, error } = await supabase
     .from('synced_leads')
     .select(
-      'id, email, first_name, last_name, company_name, job_title, linkedin_url, vacancy_url, sender_account, updated_at, reply_subject, reply_content, client_has_replied, opened_at, archived_at, objection_status'
+      'id, email, first_name, last_name, company_name, job_title, linkedin_url, vacancy_url, sender_account, updated_at, reply_subject, reply_content, client_has_replied, opened_at, archived_at, objection_status, folder_id'
     )
     .eq('client_id', clientId)
     .eq('interest_status', 'positive')
@@ -88,6 +95,7 @@ export async function getPositiveLeadsForInbox(
         opened_at: row.opened_at ?? null,
         archived_at: row.archived_at ?? null,
         objection_status: row.objection_status ?? null,
+        folder_id: row.folder_id ?? null,
       })
     }
   }
@@ -141,4 +149,24 @@ export async function getLeadThread(
   }
 
   return data
+}
+
+/**
+ * Get all custom inbox folders for a client.
+ */
+export async function getInboxFolders(clientId: string): Promise<InboxFolder[]> {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('inbox_folders')
+    .select('id, name, sort_order')
+    .eq('client_id', clientId)
+    .order('sort_order', { ascending: true })
+
+  if (error) {
+    console.error('Failed to fetch inbox folders:', error.message)
+    return []
+  }
+
+  return data ?? []
 }
