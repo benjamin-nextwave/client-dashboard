@@ -600,3 +600,42 @@ export async function refreshThread(leadId: string): Promise<ActionResult> {
   revalidatePath('/dashboard/inbox')
   return { success: true }
 }
+
+/**
+ * Submit an objection for a lead.
+ */
+export async function submitObjection(
+  leadId: string,
+  data: {
+    showed_intent: boolean
+    asked_question: boolean
+    reason: string
+  }
+): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Niet ingelogd' }
+
+  const admin = createAdminClient()
+
+  const { error } = await admin
+    .from('synced_leads')
+    .update({
+      objection_status: 'submitted',
+      objection_data: {
+        showed_intent: data.showed_intent,
+        asked_question: data.asked_question,
+        reason: data.reason,
+        submitted_at: new Date().toISOString(),
+      },
+    })
+    .eq('id', leadId)
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath(`/dashboard/inbox/${leadId}`)
+  revalidatePath('/dashboard/inbox')
+  return {}
+}

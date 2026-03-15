@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/server'
 import { ThreadView } from '../_components/thread-view'
 import { LeadContactCard } from '../_components/lead-contact-card'
 import { ArchiveButton } from '../_components/archive-button'
+import { ObjectionButton } from '../_components/objection-form'
 import { ThreadRealtimeProvider } from '../_components/thread-realtime-provider'
 
 // ── Maintenance mode toggle (keep in sync with ../page.tsx) ─────────
@@ -56,7 +57,7 @@ export default async function LeadThreadPage({
   const { data: lead, error: leadError } = await supabase
     .from('synced_leads')
     .select(
-      'id, email, first_name, last_name, company_name, job_title, linkedin_url, vacancy_url, sender_account, campaign_id, client_has_replied, reply_subject, archived_at'
+      'id, email, first_name, last_name, company_name, job_title, linkedin_url, vacancy_url, sender_account, campaign_id, client_has_replied, reply_subject, archived_at, objection_status, objection_data'
     )
     .eq('id', leadId)
     .single()
@@ -68,31 +69,12 @@ export default async function LeadThreadPage({
   // Mark as opened
   await markLeadAsOpened(leadId)
 
-  // Fetch ALL emails for this lead (unfiltered) so we can resolve sender account
-  let allEmails: Awaited<ReturnType<typeof getLeadThread>> = []
-  try {
-    allEmails = await getLeadThread(client.id, lead.email)
-  } catch (err) {
-    console.error('Failed to fetch lead thread:', err)
-  }
-
-  // Resolve sender account using multiple strategies:
-  // 1. From lead record (synced_leads.sender_account)
-  // 2. From reply emails: the lead replied TO the correct sender
-  // 3. From campaign fallback: another lead in the same campaign
-  // 4. From any outbound email in the cache
+  // Resolve sender account BEFORE fetching emails so we can filter at query time.
+  // This prevents mixing emails from different campaigns for the same lead email.
   let senderAccount = lead.sender_account
 
-  if (!senderAccount) {
-    // Strategy 2: find the sender from lead's reply (to_address = correct sender)
-    const replyFromLead = allEmails.find(
-      (e) => e.is_reply && e.from_address?.toLowerCase() === lead.email.toLowerCase()
-    )
-    senderAccount = replyFromLead?.to_address ?? null
-  }
-
   if (!senderAccount && lead.campaign_id) {
-    // Strategy 3: find sender from another lead in the same campaign
+    // Strategy 2: find sender from another lead in the same campaign
     const { data: campLead } = await supabase
       .from('synced_leads')
       .select('sender_account')
@@ -103,24 +85,36 @@ export default async function LeadThreadPage({
     senderAccount = campLead?.sender_account ?? null
   }
 
-  if (!senderAccount) {
-    // Strategy 4: fallback to first outbound email's sender
-    senderAccount =
-      allEmails.find((e) => e.sender_account)?.sender_account ||
-      allEmails.find((e) => !e.is_reply)?.from_address ||
-      ''
+  // Fetch emails, filtered by sender account when known
+  let emails: Awaited<ReturnType<typeof getLeadThread>> = []
+  try {
+    emails = await getLeadThread(client.id, lead.email, senderAccount)
+  } catch (err) {
+    console.error('Failed to fetch lead thread:', err)
   }
 
-  // Filter emails to only show the correct campaign's conversation
-  let emails = allEmails
-  if (senderAccount) {
-    const sa = senderAccount.toLowerCase()
-    const filtered = allEmails.filter(
-      (e) =>
-        e.from_address?.toLowerCase() === sa ||
-        e.to_address?.toLowerCase().includes(sa)
+  // If sender still unknown, resolve from the fetched emails
+  if (!senderAccount && emails.length > 0) {
+    // Try reply's to_address first (lead replied TO the correct sender)
+    const replyFromLead = emails.find(
+      (e) => e.is_reply && e.from_address?.toLowerCase() === lead.email.toLowerCase()
     )
-    if (filtered.length > 0) emails = filtered
+    senderAccount =
+      replyFromLead?.to_address ||
+      emails.find((e) => e.sender_account)?.sender_account ||
+      emails.find((e) => !e.is_reply)?.from_address ||
+      ''
+
+    // Re-filter with the resolved sender account
+    if (senderAccount) {
+      const sa = senderAccount.toLowerCase()
+      const filtered = emails.filter(
+        (e) =>
+          e.from_address?.toLowerCase() === sa ||
+          e.to_address?.toLowerCase().includes(sa)
+      )
+      if (filtered.length > 0) emails = filtered
+    }
   }
 
   // Check if recruitment client
@@ -155,8 +149,9 @@ export default async function LeadThreadPage({
             replySubject={lead.reply_subject ?? null}
           />
         </div>
-        <div className="mt-6 lg:col-span-1 lg:mt-0">
+        <div className="mt-6 lg:col-span-1 lg:mt-0 space-y-4">
           <LeadContactCard lead={lead} isRecruitment={isRecruitment} />
+          <ObjectionButton leadId={lead.id} objectionStatus={lead.objection_status ?? null} objectionData={lead.objection_data as { response?: string; reviewed_at?: string } | null} />
         </div>
       </div>
     </div>

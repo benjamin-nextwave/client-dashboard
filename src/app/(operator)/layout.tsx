@@ -41,6 +41,12 @@ export default function OperatorLayout({
               >
                 Feedback
               </Link>
+              <Link
+                href="/admin/bezwaren"
+                className="text-sm font-medium text-gray-600 hover:text-gray-900"
+              >
+                Bezwaren
+              </Link>
             </nav>
           </div>
           <form action={signOut}>

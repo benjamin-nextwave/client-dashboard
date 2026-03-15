@@ -76,7 +76,19 @@ export function InboxItem({ lead, isArchived = false }: InboxItemProps) {
       <div className="flex items-start gap-3">
         {/* Status badge */}
         <div className="flex-shrink-0 pt-0.5">
-          {isArchived ? (
+          {lead.objection_status === 'submitted' ? (
+            <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800">
+              Bezwaar ingediend
+            </span>
+          ) : lead.objection_status === 'approved' ? (
+            <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
+              Bezwaar goedgekeurd
+            </span>
+          ) : lead.objection_status === 'rejected' ? (
+            <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-800">
+              Bezwaar afgekeurd
+            </span>
+          ) : isArchived ? (
             <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600">
               Afgehandeld
             </span>

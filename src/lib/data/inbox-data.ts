@@ -18,6 +18,7 @@ export interface InboxLead {
   client_has_replied: boolean
   opened_at: string | null
   archived_at: string | null
+  objection_status: string | null
 }
 
 export interface CachedEmail {
@@ -51,7 +52,7 @@ export async function getPositiveLeadsForInbox(
   const { data, error } = await supabase
     .from('synced_leads')
     .select(
-      'id, email, first_name, last_name, company_name, job_title, linkedin_url, vacancy_url, sender_account, updated_at, reply_subject, reply_content, client_has_replied, opened_at, archived_at'
+      'id, email, first_name, last_name, company_name, job_title, linkedin_url, vacancy_url, sender_account, updated_at, reply_subject, reply_content, client_has_replied, opened_at, archived_at, objection_status'
     )
     .eq('client_id', clientId)
     .eq('interest_status', 'positive')
@@ -86,6 +87,7 @@ export async function getPositiveLeadsForInbox(
         client_has_replied: row.client_has_replied ?? false,
         opened_at: row.opened_at ?? null,
         archived_at: row.archived_at ?? null,
+        objection_status: row.objection_status ?? null,
       })
     }
   }
