@@ -6,6 +6,19 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { clientFormSchema, clientEditSchema } from '@/lib/validations/client'
 import { uploadClientLogo, deleteClientLogo } from '@/lib/supabase/storage'
 
+export async function toggleClientHidden(clientId: string, isHidden: boolean): Promise<{ error?: string }> {
+  const supabase = createAdminClient()
+  const { error } = await supabase
+    .from('clients')
+    .update({ is_hidden: isHidden })
+    .eq('id', clientId)
+
+  if (error) return { error: `Kon zichtbaarheid niet wijzigen: ${error.message}` }
+
+  revalidatePath('/admin')
+  return {}
+}
+
 export async function createClient(
   prevState: { error: string },
   formData: FormData
