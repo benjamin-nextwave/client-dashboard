@@ -32,13 +32,23 @@ export function DncAddForm() {
 
   const emailRef = useRef<HTMLInputElement>(null)
   const domainRef = useRef<HTMLInputElement>(null)
+  const lastSubmittedEmail = useRef<string>('')
 
-  // Clear inputs on success
+  // Clear inputs on success + trigger webhook
   const prevEmailError = useRef(emailState.error)
   const prevDomainError = useRef(domainState.error)
 
   useEffect(() => {
     if (prevEmailError.current !== emailState.error && emailState.error === '') {
+      const email = lastSubmittedEmail.current
+      if (email) {
+        fetch('/api/dnc-webhook', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'single', email }),
+        }).catch(() => {})
+        lastSubmittedEmail.current = ''
+      }
       if (emailRef.current) emailRef.current.value = ''
     }
     prevEmailError.current = emailState.error
@@ -51,6 +61,11 @@ export function DncAddForm() {
     prevDomainError.current = domainState.error
   }, [domainState.error])
 
+  function handleEmailSubmit(formData: FormData) {
+    lastSubmittedEmail.current = (formData.get('email') as string)?.toLowerCase() ?? ''
+    emailAction(formData)
+  }
+
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       {/* Email form */}
@@ -58,7 +73,7 @@ export function DncAddForm() {
         <h3 className="text-sm font-medium text-gray-900">
           E-mailadres toevoegen
         </h3>
-        <form action={emailAction} className="mt-3 flex gap-2">
+        <form action={handleEmailSubmit} className="mt-3 flex gap-2">
           <input
             ref={emailRef}
             type="email"

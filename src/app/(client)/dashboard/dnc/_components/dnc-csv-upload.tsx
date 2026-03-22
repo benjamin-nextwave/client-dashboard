@@ -88,6 +88,13 @@ export function DncCsvUpload() {
     if ('error' in result) {
       setStatus({ type: 'error', message: result.error })
     } else {
+      // Trigger webhook via API route (1 call met alle emails)
+      fetch('/api/dnc-webhook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'bulk', emails: result.emails }),
+      }).catch(() => {})
+
       setStatus({
         type: 'success',
         message: `${result.imported} van ${emails.length} adressen geimporteerd.`,

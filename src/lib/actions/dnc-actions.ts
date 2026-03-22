@@ -9,8 +9,6 @@ import {
   DncBulkImportSchema,
 } from '@/lib/validations/dnc'
 
-const DNC_WEBHOOK = 'https://hook.eu2.make.com/dhkkgga3ktiwgalbkeujdw21odiqqqa5'
-
 // --- Types ---
 
 export type DncEntry = {
@@ -23,12 +21,12 @@ export type DncEntry = {
 type FormActionState = { error: string }
 
 type BulkImportResult =
-  | { success: true; imported: number }
+  | { success: true; imported: number; emails: string[] }
   | { error: string }
 
 type RemoveResult = { success: true } | { error: string }
 
-// --- Helpers ---
+// --- Helper: get authenticated client_id ---
 
 async function getAuthClientId() {
   const supabase = await createClient()
@@ -40,30 +38,6 @@ async function getAuthClientId() {
 
   const clientId = user.app_metadata?.client_id as string | undefined
   return clientId ?? null
-}
-
-async function getCompanyName(clientId: string): Promise<string> {
-  const admin = createAdminClient()
-  const { data } = await admin
-    .from('clients')
-    .select('company_name')
-    .eq('id', clientId)
-    .single()
-  return data?.company_name ?? 'Onbekend'
-}
-
-async function callDncWebhook(body: Record<string, unknown>): Promise<void> {
-  try {
-    await fetch(DNC_WEBHOOK, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      cache: 'no-store',
-      next: { revalidate: 0 },
-    } as RequestInit)
-  } catch {
-    // Webhook failures must not block the user
-  }
 }
 
 // --- Server Actions ---
@@ -96,18 +70,6 @@ export async function addDncEmail(
       return { error: 'Dit e-mailadres staat al op de DNC-lijst.' }
     }
     return { error: 'Fout bij het toevoegen. Probeer het opnieuw.' }
-  }
-
-  // 1 call per handmatige toevoeging — wrapped in try/catch to never block user
-  try {
-    const companyName = await getCompanyName(clientId)
-    await callDncWebhook({
-      type: 'single',
-      company_name: companyName,
-      email: parsed.data.email.toLowerCase(),
-    })
-  } catch (e) {
-    console.error('[DNC] Webhook failed for single email:', e)
   }
 
   revalidatePath('/dashboard/dnc')
@@ -207,20 +169,8 @@ export async function bulkImportDnc(
     return { error: 'Fout bij het importeren. Probeer het opnieuw.' }
   }
 
-  // 1 call voor de hele CSV — alle emails als array
-  try {
-    const companyName = await getCompanyName(clientId)
-    await callDncWebhook({
-      type: 'bulk',
-      company_name: companyName,
-      emails: uniqueEmails,
-    })
-  } catch (e) {
-    console.error('[DNC] Webhook failed for bulk import:', e)
-  }
-
   revalidatePath('/dashboard/dnc')
-  return { success: true, imported: count ?? uniqueEmails.length }
+  return { success: true, imported: count ?? uniqueEmails.length, emails: uniqueEmails }
 }
 
 export async function getDncEntries(): Promise<DncEntry[]> {
