@@ -58,7 +58,9 @@ async function callDncWebhook(body: Record<string, unknown>): Promise<void> {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
-    })
+      cache: 'no-store',
+      next: { revalidate: 0 },
+    } as RequestInit)
   } catch {
     // Webhook failures must not block the user
   }
