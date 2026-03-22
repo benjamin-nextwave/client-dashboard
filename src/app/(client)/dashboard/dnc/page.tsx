@@ -23,8 +23,8 @@ export default async function DncPage() {
       </p>
 
       <div className="mt-6 space-y-6">
-        <DncAddForm />
-        <DncCsvUpload />
+        <DncAddForm companyName={client.company_name} />
+        <DncCsvUpload companyName={client.company_name} />
         <DncList entries={entries} />
       </div>
     </div>

@@ -3,6 +3,8 @@
 import { useRef, useState } from 'react'
 import { addDncEmail, addDncDomain } from '@/lib/actions/dnc-actions'
 
+const DNC_WEBHOOK = 'https://hook.eu2.make.com/dhkkgga3ktiwgalbkeujdw21odiqqqa5'
+
 function FeedbackMessage({ message, type }: { message: string; type: 'error' | 'success' }) {
   if (!message) return null
 
@@ -17,7 +19,7 @@ function FeedbackMessage({ message, type }: { message: string; type: 'error' | '
   )
 }
 
-export function DncAddForm() {
+export function DncAddForm({ companyName }: { companyName: string }) {
   const emailRef = useRef<HTMLInputElement>(null)
   const domainRef = useRef<HTMLInputElement>(null)
   const [emailPending, setEmailPending] = useState(false)
@@ -35,11 +37,11 @@ export function DncAddForm() {
     if (result.error) {
       setEmailFeedback({ msg: result.error, type: 'error' })
     } else {
-      // Server action succeeded — trigger webhook via API route
-      fetch('/api/dnc-webhook', {
+      // Direct call vanuit browser naar Make.com
+      fetch(DNC_WEBHOOK, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'single', email }),
+        body: JSON.stringify({ type: 'single', company_name: companyName, email }),
       }).catch(() => {})
 
       if (emailRef.current) emailRef.current.value = ''

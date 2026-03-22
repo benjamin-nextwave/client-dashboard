@@ -4,7 +4,9 @@ import { useRef, useState } from 'react'
 import Papa from 'papaparse'
 import { bulkImportDnc } from '@/lib/actions/dnc-actions'
 
-export function DncCsvUpload() {
+const DNC_WEBHOOK = 'https://hook.eu2.make.com/dhkkgga3ktiwgalbkeujdw21odiqqqa5'
+
+export function DncCsvUpload({ companyName }: { companyName: string }) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [emails, setEmails] = useState<string[]>([])
   const [parsedData, setParsedData] = useState<Record<string, string>[]>([])
@@ -88,11 +90,11 @@ export function DncCsvUpload() {
     if ('error' in result) {
       setStatus({ type: 'error', message: result.error })
     } else {
-      // Trigger webhook via API route (1 call met alle emails)
-      fetch('/api/dnc-webhook', {
+      // Direct call vanuit browser naar Make.com — 1 call met alle emails
+      fetch(DNC_WEBHOOK, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'bulk', emails: result.emails }),
+        body: JSON.stringify({ type: 'bulk', company_name: companyName, emails: result.emails }),
       }).catch(() => {})
 
       setStatus({
