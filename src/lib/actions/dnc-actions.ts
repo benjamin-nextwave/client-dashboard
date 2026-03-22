@@ -96,13 +96,17 @@ export async function addDncEmail(
     return { error: 'Fout bij het toevoegen. Probeer het opnieuw.' }
   }
 
-  // 1 call per handmatige toevoeging
-  const companyName = await getCompanyName(clientId)
-  await callDncWebhook({
-    type: 'single',
-    company_name: companyName,
-    email: parsed.data.email.toLowerCase(),
-  })
+  // 1 call per handmatige toevoeging — wrapped in try/catch to never block user
+  try {
+    const companyName = await getCompanyName(clientId)
+    await callDncWebhook({
+      type: 'single',
+      company_name: companyName,
+      email: parsed.data.email.toLowerCase(),
+    })
+  } catch (e) {
+    console.error('[DNC] Webhook failed for single email:', e)
+  }
 
   revalidatePath('/dashboard/dnc')
   return { error: '' }
@@ -202,12 +206,16 @@ export async function bulkImportDnc(
   }
 
   // 1 call voor de hele CSV — alle emails als array
-  const companyName = await getCompanyName(clientId)
-  await callDncWebhook({
-    type: 'bulk',
-    company_name: companyName,
-    emails: uniqueEmails,
-  })
+  try {
+    const companyName = await getCompanyName(clientId)
+    await callDncWebhook({
+      type: 'bulk',
+      company_name: companyName,
+      emails: uniqueEmails,
+    })
+  } catch (e) {
+    console.error('[DNC] Webhook failed for bulk import:', e)
+  }
 
   revalidatePath('/dashboard/dnc')
   return { success: true, imported: count ?? uniqueEmails.length }
