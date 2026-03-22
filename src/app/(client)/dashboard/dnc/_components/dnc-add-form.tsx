@@ -1,69 +1,70 @@
 'use client'
 
-import { useActionState, useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { addDncEmail, addDncDomain } from '@/lib/actions/dnc-actions'
 
-function FeedbackMessage({ message }: { message: string }) {
-  const [visible, setVisible] = useState(true)
-
-  useEffect(() => {
-    setVisible(true)
-    const timer = setTimeout(() => setVisible(false), 3000)
-    return () => clearTimeout(timer)
-  }, [message])
-
-  if (!visible || !message) return null
+function FeedbackMessage({ message, type }: { message: string; type: 'error' | 'success' }) {
+  if (!message) return null
 
   return (
-    <div className="mt-2 rounded-md bg-red-50 p-2 text-sm text-red-700">
+    <div
+      className={`mt-2 rounded-md p-2 text-sm ${
+        type === 'error' ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'
+      }`}
+    >
       {message}
     </div>
   )
 }
 
 export function DncAddForm() {
-  const [emailState, emailAction, emailPending] = useActionState(addDncEmail, {
-    error: '',
-  })
-  const [domainState, domainAction, domainPending] = useActionState(
-    addDncDomain,
-    { error: '' }
-  )
-
   const emailRef = useRef<HTMLInputElement>(null)
   const domainRef = useRef<HTMLInputElement>(null)
-  const lastSubmittedEmail = useRef<string>('')
+  const [emailPending, setEmailPending] = useState(false)
+  const [domainPending, setDomainPending] = useState(false)
+  const [emailFeedback, setEmailFeedback] = useState<{ msg: string; type: 'error' | 'success' }>({ msg: '', type: 'error' })
+  const [domainFeedback, setDomainFeedback] = useState<{ msg: string; type: 'error' | 'success' }>({ msg: '', type: 'error' })
 
-  // Clear inputs on success + trigger webhook
-  const prevEmailError = useRef(emailState.error)
-  const prevDomainError = useRef(domainState.error)
+  async function handleEmailSubmit(formData: FormData) {
+    const email = (formData.get('email') as string)?.toLowerCase() ?? ''
+    setEmailPending(true)
+    setEmailFeedback({ msg: '', type: 'error' })
 
-  useEffect(() => {
-    if (prevEmailError.current !== emailState.error && emailState.error === '') {
-      const email = lastSubmittedEmail.current
-      if (email) {
-        fetch('/api/dnc-webhook', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ type: 'single', email }),
-        }).catch(() => {})
-        lastSubmittedEmail.current = ''
-      }
+    const result = await addDncEmail({ error: '' }, formData)
+
+    if (result.error) {
+      setEmailFeedback({ msg: result.error, type: 'error' })
+    } else {
+      // Server action succeeded — trigger webhook via API route
+      fetch('/api/dnc-webhook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'single', email }),
+      }).catch(() => {})
+
       if (emailRef.current) emailRef.current.value = ''
+      setEmailFeedback({ msg: 'E-mailadres toegevoegd.', type: 'success' })
+      setTimeout(() => setEmailFeedback({ msg: '', type: 'error' }), 3000)
     }
-    prevEmailError.current = emailState.error
-  }, [emailState.error])
 
-  useEffect(() => {
-    if (prevDomainError.current !== domainState.error && domainState.error === '') {
+    setEmailPending(false)
+  }
+
+  async function handleDomainSubmit(formData: FormData) {
+    setDomainPending(true)
+    setDomainFeedback({ msg: '', type: 'error' })
+
+    const result = await addDncDomain({ error: '' }, formData)
+
+    if (result.error) {
+      setDomainFeedback({ msg: result.error, type: 'error' })
+    } else {
       if (domainRef.current) domainRef.current.value = ''
+      setDomainFeedback({ msg: 'Domein toegevoegd.', type: 'success' })
+      setTimeout(() => setDomainFeedback({ msg: '', type: 'error' }), 3000)
     }
-    prevDomainError.current = domainState.error
-  }, [domainState.error])
 
-  function handleEmailSubmit(formData: FormData) {
-    lastSubmittedEmail.current = (formData.get('email') as string)?.toLowerCase() ?? ''
-    emailAction(formData)
+    setDomainPending(false)
   }
 
   return (
@@ -90,7 +91,7 @@ export function DncAddForm() {
             {emailPending ? 'Bezig...' : 'Toevoegen'}
           </button>
         </form>
-        {emailState.error && <FeedbackMessage message={emailState.error} />}
+        {emailFeedback.msg && <FeedbackMessage message={emailFeedback.msg} type={emailFeedback.type} />}
       </div>
 
       {/* Domain form */}
@@ -98,7 +99,7 @@ export function DncAddForm() {
         <h3 className="text-sm font-medium text-gray-900">
           Domein toevoegen
         </h3>
-        <form action={domainAction} className="mt-3 flex gap-2">
+        <form action={handleDomainSubmit} className="mt-3 flex gap-2">
           <input
             ref={domainRef}
             type="text"
@@ -115,7 +116,7 @@ export function DncAddForm() {
             {domainPending ? 'Bezig...' : 'Toevoegen'}
           </button>
         </form>
-        {domainState.error && <FeedbackMessage message={domainState.error} />}
+        {domainFeedback.msg && <FeedbackMessage message={domainFeedback.msg} type={domainFeedback.type} />}
       </div>
     </div>
   )
