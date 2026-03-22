@@ -9,6 +9,8 @@ import {
   DncBulkImportSchema,
 } from '@/lib/validations/dnc'
 
+const DNC_WEBHOOK = 'https://hook.eu2.make.com/dhkkgga3ktiwgalbkeujdw21odiqqqa5'
+
 // --- Types ---
 
 export type DncEntry = {
@@ -26,7 +28,7 @@ type BulkImportResult =
 
 type RemoveResult = { success: true } | { error: string }
 
-// --- Helper: get authenticated client_id ---
+// --- Helpers ---
 
 async function getAuthClientId() {
   const supabase = await createClient()
@@ -38,6 +40,28 @@ async function getAuthClientId() {
 
   const clientId = user.app_metadata?.client_id as string | undefined
   return clientId ?? null
+}
+
+async function getCompanyName(clientId: string): Promise<string> {
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('clients')
+    .select('company_name')
+    .eq('id', clientId)
+    .single()
+  return data?.company_name ?? 'Onbekend'
+}
+
+async function callDncWebhook(body: Record<string, unknown>): Promise<void> {
+  try {
+    await fetch(DNC_WEBHOOK, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+  } catch {
+    // Webhook failures must not block the user
+  }
 }
 
 // --- Server Actions ---
@@ -71,6 +95,14 @@ export async function addDncEmail(
     }
     return { error: 'Fout bij het toevoegen. Probeer het opnieuw.' }
   }
+
+  // 1 call per handmatige toevoeging
+  const companyName = await getCompanyName(clientId)
+  await callDncWebhook({
+    type: 'single',
+    company_name: companyName,
+    email: parsed.data.email.toLowerCase(),
+  })
 
   revalidatePath('/dashboard/dnc')
   return { error: '' }
@@ -168,6 +200,14 @@ export async function bulkImportDnc(
   if (error) {
     return { error: 'Fout bij het importeren. Probeer het opnieuw.' }
   }
+
+  // 1 call voor de hele CSV — alle emails als array
+  const companyName = await getCompanyName(clientId)
+  await callDncWebhook({
+    type: 'bulk',
+    company_name: companyName,
+    emails: uniqueEmails,
+  })
 
   revalidatePath('/dashboard/dnc')
   return { success: true, imported: count ?? uniqueEmails.length }
