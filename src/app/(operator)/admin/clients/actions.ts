@@ -30,6 +30,7 @@ export async function createClient(
     primaryColor: formData.get('primaryColor') as string,
     isRecruitment: formData.get('isRecruitment') === 'on',
     meetingUrl: '',
+    inboxUrl: (formData.get('inboxUrl') as string) || '',
   }
 
   const result = clientFormSchema.safeParse(raw)
@@ -37,7 +38,7 @@ export async function createClient(
     return { error: result.error.errors[0].message }
   }
 
-  const { companyName, email, password, primaryColor, isRecruitment } = result.data
+  const { companyName, email, password, primaryColor, isRecruitment, inboxUrl } = result.data
 
   const DEFAULT_MEETING_URL = 'https://bespreking.neetocal.com/benjamin-steinschuld'
   const supabase = createAdminClient()
@@ -50,6 +51,7 @@ export async function createClient(
       primary_color: primaryColor,
       is_recruitment: isRecruitment,
       meeting_url: DEFAULT_MEETING_URL,
+      inbox_url: inboxUrl || null,
       password,
     })
     .select('id')
@@ -138,6 +140,7 @@ export async function updateClient(
     primaryColor: formData.get('primaryColor') as string,
     isRecruitment: formData.get('isRecruitment') === 'on',
     meetingUrl: '',
+    inboxUrl: (formData.get('inboxUrl') as string) || '',
   }
 
   const result = clientEditSchema.safeParse(raw)
@@ -145,7 +148,7 @@ export async function updateClient(
     return { error: result.error.errors[0].message }
   }
 
-  const { companyName, email, primaryColor, isRecruitment } = result.data
+  const { companyName, email, primaryColor, isRecruitment, inboxUrl } = result.data
   const password = result.data.password
 
   const supabase = createAdminClient()
@@ -155,6 +158,7 @@ export async function updateClient(
     company_name: companyName,
     primary_color: primaryColor,
     is_recruitment: isRecruitment,
+    inbox_url: inboxUrl || null,
   }
   if (password && password.length > 0) {
     clientUpdate.password = password
