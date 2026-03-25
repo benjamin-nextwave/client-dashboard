@@ -10,10 +10,18 @@ export default async function InboxEmbedPage() {
   const client = await getClientBranding()
   if (!client) redirect('/login')
 
-  const inboxPath = client.inbox_url
+  const inboxUrl = client.inbox_url
 
-  // inbox_url bevat het pad (bijv. /app/inbox/abc123), proxy-prefix ervoor zetten
-  const proxyUrl = inboxPath ? '/api/instantly-proxy' + (inboxPath.startsWith('/') ? '' : '/') + inboxPath : null
+  // Zet de Instantly URL om naar een proxy URL zodat cookies correct werken
+  let proxyUrl: string | null = null
+  if (inboxUrl) {
+    try {
+      const parsed = new URL(inboxUrl)
+      proxyUrl = '/api/instantly-proxy' + parsed.pathname + parsed.search
+    } catch {
+      // Ongeldige URL — toon empty state
+    }
+  }
 
   if (!proxyUrl) {
     return (
