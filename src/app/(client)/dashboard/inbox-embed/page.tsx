@@ -12,7 +12,18 @@ export default async function InboxEmbedPage() {
 
   const inboxUrl = client.inbox_url
 
-  if (!inboxUrl) {
+  // Zet de Instantly URL om naar een proxy URL zodat cookies correct werken
+  let proxyUrl: string | null = null
+  if (inboxUrl) {
+    try {
+      const parsed = new URL(inboxUrl)
+      proxyUrl = '/api/instantly-proxy' + parsed.pathname + parsed.search
+    } catch {
+      // Ongeldige URL — toon empty state
+    }
+  }
+
+  if (!proxyUrl) {
     return (
       <div className="flex h-full items-center justify-center">
         <div className="text-center">
@@ -30,7 +41,7 @@ export default async function InboxEmbedPage() {
 
   return (
     <div className="-mx-6 -my-8 h-[calc(100vh)] overflow-hidden">
-      <InboxEmbedFrame inboxUrl={inboxUrl} />
+      <InboxEmbedFrame inboxUrl={proxyUrl} />
     </div>
   )
 }
