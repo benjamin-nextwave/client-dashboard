@@ -123,19 +123,24 @@ export function ClientForm({
       {/* Logo */}
       <LogoUpload currentLogoUrl={currentLogoUrl} />
 
-      {/* Instantly Inbox URL */}
+      {/* Instantly Inbox Pad */}
       <div>
         <label htmlFor="inboxUrl" className="block text-sm font-medium text-gray-700">
-          Instantly Inbox URL
+          Instantly Inbox
         </label>
-        <p className="text-xs text-gray-500">De URL van de Instantly inbox die wordt getoond in het klantdashboard</p>
-        <input
-          id="inboxUrl"
-          type="url"
-          {...register('inboxUrl')}
-          placeholder="https://app.instantly.ai/..."
-          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-        />
+        <p className="text-xs text-gray-500">Het pad van de Instantly inbox (alles na app.instantly.ai)</p>
+        <div className="mt-1 flex rounded-md shadow-sm">
+          <span className="inline-flex items-center rounded-l-md border border-r-0 border-gray-300 bg-gray-50 px-3 text-sm text-gray-500">
+            app.instantly.ai
+          </span>
+          <input
+            id="inboxUrl"
+            type="text"
+            {...register('inboxUrl')}
+            placeholder="/app/inbox/abc123"
+            className="block w-full rounded-r-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+        </div>
         {errors.inboxUrl && (
           <p className="mt-1 text-sm text-red-600">{errors.inboxUrl.message}</p>
         )}
