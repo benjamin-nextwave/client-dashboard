@@ -106,8 +106,9 @@ export function InboxEmbedFrame({ proxyBaseUrl }: InboxEmbedFrameProps) {
   }
 
   // Toon iframe na inloggen
+  // De container knipt 10% links en 15% boven weg om ongewenste Instantly UI te verbergen
   return (
-    <div className="relative" style={{ height: '100vh' }}>
+    <div className="relative" style={{ height: '100vh', overflow: 'hidden' }}>
       {!iframeLoaded && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
           <div className="flex flex-col items-center gap-3">
@@ -122,8 +123,11 @@ export function InboxEmbedFrame({ proxyBaseUrl }: InboxEmbedFrameProps) {
         onLoad={() => setIframeLoaded(true)}
         style={{
           border: 'none',
-          width: '100%',
-          height: '100%',
+          position: 'absolute',
+          top: '-12vh',
+          left: '-7vw',
+          width: 'calc(100% + 7vw)',
+          height: 'calc(100% + 12vh)',
           display: 'block',
           opacity: iframeLoaded ? 1 : 0,
           transition: 'opacity 0.3s ease',
