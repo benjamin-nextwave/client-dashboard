@@ -121,7 +121,7 @@ export default async function EditClientPage({ params }: EditClientPageProps) {
             primaryColor: client.primary_color,
             isRecruitment: client.is_recruitment,
             meetingUrl: client.meeting_url ?? '',
-            inboxEnabled: !!client.inbox_url,
+            inboxUrl: client.inbox_url ?? '',
           }}
           campaigns={campaigns}
           selectedCampaignIds={selectedCampaignIds}
