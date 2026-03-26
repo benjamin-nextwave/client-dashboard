@@ -7,7 +7,7 @@ export const clientFormSchema = z.object({
   primaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Ongeldige kleurcode'),
   isRecruitment: z.coerce.boolean().default(false),
   meetingUrl: z.string().url('Ongeldige URL').optional().or(z.literal('')),
-  inboxUrl: z.string().url('Ongeldige URL').optional().or(z.literal('')),
+  inboxEnabled: z.coerce.boolean().default(false),
 })
 
 export const clientEditSchema = clientFormSchema
