@@ -10,10 +10,11 @@ interface SidebarNavProps {
   inboxCount?: number
   meetingUrl?: string
   inboxUrl?: string
+  inboxVisible?: boolean
   isOnboarding?: boolean
 }
 
-export function SidebarNav({ companyName, logoUrl, signOutAction, inboxCount, meetingUrl, inboxUrl, isOnboarding }: SidebarNavProps) {
+export function SidebarNav({ companyName, logoUrl, signOutAction, inboxCount, meetingUrl, inboxUrl, inboxVisible, isOnboarding }: SidebarNavProps) {
   const navItems = [
     ...(isOnboarding
       ? [
@@ -47,7 +48,7 @@ export function SidebarNav({ companyName, logoUrl, signOutAction, inboxCount, me
         </svg>
       ),
     },
-    ...(inboxUrl
+    ...(inboxUrl && inboxVisible
       ? [
           {
             href: '/dashboard/inbox-embed',

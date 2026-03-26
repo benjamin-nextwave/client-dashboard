@@ -8,6 +8,7 @@ export const clientFormSchema = z.object({
   isRecruitment: z.coerce.boolean().default(false),
   meetingUrl: z.string().url('Ongeldige URL').optional().or(z.literal('')),
   inboxUrl: z.string().url('Ongeldige URL').optional().or(z.literal('')),
+  inboxVisible: z.coerce.boolean().default(false),
 })
 
 export const clientEditSchema = clientFormSchema
