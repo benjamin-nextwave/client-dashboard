@@ -4,9 +4,10 @@ import { useState, useCallback } from 'react'
 
 interface InboxEmbedFrameProps {
   proxyBaseUrl: string
+  targetHost: string
 }
 
-export function InboxEmbedFrame({ proxyBaseUrl }: InboxEmbedFrameProps) {
+export function InboxEmbedFrame({ proxyBaseUrl, targetHost }: InboxEmbedFrameProps) {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
@@ -20,7 +21,7 @@ export function InboxEmbedFrame({ proxyBaseUrl }: InboxEmbedFrameProps) {
     setIsLoading(true)
 
     try {
-      const res = await fetch(`${proxyBaseUrl}/api/client/login`, {
+      const res = await fetch(`${proxyBaseUrl}/api/client/login?_target=${targetHost}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -39,7 +40,7 @@ export function InboxEmbedFrame({ proxyBaseUrl }: InboxEmbedFrameProps) {
     } finally {
       setIsLoading(false)
     }
-  }, [proxyBaseUrl, email, password])
+  }, [proxyBaseUrl, targetHost, email, password])
 
   // Toon login formulier als niet ingelogd
   if (!isLoggedIn) {
@@ -106,7 +107,6 @@ export function InboxEmbedFrame({ proxyBaseUrl }: InboxEmbedFrameProps) {
   }
 
   // Toon iframe na inloggen
-  // De container knipt 10% links en 15% boven weg om ongewenste Instantly UI te verbergen
   return (
     <div className="relative" style={{ height: '100vh', overflow: 'hidden' }}>
       {!iframeLoaded && (
@@ -118,7 +118,7 @@ export function InboxEmbedFrame({ proxyBaseUrl }: InboxEmbedFrameProps) {
         </div>
       )}
       <iframe
-        src={`${proxyBaseUrl}/app/unibox`}
+        src={`${proxyBaseUrl}/app/unibox?_target=${targetHost}`}
         title="Inbox"
         onLoad={() => setIframeLoaded(true)}
         style={{

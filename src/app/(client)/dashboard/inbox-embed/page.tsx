@@ -6,7 +6,6 @@ import { InboxEmbedFrame } from './_components/inbox-embed-frame'
 export const metadata: Metadata = { title: 'E-mail Inbox' }
 export const dynamic = 'force-dynamic'
 
-// De Cloudflare Worker proxy base URL
 const INBOX_PROXY_BASE_URL = 'https://instantly-inbox-proxy.nextwave-proxy.workers.dev'
 
 export default async function InboxEmbedPage() {
@@ -29,5 +28,14 @@ export default async function InboxEmbedPage() {
     )
   }
 
-  return <InboxEmbedFrame proxyBaseUrl={INBOX_PROXY_BASE_URL} />
+  // Haal het Instantly whitelabel domein uit de inbox_url
+  let targetHost = ''
+  try {
+    targetHost = new URL(client.inbox_url).hostname
+  } catch {
+    // inbox_url is geen volledige URL, gebruik het direct als hostname
+    targetHost = client.inbox_url
+  }
+
+  return <InboxEmbedFrame proxyBaseUrl={INBOX_PROXY_BASE_URL} targetHost={targetHost} />
 }
