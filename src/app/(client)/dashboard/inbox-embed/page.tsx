@@ -6,16 +6,14 @@ import { InboxEmbedFrame } from './_components/inbox-embed-frame'
 export const metadata: Metadata = { title: 'E-mail Inbox' }
 export const dynamic = 'force-dynamic'
 
+// De Cloudflare Worker proxy base URL
+const INBOX_PROXY_BASE_URL = 'https://instantly-inbox-proxy.nextwave-proxy.workers.dev'
+
 export default async function InboxEmbedPage() {
   const client = await getClientBranding()
   if (!client) redirect('/login')
 
-  const inboxUrl = client.inbox_url
-
-  // Laad de Instantly URL direct in het iframe
-  const proxyUrl = inboxUrl || null
-
-  if (!proxyUrl) {
+  if (!client.inbox_url) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <div className="text-center">
@@ -31,5 +29,5 @@ export default async function InboxEmbedPage() {
     )
   }
 
-  return <InboxEmbedFrame inboxUrl={proxyUrl} />
+  return <InboxEmbedFrame proxyBaseUrl={INBOX_PROXY_BASE_URL} />
 }
