@@ -9,6 +9,7 @@ export const clientFormSchema = z.object({
   meetingUrl: z.string().url('Ongeldige URL').optional().or(z.literal('')),
   inboxUrl: z.string().url('Ongeldige URL').optional().or(z.literal('')),
   inboxVisible: z.coerce.boolean().default(false),
+  chatInboxVisible: z.coerce.boolean().default(true),
 })
 
 export const clientEditSchema = clientFormSchema

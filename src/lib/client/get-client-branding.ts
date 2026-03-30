@@ -13,7 +13,7 @@ export const getClientBranding = cache(async () => {
   // Probeer met inbox_url, val terug zonder als de kolom nog niet bestaat
   const { data: client, error } = await supabase
     .from('clients')
-    .select('id, company_name, primary_color, logo_url, meeting_url, inbox_url, inbox_visible, onboarding_status')
+    .select('id, company_name, primary_color, logo_url, meeting_url, inbox_url, inbox_visible, chat_inbox_visible, onboarding_status')
     .eq('id', clientId)
     .single()
 
@@ -26,5 +26,5 @@ export const getClientBranding = cache(async () => {
     .eq('id', clientId)
     .single()
 
-  return fallback ? { ...fallback, inbox_url: null, inbox_visible: false } : null
+  return fallback ? { ...fallback, inbox_url: null, inbox_visible: false, chat_inbox_visible: true } : null
 })

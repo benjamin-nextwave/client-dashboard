@@ -32,6 +32,7 @@ export async function createClient(
     meetingUrl: '',
     inboxUrl: (formData.get('inboxUrl') as string) || '',
     inboxVisible: formData.get('inboxVisible') === 'on',
+    chatInboxVisible: formData.get('chatInboxVisible') === 'on',
   }
 
   const result = clientFormSchema.safeParse(raw)
@@ -39,7 +40,7 @@ export async function createClient(
     return { error: result.error.errors[0].message }
   }
 
-  const { companyName, email, password, primaryColor, isRecruitment, inboxUrl, inboxVisible } = result.data
+  const { companyName, email, password, primaryColor, isRecruitment, inboxUrl, inboxVisible, chatInboxVisible } = result.data
 
   const DEFAULT_MEETING_URL = 'https://bespreking.neetocal.com/benjamin-steinschuld'
   const supabase = createAdminClient()
@@ -54,6 +55,7 @@ export async function createClient(
       meeting_url: DEFAULT_MEETING_URL,
       inbox_url: inboxUrl || null,
       inbox_visible: inboxVisible,
+      chat_inbox_visible: chatInboxVisible,
       password,
     })
     .select('id')
@@ -144,6 +146,7 @@ export async function updateClient(
     meetingUrl: '',
     inboxUrl: (formData.get('inboxUrl') as string) || '',
     inboxVisible: formData.get('inboxVisible') === 'on',
+    chatInboxVisible: formData.get('chatInboxVisible') === 'on',
   }
 
   const result = clientEditSchema.safeParse(raw)
@@ -151,7 +154,7 @@ export async function updateClient(
     return { error: result.error.errors[0].message }
   }
 
-  const { companyName, email, primaryColor, isRecruitment, inboxUrl, inboxVisible } = result.data
+  const { companyName, email, primaryColor, isRecruitment, inboxUrl, inboxVisible, chatInboxVisible } = result.data
   const password = result.data.password
 
   const supabase = createAdminClient()
@@ -163,6 +166,7 @@ export async function updateClient(
     is_recruitment: isRecruitment,
     inbox_url: inboxUrl || null,
     inbox_visible: inboxVisible,
+    chat_inbox_visible: chatInboxVisible,
   }
   if (password && password.length > 0) {
     clientUpdate.password = password

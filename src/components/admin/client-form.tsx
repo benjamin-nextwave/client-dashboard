@@ -49,6 +49,7 @@ export function ClientForm({
       meetingUrl: defaultValues?.meetingUrl ?? '',
       inboxUrl: defaultValues?.inboxUrl ?? '',
       inboxVisible: defaultValues?.inboxVisible ?? false,
+      chatInboxVisible: defaultValues?.chatInboxVisible ?? true,
     },
   })
 
@@ -152,6 +153,19 @@ export function ClientForm({
         />
         <label htmlFor="inboxVisible" className="text-sm font-medium text-gray-700">
           E-mail inbox zichtbaar voor klant
+        </label>
+      </div>
+
+      {/* Chat inbox zichtbaar */}
+      <div className="flex items-center gap-2">
+        <input
+          id="chatInboxVisible"
+          type="checkbox"
+          {...register('chatInboxVisible')}
+          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+        />
+        <label htmlFor="chatInboxVisible" className="text-sm font-medium text-gray-700">
+          Inbox zichtbaar voor klant
         </label>
       </div>
 

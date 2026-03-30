@@ -14,6 +14,7 @@ export interface Client {
   meeting_url: string | null
   inbox_url: string | null
   inbox_visible: boolean
+  chat_inbox_visible: boolean
   is_recruitment: boolean
   password: string | null
   created_at: string
