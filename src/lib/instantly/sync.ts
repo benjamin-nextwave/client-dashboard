@@ -220,6 +220,99 @@ export async function syncClientData(clientId: string, forceFullSync = false): P
 }
 
 /**
+ * Sync all leads from all campaigns in the client's workspace.
+ * Fetches every lead and upserts into synced_leads.
+ */
+export async function syncAllLeads(clientId: string): Promise<void> {
+  const supabase = createAdminClient()
+  const apiKey = await getClientApiKey(supabase, clientId)
+  if (!apiKey) return
+
+  const campaigns = await getAllWorkspaceCampaigns(apiKey)
+  if (campaigns.length === 0) return
+
+  console.log(`syncAllLeads: client=${clientId}, ${campaigns.length} campaign(s)`)
+
+  let totalUpserted = 0
+
+  for (const campaign of campaigns) {
+    let startingAfter: string | undefined
+
+    while (true) {
+      try {
+        const response = await listLeads(campaign.id, {
+          limit: 100,
+          startingAfter,
+          apiKey,
+        })
+
+        if (response.items.length === 0) break
+
+        const rows = response.items.map((lead) => {
+          const payload = lead.payload ?? {}
+          const extractField = (variants: string[]): string | null => {
+            for (const variant of variants) {
+              const key = Object.keys(payload).find((k) => k.toLowerCase() === variant.toLowerCase())
+              if (key && payload[key] != null && String(payload[key]).trim() !== '') {
+                return String(payload[key]).trim()
+              }
+            }
+            return null
+          }
+
+          const interestStatus = mapInterestStatus(lead.lt_interest_status)
+
+          return {
+            client_id: clientId,
+            instantly_lead_id: lead.id,
+            campaign_id: campaign.id,
+            email: lead.email.toLowerCase().trim(),
+            first_name: lead.first_name ?? null,
+            last_name: lead.last_name ?? null,
+            company_name: lead.company_name ?? null,
+            job_title: extractField(['Job Title', 'job_title', 'Functie', 'functie']),
+            industry: extractField(['Industry', 'industry', 'Branche', 'branche']),
+            company_size: extractField(['Company Size', 'company_size', 'Bedrijfsgrootte', 'bedrijfsgrootte']),
+            website: lead.website ?? null,
+            phone: lead.phone ?? null,
+            lead_status: lead.email_reply_count > 0 ? 'replied' : 'emailed',
+            interest_status: interestStatus ?? 'neutral',
+            sender_account: lead.last_step_from ?? null,
+            email_sent_count: lead.email_open_count > 0 ? 1 : 0,
+            email_reply_count: lead.email_reply_count ?? 0,
+            payload: lead.payload ?? null,
+            last_synced_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }
+        })
+
+        const { error: upsertError } = await supabase
+          .from('synced_leads')
+          .upsert(rows, { onConflict: 'client_id,instantly_lead_id,campaign_id' })
+
+        if (upsertError) {
+          console.error(`syncAllLeads: upsert failed for campaign ${campaign.id}:`, upsertError.message)
+        } else {
+          totalUpserted += rows.length
+        }
+
+        if (!response.next_starting_after) break
+        startingAfter = response.next_starting_after
+      } catch (error) {
+        console.error(`syncAllLeads: failed for campaign ${campaign.id}:`, error)
+        break
+      }
+
+      await delay(RATE_LIMIT_DELAY_MS)
+    }
+
+    await delay(RATE_LIMIT_DELAY_MS)
+  }
+
+  console.log(`syncAllLeads: DONE for client ${clientId} — ${totalUpserted} leads upserted`)
+}
+
+/**
  * Lightweight inbox-only sync for a single client.
  */
 export async function syncInboxData(clientId: string): Promise<void> {

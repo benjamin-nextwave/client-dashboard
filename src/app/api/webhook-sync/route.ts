@@ -73,6 +73,15 @@ export async function POST(request: Request) {
 
   const clientId = cc.client_id
 
+  // Get client's API key
+  const { data: clientData } = await admin
+    .from('clients')
+    .select('instantly_api_key')
+    .eq('id', clientId)
+    .single()
+
+  const apiKey = clientData?.instantly_api_key ?? undefined
+
   // Fetch lead data from Instantly
   let leadData: {
     id: string
@@ -89,7 +98,7 @@ export async function POST(request: Request) {
   } | null = null
 
   try {
-    const response = await listLeads(campaignId, { search: email, limit: 10 })
+    const response = await listLeads(campaignId, { search: email, limit: 10, apiKey })
     const exactMatch = response.items.find(
       (l) => l.email.toLowerCase().trim() === email
     )
@@ -164,7 +173,7 @@ export async function POST(request: Request) {
   // Cache emails for this lead
   let emailsCached = 0
   try {
-    const emailResponse = await listEmails({ lead: email, limit: 100 })
+    const emailResponse = await listEmails({ lead: email, limit: 100, apiKey })
     const emails = emailResponse.items
 
     if (emails.length > 0) {
