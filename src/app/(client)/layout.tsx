@@ -38,6 +38,9 @@ export default async function ClientLayout({
         signOutAction={signOut}
         inboxCount={inboxCount}
         meetingUrl={client.meeting_url ?? undefined}
+        inboxUrl={client.inbox_url ?? undefined}
+        inboxVisible={client.inbox_visible ?? false}
+        chatInboxVisible={client.chat_inbox_visible ?? true}
         isOnboarding={client.onboarding_status === 'onboarding'}
       />
       <main className="flex-1 px-6 py-8 overflow-auto">

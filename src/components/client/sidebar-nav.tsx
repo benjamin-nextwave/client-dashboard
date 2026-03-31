@@ -9,10 +9,13 @@ interface SidebarNavProps {
   signOutAction: () => Promise<void>
   inboxCount?: number
   meetingUrl?: string
+  inboxUrl?: string
+  inboxVisible?: boolean
+  chatInboxVisible?: boolean
   isOnboarding?: boolean
 }
 
-export function SidebarNav({ companyName, logoUrl, signOutAction, inboxCount, meetingUrl, isOnboarding }: SidebarNavProps) {
+export function SidebarNav({ companyName, logoUrl, signOutAction, inboxCount, meetingUrl, inboxUrl, inboxVisible, chatInboxVisible = true, isOnboarding }: SidebarNavProps) {
   const navItems = [
     ...(isOnboarding
       ? [
@@ -36,16 +39,33 @@ export function SidebarNav({ companyName, logoUrl, signOutAction, inboxCount, me
         </svg>
       ),
     },
-    {
-      href: '/dashboard/inbox',
-      label: 'Inbox',
-      badge: inboxCount,
-      icon: (
-        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
-        </svg>
-      ),
-    },
+    ...(chatInboxVisible
+      ? [
+          {
+            href: '/dashboard/inbox',
+            label: 'Inbox',
+            badge: inboxCount,
+            icon: (
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
+              </svg>
+            ),
+          },
+        ]
+      : []),
+    ...(inboxUrl && inboxVisible
+      ? [
+          {
+            href: '/dashboard/inbox-embed',
+            label: 'E-mail',
+            icon: (
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 3.75H6.912a2.25 2.25 0 0 0-2.15 1.588L2.35 13.177a2.25 2.25 0 0 0-.1.661V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.15-1.588H15M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859M12 3v8.25m0 0-3-3m3 3 3-3" />
+              </svg>
+            ),
+          },
+        ]
+      : []),
     {
       href: '/dashboard/verzonden',
       label: 'Verzonden',

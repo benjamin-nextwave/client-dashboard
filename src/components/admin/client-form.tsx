@@ -47,6 +47,9 @@ export function ClientForm({
       primaryColor: defaultValues?.primaryColor ?? '#3B82F6',
       isRecruitment: defaultValues?.isRecruitment ?? false,
       meetingUrl: defaultValues?.meetingUrl ?? '',
+      inboxUrl: defaultValues?.inboxUrl ?? '',
+      inboxVisible: defaultValues?.inboxVisible ?? false,
+      chatInboxVisible: defaultValues?.chatInboxVisible ?? true,
     },
   })
 
@@ -121,6 +124,50 @@ export function ClientForm({
 
       {/* Logo */}
       <LogoUpload currentLogoUrl={currentLogoUrl} />
+
+      {/* Instantly Inbox URL */}
+      <div>
+        <label htmlFor="inboxUrl" className="block text-sm font-medium text-gray-700">
+          Instantly Inbox URL
+        </label>
+        <p className="text-xs text-gray-500">De URL van de Instantly inbox die wordt getoond in het klantdashboard</p>
+        <input
+          id="inboxUrl"
+          type="url"
+          {...register('inboxUrl')}
+          placeholder="https://app.instantly.ai/..."
+          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        />
+        {errors.inboxUrl && (
+          <p className="mt-1 text-sm text-red-600">{errors.inboxUrl.message}</p>
+        )}
+      </div>
+
+      {/* E-mail inbox zichtbaar */}
+      <div className="flex items-center gap-2">
+        <input
+          id="inboxVisible"
+          type="checkbox"
+          {...register('inboxVisible')}
+          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+        />
+        <label htmlFor="inboxVisible" className="text-sm font-medium text-gray-700">
+          E-mail inbox zichtbaar voor klant
+        </label>
+      </div>
+
+      {/* Chat inbox zichtbaar */}
+      <div className="flex items-center gap-2">
+        <input
+          id="chatInboxVisible"
+          type="checkbox"
+          {...register('chatInboxVisible')}
+          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+        />
+        <label htmlFor="chatInboxVisible" className="text-sm font-medium text-gray-700">
+          Inbox zichtbaar voor klant
+        </label>
+      </div>
 
       {/* Recruitment klant */}
       <div className="flex items-center gap-2">
