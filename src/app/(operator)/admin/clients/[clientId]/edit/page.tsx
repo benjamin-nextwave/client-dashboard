@@ -132,6 +132,7 @@ export default async function EditClientPage({ params }: EditClientPageProps) {
             inboxUrl: client.inbox_url ?? '',
             inboxVisible: client.inbox_visible ?? false,
             chatInboxVisible: client.chat_inbox_visible ?? true,
+            instantlyApiKey: client.instantly_api_key ?? '',
           }}
           campaigns={campaigns}
           selectedCampaignIds={selectedCampaignIds}

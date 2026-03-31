@@ -10,6 +10,7 @@ export const clientFormSchema = z.object({
   inboxUrl: z.string().url('Ongeldige URL').optional().or(z.literal('')),
   inboxVisible: z.coerce.boolean().default(false),
   chatInboxVisible: z.coerce.boolean().default(true),
+  instantlyApiKey: z.string().optional().or(z.literal('')),
 })
 
 export const clientEditSchema = clientFormSchema

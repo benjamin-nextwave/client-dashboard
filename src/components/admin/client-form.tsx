@@ -50,6 +50,7 @@ export function ClientForm({
       inboxUrl: defaultValues?.inboxUrl ?? '',
       inboxVisible: defaultValues?.inboxVisible ?? false,
       chatInboxVisible: defaultValues?.chatInboxVisible ?? true,
+      instantlyApiKey: defaultValues?.instantlyApiKey ?? '',
     },
   })
 
@@ -180,6 +181,21 @@ export function ClientForm({
         <label htmlFor="isRecruitment" className="text-sm font-medium text-gray-700">
           Recruitment klant
         </label>
+      </div>
+
+      {/* Instantly API Key */}
+      <div>
+        <label htmlFor="instantlyApiKey" className="block text-sm font-medium text-gray-700">
+          Instantly API Key
+        </label>
+        <p className="text-xs text-gray-500">De API key van de workspace van deze klant</p>
+        <input
+          id="instantlyApiKey"
+          type="password"
+          {...register('instantlyApiKey')}
+          placeholder="••••••••"
+          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        />
       </div>
 
       {/* Campagnes */}

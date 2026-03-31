@@ -60,7 +60,7 @@ export function OverzichtDashboard({
       <ComingSoonCharts />
 
       <p className="text-center text-xs text-gray-400">
-        Statistieken worden eenmaal per dag bijgewerkt (06:00).
+        Klik op &ldquo;Ververs de data&rdquo; om de nieuwste statistieken op te halen.
       </p>
     </div>
   )

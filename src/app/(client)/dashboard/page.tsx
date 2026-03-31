@@ -7,6 +7,7 @@ import {
   getDailyEmailsSent,
 } from '@/lib/data/campaign-stats'
 import { OverzichtDashboard } from './_components/overzicht-dashboard'
+import { RefreshButton } from './_components/refresh-button'
 
 export const metadata: Metadata = { title: 'Overzicht' }
 export const dynamic = 'force-dynamic'
@@ -74,7 +75,10 @@ export default async function OverzichtPage({
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold text-gray-900">Overzicht</h1>
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-gray-900">Overzicht</h1>
+        <RefreshButton />
+      </div>
       <OverzichtDashboard
         unansweredPositive={unansweredPositive}
         totalReplies={monthlyStats.totalReplies}

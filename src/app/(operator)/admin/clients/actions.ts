@@ -33,6 +33,7 @@ export async function createClient(
     inboxUrl: (formData.get('inboxUrl') as string) || '',
     inboxVisible: formData.get('inboxVisible') === 'on',
     chatInboxVisible: formData.get('chatInboxVisible') === 'on',
+    instantlyApiKey: (formData.get('instantlyApiKey') as string) || '',
   }
 
   const result = clientFormSchema.safeParse(raw)
@@ -40,7 +41,7 @@ export async function createClient(
     return { error: result.error.errors[0].message }
   }
 
-  const { companyName, email, password, primaryColor, isRecruitment, inboxUrl, inboxVisible, chatInboxVisible } = result.data
+  const { companyName, email, password, primaryColor, isRecruitment, inboxUrl, inboxVisible, chatInboxVisible, instantlyApiKey } = result.data
 
   const DEFAULT_MEETING_URL = 'https://bespreking.neetocal.com/benjamin-steinschuld'
   const supabase = createAdminClient()
@@ -56,6 +57,7 @@ export async function createClient(
       inbox_url: inboxUrl || null,
       inbox_visible: inboxVisible,
       chat_inbox_visible: chatInboxVisible,
+      instantly_api_key: instantlyApiKey || null,
       password,
     })
     .select('id')
@@ -147,6 +149,7 @@ export async function updateClient(
     inboxUrl: (formData.get('inboxUrl') as string) || '',
     inboxVisible: formData.get('inboxVisible') === 'on',
     chatInboxVisible: formData.get('chatInboxVisible') === 'on',
+    instantlyApiKey: (formData.get('instantlyApiKey') as string) || '',
   }
 
   const result = clientEditSchema.safeParse(raw)
@@ -154,7 +157,7 @@ export async function updateClient(
     return { error: result.error.errors[0].message }
   }
 
-  const { companyName, email, primaryColor, isRecruitment, inboxUrl, inboxVisible, chatInboxVisible } = result.data
+  const { companyName, email, primaryColor, isRecruitment, inboxUrl, inboxVisible, chatInboxVisible, instantlyApiKey } = result.data
   const password = result.data.password
 
   const supabase = createAdminClient()
@@ -167,6 +170,9 @@ export async function updateClient(
     inbox_url: inboxUrl || null,
     inbox_visible: inboxVisible,
     chat_inbox_visible: chatInboxVisible,
+  }
+  if (instantlyApiKey) {
+    clientUpdate.instantly_api_key = instantlyApiKey
   }
   if (password && password.length > 0) {
     clientUpdate.password = password

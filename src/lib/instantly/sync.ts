@@ -1,27 +1,18 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { logError } from '@/lib/errors/log-error'
-import { getCampaignDailyAnalytics, listLeads, listEmails, getCampaignsForEmail } from './client'
+import { getCampaignDailyAnalytics, listCampaigns, listLeads, listEmails, getCampaignsForEmail } from './client'
 
 const RATE_LIMIT_DELAY_MS = 1000
 
-// How many days of analytics to fetch on incremental syncs
 const ANALYTICS_DAYS_INCREMENTAL = 7
-// How many days of analytics to fetch on full syncs (first sync or weekly refresh)
 const ANALYTICS_DAYS_FULL = 365
-// Force a full sync (all emails + leads) every 6 hours per campaign
 const FULL_SYNC_INTERVAL_MS = 6 * 60 * 60 * 1000
-// Rate limit for getCampaignsForEmail verification calls (max 2/sec)
 const VERIFY_DELAY_MS = 1000
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-/**
- * Map Instantly interest status to our interest_status string.
- * i_status / lt_interest_status: -1 = not interested, 0 = neutral, 1 = interested
- * Uses loose equality (==) because the API may return strings instead of numbers.
- */
 function mapInterestStatus(iStatus: number | string | null | undefined): string | null {
   if (iStatus == null) return null
   // eslint-disable-next-line eqeqeq
@@ -30,14 +21,10 @@ function mapInterestStatus(iStatus: number | string | null | undefined): string 
   if (iStatus == 0) return 'neutral'
   // eslint-disable-next-line eqeqeq
   if (iStatus == -1) return 'negative'
-  // Unknown value — log it so we can debug
   console.warn(`mapInterestStatus: unexpected value ${JSON.stringify(iStatus)} (type: ${typeof iStatus})`)
   return null
 }
 
-/**
- * Get or create sync state for a campaign.
- */
 async function getSyncState(
   supabase: ReturnType<typeof createAdminClient>,
   clientId: string,
@@ -58,9 +45,6 @@ async function getSyncState(
   } | null
 }
 
-/**
- * Update sync state after a successful sync.
- */
 async function updateSyncState(
   supabase: ReturnType<typeof createAdminClient>,
   clientId: string,
@@ -85,10 +69,6 @@ async function updateSyncState(
     )
 }
 
-/**
- * Determine if a full sync is needed (vs incremental).
- * Full sync when: first sync ever, or last full sync was >24h ago.
- */
 function needsFullSync(syncState: { last_full_sync: string | null } | null): boolean {
   if (!syncState || !syncState.last_full_sync) return true
   const age = Date.now() - new Date(syncState.last_full_sync).getTime()
@@ -96,31 +76,91 @@ function needsFullSync(syncState: { last_full_sync: string | null } | null): boo
 }
 
 /**
+ * Get the client's Instantly API key from the database.
+ * Returns null if no key is configured.
+ */
+async function getClientApiKey(
+  supabase: ReturnType<typeof createAdminClient>,
+  clientId: string
+): Promise<string | null> {
+  const { data } = await supabase
+    .from('clients')
+    .select('instantly_api_key')
+    .eq('id', clientId)
+    .single()
+
+  return data?.instantly_api_key ?? null
+}
+
+/**
+ * Fetch all campaign IDs from the client's Instantly workspace.
+ */
+async function getAllWorkspaceCampaigns(apiKey: string): Promise<{ id: string; name: string }[]> {
+  const campaigns: { id: string; name: string }[] = []
+  let startingAfter: string | undefined
+
+  while (true) {
+    const response = await listCampaigns({
+      limit: 100,
+      startingAfter,
+      apiKey,
+    })
+
+    for (const campaign of response.items) {
+      campaigns.push({ id: campaign.id, name: campaign.name })
+    }
+
+    if (!response.next_starting_after) break
+    startingAfter = response.next_starting_after
+    await delay(RATE_LIMIT_DELAY_MS)
+  }
+
+  return campaigns
+}
+
+/**
  * Sync all campaign data for a single client.
- * Syncs analytics only. Lead updates happen via webhook-sync and /api/refresh.
- *
- * 1. Per campaign: sync analytics
+ * Uses the client's own Instantly API key to fetch all campaigns from their workspace.
  */
 export async function syncClientData(clientId: string, forceFullSync = false): Promise<void> {
   const supabase = createAdminClient()
 
-  const { data: campaigns, error: campaignError } = await supabase
-    .from('client_campaigns')
-    .select('campaign_id')
-    .eq('client_id', clientId)
-
-  if (campaignError) {
-    throw new Error(`Failed to fetch campaigns for client ${clientId}: ${campaignError.message}`)
+  const apiKey = await getClientApiKey(supabase, clientId)
+  if (!apiKey) {
+    console.log(`syncClientData: client=${clientId} has no API key — skipping`)
+    return
   }
 
-  if (!campaigns || campaigns.length === 0) return
+  // Fetch all campaigns from the client's workspace
+  const campaigns = await getAllWorkspaceCampaigns(apiKey)
+
+  if (campaigns.length === 0) {
+    console.log(`syncClientData: client=${clientId} has no campaigns in workspace`)
+    return
+  }
 
   console.log(
     `syncClientData: client=${clientId}, ${campaigns.length} campaign(s), forceFullSync=${forceFullSync}`
   )
 
-  for (const { campaign_id: campaignId } of campaigns) {
-    const syncState = await getSyncState(supabase, clientId, campaignId)
+  // Update client_campaigns table to keep it in sync
+  await supabase
+    .from('client_campaigns')
+    .delete()
+    .eq('client_id', clientId)
+
+  const campaignRows = campaigns.map((c) => ({
+    client_id: clientId,
+    campaign_id: c.id,
+    campaign_name: c.name,
+  }))
+
+  await supabase
+    .from('client_campaigns')
+    .upsert(campaignRows, { onConflict: 'client_id,campaign_id' })
+
+  for (const campaign of campaigns) {
+    const syncState = await getSyncState(supabase, clientId, campaign.id)
     const isFullSync = forceFullSync || needsFullSync(syncState)
     const analyticsDays = isFullSync ? ANALYTICS_DAYS_FULL : ANALYTICS_DAYS_INCREMENTAL
     const endDate = new Date().toISOString().split('T')[0]
@@ -129,12 +169,12 @@ export async function syncClientData(clientId: string, forceFullSync = false): P
       .split('T')[0]
 
     try {
-      const dailyAnalytics = await getCampaignDailyAnalytics(campaignId, startDate, endDate)
+      const dailyAnalytics = await getCampaignDailyAnalytics(campaign.id, startDate, endDate, apiKey)
 
       if (dailyAnalytics.length > 0) {
         const analyticsRows = dailyAnalytics.map((day) => ({
           client_id: clientId,
-          campaign_id: campaignId,
+          campaign_id: campaign.id,
           date: day.date,
           emails_sent: day.sent,
           leads_contacted: day.contacted,
@@ -151,26 +191,26 @@ export async function syncClientData(clientId: string, forceFullSync = false): P
           .upsert(analyticsRows, { onConflict: 'client_id,campaign_id,date' })
 
         if (analyticsError) {
-          console.error(`Failed to upsert analytics for campaign ${campaignId}:`, analyticsError.message)
+          console.error(`Failed to upsert analytics for campaign ${campaign.id}:`, analyticsError.message)
           await logError({
             clientId,
             errorType: 'sync_error',
-            message: `Analytics upsert mislukt voor campagne ${campaignId}`,
-            details: { campaignId, error: analyticsError.message },
+            message: `Analytics upsert mislukt voor campagne ${campaign.id}`,
+            details: { campaignId: campaign.id, error: analyticsError.message },
           })
         }
       }
     } catch (error) {
-      console.error(`Failed to sync analytics for campaign ${campaignId}:`, error)
+      console.error(`Failed to sync analytics for campaign ${campaign.id}:`, error)
       await logError({
         clientId,
         errorType: 'api_failure',
-        message: `Sync analytics mislukt voor campagne ${campaignId}`,
-        details: { campaignId, error: error instanceof Error ? error.message : String(error) },
+        message: `Sync analytics mislukt voor campagne ${campaign.id}`,
+        details: { campaignId: campaign.id, error: error instanceof Error ? error.message : String(error) },
       })
     }
 
-    await updateSyncState(supabase, clientId, campaignId, {
+    await updateSyncState(supabase, clientId, campaign.id, {
       last_analytics_sync: new Date().toISOString(),
       ...(isFullSync ? { last_full_sync: new Date().toISOString() } : {}),
     })
@@ -181,29 +221,20 @@ export async function syncClientData(clientId: string, forceFullSync = false): P
 
 /**
  * Lightweight inbox-only sync for a single client.
- * Only updates existing leads — does NOT discover new leads (webhook does that).
- * Skips analytics entirely. Used by "Verversen" button and 15-minute cron.
- *
- * For each existing lead in synced_leads:
- * 1. Fetch latest emails from Instantly
- * 2. Update interest_status, reply data, email counts
- * 3. Remove leads that are no longer positive
  */
 export async function syncInboxData(clientId: string): Promise<void> {
   const supabase = createAdminClient()
-  await updateExistingLeads(clientId, supabase)
+  const apiKey = await getClientApiKey(supabase, clientId)
+  if (!apiKey) return
+
+  await updateExistingLeads(clientId, supabase, apiKey)
 }
 
-/**
- * Core logic: update all existing synced_leads for a client.
- * Per lead: check interest_status via getCampaignsForEmail + listLeads,
- * update email cache, remove leads no longer positive.
- */
 async function updateExistingLeads(
   clientId: string,
-  supabase: ReturnType<typeof createAdminClient>
+  supabase: ReturnType<typeof createAdminClient>,
+  apiKey: string
 ): Promise<void> {
-  // Get all existing leads for this client
   const { data: existingLeads, error: leadsError } = await supabase
     .from('synced_leads')
     .select('id, email, campaign_id, interest_status, instantly_lead_id')
@@ -218,7 +249,6 @@ async function updateExistingLeads(
     return
   }
 
-  // Separate manually-added leads (not in Instantly) from synced leads
   const manualLeads = existingLeads.filter((l) => l.instantly_lead_id?.startsWith('manual:'))
   const syncedLeads = existingLeads.filter((l) => !l.instantly_lead_id?.startsWith('manual:'))
 
@@ -226,7 +256,6 @@ async function updateExistingLeads(
     console.log(`updateExistingLeads: client=${clientId} has ${manualLeads.length} manually-added lead(s) — skipping sync for those`)
   }
 
-  // Deduplicate by email (a lead may have multiple campaign rows)
   const uniqueEmails = [...new Set(syncedLeads.map((l) => l.email.toLowerCase()))]
 
   console.log(
@@ -242,10 +271,9 @@ async function updateExistingLeads(
     const email = uniqueEmails[i]
     if (i > 0) await delay(VERIFY_DELAY_MS)
 
-    // Verify this lead is still in the correct campaigns
     let instantlyCampaignIds: string[]
     try {
-      instantlyCampaignIds = await getCampaignsForEmail(email)
+      instantlyCampaignIds = await getCampaignsForEmail(email, apiKey)
     } catch (error) {
       console.error(`updateExistingLeads: getCampaignsForEmail failed for ${email}:`, error)
       errors++
@@ -253,28 +281,23 @@ async function updateExistingLeads(
     }
 
     const instantlySet = new Set(instantlyCampaignIds)
-
-    // Get this lead's synced rows for this client (manual leads already excluded)
     const leadRows = syncedLeads.filter((l) => l.email.toLowerCase() === email)
 
     for (const row of leadRows) {
       if (!instantlySet.has(row.campaign_id)) {
-        // Lead no longer in this campaign — delete
         await supabase.from('synced_leads').delete().eq('id', row.id)
         console.log(`updateExistingLeads: removed ${email} from campaign ${row.campaign_id} (not in Instantly)`)
         removed++
         continue
       }
 
-      // Lead still valid — fetch fresh data via listLeads(search=email)
       try {
-        const response = await listLeads(row.campaign_id, { search: email, limit: 10 })
+        const response = await listLeads(row.campaign_id, { search: email, limit: 10, apiKey })
         const lead = response.items.find((l) => l.email.toLowerCase().trim() === email)
 
         if (lead) {
           const interestStatus = mapInterestStatus(lead.lt_interest_status)
 
-          // If lead is no longer positive, remove from inbox
           if (interestStatus !== 'positive' && row.interest_status === 'positive') {
             await supabase.from('synced_leads').delete().eq('id', row.id)
             console.log(`updateExistingLeads: removed ${email} — no longer positive (now: ${interestStatus})`)
@@ -282,7 +305,6 @@ async function updateExistingLeads(
             continue
           }
 
-          // Update the lead with fresh data
           await supabase
             .from('synced_leads')
             .update({
@@ -304,10 +326,9 @@ async function updateExistingLeads(
       await delay(RATE_LIMIT_DELAY_MS)
     }
 
-    // Refresh cached emails for this lead
     await delay(RATE_LIMIT_DELAY_MS)
     try {
-      const emailResponse = await listEmails({ lead: email, limit: 100 })
+      const emailResponse = await listEmails({ lead: email, limit: 100, apiKey })
       if (emailResponse.items.length > 0) {
         const cacheRows = emailResponse.items.map((e) => ({
           client_id: clientId,
@@ -328,7 +349,6 @@ async function updateExistingLeads(
           .from('cached_emails')
           .upsert(cacheRows, { onConflict: 'instantly_email_id' })
 
-        // Update reply data on synced_leads
         const latestReply = emailResponse.items
           .filter((e) => e.ue_type === 2)
           .sort((a, b) =>
@@ -353,7 +373,6 @@ async function updateExistingLeads(
     }
   }
 
-  // Clean up orphaned cached_emails for removed leads
   if (removed > 0) {
     const { data: remainingLeads } = await supabase
       .from('synced_leads')
@@ -380,62 +399,32 @@ async function updateExistingLeads(
 }
 
 /**
- * Get all client IDs that have campaigns, sorted by least-recently-synced first.
- */
-async function getClientIdsSortedBySyncTime(
-  supabase: ReturnType<typeof createAdminClient>
-): Promise<string[]> {
-  const { data: clientCampaigns, error } = await supabase
-    .from('client_campaigns')
-    .select('client_id')
-
-  if (error) {
-    throw new Error(`Failed to fetch client campaigns: ${error.message}`)
-  }
-
-  if (!clientCampaigns || clientCampaigns.length === 0) return []
-
-  const clientIds = [...new Set(clientCampaigns.map((cc) => cc.client_id))]
-
-  const { data: syncTimes } = await supabase
-    .from('synced_leads')
-    .select('client_id, last_synced_at')
-    .in('client_id', clientIds)
-    .order('last_synced_at', { ascending: false })
-
-  const lastSyncMap = new Map<string, string>()
-  for (const row of syncTimes ?? []) {
-    if (!lastSyncMap.has(row.client_id)) {
-      lastSyncMap.set(row.client_id, row.last_synced_at)
-    }
-  }
-
-  clientIds.sort((a, b) => {
-    const aTime = lastSyncMap.get(a) ?? ''
-    const bTime = lastSyncMap.get(b) ?? ''
-    return aTime.localeCompare(bTime)
-  })
-
-  return clientIds
-}
-
-/**
- * Full sync for all clients (used by the daily 6 AM cron).
- * Syncs analytics only. Lead/email updates happen via webhook-sync and /api/refresh.
+ * Full sync for all clients (used by the daily cron).
+ * Only syncs clients that have an API key configured.
  */
 export async function syncAllClientsFull(): Promise<void> {
   const supabase = createAdminClient()
-  const clientIds = await getClientIdsSortedBySyncTime(supabase)
 
-  for (const clientId of clientIds) {
+  const { data: clients, error } = await supabase
+    .from('clients')
+    .select('id')
+    .not('instantly_api_key', 'is', null)
+
+  if (error) {
+    throw new Error(`Failed to fetch clients: ${error.message}`)
+  }
+
+  if (!clients || clients.length === 0) return
+
+  for (const client of clients) {
     try {
-      await syncClientData(clientId, true)
+      await syncClientData(client.id, true)
     } catch (error) {
-      console.error(`Full sync failed for client ${clientId}:`, error)
+      console.error(`Full sync failed for client ${client.id}:`, error)
       await logError({
-        clientId,
+        clientId: client.id,
         errorType: 'sync_error',
-        message: `Volledige sync mislukt voor klant ${clientId}`,
+        message: `Volledige sync mislukt voor klant ${client.id}`,
         details: { error: error instanceof Error ? error.message : String(error) },
       })
     }

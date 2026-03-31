@@ -9,9 +9,10 @@ import type {
 
 const BASE_URL = 'https://api.instantly.ai/api/v2'
 
-function getHeaders() {
+function getHeaders(apiKey?: string) {
+  const key = apiKey || process.env.INSTANTLY_API_KEY
   return {
-    Authorization: `Bearer ${process.env.INSTANTLY_API_KEY}`,
+    Authorization: `Bearer ${key}`,
     'Content-Type': 'application/json',
   }
 }
@@ -21,6 +22,7 @@ interface ListCampaignsOptions {
   status?: number
   limit?: number
   startingAfter?: string
+  apiKey?: string
 }
 
 export async function listCampaigns(
@@ -36,7 +38,7 @@ export async function listCampaigns(
   const response = await fetch(
     `${BASE_URL}/campaigns?${params.toString()}`,
     {
-      headers: getHeaders(),
+      headers: getHeaders(options?.apiKey),
       cache: 'no-store',
     }
   )
@@ -53,7 +55,8 @@ export async function listCampaigns(
 export async function getCampaignAnalyticsOverview(
   campaignIds: string[],
   startDate: string,
-  endDate: string
+  endDate: string,
+  apiKey?: string
 ): Promise<InstantlyCampaignAnalytics> {
   const params = new URLSearchParams({
     ids: campaignIds.join(','),
@@ -64,7 +67,7 @@ export async function getCampaignAnalyticsOverview(
   const response = await fetch(
     `${BASE_URL}/campaigns/analytics/overview?${params.toString()}`,
     {
-      headers: getHeaders(),
+      headers: getHeaders(apiKey),
       cache: 'no-store',
     }
   )
@@ -81,7 +84,8 @@ export async function getCampaignAnalyticsOverview(
 export async function getCampaignDailyAnalytics(
   campaignId: string,
   startDate: string,
-  endDate: string
+  endDate: string,
+  apiKey?: string
 ): Promise<InstantlyDailyAnalytics[]> {
   const params = new URLSearchParams({
     campaign_id: campaignId,
@@ -92,7 +96,7 @@ export async function getCampaignDailyAnalytics(
   const response = await fetch(
     `${BASE_URL}/campaigns/analytics/daily?${params.toString()}`,
     {
-      headers: getHeaders(),
+      headers: getHeaders(apiKey),
       cache: 'no-store',
     }
   )
@@ -108,19 +112,17 @@ export async function getCampaignDailyAnalytics(
 
 export async function listLeads(
   campaignId: string,
-  options?: { limit?: number; startingAfter?: string; interestStatus?: number; search?: string }
+  options?: { limit?: number; startingAfter?: string; interestStatus?: number; search?: string; apiKey?: string }
 ): Promise<InstantlyListResponse<InstantlyLead>> {
   const body: Record<string, unknown> = { campaign: campaignId }
   if (options?.limit) body.limit = options.limit
   if (options?.startingAfter) body.starting_after = options.startingAfter
-  // Note: interest_value does NOT filter server-side. Filter client-side on lt_interest_status instead.
-  // Kept for backward compat but has no effect.
   if (options?.interestStatus !== undefined) body.interest_value = options.interestStatus
   if (options?.search) body.search = options.search
 
   const response = await fetch(`${BASE_URL}/leads/list`, {
     method: 'POST',
-    headers: getHeaders(),
+    headers: getHeaders(options?.apiKey),
     body: JSON.stringify(body),
     cache: 'no-store',
   })
@@ -142,6 +144,7 @@ interface ListEmailsOptions {
   startingAfter?: string
   sortOrder?: 'asc' | 'desc'
   search?: string
+  apiKey?: string
 }
 
 export async function listEmails(
@@ -160,7 +163,7 @@ export async function listEmails(
   const response = await fetch(
     `${BASE_URL}/emails?${params.toString()}`,
     {
-      headers: getHeaders(),
+      headers: getHeaders(options?.apiKey),
       cache: 'no-store',
     }
   )
@@ -176,10 +179,8 @@ export async function listEmails(
 
 /**
  * Search campaigns that contain a specific lead email.
- * Uses GET /api/v2/campaigns/search-by-contact
- * Returns an array of campaign IDs where this email actually exists.
  */
-export async function getCampaignsForEmail(email: string): Promise<string[]> {
+export async function getCampaignsForEmail(email: string, apiKey?: string): Promise<string[]> {
   const params = new URLSearchParams({
     search: email,
   })
@@ -187,7 +188,7 @@ export async function getCampaignsForEmail(email: string): Promise<string[]> {
   const response = await fetch(
     `${BASE_URL}/campaigns/search-by-contact?${params.toString()}`,
     {
-      headers: getHeaders(),
+      headers: getHeaders(apiKey),
       cache: 'no-store',
     }
   )
@@ -198,12 +199,7 @@ export async function getCampaignsForEmail(email: string): Promise<string[]> {
     )
   }
 
-  // The response may be a list of campaign objects or an array
   const data = await response.json()
-
-  // Handle both possible response formats:
-  // Format 1: { items: [{ id: "...", name: "..." }, ...] }
-  // Format 2: [{ id: "...", name: "..." }, ...]
   const items = Array.isArray(data) ? data : (data.items ?? [])
   return items.map((c: { id: string }) => c.id)
 }
@@ -213,6 +209,7 @@ interface ReplyEmailOptions {
   replyToUuid: string
   subject: string
   bodyHtml: string
+  apiKey?: string
 }
 
 export async function replyToEmail(
@@ -220,7 +217,7 @@ export async function replyToEmail(
 ): Promise<InstantlyEmail> {
   const response = await fetch(`${BASE_URL}/emails/reply`, {
     method: 'POST',
-    headers: getHeaders(),
+    headers: getHeaders(options.apiKey),
     body: JSON.stringify({
       eaccount: options.eaccount,
       reply_to_uuid: options.replyToUuid,
