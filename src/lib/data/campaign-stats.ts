@@ -120,20 +120,9 @@ export async function getMonthlyStats(
     0
   )
 
-  // Fetch positive leads (all-time, distinct by email)
-  const { data: positiveLeads } = await supabase
-    .from('synced_leads')
-    .select('email')
-    .eq('client_id', clientId)
-    .eq('interest_status', 'positive')
-
-  const uniquePositive = new Set(
-    (positiveLeads ?? []).map((l) => l.email)
-  ).size
-
   return {
     totalReplies,
-    positiveLeads: uniquePositive,
+    positiveLeads: totalReplies,
     emailsSent,
   }
 }
@@ -145,16 +134,9 @@ export async function getMonthlyStats(
 export async function getUnansweredPositiveCount(
   clientId: string
 ): Promise<number> {
-  const supabase = await createClient()
-
-  const { data } = await supabase
-    .from('synced_leads')
-    .select('email')
-    .eq('client_id', clientId)
-    .eq('interest_status', 'positive')
-    .is('opened_at', null)
-
-  return new Set((data ?? []).map((l) => l.email)).size
+  // No longer tracking individual leads — return 0
+  void clientId
+  return 0
 }
 
 /**

@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { syncClientData, syncAllLeads } from '@/lib/instantly/sync'
+import { syncClientData } from '@/lib/instantly/sync'
 
 /**
  * On-demand sync endpoint for a single client.
@@ -49,11 +49,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    // Sync analytics and leads in parallel
-    await Promise.all([
-      syncClientData(clientId, force),
-      syncAllLeads(clientId),
-    ])
+    await syncClientData(clientId, force)
     return NextResponse.json({ synced: true })
   } catch (error) {
     console.error(`On-demand sync failed for client ${clientId}:`, error)
