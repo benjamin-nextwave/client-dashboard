@@ -124,10 +124,10 @@ export function InboxEmbedFrame({ proxyBaseUrl, targetHost }: InboxEmbedFramePro
         style={{
           border: 'none',
           position: 'absolute',
-          top: '-130px',
+          top: '-115px',
           left: '-96px',
           width: 'calc(100% + 96px)',
-          height: 'calc(100% + 130px)',
+          height: 'calc(100% + 115px)',
           display: 'block',
           opacity: iframeLoaded ? 1 : 0,
           transition: 'opacity 0.3s ease',
