@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { listCampaigns } from '@/lib/instantly/client'
 import { ClientForm } from '@/components/admin/client-form'
 import { updateClient } from '../../actions'
 
@@ -40,14 +39,6 @@ export default async function EditClientPage({ params }: EditClientPageProps) {
     )
   }
 
-  // Fetch client's current campaigns
-  const { data: clientCampaigns } = await supabase
-    .from('client_campaigns')
-    .select('campaign_id, campaign_name')
-    .eq('client_id', clientId)
-
-  const selectedCampaignIds = clientCampaigns?.map((c) => c.campaign_id) ?? []
-
   // Fetch client's auth user email
   let clientEmail = ''
   const { data: profile } = await supabase
@@ -62,22 +53,6 @@ export default async function EditClientPage({ params }: EditClientPageProps) {
     if (authUser?.user?.email) {
       clientEmail = authUser.user.email
     }
-  }
-
-  // Fetch available campaigns from Instantly API
-  let campaigns: { id: string; name: string }[] = []
-  let campaignWarning: string | null = null
-
-  try {
-    if (!process.env.INSTANTLY_API_KEY) {
-      campaignWarning = 'INSTANTLY_API_KEY is niet geconfigureerd. Campagnes kunnen niet worden opgehaald.'
-    } else {
-      const result = await listCampaigns({ limit: 100 })
-      campaigns = result.items.map((c) => ({ id: c.id, name: c.name }))
-    }
-  } catch (err) {
-    campaignWarning = 'Campagnes konden niet worden opgehaald van Instantly.'
-    console.warn('Failed to fetch campaigns:', err)
   }
 
   // Bind clientId to updateClient action
@@ -114,12 +89,6 @@ export default async function EditClientPage({ params }: EditClientPageProps) {
         </div>
       </div>
 
-      {campaignWarning && (
-        <div className="mb-4 rounded-md bg-yellow-50 p-4 text-sm text-yellow-700">
-          {campaignWarning}
-        </div>
-      )}
-
       <div className="rounded-lg bg-white p-6 shadow-sm">
         <ClientForm
           action={boundUpdate}
@@ -134,8 +103,6 @@ export default async function EditClientPage({ params }: EditClientPageProps) {
             chatInboxVisible: client.chat_inbox_visible ?? true,
             instantlyApiKey: client.instantly_api_key ?? '',
           }}
-          campaigns={campaigns}
-          selectedCampaignIds={selectedCampaignIds}
           currentLogoUrl={client.logo_url}
           isEditing={true}
           originalEmail={clientEmail}

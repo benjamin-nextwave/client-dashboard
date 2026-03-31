@@ -6,18 +6,9 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { clientFormSchema, clientEditSchema, type ClientFormValues, type ClientEditValues } from '@/lib/validations/client'
 import { ColorPicker } from './color-picker'
 import { LogoUpload } from './logo-upload'
-import { CampaignSelector } from './campaign-selector'
-
-interface Campaign {
-  id: string
-  name: string
-}
-
 interface ClientFormProps {
   action: (prevState: { error: string }, formData: FormData) => Promise<{ error: string }>
   defaultValues?: Partial<ClientFormValues>
-  campaigns: Campaign[]
-  selectedCampaignIds?: string[]
   currentLogoUrl?: string | null
   isEditing?: boolean
   originalEmail?: string
@@ -26,8 +17,6 @@ interface ClientFormProps {
 export function ClientForm({
   action,
   defaultValues,
-  campaigns,
-  selectedCampaignIds,
   currentLogoUrl,
   isEditing = false,
   originalEmail,
@@ -197,12 +186,6 @@ export function ClientForm({
           className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
         />
       </div>
-
-      {/* Campagnes */}
-      <CampaignSelector
-        campaigns={campaigns}
-        selectedIds={selectedCampaignIds}
-      />
 
       {/* Submit */}
       <div className="flex justify-end">

@@ -111,25 +111,6 @@ export async function createClient(
     }
   }
 
-  // Step 5: Handle campaign associations (non-fatal)
-  const campaignIds = formData.getAll('campaign_ids') as string[]
-  const campaignNames = formData.getAll('campaign_names') as string[]
-  if (campaignIds.length > 0) {
-    const campaignRows = campaignIds.map((id, index) => ({
-      client_id: client.id,
-      campaign_id: id,
-      campaign_name: campaignNames[index] || '',
-    }))
-
-    const { error: campaignError } = await supabase
-      .from('client_campaigns')
-      .insert(campaignRows)
-
-    if (campaignError) {
-      console.warn(`Campagne koppeling mislukt voor klant ${client.id}: ${campaignError.message}`)
-    }
-  }
-
   revalidatePath('/admin')
   redirect('/admin')
 }
@@ -229,34 +210,6 @@ export async function updateClient(
       console.warn(`Logo upload mislukt voor klant ${clientId}: ${uploadResult.error}`)
     } else {
       await supabase.from('clients').update({ logo_url: uploadResult.url }).eq('id', clientId)
-    }
-  }
-
-  // Handle campaigns: delete existing, insert new
-  const { error: deleteError } = await supabase
-    .from('client_campaigns')
-    .delete()
-    .eq('client_id', clientId)
-
-  if (deleteError) {
-    console.warn(`Campagnes verwijderen mislukt voor klant ${clientId}: ${deleteError.message}`)
-  }
-
-  const campaignIds = formData.getAll('campaign_ids') as string[]
-  const campaignNames = formData.getAll('campaign_names') as string[]
-  if (campaignIds.length > 0) {
-    const campaignRows = campaignIds.map((id, index) => ({
-      client_id: clientId,
-      campaign_id: id,
-      campaign_name: campaignNames[index] || '',
-    }))
-
-    const { error: campaignError } = await supabase
-      .from('client_campaigns')
-      .insert(campaignRows)
-
-    if (campaignError) {
-      console.warn(`Campagne koppeling mislukt voor klant ${clientId}: ${campaignError.message}`)
     }
   }
 
