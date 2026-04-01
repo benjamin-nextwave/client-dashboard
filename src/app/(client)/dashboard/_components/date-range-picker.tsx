@@ -6,7 +6,6 @@ const PRESETS = [
   { label: '7 dagen', value: '7d' },
   { label: '30 dagen', value: '30d' },
   { label: '90 dagen', value: '90d' },
-  { label: 'Deze maand', value: 'month' },
   { label: 'Alles', value: 'all' },
 ] as const
 
@@ -36,7 +35,7 @@ export function DateRangePicker({ currentRange }: DateRangePickerProps) {
       {PRESETS.map((preset) => {
         const isActive =
           currentRange === preset.value ||
-          (currentRange === '' && preset.value === 'all')
+          (currentRange === '' && preset.value === '30d')
         return (
           <button
             key={preset.value}

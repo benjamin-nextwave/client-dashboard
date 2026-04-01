@@ -1,11 +1,7 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { getClientBranding } from '@/lib/client/get-client-branding'
-import {
-  getMonthlyStats,
-  getUnansweredPositiveCount,
-  getDailyEmailsSent,
-} from '@/lib/data/campaign-stats'
+import { getOverviewStats, getDailyStats } from '@/lib/data/campaign-stats'
 import { OverzichtDashboard } from './_components/overzicht-dashboard'
 import { RefreshButton } from './_components/refresh-button'
 
@@ -35,19 +31,13 @@ function getDateRange(range: string | undefined): { startDate?: string; endDate?
         endDate,
         label: 'Afgelopen 90 dagen',
       }
-    case 'month':
-      return {
-        startDate: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`,
-        endDate,
-        label: 'Deze maand',
-      }
     case 'all':
       return { label: 'Alle tijd' }
     default:
       return {
-        startDate: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`,
+        startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         endDate,
-        label: 'Deze maand',
+        label: 'Afgelopen 30 dagen',
       }
   }
 }
@@ -63,14 +53,9 @@ export default async function OverzichtPage({
   const params = await searchParams
   const { startDate, endDate, label: periodLabel } = getDateRange(params.range)
 
-  const [
-    monthlyStats,
-    unansweredPositive,
-    dailyEmailsSent,
-  ] = await Promise.all([
-    getMonthlyStats(client.id, startDate, endDate),
-    getUnansweredPositiveCount(client.id),
-    getDailyEmailsSent(client.id, startDate, endDate),
+  const [stats, dailyStats] = await Promise.all([
+    getOverviewStats(client.id, startDate, endDate),
+    getDailyStats(client.id, startDate, endDate),
   ])
 
   return (
@@ -80,13 +65,12 @@ export default async function OverzichtPage({
         <RefreshButton />
       </div>
       <OverzichtDashboard
-        unansweredPositive={unansweredPositive}
-        totalReplies={monthlyStats.totalReplies}
-        positiveLeads={monthlyStats.positiveLeads}
-        emailsSent={monthlyStats.emailsSent}
-        dailyEmailsSent={dailyEmailsSent}
+        emailsSent={stats.emailsSent}
+        uniqueReplies={stats.uniqueReplies}
+        bounced={stats.bounced}
+        dailyStats={dailyStats}
         brandColor={client.primary_color ?? '#3B82F6'}
-        currentRange={params.range ?? ''}
+        currentRange={params.range ?? '30d'}
         periodLabel={periodLabel}
       />
     </div>

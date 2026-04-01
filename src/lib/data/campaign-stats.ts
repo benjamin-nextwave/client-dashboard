@@ -2,35 +2,40 @@ import { createClient } from '@/lib/supabase/server'
 
 // --- Types ---
 
-interface MonthlyStats {
-  totalReplies: number
-  positiveLeads: number
+export interface OverviewStats {
   emailsSent: number
+  uniqueReplies: number
+  bounced: number
+  activeCampaigns: number
 }
 
-// --- Helper: first day of current month ---
+export interface DailyStats {
+  date: string
+  emailsSent: number
+  replies: number
+}
+
+// --- Helper ---
 
 function firstDayOfMonth(): string {
   const now = new Date()
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
 }
 
-// --- Exported query functions ---
-
 /**
- * Get monthly stats: total replies and emails sent from campaign_analytics.
+ * Get overview stats from campaign_analytics for the given date range.
  */
-export async function getMonthlyStats(
+export async function getOverviewStats(
   clientId: string,
   startDate?: string,
   endDate?: string
-): Promise<MonthlyStats> {
+): Promise<OverviewStats> {
   const supabase = await createClient()
   const dateStart = startDate ?? firstDayOfMonth()
 
   let query = supabase
     .from('campaign_analytics')
-    .select('unique_replies, emails_sent')
+    .select('emails_sent, unique_replies, bounced')
     .eq('client_id', clientId)
     .gte('date', dateStart)
 
@@ -40,54 +45,31 @@ export async function getMonthlyStats(
 
   const { data: analytics } = await query
 
-  const totalReplies = (analytics ?? []).reduce(
-    (sum, row) => sum + (row.unique_replies ?? 0),
-    0
-  )
-  const emailsSent = (analytics ?? []).reduce(
-    (sum, row) => sum + (row.emails_sent ?? 0),
-    0
-  )
+  const rows = analytics ?? []
 
   return {
-    totalReplies,
-    positiveLeads: totalReplies,
-    emailsSent,
+    emailsSent: rows.reduce((sum, r) => sum + (r.emails_sent ?? 0), 0),
+    uniqueReplies: rows.reduce((sum, r) => sum + (r.unique_replies ?? 0), 0),
+    bounced: rows.reduce((sum, r) => sum + (r.bounced ?? 0), 0),
+    activeCampaigns: 0, // Will be set from sync result or separate query
   }
 }
 
 /**
- * No longer tracking individual leads — always returns 0.
- */
-export async function getUnansweredPositiveCount(
-  clientId: string
-): Promise<number> {
-  void clientId
-  return 0
-}
-
-// --- Daily email stats ---
-
-interface DailyEmailStat {
-  date: string
-  count: number
-}
-
-/**
- * Get emails sent per day for the given date range.
+ * Get daily stats: emails sent + replies per day.
  * Aggregates across all campaigns for the client.
  */
-export async function getDailyEmailsSent(
+export async function getDailyStats(
   clientId: string,
   startDate?: string,
   endDate?: string
-): Promise<DailyEmailStat[]> {
+): Promise<DailyStats[]> {
   const supabase = await createClient()
   const dateStart = startDate ?? firstDayOfMonth()
 
   let query = supabase
     .from('campaign_analytics')
-    .select('date, emails_sent')
+    .select('date, emails_sent, unique_replies')
     .eq('client_id', clientId)
     .gte('date', dateStart)
     .order('date', { ascending: true })
@@ -101,13 +83,16 @@ export async function getDailyEmailsSent(
   if (!data || data.length === 0) return []
 
   // Aggregate by date (multiple campaigns may have entries for same date)
-  const dateMap = new Map<string, number>()
+  const dateMap = new Map<string, { emailsSent: number; replies: number }>()
 
   for (const row of data) {
-    dateMap.set(row.date, (dateMap.get(row.date) ?? 0) + (row.emails_sent ?? 0))
+    const existing = dateMap.get(row.date) ?? { emailsSent: 0, replies: 0 }
+    existing.emailsSent += row.emails_sent ?? 0
+    existing.replies += row.unique_replies ?? 0
+    dateMap.set(row.date, existing)
   }
 
   return Array.from(dateMap.entries())
-    .map(([date, count]) => ({ date, count }))
+    .map(([date, stats]) => ({ date, ...stats }))
     .sort((a, b) => a.date.localeCompare(b.date))
 }
