@@ -3,6 +3,7 @@
 import { StatsCards } from './stats-cards'
 import { DailyChart } from './daily-chart'
 import { DateRangePicker } from './date-range-picker'
+import { ComingSoonCharts } from './coming-soon-charts'
 import { EmptyState } from '@/components/ui/empty-state'
 
 interface OverzichtDashboardProps {
@@ -56,6 +57,8 @@ export function OverzichtDashboard({
       <p className="text-center text-xs text-gray-400">
         Klik op &ldquo;Ververs de data&rdquo; om de nieuwste statistieken op te halen.
       </p>
+
+      <ComingSoonCharts />
     </div>
   )
 }

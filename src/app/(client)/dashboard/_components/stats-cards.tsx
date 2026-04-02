@@ -26,6 +26,7 @@ export function StatsCards({
     },
     {
       label: 'Unieke reacties',
+      subtitle: 'Excl. out-of-office en automatische antwoorden',
       value: uniqueReplies.toLocaleString('nl-NL'),
       icon: (
         <svg className="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -57,6 +58,9 @@ export function StatsCards({
             <div>
               <p className="text-sm text-gray-500">{card.label}</p>
               <p className="text-2xl font-bold text-gray-900">{card.value}</p>
+              {'subtitle' in card && card.subtitle && (
+                <p className="text-[10px] leading-tight text-gray-400">{card.subtitle}</p>
+              )}
             </div>
           </div>
           <p className="mt-2 text-xs text-gray-400">{periodLabel}</p>
