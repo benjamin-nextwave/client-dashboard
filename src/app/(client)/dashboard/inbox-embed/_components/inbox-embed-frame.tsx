@@ -56,6 +56,10 @@ export function InboxEmbedFrame({ proxyBaseUrl, targetHost }: InboxEmbedFramePro
               <p className="mt-1 text-sm text-gray-600">Log in om je inbox te bekijken</p>
             </div>
 
+            <div className="mb-4 rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-700">
+              <strong>Let op:</strong> de login van de inbox heeft niet hetzelfde wachtwoord als het dashboard.
+            </div>
+
             {error && (
               <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">
                 {error}

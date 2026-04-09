@@ -54,7 +54,7 @@ export default async function VoorkeurenPage() {
           {[
             { title: 'Algemene dashboard uitleg', id: 'b38fb5e422e947df8e3e3632c7093ffd' },
             { title: 'Reageren op mails', id: '41fbd7812a784bcea74b8e791ddb7279' },
-            { title: 'Inloggen in de inbox', id: '41fbd7812a784bcea74b8e791ddb7279' },
+            { title: 'Inloggen in de inbox', id: '87e25d43233745d8bd3771c71706389f' },
           ].map((video) => (
             <div key={video.title} className="overflow-hidden rounded-lg bg-white shadow-sm">
               <div className="px-5 py-3">
