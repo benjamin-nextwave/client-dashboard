@@ -33,7 +33,6 @@ export default async function ClientLayout({
         companyName={client.company_name}
         logoUrl={client.logo_url}
         signOutAction={signOut}
-        meetingUrl={client.meeting_url ?? undefined}
         inboxUrl={client.inbox_url ?? undefined}
         inboxVisible={client.inbox_visible ?? false}
       />
