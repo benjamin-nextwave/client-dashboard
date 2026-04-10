@@ -2,6 +2,82 @@ import { createAdminClient } from '@/lib/supabase/admin'
 
 // --- Types ---
 
+export type ClientOperationalStatus = 'active' | 'paused' | 'onboarding'
+
+export interface ClientListItem {
+  id: string
+  companyName: string
+  logoUrl: string | null
+  primaryColor: string | null
+  loginEmail: string | null
+  notificationEmail: string | null
+  inboxUrl: string | null
+  isRecruitment: boolean
+  isHidden: boolean
+  onboardingStatus: string
+  status: ClientOperationalStatus
+  password: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+/**
+ * Lightweight client list for the operator dashboard UI.
+ * No Instantly / analytics data — purely a client management view.
+ */
+export async function getClientList(): Promise<ClientListItem[]> {
+  const supabase = createAdminClient()
+
+  const [clientsResult, profilesResult, authResult] = await Promise.all([
+    supabase
+      .from('clients')
+      .select('id, company_name, primary_color, logo_url, notification_email, inbox_url, is_recruitment, is_hidden, onboarding_status, password, created_at, updated_at')
+      .order('company_name', { ascending: true }),
+    supabase.from('profiles').select('id, client_id').eq('user_role', 'client'),
+    supabase.auth.admin.listUsers({ perPage: 1000 }),
+  ])
+
+  if (clientsResult.error || !clientsResult.data) return []
+
+  // Build map: client_id → login email
+  const userIdToClientId = new Map<string, string>()
+  for (const p of profilesResult.data ?? []) {
+    if (p.client_id) userIdToClientId.set(p.id, p.client_id)
+  }
+  const emailByClientId = new Map<string, string>()
+  for (const user of authResult.data?.users ?? []) {
+    const clientId = userIdToClientId.get(user.id)
+    if (clientId && user.email) emailByClientId.set(clientId, user.email)
+  }
+
+  return clientsResult.data.map((client) => {
+    const isHidden = client.is_hidden ?? false
+    const onboardingStatus = client.onboarding_status ?? 'live'
+    const status: ClientOperationalStatus = isHidden
+      ? 'paused'
+      : onboardingStatus === 'onboarding'
+        ? 'onboarding'
+        : 'active'
+
+    return {
+      id: client.id,
+      companyName: client.company_name,
+      logoUrl: client.logo_url,
+      primaryColor: client.primary_color,
+      loginEmail: emailByClientId.get(client.id) ?? null,
+      notificationEmail: client.notification_email ?? null,
+      inboxUrl: client.inbox_url ?? null,
+      isRecruitment: client.is_recruitment,
+      isHidden,
+      onboardingStatus,
+      status,
+      password: client.password ?? null,
+      createdAt: client.created_at,
+      updatedAt: client.updated_at ?? client.created_at,
+    }
+  })
+}
+
 export interface CampaignStats {
   campaignId: string
   campaignName: string
