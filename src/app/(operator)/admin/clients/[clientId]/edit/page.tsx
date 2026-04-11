@@ -94,7 +94,8 @@ export default async function EditClientPage({ params }: EditClientPageProps) {
             )}
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <QuickLink href={`/admin/clients/${clientId}/campagne`} label="Campagne" highlight />
           <QuickLink href={`/admin/clients/${clientId}/contacten`} label="Contacten" />
           <QuickLink href={`/admin/clients/${clientId}/csv`} label="CSV" />
           <QuickLink href={`/admin/clients/${clientId}/onboarding`} label="Onboarding" />
@@ -123,11 +124,15 @@ export default async function EditClientPage({ params }: EditClientPageProps) {
   )
 }
 
-function QuickLink({ href, label }: { href: string; label: string }) {
+function QuickLink({ href, label, highlight }: { href: string; label: string; highlight?: boolean }) {
   return (
     <Link
       href={href}
-      className="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-indigo-200 hover:text-indigo-600 hover:shadow"
+      className={`inline-flex items-center rounded-lg border px-3 py-1.5 text-xs font-semibold shadow-sm transition-all hover:-translate-y-0.5 hover:shadow ${
+        highlight
+          ? 'border-indigo-200 bg-indigo-50 text-indigo-700 hover:border-indigo-300 hover:bg-indigo-100'
+          : 'border-gray-200 bg-white text-gray-700 hover:border-indigo-200 hover:text-indigo-600'
+      }`}
     >
       {label}
     </Link>

@@ -66,3 +66,50 @@ export async function deleteClientLogo(clientId: string): Promise<void> {
     await supabase.storage.from(LOGO_BUCKET).remove(filePaths)
   }
 }
+
+// --- Campaign variants PDF ---
+
+const CAMPAIGN_PDF_BUCKET = 'campaign-pdfs'
+const MAX_PDF_SIZE = 20 * 1024 * 1024 // 20MB
+
+export async function uploadCampaignVariantsPdf(
+  clientId: string,
+  file: File
+): Promise<{ url: string } | { error: string }> {
+  if (file.type !== 'application/pdf') {
+    return { error: `Alleen PDF bestanden toegestaan (ontvangen: ${file.type || 'onbekend'}).` }
+  }
+  if (file.size > MAX_PDF_SIZE) {
+    return { error: 'Bestand is te groot. Maximaal 20MB.' }
+  }
+
+  // Unique filename to bust browser/CDN cache on replace
+  const path = `${clientId}/mailvarianten-${Date.now()}.pdf`
+
+  const supabase = createAdminClient()
+
+  const { error } = await supabase.storage
+    .from(CAMPAIGN_PDF_BUCKET)
+    .upload(path, file, {
+      upsert: true,
+      contentType: 'application/pdf',
+    })
+
+  if (error) {
+    return { error: `Upload mislukt: ${error.message}` }
+  }
+
+  const { data } = supabase.storage.from(CAMPAIGN_PDF_BUCKET).getPublicUrl(path)
+  return { url: data.publicUrl }
+}
+
+export async function deleteCampaignVariantsPdf(clientId: string): Promise<void> {
+  const supabase = createAdminClient()
+  const { data: files } = await supabase.storage
+    .from(CAMPAIGN_PDF_BUCKET)
+    .list(clientId)
+  if (files && files.length > 0) {
+    const paths = files.map((f) => `${clientId}/${f.name}`)
+    await supabase.storage.from(CAMPAIGN_PDF_BUCKET).remove(paths)
+  }
+}

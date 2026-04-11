@@ -1,22 +1,16 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import type { FeedbackRequest, FeedbackWithClient } from './feedback-types'
 
-export type FeedbackRequest = {
-  id: string
-  client_id: string
-  user_id: string
-  category: 'bug' | 'new_feature' | 'optimization' | 'other'
-  title: string
-  description: string
-  status: 'new' | 'in_progress' | 'thinking' | 'denied' | 'applied'
-  operator_response: string | null
-  created_at: string
-  updated_at: string
-}
-
-export type FeedbackWithClient = FeedbackRequest & {
-  company_name: string
-}
+// Re-export types and constants for existing callers
+export type {
+  FeedbackCategory,
+  FeedbackMetadata,
+  FeedbackRequest,
+  FeedbackWithClient,
+  VariantReason,
+} from './feedback-types'
+export { VARIANT_REASONS, VARIANT_REASON_LABELS } from './feedback-types'
 
 export async function getClientFeedback(clientId: string): Promise<FeedbackRequest[]> {
   const supabase = await createClient()

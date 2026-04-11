@@ -2,72 +2,85 @@
 
 import { useState } from 'react'
 import { submitFeedback } from '@/lib/actions/feedback-actions'
-import type { FeedbackRequest } from '@/lib/data/feedback-data'
+import {
+  VARIANT_REASONS,
+  VARIANT_REASON_LABELS,
+  type FeedbackRequest,
+  type VariantReason,
+} from '@/lib/data/feedback-types'
 import { EmptyState } from '@/components/ui/empty-state'
 
-const CATEGORIES = [
+type CategoryValue =
+  | 'campaign_performance'
+  | 'new_mail_variants'
+  | 'bug'
+  | 'new_feature'
+  | 'optimization'
+  | 'other'
+
+type CategoryDef = {
+  value: CategoryValue
+  label: string
+  description: string
+  group: 'campagne' | 'dashboard'
+}
+
+const CATEGORIES: CategoryDef[] = [
+  {
+    value: 'campaign_performance',
+    label: 'Campagne presteert niet goed genoeg',
+    description: 'Ik ben niet tevreden over de resultaten van de campagne.',
+    group: 'campagne',
+  },
+  {
+    value: 'new_mail_variants',
+    label: 'Ik wil nieuwe mailvarianten',
+    description: 'De huidige mails moeten aangepast of vervangen worden.',
+    group: 'campagne',
+  },
   {
     value: 'bug',
-    label: 'Bug melden',
-    description: 'Iets werkt niet goed',
-    icon: (
-      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 12.75c1.148 0 2.278.08 3.383.237 1.037.146 1.866.966 1.866 2.013 0 3.728-2.35 6.75-5.25 6.75S6.75 18.728 6.75 15c0-1.046.83-1.867 1.866-2.013A24.204 24.204 0 0 1 12 12.75Zm0 0c2.883 0 5.647.508 8.207 1.44a23.91 23.91 0 0 1-1.152-6.135c-.117-1.08-.83-1.965-1.777-2.413A5.98 5.98 0 0 0 12 5.25a5.98 5.98 0 0 0-5.278.465c-.947.448-1.66 1.333-1.777 2.413a23.91 23.91 0 0 1-1.152 6.135A24.29 24.29 0 0 1 12 12.75ZM2.695 18.678a17.891 17.891 0 0 1 2.555-7.384m13.5 7.384a17.891 17.891 0 0 0-2.555-7.384" />
-      </svg>
-    ),
-    color: 'border-red-200 bg-red-50 text-red-700',
-    selectedColor: 'border-red-400 bg-red-50 ring-2 ring-red-200',
-    iconBg: 'bg-red-100',
+    label: 'Er werkt iets niet',
+    description: 'Melding van een bug of storing in het dashboard.',
+    group: 'dashboard',
   },
   {
     value: 'new_feature',
     label: 'Nieuwe functie',
-    description: 'Iets nieuws toevoegen',
-    icon: (
-      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 0 0 1.5-.189m-1.5.189a6.01 6.01 0 0 1-1.5-.189m3.75 7.478a12.06 12.06 0 0 1-4.5 0m3.75 2.383a14.406 14.406 0 0 1-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 1 0-7.517 0c.85.493 1.509 1.333 1.509 2.316V18" />
-      </svg>
-    ),
-    color: 'border-purple-200 bg-purple-50 text-purple-700',
-    selectedColor: 'border-purple-400 bg-purple-50 ring-2 ring-purple-200',
-    iconBg: 'bg-purple-100',
+    description: 'Ik heb een idee voor iets nieuws in het dashboard.',
+    group: 'dashboard',
   },
   {
     value: 'optimization',
     label: 'Verbetering',
-    description: 'Bestaande functie verbeteren',
-    icon: (
-      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
-      </svg>
-    ),
-    color: 'border-amber-200 bg-amber-50 text-amber-700',
-    selectedColor: 'border-amber-400 bg-amber-50 ring-2 ring-amber-200',
-    iconBg: 'bg-amber-100',
+    description: 'Een bestaande functie kan beter.',
+    group: 'dashboard',
   },
   {
     value: 'other',
     label: 'Anders',
-    description: 'Overige feedback',
-    icon: (
-      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z" />
-      </svg>
-    ),
-    color: 'border-gray-200 bg-gray-50 text-gray-700',
-    selectedColor: 'border-gray-400 bg-gray-50 ring-2 ring-gray-200',
-    iconBg: 'bg-gray-100',
+    description: 'Overige vraag of opmerking.',
+    group: 'dashboard',
   },
 ]
 
-const CATEGORY_LABELS: Record<string, string> = {
-  bug: 'Bug',
-  new_feature: 'Nieuwe functie',
-  optimization: 'Verbetering',
-  other: 'Anders',
+const CATEGORY_LABELS: Record<string, string> = Object.fromEntries(
+  CATEGORIES.map((c) => [c.value, c.label])
+)
+
+const CATEGORY_TAG_COLORS: Record<string, string> = {
+  campaign_performance: 'bg-rose-100 text-rose-700',
+  new_mail_variants: 'bg-indigo-100 text-indigo-700',
+  bug: 'bg-red-100 text-red-700',
+  new_feature: 'bg-purple-100 text-purple-700',
+  optimization: 'bg-amber-100 text-amber-700',
+  other: 'bg-gray-100 text-gray-700',
 }
 
-const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; border: string; icon: React.ReactNode }> = {
+const STATUS_CONFIG: Record<
+  string,
+  { label: string; bg: string; text: string; border: string; icon: React.ReactNode }
+> = {
   new: {
     label: 'Nieuw',
     bg: 'bg-gray-50',
@@ -97,7 +110,7 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; b
     border: 'border-yellow-200',
     icon: (
       <svg className="h-4 w-4 text-yellow-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 0 0 1.5-.189m-1.5.189a6.01 6.01 0 0 1-1.5-.189m3.75 7.478a12.06 12.06 0 0 1-4.5 0m3.75 2.383a14.406 14.406 0 0 1-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 1 0-7.517 0c.85.493 1.509 1.333 1.509 2.316V18" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 0 0 1.5-.189m-1.5.189a6.01 6.01 0 0 1-1.5-.189" />
       </svg>
     ),
   },
@@ -125,26 +138,31 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; b
   },
 }
 
-const CATEGORY_TAG_COLORS: Record<string, string> = {
-  bug: 'bg-red-100 text-red-700',
-  new_feature: 'bg-purple-100 text-purple-700',
-  optimization: 'bg-amber-100 text-amber-700',
-  other: 'bg-gray-100 text-gray-700',
-}
-
 export function FeedbackPage({ feedbackRequests }: { feedbackRequests: FeedbackRequest[] }) {
-  const [category, setCategory] = useState('new_feature')
+  const [category, setCategory] = useState<CategoryValue>('campaign_performance')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
+  const [variantReasons, setVariantReasons] = useState<VariantReason[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+
+  const toggleReason = (reason: VariantReason) => {
+    setVariantReasons((prev) =>
+      prev.includes(reason) ? prev.filter((r) => r !== reason) : [...prev, reason]
+    )
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setSubmitting(true)
     setFeedback(null)
 
-    const result = await submitFeedback({ category, title, description })
+    const metadata =
+      category === 'new_mail_variants' && variantReasons.length > 0
+        ? { variant_reasons: variantReasons }
+        : null
+
+    const result = await submitFeedback({ category, title, description, metadata })
 
     if ('error' in result) {
       setFeedback({ type: 'error', message: result.error })
@@ -152,53 +170,104 @@ export function FeedbackPage({ feedbackRequests }: { feedbackRequests: FeedbackR
       setFeedback({ type: 'success', message: 'Verzoek ingediend!' })
       setTitle('')
       setDescription('')
-      setCategory('new_feature')
+      setVariantReasons([])
+      setCategory('campaign_performance')
     }
 
     setSubmitting(false)
     setTimeout(() => setFeedback(null), 4000)
   }
 
+  const campagneCats = CATEGORIES.filter((c) => c.group === 'campagne')
+  const dashboardCats = CATEGORIES.filter((c) => c.group === 'dashboard')
+
   return (
     <div className="space-y-10">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Contact & feedback</h1>
+        <p className="mt-1 text-sm text-gray-500">
+          Stel een vraag, geef feedback over de campagne of het dashboard, of vraag nieuwe
+          mailvarianten aan. Je krijgt een reactie van ons team zodra het is opgepakt.
+        </p>
+      </div>
+
       {/* Submission Form */}
-      <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
         <div className="border-b border-gray-100 px-6 py-4">
           <h2 className="text-base font-semibold text-gray-900">Nieuw verzoek indienen</h2>
-          <p className="mt-0.5 text-sm text-gray-500">Kies een categorie en beschrijf uw verzoek.</p>
+          <p className="mt-0.5 text-sm text-gray-500">Kies waar je contact over wilt opnemen.</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6">
-          {/* Category Cards */}
-          <fieldset>
-            <legend className="mb-3 text-sm font-medium text-gray-700">Categorie</legend>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {CATEGORIES.map((cat) => {
-                const isSelected = category === cat.value
-                return (
-                  <button
-                    key={cat.value}
-                    type="button"
-                    onClick={() => setCategory(cat.value)}
-                    className={`relative flex flex-col items-center rounded-lg border px-3 py-4 text-center transition-all ${
-                      isSelected ? cat.selectedColor : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    <span className={`flex h-9 w-9 items-center justify-center rounded-full ${isSelected ? cat.iconBg : 'bg-gray-100'}`}>
-                      <span className={isSelected ? '' : 'text-gray-400'}>{cat.icon}</span>
-                    </span>
-                    <span className={`mt-2 text-sm font-medium ${isSelected ? 'text-gray-900' : 'text-gray-600'}`}>
-                      {cat.label}
-                    </span>
-                    <span className="mt-0.5 text-xs text-gray-400">{cat.description}</span>
-                  </button>
-                )
-              })}
+        <form onSubmit={handleSubmit} className="space-y-6 p-6">
+          {/* Category — two clearly separated groups */}
+          <div className="grid gap-4 lg:grid-cols-2">
+            <CategoryGroup
+              variant="campagne"
+              title="Over de campagne"
+              description="Feedback over resultaten, mailvarianten of de inhoud van je campagne."
+              icon={
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+                </svg>
+              }
+              categories={campagneCats}
+              selected={category}
+              onSelect={setCategory}
+            />
+            <CategoryGroup
+              variant="dashboard"
+              title="Over het dashboard"
+              description="Vragen over dit platform: storingen, nieuwe functies of verbeteringen."
+              icon={
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25m18 0A2.25 2.25 0 0 0 18.75 3H5.25A2.25 2.25 0 0 0 3 5.25m18 0V12a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 12V5.25" />
+                </svg>
+              }
+              categories={dashboardCats}
+              selected={category}
+              onSelect={setCategory}
+            />
+          </div>
+
+          {/* Mail variant reasons — only when relevant */}
+          {category === 'new_mail_variants' && (
+            <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-4">
+              <div className="text-sm font-semibold text-indigo-900">
+                Wat wil je aangepast hebben?
+              </div>
+              <p className="mt-0.5 text-xs text-indigo-700">
+                Selecteer één of meerdere punten — dit helpt ons de juiste varianten te schrijven.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {VARIANT_REASONS.map((reason) => {
+                  const active = variantReasons.includes(reason)
+                  return (
+                    <button
+                      key={reason}
+                      type="button"
+                      onClick={() => toggleReason(reason)}
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all ${
+                        active
+                          ? 'border-indigo-500 bg-indigo-600 text-white shadow-sm shadow-indigo-500/30'
+                          : 'border-indigo-200 bg-white text-indigo-700 hover:border-indigo-300 hover:bg-indigo-100'
+                      }`}
+                    >
+                      {active && (
+                        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                        </svg>
+                      )}
+                      {VARIANT_REASON_LABELS[reason]}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
-          </fieldset>
+          )}
 
           {/* Title + Description */}
-          <div className="mt-5 space-y-4">
+          <div className="space-y-4">
             <div>
               <label htmlFor="title" className="block text-sm font-medium text-gray-700">
                 Titel
@@ -210,14 +279,14 @@ export function FeedbackPage({ feedbackRequests }: { feedbackRequests: FeedbackR
                 onChange={(e) => setTitle(e.target.value)}
                 required
                 maxLength={200}
-                placeholder="Korte beschrijving van uw verzoek"
-                className="mt-1.5 block w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm shadow-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                placeholder="Korte samenvatting van je verzoek"
+                className="mt-1.5 block w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm shadow-sm transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
             </div>
 
             <div>
               <label htmlFor="description" className="block text-sm font-medium text-gray-700">
-                Beschrijving
+                Toelichting
               </label>
               <textarea
                 id="description"
@@ -225,19 +294,25 @@ export function FeedbackPage({ feedbackRequests }: { feedbackRequests: FeedbackR
                 onChange={(e) => setDescription(e.target.value)}
                 required
                 maxLength={5000}
-                rows={4}
-                placeholder="Beschrijf uw verzoek in detail..."
-                className="mt-1.5 block w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm shadow-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                rows={5}
+                placeholder={
+                  category === 'new_mail_variants'
+                    ? 'Leg in detail uit wat je anders wilt: toon, inhoud, voorbeelden...'
+                    : category === 'campaign_performance'
+                      ? 'Wat mis je? Welke cijfers vallen tegen? Wat had je verwacht?'
+                      : 'Beschrijf je verzoek zo volledig mogelijk.'
+                }
+                className="mt-1.5 block w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm shadow-sm transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
             </div>
           </div>
 
-          {/* Feedback + Submit */}
-          <div className="mt-5 flex items-center gap-4">
+          {/* Submit */}
+          <div className="flex items-center gap-4">
             <button
               type="submit"
               disabled={submitting}
-              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-600/30 transition-all hover:-translate-y-0.5 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
             >
               {submitting ? (
                 <>
@@ -249,16 +324,20 @@ export function FeedbackPage({ feedbackRequests }: { feedbackRequests: FeedbackR
                 </>
               ) : (
                 <>
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
-                  </svg>
                   Verzoek indienen
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                  </svg>
                 </>
               )}
             </button>
 
             {feedback && (
-              <p className={`text-sm font-medium ${feedback.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+              <p
+                className={`text-sm font-medium ${
+                  feedback.type === 'success' ? 'text-green-600' : 'text-red-600'
+                }`}
+              >
                 {feedback.message}
               </p>
             )}
@@ -271,7 +350,9 @@ export function FeedbackPage({ feedbackRequests }: { feedbackRequests: FeedbackR
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-base font-semibold text-gray-900">Mijn verzoeken</h2>
           {feedbackRequests.length > 0 && (
-            <span className="text-sm text-gray-400">{feedbackRequests.length} verzoek{feedbackRequests.length !== 1 ? 'en' : ''}</span>
+            <span className="text-sm text-gray-400">
+              {feedbackRequests.length} verzoek{feedbackRequests.length !== 1 ? 'en' : ''}
+            </span>
           )}
         </div>
 
@@ -283,48 +364,61 @@ export function FeedbackPage({ feedbackRequests }: { feedbackRequests: FeedbackR
               </svg>
             }
             title="Geen verzoeken"
-            description="U heeft nog geen feedback verzoeken ingediend."
+            description="Je hebt nog geen verzoeken ingediend."
           />
         ) : (
           <div className="space-y-3">
             {feedbackRequests.map((req) => {
               const status = STATUS_CONFIG[req.status] ?? STATUS_CONFIG.new
               const catColor = CATEGORY_TAG_COLORS[req.category] ?? CATEGORY_TAG_COLORS.other
+              const reasons = req.metadata?.variant_reasons ?? []
 
               return (
                 <div
                   key={req.id}
-                  className={`overflow-hidden rounded-xl border ${status.border} ${status.bg} transition-colors`}
+                  className={`overflow-hidden rounded-xl border ${status.border} ${status.bg}`}
                 >
                   <div className="px-5 py-4">
-                    {/* Header row */}
                     <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-2.5">
-                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/80 shadow-sm">
+                      <div className="flex items-start gap-2.5">
+                        <span className="mt-0.5 flex h-7 w-7 items-center justify-center rounded-full bg-white/80 shadow-sm">
                           {status.icon}
                         </span>
                         <div>
                           <h3 className="text-sm font-semibold text-gray-900">{req.title}</h3>
-                          <div className="mt-0.5 flex items-center gap-2">
+                          <div className="mt-0.5 flex flex-wrap items-center gap-2">
                             <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${catColor}`}>
                               {CATEGORY_LABELS[req.category] ?? req.category}
                             </span>
-                            <span className={`text-xs font-medium ${status.text}`}>
-                              {status.label}
-                            </span>
+                            <span className={`text-xs font-medium ${status.text}`}>{status.label}</span>
                           </div>
                         </div>
                       </div>
                       <span className="shrink-0 rounded-md bg-white/60 px-2 py-0.5 text-xs text-gray-500">
-                        {new Date(req.created_at).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        {new Date(req.created_at).toLocaleDateString('nl-NL', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
                       </span>
                     </div>
 
-                    {/* Description */}
+                    {reasons.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        {reasons.map((r) => (
+                          <span
+                            key={r}
+                            className="inline-flex items-center gap-1 rounded-full bg-white/60 px-2 py-0.5 text-[10px] font-semibold text-indigo-700 ring-1 ring-indigo-100"
+                          >
+                            {VARIANT_REASON_LABELS[r]}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
                     <p className="mt-3 text-sm leading-relaxed text-gray-600">{req.description}</p>
                   </div>
 
-                  {/* Operator response */}
                   {req.operator_response && (
                     <div className="border-t border-white/50 bg-white/60 px-5 py-3">
                       <div className="flex items-start gap-2.5">
@@ -335,7 +429,9 @@ export function FeedbackPage({ feedbackRequests }: { feedbackRequests: FeedbackR
                         </span>
                         <div>
                           <p className="text-xs font-semibold text-gray-500">Reactie van NextWave</p>
-                          <p className="mt-0.5 text-sm text-gray-700">{req.operator_response}</p>
+                          <p className="mt-0.5 whitespace-pre-wrap text-sm text-gray-700">
+                            {req.operator_response}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -347,5 +443,132 @@ export function FeedbackPage({ feedbackRequests }: { feedbackRequests: FeedbackR
         )}
       </div>
     </div>
+  )
+}
+
+type GroupVariant = 'campagne' | 'dashboard'
+
+const GROUP_THEME: Record<
+  GroupVariant,
+  {
+    container: string
+    iconWrap: string
+    iconColor: string
+    eyebrow: string
+    title: string
+    description: string
+    activeCard: string
+    activeDot: string
+    activeLabel: string
+    activeDesc: string
+    inactiveCard: string
+  }
+> = {
+  campagne: {
+    container:
+      'relative overflow-hidden rounded-2xl border-2 border-rose-200 bg-gradient-to-br from-rose-50 via-white to-orange-50 p-5 shadow-sm',
+    iconWrap: 'bg-rose-500 text-white shadow-lg shadow-rose-500/30',
+    iconColor: '',
+    eyebrow: 'text-rose-600',
+    title: 'text-rose-950',
+    description: 'text-rose-800/70',
+    activeCard: 'border-rose-500 bg-white shadow-sm ring-2 ring-rose-200',
+    activeDot: 'border-rose-500 bg-rose-500',
+    activeLabel: 'text-rose-950',
+    activeDesc: 'text-rose-800',
+    inactiveCard: 'border-rose-200/60 bg-white/60 hover:border-rose-300 hover:bg-white',
+  },
+  dashboard: {
+    container:
+      'relative overflow-hidden rounded-2xl border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 via-white to-violet-50 p-5 shadow-sm',
+    iconWrap: 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30',
+    iconColor: '',
+    eyebrow: 'text-indigo-600',
+    title: 'text-indigo-950',
+    description: 'text-indigo-800/70',
+    activeCard: 'border-indigo-500 bg-white shadow-sm ring-2 ring-indigo-200',
+    activeDot: 'border-indigo-500 bg-indigo-500',
+    activeLabel: 'text-indigo-950',
+    activeDesc: 'text-indigo-800',
+    inactiveCard: 'border-indigo-200/60 bg-white/60 hover:border-indigo-300 hover:bg-white',
+  },
+}
+
+function CategoryGroup({
+  variant,
+  title,
+  description,
+  icon,
+  categories,
+  selected,
+  onSelect,
+}: {
+  variant: GroupVariant
+  title: string
+  description: string
+  icon: React.ReactNode
+  categories: CategoryDef[]
+  selected: CategoryValue
+  onSelect: (v: CategoryValue) => void
+}) {
+  const theme = GROUP_THEME[variant]
+  const glowColor = variant === 'campagne' ? 'from-rose-300/30' : 'from-indigo-300/30'
+
+  return (
+    <section className={theme.container}>
+      <div className={`pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-gradient-to-br ${glowColor} to-transparent blur-3xl`} />
+      <div className="relative">
+        <div className="flex items-start gap-3">
+          <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl ${theme.iconWrap}`}>
+            {icon}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className={`text-[10px] font-bold uppercase tracking-widest ${theme.eyebrow}`}>
+              Categorie
+            </div>
+            <h3 className={`mt-0.5 text-base font-bold ${theme.title}`}>{title}</h3>
+            <p className={`mt-1 text-xs leading-relaxed ${theme.description}`}>{description}</p>
+          </div>
+        </div>
+
+        <div className="mt-4 space-y-2">
+          {categories.map((cat) => {
+            const active = selected === cat.value
+            return (
+              <button
+                key={cat.value}
+                type="button"
+                onClick={() => onSelect(cat.value)}
+                className={`flex w-full items-start gap-3 rounded-xl border px-4 py-3 text-left transition-all ${
+                  active ? theme.activeCard : theme.inactiveCard
+                }`}
+              >
+                <div
+                  className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 ${
+                    active ? theme.activeDot : 'border-gray-300 bg-white'
+                  }`}
+                >
+                  {active && <div className="h-2 w-2 rounded-full bg-white" />}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div
+                    className={`text-sm font-semibold ${
+                      active ? theme.activeLabel : 'text-gray-900'
+                    }`}
+                  >
+                    {cat.label}
+                  </div>
+                  <div
+                    className={`mt-0.5 text-xs ${active ? theme.activeDesc : 'text-gray-500'}`}
+                  >
+                    {cat.description}
+                  </div>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    </section>
   )
 }
