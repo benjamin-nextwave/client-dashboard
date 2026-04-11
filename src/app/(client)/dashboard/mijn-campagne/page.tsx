@@ -45,6 +45,10 @@ export default async function MijnCampagnePage() {
 
   const tasks = deriveTasks(state)
 
+  // The DNC block (step 6) only becomes visible when it is the active step —
+  // i.e. all previous tasks (form, drafts, variants, preview) are done.
+  const dncIsCurrent = tasks.find((t) => t.status === 'current')?.id === 'dnc'
+
   return (
     <div className="space-y-8">
       <div>
@@ -70,7 +74,7 @@ export default async function MijnCampagnePage() {
 
           <CampaignBody state={state} />
 
-          <DncBlock dncConfirmedAt={state.dncConfirmedAt} />
+          {dncIsCurrent && <DncBlock dncConfirmedAt={state.dncConfirmedAt} />}
         </>
       )}
 
