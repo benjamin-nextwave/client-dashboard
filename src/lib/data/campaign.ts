@@ -170,10 +170,10 @@ export function deriveTasks(state: CampaignState): CampaignTask[] {
   const task3Done = state.mailDraftsReady && state.previewFilled
   const task4Done = !!state.variantsApprovedAt
   const task5Done = !!state.previewApprovedAt
-  // Task 6 (DNC) is optional — we mark it upcoming unless everything else done
+  const task6Done = !!state.dncConfirmedAt
 
-  const doneFlags = [task1Done, task2Done, task3Done, task4Done, task5Done]
-  // First not-done index is "current"
+  const doneFlags = [task1Done, task2Done, task3Done, task4Done, task5Done, task6Done]
+  // First not-done index is "current". -1 means everything is done.
   const currentIndex = doneFlags.findIndex((d) => !d)
 
   const statusFor = (i: number, done: boolean): TaskStatus => {
@@ -218,7 +218,7 @@ export function deriveTasks(state: CampaignState): CampaignTask[] {
       id: 'dnc',
       label: 'DNC-lijst aanvullen (optioneel)',
       assignee: 'client',
-      status: state.dncConfirmedAt ? 'completed' : 'upcoming',
+      status: statusFor(5, task6Done),
     },
   ]
 }

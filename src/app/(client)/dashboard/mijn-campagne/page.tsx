@@ -39,11 +39,12 @@ export default async function MijnCampagnePage() {
   // Clients only see variants that are explicitly published by the operator
   const variants = allVariants.filter((v) => v.isPublished)
 
-  // DNC confirmation is the final step: once done, the tracker + action
-  // blocks disappear and a "Onboarding voltooid" banner takes their place.
-  const onboardingDone = !!state.dncConfirmedAt
-
   const tasks = deriveTasks(state)
+
+  // Onboarding is done as soon as *every* task is completed — regardless
+  // of the order the client handled them. The tracker + action blocks
+  // disappear and a "Onboarding voltooid" banner takes their place.
+  const onboardingDone = tasks.every((t) => t.status === 'completed')
 
   // The DNC block (step 6) only becomes visible when it is the active step —
   // i.e. all previous tasks (form, drafts, variants, preview) are done.

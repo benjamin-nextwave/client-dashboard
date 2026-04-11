@@ -77,22 +77,6 @@ export function CampaignBody({ state }: Props) {
         </section>
       )}
 
-      {isCompleted && (
-        <section className="flex items-center gap-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-6">
-          <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/30">
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-            </svg>
-          </div>
-          <div>
-            <div className="text-base font-semibold text-emerald-900">Campagne goedgekeurd</div>
-            <p className="mt-0.5 text-sm text-emerald-700">
-              Bedankt voor je bevestiging. We gaan verder met de lancering.
-            </p>
-          </div>
-        </section>
-      )}
-
       {/* Task 2: Invulformulier */}
       {state.formSubmissionCount < state.formAllowedCount && (
         <TaskCard
