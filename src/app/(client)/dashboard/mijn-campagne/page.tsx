@@ -69,6 +69,8 @@ export default async function MijnCampagnePage() {
 
           <MailVariantsApprovalBlock
             variants={variants}
+            pdfUrl={state.variantsPdfUrl}
+            pdfUploadedAt={state.variantsPdfUploadedAt}
             lastAcknowledgedAt={state.mailVariantsLastAcknowledgedAt}
           />
 

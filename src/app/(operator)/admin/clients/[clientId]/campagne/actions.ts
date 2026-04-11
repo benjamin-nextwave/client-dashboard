@@ -349,7 +349,10 @@ export async function uploadVariantsPdfAction(
   const supabase = createAdminClient()
   const { error } = await supabase
     .from('clients')
-    .update({ campaign_variants_pdf_url: result.url })
+    .update({
+      campaign_variants_pdf_url: result.url,
+      campaign_variants_pdf_uploaded_at: new Date().toISOString(),
+    })
     .eq('id', clientId)
 
   if (error) return { error: error.message }
@@ -364,7 +367,10 @@ export async function removeVariantsPdfAction(clientId: string): Promise<{ error
   const supabase = createAdminClient()
   const { error } = await supabase
     .from('clients')
-    .update({ campaign_variants_pdf_url: null })
+    .update({
+      campaign_variants_pdf_url: null,
+      campaign_variants_pdf_uploaded_at: null,
+    })
     .eq('id', clientId)
 
   if (error) return { error: error.message }
