@@ -95,25 +95,18 @@ export default async function MijnCampagnePage() {
 
 function OnboardingCompleteBanner() {
   return (
-    <section className="relative overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-8 shadow-sm">
-      <div className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-gradient-to-br from-emerald-400/30 to-transparent blur-3xl" />
-      <div className="pointer-events-none absolute -left-10 bottom-0 h-48 w-48 rounded-full bg-gradient-to-tr from-teal-400/20 to-transparent blur-3xl" />
-      <div className="relative flex flex-wrap items-center gap-5">
-        <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/40">
-          <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
+    <section className="relative overflow-hidden rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-5 shadow-sm">
+      <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-gradient-to-br from-emerald-400/25 to-transparent blur-3xl" />
+      <div className="relative flex items-center gap-4">
+        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-sm shadow-emerald-500/30">
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
           </svg>
         </div>
         <div className="min-w-0 flex-1">
-          <div className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
-            Klaar voor lancering
-          </div>
-          <h2 className="mt-1 text-3xl font-bold tracking-tight text-gray-900">
-            Onboarding voltooid
-          </h2>
-          <p className="mt-2 max-w-xl text-sm leading-relaxed text-gray-600">
-            Bedankt! Alle stappen zijn afgerond. Ons team gaat verder met de laatste voorbereidingen
-            en de campagne wordt binnenkort gelanceerd.
+          <h2 className="text-base font-bold text-gray-900">Onboarding voltooid</h2>
+          <p className="mt-0.5 text-xs leading-relaxed text-gray-600">
+            Bedankt! Alle stappen zijn afgerond. Ons team gaat verder met de laatste voorbereidingen.
           </p>
         </div>
       </div>
