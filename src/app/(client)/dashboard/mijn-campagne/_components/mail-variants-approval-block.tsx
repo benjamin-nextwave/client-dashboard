@@ -35,12 +35,16 @@ export function MailVariantsApprovalBlock({
   // Nothing to approve if neither text variants nor PDF exist
   if (!hasVariants && !hasPdf) return null
 
-  // Latest update time across both text variants and PDF upload
+  // When has the client last acknowledged? And what was the most recent
+  // operator-side change? If the client has never acknowledged, always
+  // show the block (even if we don't have reliable timestamps).
   const variantTimes = variants.map((v) => new Date(v.updatedAt).getTime())
   const pdfTime = pdfUploadedAt ? new Date(pdfUploadedAt).getTime() : 0
   const latestUpdate = Math.max(0, ...variantTimes, pdfTime)
   const ackTime = lastAcknowledgedAt ? new Date(lastAcknowledgedAt).getTime() : 0
-  const needsApproval = latestUpdate > ackTime
+  const neverAcknowledged = !lastAcknowledgedAt
+  const updatedSinceAck = latestUpdate > 0 && latestUpdate > ackTime
+  const needsApproval = neverAcknowledged || updatedSinceAck
 
   if (!needsApproval) return null
 
