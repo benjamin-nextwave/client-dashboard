@@ -532,7 +532,7 @@ function Question({
             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636" />
             </svg>
-            Vraag overgeslagen — gebruik "Herstel" om alsnog te beantwoorden.
+            Vraag overgeslagen — gebruik &quot;Herstel&quot; om alsnog te beantwoorden.
           </div>
         ) : (
           <>
