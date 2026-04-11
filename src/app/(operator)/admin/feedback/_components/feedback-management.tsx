@@ -23,7 +23,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   new_feature: 'bg-purple-100 text-purple-700',
   optimization: 'bg-amber-100 text-amber-700',
   other: 'bg-gray-100 text-gray-700',
-  campaign_performance: 'bg-rose-100 text-rose-700',
+  campaign_performance: 'bg-emerald-100 text-emerald-700',
   new_mail_variants: 'bg-indigo-100 text-indigo-700',
 }
 

@@ -69,7 +69,7 @@ const CATEGORY_LABELS: Record<string, string> = Object.fromEntries(
 )
 
 const CATEGORY_TAG_COLORS: Record<string, string> = {
-  campaign_performance: 'bg-rose-100 text-rose-700',
+  campaign_performance: 'bg-emerald-100 text-emerald-700',
   new_mail_variants: 'bg-indigo-100 text-indigo-700',
   bug: 'bg-red-100 text-red-700',
   new_feature: 'bg-purple-100 text-purple-700',
@@ -466,17 +466,17 @@ const GROUP_THEME: Record<
 > = {
   campagne: {
     container:
-      'relative overflow-hidden rounded-2xl border-2 border-rose-200 bg-gradient-to-br from-rose-50 via-white to-orange-50 p-5 shadow-sm',
-    iconWrap: 'bg-rose-500 text-white shadow-lg shadow-rose-500/30',
+      'relative overflow-hidden rounded-2xl border-2 border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-orange-50 p-5 shadow-sm',
+    iconWrap: 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30',
     iconColor: '',
-    eyebrow: 'text-rose-600',
-    title: 'text-rose-950',
-    description: 'text-rose-800/70',
-    activeCard: 'border-rose-500 bg-white shadow-sm ring-2 ring-rose-200',
-    activeDot: 'border-rose-500 bg-rose-500',
-    activeLabel: 'text-rose-950',
-    activeDesc: 'text-rose-800',
-    inactiveCard: 'border-rose-200/60 bg-white/60 hover:border-rose-300 hover:bg-white',
+    eyebrow: 'text-emerald-600',
+    title: 'text-emerald-950',
+    description: 'text-emerald-800/70',
+    activeCard: 'border-emerald-500 bg-white shadow-sm ring-2 ring-emerald-200',
+    activeDot: 'border-emerald-500 bg-emerald-500',
+    activeLabel: 'text-emerald-950',
+    activeDesc: 'text-emerald-800',
+    inactiveCard: 'border-emerald-200/60 bg-white/60 hover:border-emerald-300 hover:bg-white',
   },
   dashboard: {
     container:
@@ -512,7 +512,7 @@ function CategoryGroup({
   onSelect: (v: CategoryValue) => void
 }) {
   const theme = GROUP_THEME[variant]
-  const glowColor = variant === 'campagne' ? 'from-rose-300/30' : 'from-indigo-300/30'
+  const glowColor = variant === 'campagne' ? 'from-emerald-300/30' : 'from-indigo-300/30'
 
   return (
     <section className={theme.container}>
