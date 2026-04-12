@@ -9,19 +9,22 @@ interface Props {
   formSubmissionCount: number
   variantsPdfUrl: string | null
   mailVariants: MailVariant[]
+  variantsAcknowledged: boolean
 }
 
 /**
  * Subtle "terug te vinden" section at the bottom of the client campaign page.
  * Groups reference/archive items (form answers, approved variants, PDF, ...)
- * in uniform rows with consistent "Inzien" buttons.
+ * in uniform rows with consistent "Inzien" buttons. Mail variants and PDF
+ * only appear here AFTER the client has acknowledged them — before that
+ * they're shown in the prominent approval block higher on the page.
  */
-export function ArchiveSection({ formSubmissionCount, variantsPdfUrl, mailVariants }: Props) {
+export function ArchiveSection({ formSubmissionCount, variantsPdfUrl, mailVariants, variantsAcknowledged }: Props) {
   const [modalOpen, setModalOpen] = useState(false)
 
   const hasForm = formSubmissionCount > 0
-  const hasPdf = !!variantsPdfUrl
-  const hasVariants = mailVariants.length > 0
+  const hasPdf = !!variantsPdfUrl && variantsAcknowledged
+  const hasVariants = mailVariants.length > 0 && variantsAcknowledged
 
   // If nothing to show yet, don't render the section
   if (!hasForm && !hasPdf && !hasVariants) return null

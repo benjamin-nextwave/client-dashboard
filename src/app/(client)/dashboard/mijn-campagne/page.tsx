@@ -88,6 +88,7 @@ export default async function MijnCampagnePage() {
         formSubmissionCount={state.formSubmissionCount}
         variantsPdfUrl={state.variantsPdfUrl}
         mailVariants={variants}
+        variantsAcknowledged={!!state.mailVariantsLastAcknowledgedAt}
       />
     </div>
   )
