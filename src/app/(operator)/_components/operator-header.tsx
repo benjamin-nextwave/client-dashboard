@@ -9,6 +9,7 @@ interface OperatorHeaderProps {
 
 const NAV = [
   { href: '/admin', label: 'Klanten', match: (p: string) => p === '/admin' || p.startsWith('/admin/clients') },
+  { href: '/admin/overzicht', label: 'Overzicht', match: (p: string) => p.startsWith('/admin/overzicht') },
   { href: '/admin/errors', label: 'Fouten', match: (p: string) => p.startsWith('/admin/errors') },
   { href: '/admin/feedback', label: 'Feedback', match: (p: string) => p.startsWith('/admin/feedback') },
   { href: '/admin/bezwaren', label: 'Bezwaren', match: (p: string) => p.startsWith('/admin/bezwaren') },
