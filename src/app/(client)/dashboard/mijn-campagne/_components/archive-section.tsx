@@ -10,6 +10,8 @@ interface Props {
   variantsPdfUrl: string | null
   mailVariants: MailVariant[]
   variantsAcknowledged: boolean
+  proposalTitle: string | null
+  proposalAcknowledged: boolean
 }
 
 /**
@@ -19,15 +21,16 @@ interface Props {
  * only appear here AFTER the client has acknowledged them — before that
  * they're shown in the prominent approval block higher on the page.
  */
-export function ArchiveSection({ formSubmissionCount, variantsPdfUrl, mailVariants, variantsAcknowledged }: Props) {
+export function ArchiveSection({ formSubmissionCount, variantsPdfUrl, mailVariants, variantsAcknowledged, proposalTitle, proposalAcknowledged }: Props) {
   const [modalOpen, setModalOpen] = useState(false)
 
   const hasForm = formSubmissionCount > 0
   const hasPdf = !!variantsPdfUrl && variantsAcknowledged
   const hasVariants = mailVariants.length > 0 && variantsAcknowledged
+  const hasProposal = !!proposalTitle && proposalAcknowledged
 
   // If nothing to show yet, don't render the section
-  if (!hasForm && !hasPdf && !hasVariants) return null
+  if (!hasForm && !hasPdf && !hasVariants && !hasProposal) return null
 
   return (
     <>
@@ -84,6 +87,18 @@ export function ArchiveSection({ formSubmissionCount, variantsPdfUrl, mailVarian
               subtitle="Downloadbaar document"
               href={variantsPdfUrl!}
               external
+            />
+          )}
+
+          {hasProposal && (
+            <ArchiveRow
+              icon={
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+                </svg>
+              }
+              title="Campagnevoorstel"
+              subtitle={proposalTitle!}
             />
           )}
         </div>

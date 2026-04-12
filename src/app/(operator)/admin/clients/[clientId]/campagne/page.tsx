@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCampaignState, getMailVariants } from '@/lib/data/campaign'
 import { CampaignControls } from './_components/campaign-controls'
+import { ProposalEditor } from './_components/proposal-editor'
 import { MailVariantsEditor } from './_components/mail-variants-editor'
 import { PdfUpload } from './_components/pdf-upload'
 
@@ -54,6 +55,13 @@ export default async function OperatorCampaignPage({ params }: Props) {
       </div>
 
       <CampaignControls clientId={clientId} state={state} />
+      <ProposalEditor
+        clientId={clientId}
+        currentTitle={state.proposalTitle}
+        currentBody={state.proposalBody}
+        publishedAt={state.proposalPublishedAt}
+        acknowledgedAt={state.proposalAcknowledgedAt}
+      />
       <PdfUpload clientId={clientId} currentUrl={state.variantsPdfUrl} />
       <MailVariantsEditor
         clientId={clientId}

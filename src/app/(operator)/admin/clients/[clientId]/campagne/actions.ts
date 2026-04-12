@@ -250,6 +250,53 @@ export async function mailClientAboutVariants(clientId: string): Promise<{ error
   return {}
 }
 
+// --- Campaign proposals ---
+
+export async function publishProposal(
+  clientId: string,
+  title: string,
+  body: string
+): Promise<{ error?: string }> {
+  if (!title.trim()) return { error: 'Titel is verplicht' }
+  if (!body.trim()) return { error: 'Beschrijving is verplicht' }
+
+  const supabase = createAdminClient()
+  const now = new Date().toISOString()
+
+  const { error } = await supabase
+    .from('clients')
+    .update({
+      campaign_proposal_title: title.trim(),
+      campaign_proposal_body: body.trim(),
+      campaign_proposal_published_at: now,
+    })
+    .eq('id', clientId)
+
+  if (error) return { error: error.message }
+
+  for (const p of adminPaths(clientId)) revalidatePath(p)
+  return {}
+}
+
+export async function clearProposal(clientId: string): Promise<{ error?: string }> {
+  const supabase = createAdminClient()
+
+  const { error } = await supabase
+    .from('clients')
+    .update({
+      campaign_proposal_title: null,
+      campaign_proposal_body: null,
+      campaign_proposal_published_at: null,
+      campaign_proposal_acknowledged_at: null,
+    })
+    .eq('id', clientId)
+
+  if (error) return { error: error.message }
+
+  for (const p of adminPaths(clientId)) revalidatePath(p)
+  return {}
+}
+
 // --- Mail variants ---
 
 export async function addMailVariant(

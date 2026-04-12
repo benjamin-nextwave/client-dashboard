@@ -4,6 +4,7 @@ import { getCampaignState, getMailVariants, deriveTasks } from '@/lib/data/campa
 import { StatusTracker } from './_components/status-tracker'
 import { CampaignBody } from './_components/campaign-body'
 import { MailVariantsApprovalBlock } from './_components/mail-variants-approval-block'
+import { ProposalApprovalBlock } from './_components/proposal-approval-block'
 import { DncBlock } from './_components/dnc-block'
 import { ArchiveSection } from './_components/archive-section'
 import { ContactBlock } from './_components/contact-block'
@@ -64,6 +65,13 @@ export default async function MijnCampagnePage() {
     (variants.length > 0 || !!state.variantsPdfUrl) &&
     (!state.mailVariantsLastAcknowledgedAt || latestVariantUpdate > ackTime)
 
+  // Campaign proposal approval check
+  const hasProposal = !!state.proposalTitle && !!state.proposalPublishedAt
+  const proposalNeedsApproval =
+    hasProposal &&
+    (!state.proposalAcknowledgedAt ||
+      new Date(state.proposalPublishedAt!).getTime() > new Date(state.proposalAcknowledgedAt).getTime())
+
   return (
     <div className="space-y-8">
       <div>
@@ -75,13 +83,19 @@ export default async function MijnCampagnePage() {
         </p>
       </div>
 
-      {onboardingDone && !variantsNeedApproval ? (
+      {onboardingDone && !variantsNeedApproval && !proposalNeedsApproval ? (
         <OnboardingCompleteBanner />
       ) : onboardingDone ? (
         <>
-          {/* Onboarding was done but operator pushed new variants — show
-              the compact banner + the approval block on top */}
           <OnboardingCompleteBanner />
+          {proposalNeedsApproval && (
+            <ProposalApprovalBlock
+              title={state.proposalTitle!}
+              body={state.proposalBody!}
+              publishedAt={state.proposalPublishedAt!}
+              acknowledgedAt={state.proposalAcknowledgedAt}
+            />
+          )}
           <MailVariantsApprovalBlock
             variants={variants}
             pdfUrl={state.variantsPdfUrl}
@@ -94,6 +108,15 @@ export default async function MijnCampagnePage() {
         <>
           {/* ─── Action zone ─── */}
           <StatusTracker tasks={tasks} />
+
+          {proposalNeedsApproval && (
+            <ProposalApprovalBlock
+              title={state.proposalTitle!}
+              body={state.proposalBody!}
+              publishedAt={state.proposalPublishedAt!}
+              acknowledgedAt={state.proposalAcknowledgedAt}
+            />
+          )}
 
           <MailVariantsApprovalBlock
             variants={variants}
@@ -117,6 +140,8 @@ export default async function MijnCampagnePage() {
         variantsPdfUrl={state.variantsPdfUrl}
         mailVariants={variants}
         variantsAcknowledged={!variantsNeedApproval && !!state.mailVariantsLastAcknowledgedAt}
+        proposalTitle={state.proposalTitle}
+        proposalAcknowledged={!proposalNeedsApproval && !!state.proposalAcknowledgedAt}
       />
     </div>
   )

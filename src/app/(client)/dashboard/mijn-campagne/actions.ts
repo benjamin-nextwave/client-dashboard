@@ -155,6 +155,66 @@ export async function acknowledgeMailVariants(): Promise<{ error?: string }> {
   return {}
 }
 
+export async function acknowledgeProposal(): Promise<{ error?: string }> {
+  const clientId = await getClientIdForCurrentUser()
+  if (!clientId) return { error: 'Niet geautoriseerd' }
+
+  const admin = createAdminClient()
+
+  const { data: client } = await admin
+    .from('clients')
+    .select('id, company_name, notification_email, campaign_proposal_title, campaign_proposal_body')
+    .eq('id', clientId)
+    .single()
+
+  if (!client) return { error: 'Klant niet gevonden' }
+
+  let loginEmail: string | null = null
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('id')
+    .eq('client_id', clientId)
+    .eq('user_role', 'client')
+    .single()
+
+  if (profile) {
+    const { data: authUser } = await admin.auth.admin.getUserById(profile.id)
+    if (authUser?.user?.email) loginEmail = authUser.user.email
+  }
+
+  const acknowledgedAt = new Date().toISOString()
+
+  try {
+    const res = await fetch(WEBHOOK_VARIANTS_ACKNOWLEDGED, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        event: 'campaign_proposal_acknowledged',
+        client_id: client.id,
+        client_name: client.company_name,
+        client_email: loginEmail,
+        notification_email: client.notification_email ?? null,
+        proposal_title: client.campaign_proposal_title,
+        proposal_body: client.campaign_proposal_body,
+        acknowledged_at: acknowledgedAt,
+      }),
+    })
+    if (!res.ok) return { error: `Webhook faalde: ${res.status}` }
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Webhook error' }
+  }
+
+  const { error } = await admin
+    .from('clients')
+    .update({ campaign_proposal_acknowledged_at: acknowledgedAt })
+    .eq('id', clientId)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/dashboard/mijn-campagne')
+  return {}
+}
+
 export async function approvePreview(): Promise<{ error?: string }> {
   const clientId = await getClientIdForCurrentUser()
   if (!clientId) return { error: 'Niet geautoriseerd' }

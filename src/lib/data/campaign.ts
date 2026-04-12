@@ -30,6 +30,10 @@ export interface CampaignState {
   variantsPdfUploadedAt: string | null
   dncConfirmedAt: string | null
   mailVariantsLastAcknowledgedAt: string | null
+  proposalTitle: string | null
+  proposalBody: string | null
+  proposalPublishedAt: string | null
+  proposalAcknowledgedAt: string | null
 }
 
 export interface CampaignFormSubmission {
@@ -70,6 +74,10 @@ function mapCampaignRow(row: Record<string, unknown>, submissionCount: number): 
     variantsPdfUploadedAt: (row.campaign_variants_pdf_uploaded_at as string) ?? null,
     dncConfirmedAt: (row.campaign_dnc_confirmed_at as string) ?? null,
     mailVariantsLastAcknowledgedAt: (row.mail_variants_last_acknowledged_at as string) ?? null,
+    proposalTitle: (row.campaign_proposal_title as string) ?? null,
+    proposalBody: (row.campaign_proposal_body as string) ?? null,
+    proposalPublishedAt: (row.campaign_proposal_published_at as string) ?? null,
+    proposalAcknowledgedAt: (row.campaign_proposal_acknowledged_at as string) ?? null,
   }
 }
 
@@ -83,7 +91,7 @@ export async function getCampaignState(clientId: string): Promise<CampaignState 
     supabase
       .from('clients')
       .select(
-        'id, campaign_form_submitted_at, campaign_form_allowed_count, campaign_mail_drafts_ready, campaign_preview_filled, campaign_approval_deadline, campaign_preview_approval_requested_at, campaign_preview_approved_at, campaign_variants_approval_requested_at, campaign_variants_approved_at, campaign_completed_at, campaign_variants_pdf_url, campaign_variants_pdf_uploaded_at, campaign_dnc_confirmed_at, mail_variants_last_acknowledged_at'
+        'id, campaign_form_submitted_at, campaign_form_allowed_count, campaign_mail_drafts_ready, campaign_preview_filled, campaign_approval_deadline, campaign_preview_approval_requested_at, campaign_preview_approved_at, campaign_variants_approval_requested_at, campaign_variants_approved_at, campaign_completed_at, campaign_variants_pdf_url, campaign_variants_pdf_uploaded_at, campaign_dnc_confirmed_at, mail_variants_last_acknowledged_at, campaign_proposal_title, campaign_proposal_body, campaign_proposal_published_at, campaign_proposal_acknowledged_at'
       )
       .eq('id', clientId)
       .single(),
