@@ -66,6 +66,20 @@ const EVENT_DEFS: EventDef[] = [
     timestampKey: 'campaign_proposal_acknowledged_at',
   },
   {
+    type: 'variants_published',
+    label: 'Mailvarianten aangeboden ter goedkeuring',
+    description: 'Er zijn tekstuele mailvarianten gepubliceerd in het klantdashboard.',
+    nextAction: 'Wacht op goedkeuring van de klant',
+    timestampKey: 'campaign_variants_last_published_at',
+  },
+  {
+    type: 'client_mailed',
+    label: 'Klant gemaild over mailvarianten',
+    description: 'De klant is per e-mail genotificeerd over nieuwe mailvarianten.',
+    nextAction: null,
+    timestampKey: 'campaign_client_mailed_at',
+  },
+  {
     type: 'pdf_uploaded',
     label: 'Mailvarianten PDF geüpload',
     description: 'Er is een nieuwe PDF met mailvarianten geüpload voor de klant.',
@@ -92,7 +106,8 @@ export async function getActivityTimeline(): Promise<TimelineEvent[]> {
         'campaign_form_submitted_at, campaign_variants_approved_at, ' +
         'campaign_preview_approved_at, campaign_dnc_confirmed_at, ' +
         'mail_variants_last_acknowledged_at, campaign_proposal_acknowledged_at, ' +
-        'campaign_variants_pdf_uploaded_at, campaign_proposal_published_at'
+        'campaign_variants_pdf_uploaded_at, campaign_proposal_published_at, ' +
+        'campaign_variants_last_published_at, campaign_client_mailed_at'
       )
       .eq('is_hidden', false),
     supabase.from('operator_seen_events').select('event_key, note'),

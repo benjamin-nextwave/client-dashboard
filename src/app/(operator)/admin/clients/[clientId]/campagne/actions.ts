@@ -76,7 +76,10 @@ export async function requestVariantsApproval(clientId: string): Promise<{ error
 
   const { error } = await supabase
     .from('clients')
-    .update({ campaign_variants_approval_requested_at: nowIso })
+    .update({
+      campaign_variants_approval_requested_at: nowIso,
+      campaign_variants_last_published_at: nowIso,
+    })
     .eq('id', clientId)
 
   if (error) return { error: error.message }
@@ -105,18 +108,20 @@ export async function setMailVariantPublished(
   // If this is the first time anything is being published for this client,
   // also mark the campaign-level approval-requested flag so Task 4 appears.
   if (published) {
+    const now = new Date().toISOString()
     const { data: client } = await supabase
       .from('clients')
       .select('campaign_variants_approval_requested_at')
       .eq('id', clientId)
       .single()
 
-    if (client && !client.campaign_variants_approval_requested_at) {
-      await supabase
-        .from('clients')
-        .update({ campaign_variants_approval_requested_at: new Date().toISOString() })
-        .eq('id', clientId)
+    const patch: Record<string, unknown> = {
+      campaign_variants_last_published_at: now,
     }
+    if (client && !client.campaign_variants_approval_requested_at) {
+      patch.campaign_variants_approval_requested_at = now
+    }
+    await supabase.from('clients').update(patch).eq('id', clientId)
   }
 
   for (const p of adminPaths(clientId)) revalidatePath(p)
@@ -247,6 +252,13 @@ export async function mailClientAboutVariants(clientId: string): Promise<{ error
     return { error: err instanceof Error ? err.message : 'Webhook error' }
   }
 
+  // Track that we mailed the client (for the activity timeline)
+  await supabase
+    .from('clients')
+    .update({ campaign_client_mailed_at: new Date().toISOString() })
+    .eq('id', clientId)
+
+  for (const p of adminPaths(clientId)) revalidatePath(p)
   return {}
 }
 
