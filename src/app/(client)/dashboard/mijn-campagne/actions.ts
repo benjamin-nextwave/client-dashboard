@@ -12,7 +12,7 @@ import {
 
 const WEBHOOK_CAMPAIGN_READY = 'https://hook.eu2.make.com/nx6392ay1en939gg5dyh718o7jcwi1wy'
 const WEBHOOK_FORM_SUBMITTED = 'https://hook.eu2.make.com/3ygu3f88qqlmle9y7vkp0ilkl83kgipg'
-const WEBHOOK_VARIANTS_ACKNOWLEDGED = 'https://hook.eu2.make.com/za5jg3k57b3s01a41itb79d6uuhyu1h1'
+const WEBHOOK_VARIANTS_ACKNOWLEDGED = 'https://hook.eu2.make.com/mt2w44repj3g4vz2689e5pbpis9qhovb'
 
 async function getClientIdForCurrentUser(): Promise<string | null> {
   const supabase = await createClient()
