@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { sendClientMail, MAIL_CATEGORIES, type MailCategory } from '../actions'
+import { sendClientMail } from '../actions'
+import { MAIL_CATEGORIES, type MailCategory } from '../constants'
 
 interface Props {
   clients: { id: string; name: string }[]
