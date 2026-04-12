@@ -11,18 +11,15 @@ interface Props {
   pdfUrl: string | null
   pdfUploadedAt: string | null
   lastAcknowledgedAt: string | null
+  isPostOnboarding: boolean
 }
 
-/**
- * Prominent block shown at the top of the client campaign page when the
- * operator has published new / updated mail variants (text or PDF) that
- * need the client's approval. Hidden once the client has acknowledged them.
- */
 export function MailVariantsApprovalBlock({
   variants,
   pdfUrl,
   pdfUploadedAt,
   lastAcknowledgedAt,
+  isPostOnboarding,
 }: Props) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
@@ -32,12 +29,8 @@ export function MailVariantsApprovalBlock({
   const hasVariants = variants.length > 0
   const hasPdf = !!pdfUrl
 
-  // Nothing to approve if neither text variants nor PDF exist
   if (!hasVariants && !hasPdf) return null
 
-  // When has the client last acknowledged? And what was the most recent
-  // operator-side change? If the client has never acknowledged, always
-  // show the block (even if we don't have reliable timestamps).
   const variantTimes = variants.map((v) => new Date(v.updatedAt).getTime())
   const pdfTime = pdfUploadedAt ? new Date(pdfUploadedAt).getTime() : 0
   const latestUpdate = Math.max(0, ...variantTimes, pdfTime)
@@ -48,9 +41,6 @@ export function MailVariantsApprovalBlock({
 
   if (!needsApproval) return null
 
-  const perMail: Record<number, number> = {}
-  for (const v of variants) perMail[v.mailNumber] = (perMail[v.mailNumber] ?? 0) + 1
-
   const handleApprove = () => {
     setError(null)
     startTransition(async () => {
@@ -60,7 +50,79 @@ export function MailVariantsApprovalBlock({
     })
   }
 
-  // Description text depends on what's available
+  // --- Post-onboarding: clean "new proposal" look ---
+  if (isPostOnboarding) {
+    return (
+      <>
+        <section className="overflow-hidden rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 via-white to-violet-50 p-6 shadow-sm">
+          <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-gradient-to-br from-indigo-300/20 to-transparent blur-3xl" />
+          <div className="relative">
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-indigo-200/60 bg-white/80 px-3 py-1 text-[11px] font-semibold text-indigo-700 backdrop-blur">
+              <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.8)]" />
+              Nieuw voorstel
+            </div>
+            <h3 className="mt-3 text-lg font-bold text-gray-900">
+              Nieuwe mailvarianten ter goedkeuring
+            </h3>
+            <p className="mt-1 text-sm leading-relaxed text-gray-600">
+              NextWave heeft {variants.length} nieuwe {variants.length === 1 ? 'mailvariant' : 'mailvarianten'} voor
+              je klaargezet. Bekijk het voorstel en laat weten of je akkoord bent.
+            </p>
+
+            {error && (
+              <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">
+                {error}
+              </div>
+            )}
+
+            <div className="mt-5 flex flex-wrap gap-3">
+              {hasVariants && (
+                <button
+                  type="button"
+                  onClick={() => setOpen(true)}
+                  className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:border-indigo-200 hover:text-indigo-600"
+                >
+                  Voorstel bekijken ({variants.length})
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={handleApprove}
+                disabled={pending}
+                className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-base font-bold text-white shadow-lg shadow-emerald-500/40 transition-all hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+              >
+                {pending ? (
+                  <>
+                    <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.25" strokeWidth="4" />
+                      <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+                    </svg>
+                    Versturen...
+                  </>
+                ) : (
+                  <>
+                    Goedkeuren
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                    </svg>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {open && hasVariants && (
+          <MailVariantsModal variants={variants} onClose={() => setOpen(false)} />
+        )}
+      </>
+    )
+  }
+
+  // --- During onboarding: amber action card with step 4, PDF link, urgency ---
+  const perMail: Record<number, number> = {}
+  for (const v of variants) perMail[v.mailNumber] = (perMail[v.mailNumber] ?? 0) + 1
+
   let description: string
   if (hasVariants && hasPdf) {
     description = `NextWave heeft ${variants.length} ${variants.length === 1 ? 'mailvariant' : 'mailvarianten'} én een PDF-document voor je klaargezet. Bekijk alles en keur goed om de campagne op schema te houden.`

@@ -87,6 +87,7 @@ export default async function MijnCampagnePage() {
             pdfUrl={state.variantsPdfUrl}
             pdfUploadedAt={state.variantsPdfUploadedAt}
             lastAcknowledgedAt={state.mailVariantsLastAcknowledgedAt}
+            isPostOnboarding={onboardingDone}
           />
         </>
       ) : (
@@ -99,6 +100,7 @@ export default async function MijnCampagnePage() {
             pdfUrl={state.variantsPdfUrl}
             pdfUploadedAt={state.variantsPdfUploadedAt}
             lastAcknowledgedAt={state.mailVariantsLastAcknowledgedAt}
+            isPostOnboarding={onboardingDone}
           />
 
           <CampaignBody state={state} />
