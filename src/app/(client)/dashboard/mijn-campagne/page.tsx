@@ -50,6 +50,20 @@ export default async function MijnCampagnePage() {
   // i.e. all previous tasks (form, drafts, variants, preview) are done.
   const dncIsCurrent = tasks.find((t) => t.status === 'current')?.id === 'dnc'
 
+  // Do the published variants / PDF need (re-)approval? Computed once so
+  // both the approval block and the archive section can use the same answer.
+  const variantTimes = variants.map((v) => new Date(v.updatedAt).getTime())
+  const pdfTime = state.variantsPdfUploadedAt
+    ? new Date(state.variantsPdfUploadedAt).getTime()
+    : 0
+  const latestVariantUpdate = Math.max(0, ...variantTimes, pdfTime)
+  const ackTime = state.mailVariantsLastAcknowledgedAt
+    ? new Date(state.mailVariantsLastAcknowledgedAt).getTime()
+    : 0
+  const variantsNeedApproval =
+    (variants.length > 0 || !!state.variantsPdfUrl) &&
+    (!state.mailVariantsLastAcknowledgedAt || latestVariantUpdate > ackTime)
+
   return (
     <div className="space-y-8">
       <div>
@@ -61,8 +75,20 @@ export default async function MijnCampagnePage() {
         </p>
       </div>
 
-      {onboardingDone ? (
+      {onboardingDone && !variantsNeedApproval ? (
         <OnboardingCompleteBanner />
+      ) : onboardingDone ? (
+        <>
+          {/* Onboarding was done but operator pushed new variants — show
+              the compact banner + the approval block on top */}
+          <OnboardingCompleteBanner />
+          <MailVariantsApprovalBlock
+            variants={variants}
+            pdfUrl={state.variantsPdfUrl}
+            pdfUploadedAt={state.variantsPdfUploadedAt}
+            lastAcknowledgedAt={state.mailVariantsLastAcknowledgedAt}
+          />
+        </>
       ) : (
         <>
           {/* ─── Action zone ─── */}
@@ -81,14 +107,14 @@ export default async function MijnCampagnePage() {
         </>
       )}
 
-      <ContactBlock isOnboardingComplete={onboardingDone} />
+      <ContactBlock isOnboardingComplete={onboardingDone && !variantsNeedApproval} />
 
       {/* ─── Archive zone ─── */}
       <ArchiveSection
         formSubmissionCount={state.formSubmissionCount}
         variantsPdfUrl={state.variantsPdfUrl}
         mailVariants={variants}
-        variantsAcknowledged={!!state.mailVariantsLastAcknowledgedAt}
+        variantsAcknowledged={!variantsNeedApproval && !!state.mailVariantsLastAcknowledgedAt}
       />
     </div>
   )
