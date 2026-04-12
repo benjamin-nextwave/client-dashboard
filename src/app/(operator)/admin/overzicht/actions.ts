@@ -26,6 +26,18 @@ export async function markEventUnseen(eventKey: string): Promise<{ error?: strin
   return {}
 }
 
+export async function saveEventNote(eventKey: string, note: string): Promise<{ error?: string }> {
+  const supabase = createAdminClient()
+  const trimmed = note.trim() || null
+  const { error } = await supabase
+    .from('operator_seen_events')
+    .upsert({ event_key: eventKey, seen_at: new Date().toISOString(), note: trimmed })
+
+  if (error) return { error: error.message }
+  revalidatePath('/admin/overzicht')
+  return {}
+}
+
 export async function markAllSeen(eventKeys: string[]): Promise<{ error?: string }> {
   if (eventKeys.length === 0) return {}
   const supabase = createAdminClient()

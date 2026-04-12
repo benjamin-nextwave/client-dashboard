@@ -10,6 +10,7 @@ export interface TimelineEvent {
   description: string
   timestamp: string
   seen: boolean
+  note: string | null
   nextAction: string | null
 }
 
@@ -94,11 +95,13 @@ export async function getActivityTimeline(): Promise<TimelineEvent[]> {
         'campaign_variants_pdf_uploaded_at, campaign_proposal_published_at'
       )
       .eq('is_hidden', false),
-    supabase.from('operator_seen_events').select('event_key'),
+    supabase.from('operator_seen_events').select('event_key, note'),
   ])
 
   const clients = (clientsRes.data ?? []) as unknown as Record<string, unknown>[]
-  const seenKeys = new Set((seenRes.data ?? []).map((r: { event_key: string }) => r.event_key))
+  const seenMap = new Map(
+    (seenRes.data ?? []).map((r: { event_key: string; note: string | null }) => [r.event_key, r.note])
+  )
 
   const events: TimelineEvent[] = []
 
@@ -122,7 +125,8 @@ export async function getActivityTimeline(): Promise<TimelineEvent[]> {
         label: def.label,
         description: def.description,
         timestamp: ts,
-        seen: seenKeys.has(key),
+        seen: seenMap.has(key),
+        note: seenMap.get(key) ?? null,
         nextAction: def.nextAction,
       })
     }

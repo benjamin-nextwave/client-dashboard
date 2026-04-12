@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import type { TimelineEvent } from '@/lib/data/activity-timeline'
-import { markEventSeen, markEventUnseen, markAllSeen } from '../actions'
+import { markEventSeen, markEventUnseen, markAllSeen, saveEventNote } from '../actions'
 
 type FilterMode = 'all' | 'unseen' | 'seen'
 
@@ -192,92 +192,178 @@ export function ActivityTimeline({ events }: { events: TimelineEvent[] }) {
               </div>
 
               <div className="space-y-1">
-                {group.events.map((event) => {
-                  const icon = TYPE_ICONS[event.type] ?? DEFAULT_ICON
-                  return (
-                    <div
-                      key={event.key}
-                      className={`group flex items-start gap-4 rounded-xl px-4 py-3 transition-all ${
-                        event.seen
-                          ? 'opacity-50 hover:opacity-70'
-                          : 'bg-white shadow-sm ring-1 ring-gray-100'
-                      }`}
-                    >
-                      {/* Icon dot */}
-                      <div className="relative mt-0.5 flex-shrink-0">
-                        <div
-                          className={`flex h-7 w-7 items-center justify-center rounded-full text-white ${icon.bg}`}
-                        >
-                          {icon.icon}
-                        </div>
-                        {!event.seen && (
-                          <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-indigo-500" />
-                        )}
-                      </div>
-
-                      {/* Content */}
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-bold text-gray-900">
-                                {event.clientName}
-                              </span>
-                              <span className="text-xs text-gray-400">
-                                {formatTime(event.timestamp)}
-                              </span>
-                            </div>
-                            <div className="mt-0.5 text-sm text-gray-700">
-                              {event.label}
-                            </div>
-                            {event.nextAction && !event.seen && (
-                              <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-lg bg-indigo-50 px-2.5 py-1 text-[11px] font-semibold text-indigo-700 ring-1 ring-indigo-100">
-                                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-                                </svg>
-                                {event.nextAction}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Actions */}
-                          <div className="flex flex-shrink-0 items-center gap-1.5">
-                            <Link
-                              href={`/admin/clients/${event.clientId}/campagne`}
-                              className="hidden rounded-lg border border-gray-200 bg-white px-2 py-1 text-[10px] font-semibold text-gray-600 shadow-sm transition-all hover:border-indigo-200 hover:text-indigo-600 group-hover:inline-flex"
-                            >
-                              Open
-                            </Link>
-                            <button
-                              type="button"
-                              onClick={() => handleToggle(event)}
-                              disabled={pending}
-                              title={event.seen ? 'Markeer als nieuw' : 'Markeer als gezien'}
-                              className={`flex h-7 w-7 items-center justify-center rounded-lg border transition-all disabled:opacity-50 ${
-                                event.seen
-                                  ? 'border-emerald-300 bg-emerald-50 text-emerald-600'
-                                  : 'border-gray-200 bg-white text-gray-400 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-600'
-                              }`}
-                            >
-                              <svg
-                                className="h-3.5 w-3.5"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                strokeWidth={event.seen ? 3 : 2}
-                                stroke="currentColor"
-                              >
-                                <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                              </svg>
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
+                {group.events.map((event) => (
+                  <EventItem
+                    key={event.key}
+                    event={event}
+                    pending={pending}
+                    onToggle={() => handleToggle(event)}
+                  />
+                ))}
               </div>
             </div>
           ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function EventItem({
+  event,
+  pending,
+  onToggle,
+}: {
+  event: TimelineEvent
+  pending: boolean
+  onToggle: () => void
+}) {
+  const router = useRouter()
+  const [noteOpen, setNoteOpen] = useState(false)
+  const [noteText, setNoteText] = useState(event.note ?? '')
+  const [savingNote, startSaveNote] = useTransition()
+  const [noteSaved, setNoteSaved] = useState(false)
+
+  const icon = TYPE_ICONS[event.type] ?? DEFAULT_ICON
+
+  const handleSaveNote = () => {
+    startSaveNote(async () => {
+      await saveEventNote(event.key, noteText)
+      setNoteSaved(true)
+      setTimeout(() => setNoteSaved(false), 2000)
+      router.refresh()
+    })
+  }
+
+  return (
+    <div
+      className={`group rounded-xl px-4 py-3 transition-all ${
+        event.seen
+          ? 'opacity-50 hover:opacity-70'
+          : 'bg-white shadow-sm ring-1 ring-gray-100'
+      }`}
+    >
+      <div className="flex items-start gap-4">
+        {/* Icon dot */}
+        <div className="relative mt-0.5 flex-shrink-0">
+          <div
+            className={`flex h-7 w-7 items-center justify-center rounded-full text-white ${icon.bg}`}
+          >
+            {icon.icon}
+          </div>
+          {!event.seen && (
+            <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-indigo-500" />
+          )}
+        </div>
+
+        {/* Content */}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-gray-900">{event.clientName}</span>
+                <span className="text-xs text-gray-400">{formatTime(event.timestamp)}</span>
+              </div>
+              <div className="mt-0.5 text-sm text-gray-700">{event.label}</div>
+              {event.nextAction && !event.seen && (
+                <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-lg bg-indigo-50 px-2.5 py-1 text-[11px] font-semibold text-indigo-700 ring-1 ring-indigo-100">
+                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                  </svg>
+                  {event.nextAction}
+                </div>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="flex flex-shrink-0 items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setNoteOpen(!noteOpen)}
+                title="Notitie"
+                className={`flex h-7 w-7 items-center justify-center rounded-lg border transition-all ${
+                  event.note
+                    ? 'border-amber-300 bg-amber-50 text-amber-600'
+                    : 'border-gray-200 bg-white text-gray-400 hover:border-amber-300 hover:bg-amber-50 hover:text-amber-600'
+                }`}
+              >
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Z" />
+                </svg>
+              </button>
+              <Link
+                href={`/admin/clients/${event.clientId}/campagne`}
+                className="hidden rounded-lg border border-gray-200 bg-white px-2 py-1 text-[10px] font-semibold text-gray-600 shadow-sm transition-all hover:border-indigo-200 hover:text-indigo-600 group-hover:inline-flex"
+              >
+                Open
+              </Link>
+              <button
+                type="button"
+                onClick={onToggle}
+                disabled={pending}
+                title={event.seen ? 'Markeer als nieuw' : 'Markeer als gezien'}
+                className={`flex h-7 w-7 items-center justify-center rounded-lg border transition-all disabled:opacity-50 ${
+                  event.seen
+                    ? 'border-emerald-300 bg-emerald-50 text-emerald-600'
+                    : 'border-gray-200 bg-white text-gray-400 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-600'
+                }`}
+              >
+                <svg
+                  className="h-3.5 w-3.5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={event.seen ? 3 : 2}
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {/* Existing note display */}
+          {event.note && !noteOpen && (
+            <button
+              type="button"
+              onClick={() => setNoteOpen(true)}
+              className="mt-2 flex items-start gap-1.5 text-left text-xs text-amber-700"
+            >
+              <svg className="mt-0.5 h-3 w-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Z" />
+              </svg>
+              <span className="italic">{event.note}</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Note editor */}
+      {noteOpen && (
+        <div className="mt-3 ml-11 flex items-start gap-2">
+          <input
+            type="text"
+            value={noteText}
+            onChange={(e) => setNoteText(e.target.value)}
+            placeholder="Korte notitie..."
+            disabled={savingNote}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleSaveNote() }}
+            className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-900 shadow-sm transition-all focus:border-amber-400 focus:outline-none focus:ring-4 focus:ring-amber-100 disabled:opacity-50"
+          />
+          <button
+            type="button"
+            onClick={handleSaveNote}
+            disabled={savingNote}
+            className="rounded-lg bg-gray-900 px-3 py-1.5 text-[11px] font-semibold text-white shadow-sm transition-all hover:bg-indigo-600 disabled:opacity-50"
+          >
+            {noteSaved ? '✓' : 'Opslaan'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setNoteOpen(false)}
+            className="rounded-lg px-2 py-1.5 text-[11px] text-gray-500 hover:text-gray-700"
+          >
+            Sluiten
+          </button>
         </div>
       )}
     </div>
