@@ -12,6 +12,7 @@ const NAV = [
   { href: '/admin/errors', label: 'Fouten', match: (p: string) => p.startsWith('/admin/errors') },
   { href: '/admin/feedback', label: 'Feedback', match: (p: string) => p.startsWith('/admin/feedback') },
   { href: '/admin/bezwaren', label: 'Bezwaren', match: (p: string) => p.startsWith('/admin/bezwaren') },
+  { href: '/admin/mail-client', label: 'Mailen', match: (p: string) => p.startsWith('/admin/mail-client') },
 ]
 
 export function OperatorHeader({ signOutAction }: OperatorHeaderProps) {
