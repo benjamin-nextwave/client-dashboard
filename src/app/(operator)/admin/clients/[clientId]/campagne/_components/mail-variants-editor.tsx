@@ -282,7 +282,7 @@ function VariantCard({
               isDirty ? 'bg-amber-100 text-amber-700' : 'bg-indigo-50 text-indigo-600'
             }`}
           >
-            {variant.variantLabel.replace('Variant ', '')}
+            {variant.variantLabel.charAt(0).toUpperCase()}
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">

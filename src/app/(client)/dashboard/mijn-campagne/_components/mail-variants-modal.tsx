@@ -105,7 +105,7 @@ function VariantView({ variant }: { variant: MailVariant }) {
     <article className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
       <header className="flex items-center gap-3 border-b border-gray-100 bg-gray-50/50 px-5 py-3">
         <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-100 text-xs font-bold text-indigo-700">
-          {variant.variantLabel.replace('Variant ', '')}
+          {variant.variantLabel.charAt(0).toUpperCase()}
         </div>
         <div className="flex-1">
           <div className="text-sm font-semibold text-gray-900">{variant.variantLabel}</div>
