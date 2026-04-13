@@ -359,13 +359,14 @@ export async function addMailVariant(
 export async function updateMailVariant(
   variantId: string,
   clientId: string,
-  fields: { variantLabel?: string; subject?: string; body?: string; explanation?: string }
+  fields: { variantLabel?: string; subject?: string; body?: string; exampleBody?: string; explanation?: string }
 ): Promise<{ error?: string }> {
   const supabase = createAdminClient()
   const patch: Record<string, unknown> = { updated_at: new Date().toISOString() }
   if (fields.variantLabel !== undefined) patch.variant_label = fields.variantLabel
   if (fields.subject !== undefined) patch.subject = fields.subject
   if (fields.body !== undefined) patch.body = fields.body
+  if (fields.exampleBody !== undefined) patch.example_body = fields.exampleBody
   if (fields.explanation !== undefined) patch.explanation = fields.explanation
 
   const { error } = await supabase

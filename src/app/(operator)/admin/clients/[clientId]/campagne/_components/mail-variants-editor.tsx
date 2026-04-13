@@ -215,6 +215,7 @@ function VariantCard({
   const [label, setLabel] = useState(variant.variantLabel)
   const [subject, setSubject] = useState(variant.subject)
   const [body, setBody] = useState(variant.body)
+  const [exampleBody, setExampleBody] = useState(variant.exampleBody)
   const [explanation, setExplanation] = useState(variant.explanation)
   const [saved, setSaved] = useState(false)
 
@@ -222,6 +223,7 @@ function VariantCard({
     label !== variant.variantLabel ||
     subject !== variant.subject ||
     body !== variant.body ||
+    exampleBody !== variant.exampleBody ||
     explanation !== variant.explanation
 
   const handleSave = () => {
@@ -230,6 +232,7 @@ function VariantCard({
         variantLabel: label,
         subject,
         body,
+        exampleBody,
         explanation,
       })
       if (!result.error) {
@@ -386,16 +389,28 @@ function VariantCard({
               className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-indigo-400 focus:outline-none focus:ring-4 focus:ring-indigo-100"
             />
           </FieldLabel>
-          <FieldLabel text="Mail body">
-            <textarea
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              rows={8}
-              placeholder="Schrijf hier de mail body..."
-              disabled={disabled || saving}
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-indigo-400 focus:outline-none focus:ring-4 focus:ring-indigo-100"
-            />
-          </FieldLabel>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <FieldLabel text="Mail body (met variabelen)">
+              <textarea
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                rows={8}
+                placeholder="Hallo {{voornaam}}, ik zag dat {{bedrijf}}..."
+                disabled={disabled || saving}
+                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-mono shadow-sm focus:border-indigo-400 focus:outline-none focus:ring-4 focus:ring-indigo-100"
+              />
+            </FieldLabel>
+            <FieldLabel text="Voorbeeld (variabelen ingevuld)">
+              <textarea
+                value={exampleBody}
+                onChange={(e) => setExampleBody(e.target.value)}
+                rows={8}
+                placeholder="Hallo Jan, ik zag dat Jansen BV..."
+                disabled={disabled || saving}
+                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-indigo-400 focus:outline-none focus:ring-4 focus:ring-indigo-100"
+              />
+            </FieldLabel>
+          </div>
           <FieldLabel text="Toelichting voor de klant">
             <textarea
               value={explanation}

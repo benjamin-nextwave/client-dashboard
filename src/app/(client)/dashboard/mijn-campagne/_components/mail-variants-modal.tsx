@@ -26,7 +26,7 @@ export function MailVariantsModal({ variants, onClose }: Props) {
       onClick={onClose}
     >
       <div
-        className="flex h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+        className="flex h-[85vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -124,11 +124,25 @@ function VariantView({ variant }: { variant: MailVariant }) {
           <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">Onderwerp</div>
           <p className="mt-0.5 text-sm font-medium text-gray-900">{variant.subject || '—'}</p>
         </div>
-        <div>
-          <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">Mail body</div>
-          <pre className="mt-1 whitespace-pre-wrap rounded-xl bg-gray-50 p-4 font-sans text-sm leading-relaxed text-gray-800">
-            {variant.body || '—'}
-          </pre>
+        <div className={variant.exampleBody ? 'grid gap-3 sm:grid-cols-2' : ''}>
+          <div>
+            <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+              {variant.exampleBody ? 'Mail body (met variabelen)' : 'Mail body'}
+            </div>
+            <pre className="mt-1 whitespace-pre-wrap rounded-xl bg-gray-50 p-4 font-sans text-sm leading-relaxed text-gray-800">
+              {variant.body || '—'}
+            </pre>
+          </div>
+          {variant.exampleBody && (
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                Voorbeeld (ingevuld)
+              </div>
+              <pre className="mt-1 whitespace-pre-wrap rounded-xl bg-emerald-50 p-4 font-sans text-sm leading-relaxed text-emerald-900 ring-1 ring-emerald-100">
+                {variant.exampleBody}
+              </pre>
+            </div>
+          )}
         </div>
       </div>
     </article>

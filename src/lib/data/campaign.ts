@@ -50,6 +50,7 @@ export interface MailVariant {
   variantLabel: string
   subject: string
   body: string
+  exampleBody: string
   explanation: string
   position: number
   isPublished: boolean
@@ -155,6 +156,7 @@ export async function getMailVariants(clientId: string): Promise<MailVariant[]> 
     variantLabel: row.variant_label,
     subject: row.subject,
     body: row.body,
+    exampleBody: row.example_body ?? '',
     explanation: row.explanation,
     position: row.position,
     isPublished: Boolean(row.is_published),
