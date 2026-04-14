@@ -87,6 +87,13 @@ const EVENT_DEFS: EventDef[] = [
     timestampKey: 'campaign_variants_pdf_uploaded_at',
   },
   {
+    type: 'operator_mail_page',
+    label: 'Klant gemaild via mailpagina',
+    description: '',
+    nextAction: null,
+    timestampKey: 'operator_mail_page_sent_at',
+  },
+  {
     type: 'proposal_published',
     label: 'Campagnevoorstel gepubliceerd',
     description: 'Er is een nieuw campagnevoorstel gepubliceerd voor de klant.',
@@ -107,7 +114,8 @@ export async function getActivityTimeline(): Promise<TimelineEvent[]> {
         'campaign_preview_approved_at, campaign_dnc_confirmed_at, ' +
         'mail_variants_last_acknowledged_at, campaign_proposal_acknowledged_at, ' +
         'campaign_variants_pdf_uploaded_at, campaign_proposal_published_at, ' +
-        'campaign_variants_last_published_at, campaign_client_mailed_at'
+        'campaign_variants_last_published_at, campaign_client_mailed_at, ' +
+        'operator_mail_page_sent_at, operator_mail_page_category'
       )
       .eq('is_hidden', false),
     supabase.from('operator_seen_events').select('event_key, note'),
@@ -131,14 +139,23 @@ export async function getActivityTimeline(): Promise<TimelineEvent[]> {
 
       const key = `${clientId}:${def.type}:${ts}`
 
+      // For the mail-page event, include the category in the label
+      let label = def.label
+      let description = def.description
+      if (def.type === 'operator_mail_page') {
+        const cat = client.operator_mail_page_category as string | null
+        label = cat ? `Klant gemaild: ${cat}` : 'Klant gemaild via mailpagina'
+        description = 'Mail verstuurd via de operator mailpagina.'
+      }
+
       events.push({
         key,
         clientId,
         clientName,
         clientColor,
         type: def.type,
-        label: def.label,
-        description: def.description,
+        label,
+        description,
         timestamp: ts,
         seen: seenMap.has(key),
         note: seenMap.get(key) ?? null,

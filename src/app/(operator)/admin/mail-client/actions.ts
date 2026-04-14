@@ -59,5 +59,14 @@ export async function sendClientMail(input: {
     return { error: err instanceof Error ? err.message : 'Webhook error' }
   }
 
+  // Track for the activity timeline
+  await supabase
+    .from('clients')
+    .update({
+      operator_mail_page_sent_at: new Date().toISOString(),
+      operator_mail_page_category: categoryDef?.label ?? input.category,
+    })
+    .eq('id', input.clientId)
+
   return {}
 }
