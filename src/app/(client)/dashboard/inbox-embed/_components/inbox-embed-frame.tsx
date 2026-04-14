@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useTransition } from 'react'
+import { requestInboxPasswordHelp } from '../actions'
 
 interface InboxEmbedFrameProps {
   proxyBaseUrl: string
@@ -14,6 +15,8 @@ export function InboxEmbedFrame({ proxyBaseUrl, targetHost }: InboxEmbedFramePro
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [iframeLoaded, setIframeLoaded] = useState(false)
+  const [helpPending, startHelp] = useTransition()
+  const [helpResult, setHelpResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
 
   const handleLogin = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
@@ -104,6 +107,43 @@ export function InboxEmbedFrame({ proxyBaseUrl, targetHost }: InboxEmbedFramePro
                 {isLoading ? 'Inloggen...' : 'Inloggen'}
               </button>
             </form>
+
+            {/* Password help */}
+            <div className="mt-5 border-t border-gray-100 pt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setHelpResult(null)
+                  startHelp(async () => {
+                    const result = await requestInboxPasswordHelp()
+                    if (result.error) {
+                      setHelpResult({ type: 'error', message: result.error })
+                    } else {
+                      setHelpResult({
+                        type: 'success',
+                        message: `${result.email} is zojuist gemaild met het wachtwoord en de uitleg om in te loggen.`,
+                      })
+                    }
+                  })
+                }}
+                disabled={helpPending}
+                className="w-full rounded-lg border-2 border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900 transition-all hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {helpPending ? 'Even geduld...' : 'Wachtwoord vergeten / inloggen lukt niet'}
+              </button>
+
+              {helpResult && (
+                <div
+                  className={`mt-3 rounded-lg p-3 text-sm ${
+                    helpResult.type === 'success'
+                      ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200'
+                      : 'bg-red-50 text-red-700 ring-1 ring-red-200'
+                  }`}
+                >
+                  {helpResult.message}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
