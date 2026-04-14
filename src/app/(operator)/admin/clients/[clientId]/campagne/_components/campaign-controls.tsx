@@ -7,6 +7,7 @@ import {
   updateCampaignFlags,
   updateApprovalDeadline,
   requestPreviewApproval,
+  withdrawPreviewApproval,
   triggerDraftsReadyWebhook,
   allowAnotherFormSubmission,
 } from '../actions'
@@ -80,6 +81,15 @@ export function CampaignControls({ clientId, state }: Props) {
         setWebhookStatus('sent')
         setTimeout(() => setWebhookStatus('idle'), 3000)
       }
+    })
+  }
+
+  const handleWithdrawPreview = () => {
+    setError(null)
+    startTransition(async () => {
+      const result = await withdrawPreviewApproval(clientId)
+      if (result.error) setError(result.error)
+      else router.refresh()
     })
   }
 
@@ -256,14 +266,25 @@ export function CampaignControls({ clientId, state }: Props) {
             </p>
           )}
         </div>
-        <button
-          type="button"
-          onClick={handleRequestPreview}
-          disabled={pending || isLocked || !!state.previewApprovalRequestedAt}
-          className="rounded-xl bg-gray-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-indigo-600 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400"
-        >
-          {state.previewApprovalRequestedAt ? 'Reeds aangevraagd' : 'Voorvertoning om goedkeuring vragen'}
-        </button>
+        {state.previewApprovalRequestedAt && !state.previewApprovedAt ? (
+          <button
+            type="button"
+            onClick={handleWithdrawPreview}
+            disabled={pending || isLocked}
+            className="rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition-all hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Trek verzoek in
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={handleRequestPreview}
+            disabled={pending || isLocked || !!state.previewApprovedAt}
+            className="rounded-xl bg-gray-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-indigo-600 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400"
+          >
+            {state.previewApprovedAt ? 'Reeds goedgekeurd' : 'Voorvertoning om goedkeuring vragen'}
+          </button>
+        )}
       </div>
 
     </section>

@@ -128,6 +128,19 @@ export async function setMailVariantPublished(
   return {}
 }
 
+export async function withdrawPreviewApproval(clientId: string): Promise<{ error?: string }> {
+  const supabase = createAdminClient()
+  const { error } = await supabase
+    .from('clients')
+    .update({ campaign_preview_approval_requested_at: null })
+    .eq('id', clientId)
+
+  if (error) return { error: error.message }
+
+  for (const p of adminPaths(clientId)) revalidatePath(p)
+  return {}
+}
+
 /**
  * Give the client permission to submit the form one more time.
  * Increments the total allowed submissions by 1.
