@@ -94,6 +94,7 @@ export default async function MijnCampagnePage() {
               body={state.proposalBody!}
               publishedAt={state.proposalPublishedAt!}
               acknowledgedAt={state.proposalAcknowledgedAt}
+              isPostOnboarding
             />
           )}
           <MailVariantsApprovalBlock

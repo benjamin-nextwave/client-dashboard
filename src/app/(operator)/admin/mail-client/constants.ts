@@ -5,6 +5,7 @@ export type MailCategory =
   | 'reminder_multiple'
   | 'new_variants'
   | 'new_proposal'
+  | 'campaign_live_again'
 
 export const MAIL_CATEGORIES: {
   id: MailCategory
@@ -18,4 +19,5 @@ export const MAIL_CATEGORIES: {
   { id: 'reminder_multiple', group: 'Reminder: onboarding niet voltooid', label: 'Meerdere stappen zijn nog niet afgerond' },
   { id: 'new_variants', group: 'Beoordeling', label: 'Nieuwe mailvarianten staan in het dashboard voor beoordeling' },
   { id: 'new_proposal', group: 'Beoordeling', label: 'Nieuw voorstel voor de campagne staat in het dashboard voor beoordeling', hasTextInput: true },
+  { id: 'campaign_live_again', group: 'Update', label: 'Campagne staat weer live met de toegepaste aanpassingen', hasTextInput: true },
 ]

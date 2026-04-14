@@ -110,7 +110,7 @@ export function CampaignBody({ state }: Props) {
         <TaskCard
           number={3}
           title="Mailopzetjes & voorvertoning worden voorbereid"
-          description="Ons team werkt aan je mailopzetjes en voorvertoning. Dit gebeurt binnen 48 uur."
+          description="Ons team werkt aan je mailopzetjes en voorvertoning. Vaak binnen 48 uur, bij veel drukte kan dit uitlopen."
           noAction
         />
       )}

@@ -210,7 +210,7 @@ export function deriveTasks(state: CampaignState): CampaignTask[] {
       label: 'Mailopzetjes & voorvertoning aanvullen',
       assignee: 'nextwave',
       status: statusFor(2, task3Done),
-      note: 'Binnen 48 uur',
+      note: 'Vaak ~48u, bij drukte langer',
     },
     {
       id: 'variants',

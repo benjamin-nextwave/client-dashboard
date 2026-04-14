@@ -25,6 +25,7 @@ export function MailVariantsApprovalBlock({
   const [open, setOpen] = useState(false)
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const [justApproved, setJustApproved] = useState(false)
 
   const hasVariants = variants.length > 0
   const hasPdf = !!pdfUrl
@@ -45,9 +46,43 @@ export function MailVariantsApprovalBlock({
     setError(null)
     startTransition(async () => {
       const r = await acknowledgeMailVariants()
-      if (r.error) setError(r.error)
-      else router.refresh()
+      if (r.error) {
+        setError(r.error)
+      } else if (isPostOnboarding) {
+        setJustApproved(true)
+      } else {
+        router.refresh()
+      }
     })
+  }
+
+  // --- Post-onboarding: bedankt-notificatie na klik ---
+  if (isPostOnboarding && justApproved) {
+    return (
+      <section className="overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-6 shadow-sm">
+        <div className="flex items-start gap-4">
+          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/30">
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+            </svg>
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-lg font-bold text-gray-900">Bedankt voor de goedkeuring</h3>
+            <p className="mt-1 text-sm leading-relaxed text-gray-600">
+              NextWave gaat de aanpassingen toepassen. Je krijgt via mail te horen wanneer je campagne weer live staat
+              met de toegepaste aanpassingen.
+            </p>
+            <button
+              type="button"
+              onClick={() => router.refresh()}
+              className="mt-4 rounded-lg border border-gray-200 bg-white px-4 py-2 text-xs font-semibold text-gray-700 shadow-sm transition-all hover:border-emerald-300 hover:text-emerald-700"
+            >
+              Sluiten
+            </button>
+          </div>
+        </div>
+      </section>
+    )
   }
 
   // --- Post-onboarding: clean "new proposal" look ---

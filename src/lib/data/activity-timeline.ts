@@ -12,6 +12,7 @@ export interface TimelineEvent {
   seen: boolean
   note: string | null
   nextAction: string | null
+  details: { title: string; body: string } | null
 }
 
 type EventDef = {
@@ -115,7 +116,8 @@ export async function getActivityTimeline(): Promise<TimelineEvent[]> {
         'mail_variants_last_acknowledged_at, campaign_proposal_acknowledged_at, ' +
         'campaign_variants_pdf_uploaded_at, campaign_proposal_published_at, ' +
         'campaign_variants_last_published_at, campaign_client_mailed_at, ' +
-        'operator_mail_page_sent_at, operator_mail_page_category'
+        'operator_mail_page_sent_at, operator_mail_page_category, ' +
+        'campaign_proposal_title, campaign_proposal_body'
       )
       .eq('is_hidden', false),
     supabase.from('operator_seen_events').select('event_key, note'),
@@ -148,6 +150,13 @@ export async function getActivityTimeline(): Promise<TimelineEvent[]> {
         description = 'Mail verstuurd via de operator mailpagina.'
       }
 
+      let details: { title: string; body: string } | null = null
+      if (def.type === 'proposal_published' || def.type === 'proposal_acknowledged') {
+        const title = (client.campaign_proposal_title as string | null) ?? ''
+        const body = (client.campaign_proposal_body as string | null) ?? ''
+        if (title || body) details = { title, body }
+      }
+
       events.push({
         key,
         clientId,
@@ -160,6 +169,7 @@ export async function getActivityTimeline(): Promise<TimelineEvent[]> {
         seen: seenMap.has(key),
         note: seenMap.get(key) ?? null,
         nextAction: def.nextAction,
+        details,
       })
     }
   }

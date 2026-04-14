@@ -119,15 +119,26 @@ export function ActivityTimeline({ events }: { events: TimelineEvent[] }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [filter, setFilter] = useState<FilterMode>('all')
+  const [search, setSearch] = useState('')
 
   const unseenCount = events.filter((e) => !e.seen).length
 
-  const filtered =
+  const byMode =
     filter === 'unseen'
       ? events.filter((e) => !e.seen)
       : filter === 'seen'
         ? events.filter((e) => e.seen)
         : events
+
+  const q = search.trim().toLowerCase()
+  const filtered = q
+    ? byMode.filter(
+        (e) =>
+          e.clientName.toLowerCase().includes(q) ||
+          e.label.toLowerCase().includes(q) ||
+          (e.note ?? '').toLowerCase().includes(q)
+      )
+    : byMode
 
   const groups = groupByDate(filtered)
 
@@ -153,6 +164,38 @@ export function ActivityTimeline({ events }: { events: TimelineEvent[] }) {
 
   return (
     <div className="space-y-6">
+      {/* Search */}
+      <div className="relative">
+        <svg
+          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={2}
+          stroke="currentColor"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+        </svg>
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Zoek op bedrijfsnaam of activiteit..."
+          className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-10 text-sm text-gray-900 shadow-sm transition-all placeholder:text-gray-400 focus:border-indigo-400 focus:outline-none focus:ring-4 focus:ring-indigo-100"
+        />
+        {search && (
+          <button
+            type="button"
+            onClick={() => setSearch('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+            title="Wissen"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
+      </div>
+
       {/* Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
@@ -223,6 +266,10 @@ function EventItem({
   const [noteText, setNoteText] = useState(event.note ?? '')
   const [savingNote, startSaveNote] = useTransition()
   const [noteSaved, setNoteSaved] = useState(false)
+  const [detailsOpen, setDetailsOpen] = useState(false)
+  const hasProposalDetails =
+    (event.type === 'proposal_published' || event.type === 'proposal_acknowledged') &&
+    !!event.details
 
   const icon = TYPE_ICONS[event.type] ?? DEFAULT_ICON
 
@@ -277,6 +324,24 @@ function EventItem({
 
             {/* Actions */}
             <div className="flex flex-shrink-0 items-center gap-1.5">
+              {hasProposalDetails && (
+                <button
+                  type="button"
+                  onClick={() => setDetailsOpen(!detailsOpen)}
+                  title="Bekijk voorstel"
+                  className={`flex h-7 items-center gap-1 rounded-lg border px-2 text-[10px] font-semibold transition-all ${
+                    detailsOpen
+                      ? 'border-violet-300 bg-violet-50 text-violet-700'
+                      : 'border-gray-200 bg-white text-gray-600 hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700'
+                  }`}
+                >
+                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                  </svg>
+                  Details
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setNoteOpen(!noteOpen)}
@@ -336,6 +401,21 @@ function EventItem({
           )}
         </div>
       </div>
+
+      {/* Proposal details */}
+      {detailsOpen && hasProposalDetails && event.details && (
+        <div className="mt-3 ml-11 rounded-xl border border-violet-200 bg-violet-50/40 p-4">
+          <div className="text-[11px] font-bold uppercase tracking-wide text-violet-700">Campagnevoorstel</div>
+          {event.details.title && (
+            <div className="mt-1 text-sm font-semibold text-gray-900">{event.details.title}</div>
+          )}
+          {event.details.body && (
+            <pre className="mt-2 whitespace-pre-wrap font-sans text-xs leading-relaxed text-gray-700">
+              {event.details.body}
+            </pre>
+          )}
+        </div>
+      )}
 
       {/* Note editor */}
       {noteOpen && (
