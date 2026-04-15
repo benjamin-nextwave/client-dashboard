@@ -93,7 +93,11 @@
       "Bash(git checkout:*)",
       "Bash(git merge:*)",
       "Bash(set:*)",
-      "WebFetch(domain:app.theneo.io)"
+      "WebFetch(domain:app.theneo.io)",
+      "Bash(vercel --version)",
+      "Bash(vercel deploy:*)",
+      "Bash(supabase --version)",
+      "Bash(supabase status:*)"
     ]
   }
 }
