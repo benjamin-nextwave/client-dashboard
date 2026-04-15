@@ -170,8 +170,12 @@ export function InboxEmbedFrame({ proxyBaseUrl, targetHost }: InboxEmbedFramePro
           position: 'absolute',
           top: '-115px',
           left: '0',
-          width: '100%',
-          height: 'calc(100% + 115px)',
+          // Zoom uit door te schalen; compenseer width/height zodat de iframe
+          // nog steeds het volledige zichtbare gebied vult.
+          transform: 'scale(0.85)',
+          transformOrigin: 'top left',
+          width: 'calc(100% / 0.85)',
+          height: 'calc((100% + 115px) / 0.85)',
           display: 'block',
           opacity: iframeLoaded ? 1 : 0,
           transition: 'opacity 0.3s ease',
