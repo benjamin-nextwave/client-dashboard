@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { getClientBranding } from '@/lib/client/get-client-branding'
 import { SidebarNav } from '@/components/client/sidebar-nav'
 import { ChatWidget } from '@/components/client/chat-widget'
+import { SafariBanner } from '@/components/client/safari-banner'
 import { createClient } from '@/lib/supabase/server'
 
 async function signOut() {
@@ -38,14 +39,7 @@ export default async function ClientLayout({
       />
       <main className="flex-1 overflow-auto">
         <div className="mx-auto max-w-6xl px-6 py-10 lg:px-10">
-          <div className="mb-6 flex items-start gap-3 rounded-xl border border-amber-200/70 bg-amber-50/70 px-4 py-3">
-            <svg className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
-            </svg>
-            <p className="text-xs leading-relaxed text-amber-900">
-              <span className="font-semibold">Let op:</span> De inbox wordt momenteel niet ondersteund in Safari. Gebruik Google Chrome (eventueel incognito) voor de beste ervaring.
-            </p>
-          </div>
+          <SafariBanner />
           {children}
         </div>
       </main>

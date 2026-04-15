@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useCallback, useTransition } from 'react'
+import { useState, useCallback, useTransition, useEffect } from 'react'
 import { requestInboxPasswordHelp } from '../actions'
+import { SAFARI_BANNER_HIDE_EVENT, SAFARI_BANNER_SHOW_EVENT } from '@/components/client/safari-banner'
 
 interface InboxEmbedFrameProps {
   proxyBaseUrl: string
@@ -17,6 +18,20 @@ export function InboxEmbedFrame({ proxyBaseUrl, targetHost }: InboxEmbedFramePro
   const [iframeLoaded, setIframeLoaded] = useState(false)
   const [helpPending, startHelp] = useTransition()
   const [helpResult, setHelpResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+
+  // Verberg de Safari-banner zodra de inbox-login gelukt is, zodat de iframe
+  // hoger in beeld kan. Zet 'm terug wanneer de component unmount (bv. naar
+  // andere pagina navigeren).
+  useEffect(() => {
+    if (isLoggedIn) {
+      window.dispatchEvent(new Event(SAFARI_BANNER_HIDE_EVENT))
+    } else {
+      window.dispatchEvent(new Event(SAFARI_BANNER_SHOW_EVENT))
+    }
+    return () => {
+      window.dispatchEvent(new Event(SAFARI_BANNER_SHOW_EVENT))
+    }
+  }, [isLoggedIn])
 
   const handleLogin = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
@@ -168,14 +183,14 @@ export function InboxEmbedFrame({ proxyBaseUrl, targetHost }: InboxEmbedFramePro
         style={{
           border: 'none',
           position: 'absolute',
-          top: '-115px',
-          left: '0',
+          top: '-65px',
+          left: '-90px',
           // Zoom uit door te schalen; compenseer width/height zodat de iframe
           // nog steeds het volledige zichtbare gebied vult.
-          transform: 'scale(0.85)',
+          transform: 'scale(0.83)',
           transformOrigin: 'top left',
-          width: 'calc(100% / 0.85)',
-          height: 'calc((100% + 115px) / 0.85)',
+          width: 'calc(100% / 0.83 + 150px)',
+          height: 'calc((100% + 65px) / 0.83)',
           display: 'block',
           opacity: iframeLoaded ? 1 : 0,
           transition: 'opacity 0.3s ease',
