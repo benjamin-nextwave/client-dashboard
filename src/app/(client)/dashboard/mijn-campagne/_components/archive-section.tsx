@@ -25,7 +25,7 @@ export function ArchiveSection({ formSubmissionCount, variantsPdfUrl, mailVarian
   const [modalOpen, setModalOpen] = useState(false)
 
   const hasForm = formSubmissionCount > 0
-  const hasPdf = !!variantsPdfUrl && variantsAcknowledged
+  const hasPdf = !!variantsPdfUrl
   const hasVariants = mailVariants.length > 0 && variantsAcknowledged
   const hasProposal = !!proposalTitle && proposalAcknowledged
 
