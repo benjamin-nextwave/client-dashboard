@@ -133,7 +133,7 @@ export default async function MijnCampagnePage() {
         </>
       )}
 
-      <ContactBlock isOnboardingComplete={onboardingDone && !variantsNeedApproval} />
+      <ContactBlock isOnboardingComplete={onboardingDone} />
 
       {/* ─── Archive zone ─── */}
       <ArchiveSection
