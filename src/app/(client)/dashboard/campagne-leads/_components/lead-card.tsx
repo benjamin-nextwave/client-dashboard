@@ -1,12 +1,19 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { DefaultChatTransport } from 'ai'
+import { useChat } from '@ai-sdk/react'
 import { LABEL_META, type CampaignLead } from '@/lib/data/campaign-leads'
 import {
   generateLabelJustification,
   submitLeadObjection,
 } from '@/lib/actions/campaign-leads-actions'
+
+// Hoeveel echte berichten van de klant minimaal moeten zijn gestuurd voordat
+// de definitief-indienen knop verschijnt. De AI duwt door — de klant moet
+// op zijn minst een paar keer expliciet hebben volgehouden.
+const MIN_USER_TURNS = 3
 
 const DATE_FMT = new Intl.DateTimeFormat('nl-NL', {
   day: 'numeric',
@@ -237,28 +244,8 @@ function JustificationSection({ lead }: { lead: CampaignLead }) {
 // ─── Bezwaar-flow ──────────────────────────────────────────────────────
 
 function ObjectionSection({ lead }: { lead: CampaignLead }) {
-  const router = useRouter()
-  const [pending, startTransition] = useTransition()
-  const [error, setError] = useState<string | null>(null)
-  const [showForm, setShowForm] = useState(false)
-  const [text, setText] = useState('')
-
   const status = lead.objectionStatus
-
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    setError(null)
-    startTransition(async () => {
-      const result = await submitLeadObjection({ leadId: lead.id, text: text.trim() })
-      if ('error' in result) {
-        setError(result.error)
-        return
-      }
-      setShowForm(false)
-      setText('')
-      router.refresh()
-    })
-  }
+  const [showChat, setShowChat] = useState(false)
 
   // Reeds afgehandeld of in behandeling? Toon historie.
   if (status) {
@@ -316,54 +303,15 @@ function ObjectionSection({ lead }: { lead: CampaignLead }) {
     )
   }
 
-  // Geen bezwaar — toon de actieknop / het formulier.
+  // Geen bezwaar — toon de chat-flow.
   return (
     <div className="mt-4">
-      {showForm ? (
-        <form
-          onSubmit={handleSubmit}
-          className="rounded-lg border border-gray-200 bg-white p-4"
-        >
-          <label className="mb-2 block text-[11px] font-semibold uppercase tracking-wide text-gray-500">
-            Reden van bezwaar
-          </label>
-          <textarea
-            rows={4}
-            required
-            minLength={10}
-            maxLength={2000}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-            placeholder="Leg uit waarom je het niet eens bent met dit label of deze lead…"
-          />
-          {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
-          <div className="mt-3 flex items-center justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setShowForm(false)
-                setText('')
-                setError(null)
-              }}
-              disabled={pending}
-              className="rounded-md px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-100 disabled:opacity-50"
-            >
-              Annuleren
-            </button>
-            <button
-              type="submit"
-              disabled={pending || text.trim().length < 10}
-              className="rounded-md bg-gray-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-gray-800 disabled:opacity-60"
-            >
-              {pending ? 'Verzenden…' : 'Bezwaar indienen'}
-            </button>
-          </div>
-        </form>
+      {showChat ? (
+        <ObjectionChat lead={lead} onClose={() => setShowChat(false)} />
       ) : (
         <button
           type="button"
-          onClick={() => setShowForm(true)}
+          onClick={() => setShowChat(true)}
           className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm transition-colors hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700"
         >
           <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
@@ -374,4 +322,203 @@ function ObjectionSection({ lead }: { lead: CampaignLead }) {
       )}
     </div>
   )
+}
+
+// ─── Bezwaar-chat ──────────────────────────────────────────────────────
+
+function ObjectionChat({ lead, onClose }: { lead: CampaignLead; onClose: () => void }) {
+  const router = useRouter()
+  const [input, setInput] = useState('')
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [submitPending, startSubmit] = useTransition()
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  const transport = useMemo(
+    () =>
+      new DefaultChatTransport({
+        api: '/api/campaign-leads/objection-chat',
+        body: { leadId: lead.id },
+      }),
+    [lead.id]
+  )
+
+  const { messages, sendMessage, status, error } = useChat({ transport })
+  const isStreaming = status === 'streaming' || status === 'submitted'
+
+  // Auto-scroll naar laatste bericht
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, isStreaming])
+
+  const userTurns = messages.filter((m) => m.role === 'user').length
+  const canSubmit = userTurns >= MIN_USER_TURNS && !isStreaming
+
+  const handleSend = (e: React.FormEvent) => {
+    e.preventDefault()
+    const trimmed = input.trim()
+    if (!trimmed || isStreaming) return
+    sendMessage({ text: trimmed })
+    setInput('')
+  }
+
+  const handleSubmitObjection = () => {
+    setSubmitError(null)
+    const transcript = formatTranscript(messages)
+    if (transcript.length < 10) {
+      setSubmitError('Het gesprek is te kort om als bezwaar in te dienen.')
+      return
+    }
+    startSubmit(async () => {
+      const result = await submitLeadObjection({ leadId: lead.id, text: transcript })
+      if ('error' in result) {
+        setSubmitError(result.error)
+        return
+      }
+      router.refresh()
+    })
+  }
+
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+      <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+        <div className="flex items-center gap-2">
+          <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-rose-100 text-rose-700">
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+            </svg>
+          </span>
+          <div>
+            <p className="text-sm font-semibold text-gray-900">Bezwaar indienen</p>
+            <p className="text-[11px] text-gray-500">
+              Bespreek je bezwaar eerst met onze coach. Hierna kun je het indienen.
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+          aria-label="Sluiten"
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Berichten */}
+      <div className="max-h-[420px] space-y-3 overflow-y-auto bg-gray-50/40 p-4">
+        {messages.length === 0 && (
+          <div className="rounded-md border border-dashed border-gray-200 bg-white p-3 text-center text-xs text-gray-500">
+            Begin met je bezwaar in een paar zinnen — onze coach zal je vragen stellen.
+          </div>
+        )}
+        {messages.map((m) => {
+          const text =
+            m.parts
+              ?.filter((p): p is { type: 'text'; text: string } => p.type === 'text')
+              .map((p) => p.text)
+              .join('') ?? ''
+          const isUser = m.role === 'user'
+          return (
+            <div key={m.id} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+              <div
+                className={`max-w-[85%] rounded-lg px-3 py-2 text-sm leading-relaxed ${
+                  isUser
+                    ? 'bg-gray-900 text-white'
+                    : 'border border-gray-200 bg-white text-gray-800'
+                }`}
+              >
+                <div className="whitespace-pre-wrap">{text}</div>
+              </div>
+            </div>
+          )
+        })}
+        {isStreaming && messages[messages.length - 1]?.role === 'user' && (
+          <div className="flex justify-start">
+            <div className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-500">
+              <span className="inline-flex gap-1">
+                <span className="animate-bounce">.</span>
+                <span className="animate-bounce" style={{ animationDelay: '0.1s' }}>.</span>
+                <span className="animate-bounce" style={{ animationDelay: '0.2s' }}>.</span>
+              </span>
+            </div>
+          </div>
+        )}
+        {error && (
+          <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">
+            Er ging iets mis met de chat. Probeer het opnieuw.
+          </div>
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Input */}
+      <form onSubmit={handleSend} className="border-t border-gray-100 p-3">
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder={messages.length === 0 ? 'Waarom denk je dat dit label niet klopt?' : 'Reageer…'}
+            disabled={isStreaming}
+            maxLength={1000}
+            className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-gray-50 disabled:text-gray-500"
+          />
+          <button
+            type="submit"
+            disabled={isStreaming || !input.trim()}
+            className="inline-flex items-center justify-center rounded-md bg-gray-900 px-3 py-2 text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+            aria-label="Verzend bericht"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.269 3.126A59.768 59.768 0 0 1 21.485 12 59.77 59.77 0 0 1 3.27 20.876L5.999 12zm0 0h7.5" />
+            </svg>
+          </button>
+        </div>
+      </form>
+
+      {/* Submit-blok */}
+      <div className="border-t border-gray-100 bg-gray-50/60 px-4 py-3">
+        {canSubmit ? (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-xs text-gray-600">
+              Wil je je bezwaar nu definitief indienen? Het volledige gesprek wordt meegestuurd.
+            </p>
+            <button
+              type="button"
+              onClick={handleSubmitObjection}
+              disabled={submitPending}
+              className="rounded-md bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-rose-700 disabled:opacity-60"
+            >
+              {submitPending ? 'Indienen…' : 'Bezwaar definitief indienen'}
+            </button>
+          </div>
+        ) : (
+          <p className="text-xs text-gray-500">
+            Stuur eerst minimaal {MIN_USER_TURNS} berichten met de coach
+            {userTurns > 0 ? ` (${userTurns}/${MIN_USER_TURNS})` : ''} voordat je het bezwaar kunt indienen.
+          </p>
+        )}
+        {submitError && <p className="mt-2 text-xs text-red-600">{submitError}</p>}
+      </div>
+    </div>
+  )
+}
+
+type ChatMessage = ReturnType<typeof useChat>['messages'][number]
+
+function formatTranscript(messages: ChatMessage[]): string {
+  return messages
+    .map((m) => {
+      const text =
+        m.parts
+          ?.filter((p): p is { type: 'text'; text: string } => p.type === 'text')
+          .map((p) => p.text)
+          .join('') ?? ''
+      const speaker = m.role === 'user' ? 'Klant' : 'Coach'
+      return `${speaker}: ${text.trim()}`
+    })
+    .filter((line) => line.length > `Klant: `.length)
+    .join('\n\n')
 }

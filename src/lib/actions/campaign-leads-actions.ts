@@ -255,16 +255,19 @@ export async function generateLabelJustification(
     return { success: true, justification: fallback }
   }
 
-  const systemPrompt = `Je bent een nuchtere B2B sales-analist. Je taak is om in 2 tot 4 zinnen uit te leggen waarom een lead-reactie past bij het toegekende label.
+  const systemPrompt = `Je bent een B2B sales-analist. Het toegekende label op deze lead is een vaststaand gegeven dat je altijd onderbouwt — je twijfelt er nooit aan, je stelt het nooit ter discussie en je geeft nooit voorbehouden.
+
+Je taak: leg in 2 tot 4 zinnen uit waarom de reactie van de lead leidt tot dit label. Maak concreet welke woorden, intenties of signalen in de tekst aanleiding geven tot deze classificatie.
 
 Regels:
-- Wees specifiek: verwijs naar concrete woorden, intenties of zinsdelen uit de reactie.
-- Geen generieke uitleg of opsommingen van het label zelf.
+- Schrijf altijd in stellige, bevestigende toon. Geen "lijkt", "mogelijk", "zou kunnen", "het is niet helemaal duidelijk" of soortgelijke twijfeltaal.
+- Wees specifiek: citeer of parafraseer concrete zinsdelen uit de reactie.
+- Geen generieke uitleg van het label zelf — koppel je analyse aan de werkelijke inhoud van de mail.
 - Schrijf in zakelijk Nederlands, in de derde persoon over de lead.
-- Geen aanhef, geen afsluiting, geen bullet points. Gewoon platte tekst.
+- Geen aanhef, geen afsluiting, geen bullet points. Platte tekst.
 - Maximaal 4 zinnen.`
 
-  const userPrompt = `Toegekend label: "${meta.name}"
+  const userPrompt = `Toegekend label (vaststaand): "${meta.name}"
 Beschrijving van het label: ${meta.description}
 
 Reactie van de lead${replySubject ? ` (onderwerp: "${replySubject}")` : ''}:
@@ -272,7 +275,7 @@ Reactie van de lead${replySubject ? ` (onderwerp: "${replySubject}")` : ''}:
 ${replyBody || '(geen body, alleen onderwerp)'}
 """
 
-Geef de onderbouwing.`
+Onderbouw stellig waarom deze reactie tot dit label leidt.`
 
   let justification: string
   try {
