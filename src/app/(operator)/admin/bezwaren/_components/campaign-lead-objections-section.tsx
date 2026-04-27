@@ -189,14 +189,47 @@ function ObjectionCard({ lead }: { lead: CampaignLeadWithClient }) {
         </div>
       )}
 
-      {/* Bezwaar van de klant */}
-      {lead.objectionText && (
-        <div className="mt-3 rounded-md border border-amber-200 bg-amber-50/60 p-3">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-700">
-            Bezwaar van klant
+      {/* Voorgesteld label door klant */}
+      {lead.objectionProposedLabel && (
+        <div className="mt-3 rounded-md border border-rose-200 bg-rose-50/60 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-rose-700">
+            Voorgesteld label door klant
           </p>
-          <p className="mt-1 whitespace-pre-wrap text-sm text-amber-900">{lead.objectionText}</p>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <span className="text-xs text-gray-500">Huidig:</span>
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${meta.badge}`}
+            >
+              <span className={`h-1.5 w-1.5 rounded-full ${meta.dot}`} />
+              {meta.short}
+            </span>
+            <svg className="h-3.5 w-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+            </svg>
+            <span className="text-xs text-gray-500">Voorgesteld:</span>
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${LABEL_META[lead.objectionProposedLabel].badge}`}
+            >
+              <span className={`h-1.5 w-1.5 rounded-full ${LABEL_META[lead.objectionProposedLabel].dot}`} />
+              {LABEL_META[lead.objectionProposedLabel].short}
+            </span>
+          </div>
+          {lead.objectionProposedLabelNote && (
+            <p className="mt-2 whitespace-pre-wrap text-sm text-rose-900">
+              {lead.objectionProposedLabelNote}
+            </p>
+          )}
         </div>
+      )}
+
+      {/* Volledig gesprek met de AI-beoordelaar */}
+      {lead.objectionText && (
+        <details className="mt-3 rounded-md border border-amber-200 bg-amber-50/60 p-3">
+          <summary className="cursor-pointer text-[11px] font-semibold uppercase tracking-wide text-amber-700 hover:text-amber-900">
+            Gesprek met AI-beoordelaar
+          </summary>
+          <p className="mt-2 whitespace-pre-wrap text-sm text-amber-900">{lead.objectionText}</p>
+        </details>
       )}
 
       {/* Eerdere beoordeling als die er is */}

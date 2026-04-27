@@ -310,10 +310,19 @@ Onderbouw stellig waarom deze reactie tot dit label leidt.`
 
 const SubmitObjectionSchema = z.object({
   leadId: z.string().uuid(),
-  text: z.string().trim().min(10, 'Geef minimaal 10 tekens onderbouwing.').max(2000),
+  text: z.string().trim().min(10, 'Geef minimaal 10 tekens onderbouwing.').max(20000),
+  proposedLabel: z.enum(LEAD_LABELS),
+  proposedLabelNote: z
+    .string()
+    .trim()
+    .min(10, 'Geef minimaal 10 tekens toelichting bij het voorgestelde label.')
+    .max(2000),
 })
 
-/** Klant dient bezwaar in tegen het label op een lead. */
+/**
+ * Klant dient bezwaar in tegen het label op een lead. Per lead kan dit
+ * maximaal één keer — ook na een afkeuring kan niet opnieuw worden ingediend.
+ */
 export async function submitLeadObjection(
   input: z.input<typeof SubmitObjectionSchema>
 ): Promise<ActionResult> {
@@ -334,25 +343,31 @@ export async function submitLeadObjection(
 
   const admin = createAdminClient()
 
-  // Eigenaarschap controleren
   const { data: lead } = await admin
     .from('campaign_leads')
-    .select('client_id, objection_status')
+    .select('client_id, label, objection_status')
     .eq('id', parsed.data.leadId)
     .single()
 
   if (!lead || lead.client_id !== userClientId) return { error: 'Lead niet gevonden.' }
-  if (lead.objection_status === 'pending') {
-    return { error: 'Er staat al een open bezwaar voor deze lead.' }
+  if (lead.objection_status !== null) {
+    return { error: 'Er is al een bezwaar ingediend voor deze lead.' }
+  }
+  if (parsed.data.proposedLabel === lead.label) {
+    return {
+      error:
+        'Het voorgestelde label is gelijk aan het huidige label — kies een ander passend label.',
+    }
   }
 
   const { error } = await admin
     .from('campaign_leads')
     .update({
       objection_text: parsed.data.text,
+      objection_proposed_label: parsed.data.proposedLabel,
+      objection_proposed_label_note: parsed.data.proposedLabelNote,
       objection_submitted_at: new Date().toISOString(),
       objection_status: 'pending',
-      // Reset eventueel oude beoordeling
       objection_response: null,
       objection_resolved_at: null,
     })

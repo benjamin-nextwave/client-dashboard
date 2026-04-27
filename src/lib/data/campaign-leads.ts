@@ -108,6 +108,8 @@ export type CampaignLead = {
   objectionStatus: ObjectionStatus | null
   objectionResponse: string | null
   objectionResolvedAt: string | null
+  objectionProposedLabel: LeadLabel | null
+  objectionProposedLabelNote: string | null
   createdAt: string
   updatedAt: string
 }
@@ -132,6 +134,8 @@ type DbRow = {
   objection_status: string | null
   objection_response: string | null
   objection_resolved_at: string | null
+  objection_proposed_label: string | null
+  objection_proposed_label_note: string | null
   created_at: string
   updated_at: string
 }
@@ -161,6 +165,8 @@ function rowToLead(row: DbRow): CampaignLead {
     objectionStatus: isObjectionStatus(row.objection_status) ? row.objection_status : null,
     objectionResponse: row.objection_response,
     objectionResolvedAt: row.objection_resolved_at,
+    objectionProposedLabel: isLeadLabel(row.objection_proposed_label) ? row.objection_proposed_label : null,
+    objectionProposedLabelNote: row.objection_proposed_label_note,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
