@@ -44,6 +44,16 @@ export default async function CampagneLeadsPage({ searchParams }: PageProps) {
         </p>
       </div>
 
+      <div className="mb-6 flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50/70 px-4 py-3">
+        <svg className="mt-0.5 h-4 w-4 flex-shrink-0 text-blue-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 01 1.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+        </svg>
+        <p className="text-xs leading-relaxed text-blue-900">
+          <span className="font-semibold">Let op:</span> deze leads worden niet live bijgewerkt — ze worden
+          één keer per week aangevuld door het Nextwave team.
+        </p>
+      </div>
+
       {leads.length === 0 ? (
         <EmptyState
           icon={
