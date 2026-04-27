@@ -97,7 +97,9 @@
       "Bash(vercel --version)",
       "Bash(vercel deploy:*)",
       "Bash(supabase --version)",
-      "Bash(supabase status:*)"
+      "Bash(supabase status:*)",
+      "Bash(vercel --prod --yes)",
+      "Bash(tee /tmp/tsc.out)"
     ]
   }
 }

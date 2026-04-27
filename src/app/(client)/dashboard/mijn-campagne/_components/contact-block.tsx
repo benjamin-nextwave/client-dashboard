@@ -55,7 +55,7 @@ export function ContactBlock({ isOnboardingComplete }: Props) {
                   van dit dashboard.
                 </p>
                 <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-xs leading-relaxed text-gray-700">
-                  Alleen in dringende noodgevallen kun je terecht bij{' '}
+                  Alleen in dringende gevallen kun je terecht bij{' '}
                   <a
                     href="mailto:merlijn@nextwave-solutions.nl"
                     className="font-semibold text-gray-900 underline hover:text-gray-950"

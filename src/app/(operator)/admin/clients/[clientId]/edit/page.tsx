@@ -96,6 +96,7 @@ export default async function EditClientPage({ params }: EditClientPageProps) {
         </div>
         <div className="flex flex-wrap gap-2">
           <QuickLink href={`/admin/clients/${clientId}/campagne`} label="Campagne" highlight />
+          <QuickLink href={`/admin/clients/${clientId}/campagne-leads`} label="Campagne leads" />
           <QuickLink href={`/admin/clients/${clientId}/contacten`} label="Contacten" />
           <QuickLink href={`/admin/clients/${clientId}/csv`} label="CSV" />
           <QuickLink href={`/admin/clients/${clientId}/onboarding`} label="Onboarding" />
