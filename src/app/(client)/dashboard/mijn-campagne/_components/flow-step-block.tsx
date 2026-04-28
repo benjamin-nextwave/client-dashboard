@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import {
   OUTCOME_META,
-  RESPONSIBILITY_LABEL,
+  CLIENT_RESPONSIBILITY_LABEL,
   type CampaignFlowStep,
   type CampaignFlowOutcome,
 } from '@/lib/data/campaign-flow'
@@ -217,7 +217,7 @@ function DeadEndCard({
   align: 'left' | 'right'
 }) {
   const meta = OUTCOME_META[outcome.kind]
-  const respLabel = outcome.responsibility ? RESPONSIBILITY_LABEL[outcome.responsibility] : null
+  const respLabel = outcome.responsibility ? CLIENT_RESPONSIBILITY_LABEL[outcome.responsibility] : null
 
   return (
     <button

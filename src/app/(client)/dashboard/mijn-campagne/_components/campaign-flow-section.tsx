@@ -1,16 +1,16 @@
-import { getCampaignFlow } from '@/lib/data/campaign-flow'
-import { FlowStepBlock } from './flow-step-block'
+import { getPublishedFlowsByClient } from '@/lib/data/campaign-flow'
+import { CampaignFlowsViewer } from './campaign-flows-viewer'
 
 interface Props {
   clientId: string
 }
 
 export async function CampaignFlowSection({ clientId }: Props) {
-  const flow = await getCampaignFlow(clientId)
+  const flows = await getPublishedFlowsByClient(clientId)
 
-  if (!flow || !flow.isPublished || flow.steps.length === 0) {
-    return null
-  }
+  // Alleen flows tonen die ook minimaal 1 stap hebben
+  const visibleFlows = flows.filter((f) => f.steps.length > 0)
+  if (visibleFlows.length === 0) return null
 
   return (
     <section className="relative overflow-hidden rounded-2xl border border-gray-200 bg-gradient-to-b from-white via-white to-indigo-50/20 p-6 shadow-sm sm:p-8">
@@ -33,16 +33,7 @@ export async function CampaignFlowSection({ clientId }: Props) {
         </p>
       </div>
 
-      <div className="relative mx-auto max-w-2xl">
-        {flow.steps.map((step, idx) => (
-          <FlowStepBlock
-            key={step.id}
-            step={step}
-            stepLabel={`Mail ${step.stepNumber}`}
-            isLast={idx === flow.steps.length - 1}
-          />
-        ))}
-      </div>
+      <CampaignFlowsViewer flows={visibleFlows} />
     </section>
   )
 }

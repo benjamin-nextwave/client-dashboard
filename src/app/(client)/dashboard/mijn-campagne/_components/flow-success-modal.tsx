@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import {
   OUTCOME_META,
-  RESPONSIBILITY_LABEL,
+  CLIENT_RESPONSIBILITY_LABEL,
   type CampaignFlowOutcome,
 } from '@/lib/data/campaign-flow'
 
@@ -22,7 +22,7 @@ export function FlowSuccessModal({ outcome, onClose }: Props) {
   }, [onClose])
 
   const meta = OUTCOME_META.success
-  const respLabel = outcome.responsibility ? RESPONSIBILITY_LABEL[outcome.responsibility] : null
+  const respLabel = outcome.responsibility ? CLIENT_RESPONSIBILITY_LABEL[outcome.responsibility] : null
 
   return (
     <div

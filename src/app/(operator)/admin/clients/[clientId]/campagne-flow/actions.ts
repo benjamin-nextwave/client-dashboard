@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import {
-  ensureCampaignFlow,
+  createCampaignFlow,
   DEFAULT_DROPOFF_REASONS,
   type FlowDropoffReason,
   type FlowOutcomeKind,
@@ -21,31 +21,30 @@ function revalidateFor(clientId: string) {
   for (const p of adminPaths(clientId)) revalidatePath(p)
 }
 
-async function getFlowIdForClient(clientId: string): Promise<string | null> {
+async function getClientIdForFlow(flowId: string): Promise<string | null> {
   const supabase = createAdminClient()
   const { data } = await supabase
     .from('campaign_flows')
-    .select('id')
-    .eq('client_id', clientId)
+    .select('client_id')
+    .eq('id', flowId)
     .maybeSingle()
-  return data?.id ?? null
+  return data?.client_id ?? null
 }
 
-async function getClientIdForStep(stepId: string): Promise<string | null> {
+async function getFlowIdForStep(stepId: string): Promise<string | null> {
   const supabase = createAdminClient()
-  const { data: step } = await supabase
+  const { data } = await supabase
     .from('campaign_flow_steps')
     .select('flow_id')
     .eq('id', stepId)
     .maybeSingle()
-  if (!step) return null
+  return data?.flow_id ?? null
+}
 
-  const { data: flow } = await supabase
-    .from('campaign_flows')
-    .select('client_id')
-    .eq('id', step.flow_id)
-    .maybeSingle()
-  return flow?.client_id ?? null
+async function getClientIdForStep(stepId: string): Promise<string | null> {
+  const flowId = await getFlowIdForStep(stepId)
+  if (!flowId) return null
+  return getClientIdForFlow(flowId)
 }
 
 async function getClientIdForOutcome(outcomeId: string): Promise<string | null> {
@@ -71,23 +70,59 @@ async function getClientIdForVariant(variantId: string): Promise<string | null> 
 }
 
 // =============================================================================
-// FLOW
+// FLOW (per-flow CRUD)
 // =============================================================================
 
-export async function ensureFlowAction(clientId: string): Promise<{ error?: string }> {
+export async function createFlow(
+  clientId: string,
+  name: string
+): Promise<{ flowId?: string; error?: string }> {
   try {
-    await ensureCampaignFlow(clientId)
+    const flow = await createCampaignFlow(clientId, name)
+    revalidateFor(clientId)
+    return { flowId: flow.id }
   } catch (err) {
     return { error: err instanceof Error ? err.message : 'Onbekende fout' }
   }
+}
+
+export async function updateFlowName(
+  flowId: string,
+  name: string
+): Promise<{ error?: string }> {
+  const clientId = await getClientIdForFlow(flowId)
+  if (!clientId) return { error: 'Flow niet gevonden' }
+
+  const trimmed = name.trim() || 'Naamloze campagne'
+  const supabase = createAdminClient()
+  const { error } = await supabase
+    .from('campaign_flows')
+    .update({ name: trimmed, updated_at: new Date().toISOString() })
+    .eq('id', flowId)
+
+  if (error) return { error: error.message }
+  revalidateFor(clientId)
+  return {}
+}
+
+export async function deleteFlow(flowId: string): Promise<{ error?: string }> {
+  const clientId = await getClientIdForFlow(flowId)
+  if (!clientId) return { error: 'Flow niet gevonden' }
+
+  const supabase = createAdminClient()
+  const { error } = await supabase.from('campaign_flows').delete().eq('id', flowId)
+  if (error) return { error: error.message }
   revalidateFor(clientId)
   return {}
 }
 
 export async function setFlowPublished(
-  clientId: string,
+  flowId: string,
   published: boolean
 ): Promise<{ error?: string }> {
+  const clientId = await getClientIdForFlow(flowId)
+  if (!clientId) return { error: 'Flow niet gevonden' }
+
   const supabase = createAdminClient()
   const { error } = await supabase
     .from('campaign_flows')
@@ -95,7 +130,7 @@ export async function setFlowPublished(
       is_published: published,
       published_at: published ? new Date().toISOString() : null,
     })
-    .eq('client_id', clientId)
+    .eq('id', flowId)
 
   if (error) return { error: error.message }
   revalidateFor(clientId)
@@ -106,25 +141,27 @@ export async function setFlowPublished(
 // STEPS
 // =============================================================================
 
-export async function addStep(clientId: string): Promise<{ error?: string }> {
+export async function addStep(flowId: string): Promise<{ error?: string }> {
+  const clientId = await getClientIdForFlow(flowId)
+  if (!clientId) return { error: 'Flow niet gevonden' }
+
   const supabase = createAdminClient()
 
-  let flow
-  try {
-    flow = await ensureCampaignFlow(clientId)
-  } catch (err) {
-    return { error: err instanceof Error ? err.message : 'Onbekende fout' }
-  }
+  // Bepaal volgende step_number / position binnen deze flow
+  const { data: existing } = await supabase
+    .from('campaign_flow_steps')
+    .select('step_number, position')
+    .eq('flow_id', flowId)
+    .order('step_number', { ascending: false })
+    .limit(1)
 
-  const nextStepNumber =
-    flow.steps.length > 0 ? Math.max(...flow.steps.map((s) => s.stepNumber)) + 1 : 1
-  const nextPosition =
-    flow.steps.length > 0 ? Math.max(...flow.steps.map((s) => s.position)) + 1 : 0
+  const nextStepNumber = existing && existing.length > 0 ? existing[0].step_number + 1 : 1
+  const nextPosition = existing && existing.length > 0 ? existing[0].position + 1 : 0
 
   const { data: stepRow, error: stepError } = await supabase
     .from('campaign_flow_steps')
     .insert({
-      flow_id: flow.id,
+      flow_id: flowId,
       step_number: nextStepNumber,
       title: nextStepNumber === 1 ? 'Eerste contact' : `Mail ${nextStepNumber}`,
       position: nextPosition,
@@ -145,7 +182,8 @@ export async function addStep(clientId: string): Promise<{ error?: string }> {
   })
   if (variantError) return { error: variantError.message }
 
-  // Seed met 3 default outcomes (continue/success/dropoff)
+  // Seed met 3 default outcomes (continue/success/dropoff). Dropoff = niemands
+  // verantwoordelijkheid: lead is uit de campagne, geen actie meer nodig.
   const outcomes = [
     {
       step_id: stepRow.id,
@@ -167,7 +205,7 @@ export async function addStep(clientId: string): Promise<{ error?: string }> {
       step_id: stepRow.id,
       kind: 'dropoff',
       label: 'Lead is afgehaakt',
-      responsibility: 'nextwave',
+      responsibility: null,
       dropoff_reasons: DEFAULT_DROPOFF_REASONS,
       position: 2,
     },
@@ -201,17 +239,17 @@ export async function updateStepTitle(
 }
 
 export async function deleteStep(stepId: string): Promise<{ error?: string }> {
-  const clientId = await getClientIdForStep(stepId)
-  if (!clientId) return { error: 'Stap niet gevonden' }
+  const flowId = await getFlowIdForStep(stepId)
+  if (!flowId) return { error: 'Stap niet gevonden' }
 
-  const flowId = await getFlowIdForClient(clientId)
-  if (!flowId) return { error: 'Flow niet gevonden' }
+  const clientId = await getClientIdForFlow(flowId)
+  if (!clientId) return { error: 'Flow niet gevonden' }
 
   const supabase = createAdminClient()
   const { error } = await supabase.from('campaign_flow_steps').delete().eq('id', stepId)
   if (error) return { error: error.message }
 
-  // Renummer step_numbers + posities
+  // Renummer step_numbers + posities binnen de flow
   const { data: remaining } = await supabase
     .from('campaign_flow_steps')
     .select('id')
@@ -235,11 +273,11 @@ export async function moveStep(
   stepId: string,
   direction: 'up' | 'down'
 ): Promise<{ error?: string }> {
-  const clientId = await getClientIdForStep(stepId)
-  if (!clientId) return { error: 'Stap niet gevonden' }
+  const flowId = await getFlowIdForStep(stepId)
+  if (!flowId) return { error: 'Stap niet gevonden' }
 
-  const flowId = await getFlowIdForClient(clientId)
-  if (!flowId) return { error: 'Flow niet gevonden' }
+  const clientId = await getClientIdForFlow(flowId)
+  if (!clientId) return { error: 'Flow niet gevonden' }
 
   const supabase = createAdminClient()
   const { data: steps } = await supabase
@@ -256,11 +294,10 @@ export async function moveStep(
   const swapIdx = direction === 'up' ? idx - 1 : idx + 1
   if (swapIdx < 0 || swapIdx >= steps.length) return {}
 
-  // Wissel posities + step_numbers
   const a = steps[idx]
   const b = steps[swapIdx]
 
-  // Stap 1: zet a tijdelijk op een onmogelijk hoge step_number om constraint te omzeilen
+  // Tijdelijk hoge step_number om UNIQUE-constraint te omzeilen
   await supabase
     .from('campaign_flow_steps')
     .update({ step_number: 9999, position: 9999 })
@@ -386,26 +423,5 @@ export async function updateOutcome(
   return {}
 }
 
-// Helper: check of een stap de laatste is (voor het tonen van 'continue')
-export async function getStepIsLast(
-  stepId: string
-): Promise<{ isLast: boolean; error?: string }> {
-  const clientId = await getClientIdForStep(stepId)
-  if (!clientId) return { isLast: false, error: 'Stap niet gevonden' }
-
-  const flowId = await getFlowIdForClient(clientId)
-  if (!flowId) return { isLast: false, error: 'Flow niet gevonden' }
-
-  const supabase = createAdminClient()
-  const { data: steps } = await supabase
-    .from('campaign_flow_steps')
-    .select('id, position')
-    .eq('flow_id', flowId)
-    .order('position', { ascending: false })
-    .limit(1)
-
-  return { isLast: steps?.[0]?.id === stepId }
-}
-
-// Marker re-export voor het aanvinken van outcome.kind === 'continue' in de UI
+// Marker re-export
 export type { FlowOutcomeKind }

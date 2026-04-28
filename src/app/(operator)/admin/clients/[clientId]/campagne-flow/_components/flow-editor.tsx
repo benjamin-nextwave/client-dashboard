@@ -7,11 +7,10 @@ import { addStep, setFlowPublished } from '../actions'
 import { StepEditor } from './step-editor'
 
 interface Props {
-  clientId: string
   initialFlow: CampaignFlow
 }
 
-export function FlowEditor({ clientId, initialFlow }: Props) {
+export function FlowEditor({ initialFlow }: Props) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -25,7 +24,7 @@ export function FlowEditor({ clientId, initialFlow }: Props) {
   const handleAddStep = () => {
     setError(null)
     startTransition(async () => {
-      const result = await addStep(clientId)
+      const result = await addStep(flow.id)
       if (result.error) setError(result.error)
       else router.refresh()
     })
@@ -36,7 +35,7 @@ export function FlowEditor({ clientId, initialFlow }: Props) {
     const newPublished = !isPublished
     setOptimisticPublished(newPublished)
     startTransition(async () => {
-      const result = await setFlowPublished(clientId, newPublished)
+      const result = await setFlowPublished(flow.id, newPublished)
       if (result.error) {
         setError(result.error)
         setOptimisticPublished(null)

@@ -42,8 +42,10 @@ export interface CampaignFlowStep {
 export interface CampaignFlow {
   id: string
   clientId: string
+  name: string
   isPublished: boolean
   publishedAt: string | null
+  createdAt: string
   updatedAt: string
   steps: CampaignFlowStep[]
 }
@@ -102,6 +104,12 @@ export const RESPONSIBILITY_LABEL: Record<FlowResponsibility, string> = {
   nextwave: 'Door Nextwave',
 }
 
+// Client-side: spreek de klant rechtstreeks aan
+export const CLIENT_RESPONSIBILITY_LABEL: Record<FlowResponsibility, string> = {
+  client: 'Door jou',
+  nextwave: 'Door Nextwave',
+}
+
 export const DEFAULT_DROPOFF_REASONS: FlowDropoffReason[] = [
   { label: 'Negatieve reactie', position: 0 },
   { label: 'Geen interesse', position: 1 },
@@ -143,8 +151,10 @@ interface StepRow {
 interface FlowRow {
   id: string
   client_id: string
+  name: string
   is_published: boolean
   published_at: string | null
+  created_at: string
   updated_at: string
   campaign_flow_steps?: StepRow[]
 }
@@ -195,8 +205,10 @@ function mapFlow(row: FlowRow): CampaignFlow {
   return {
     id: row.id,
     clientId: row.client_id,
+    name: row.name,
     isPublished: row.is_published,
     publishedAt: row.published_at,
+    createdAt: row.created_at,
     updatedAt: row.updated_at,
     steps: (row.campaign_flow_steps ?? [])
       .map(mapStep)
@@ -207,8 +219,10 @@ function mapFlow(row: FlowRow): CampaignFlow {
 const FLOW_SELECT = `
   id,
   client_id,
+  name,
   is_published,
   published_at,
+  created_at,
   updated_at,
   campaign_flow_steps (
     id,
@@ -238,30 +252,53 @@ const FLOW_SELECT = `
   )
 `
 
-export async function getCampaignFlow(clientId: string): Promise<CampaignFlow | null> {
+export async function getCampaignFlowsByClient(
+  clientId: string
+): Promise<CampaignFlow[]> {
   const supabase = createAdminClient()
   const { data, error } = await supabase
     .from('campaign_flows')
     .select(FLOW_SELECT)
     .eq('client_id', clientId)
+    .order('created_at', { ascending: true })
+
+  if (error || !data) return []
+  return (data as unknown as FlowRow[]).map(mapFlow)
+}
+
+export async function getCampaignFlowById(flowId: string): Promise<CampaignFlow | null> {
+  const supabase = createAdminClient()
+  const { data, error } = await supabase
+    .from('campaign_flows')
+    .select(FLOW_SELECT)
+    .eq('id', flowId)
     .maybeSingle()
 
   if (error || !data) return null
   return mapFlow(data as unknown as FlowRow)
 }
 
-export async function ensureCampaignFlow(clientId: string): Promise<CampaignFlow> {
-  const existing = await getCampaignFlow(clientId)
-  if (existing) return existing
+export async function getPublishedFlowsByClient(
+  clientId: string
+): Promise<CampaignFlow[]> {
+  const flows = await getCampaignFlowsByClient(clientId)
+  return flows.filter((f) => f.isPublished)
+}
 
+export async function createCampaignFlow(
+  clientId: string,
+  name: string
+): Promise<CampaignFlow> {
   const supabase = createAdminClient()
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('campaign_flows')
-    .insert({ client_id: clientId, is_published: false })
+    .insert({ client_id: clientId, is_published: false, name: name.trim() || 'Naamloze campagne' })
+    .select('id')
+    .single()
 
-  if (error) throw new Error(`Kon campagne-flow niet aanmaken: ${error.message}`)
+  if (error || !data) throw new Error(`Kon campagne-flow niet aanmaken: ${error?.message}`)
 
-  const created = await getCampaignFlow(clientId)
+  const created = await getCampaignFlowById(data.id)
   if (!created) throw new Error('Campagne-flow niet gevonden na aanmaken')
   return created
 }

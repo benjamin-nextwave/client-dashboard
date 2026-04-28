@@ -1,17 +1,19 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { ensureCampaignFlow, type CampaignFlow } from '@/lib/data/campaign-flow'
-import { FlowEditor } from './_components/flow-editor'
+import { getCampaignFlowsByClient } from '@/lib/data/campaign-flow'
+import { FlowsManager } from './_components/flows-manager'
 
 export const dynamic = 'force-dynamic'
 
 interface Props {
   params: Promise<{ clientId: string }>
+  searchParams: Promise<{ flow?: string }>
 }
 
-export default async function OperatorCampaignFlowPage({ params }: Props) {
+export default async function OperatorCampaignFlowPage({ params, searchParams }: Props) {
   const { clientId } = await params
+  const { flow: selectedFlowParam } = await searchParams
 
   const supabase = createAdminClient()
   const { data: client } = await supabase
@@ -22,41 +24,16 @@ export default async function OperatorCampaignFlowPage({ params }: Props) {
 
   if (!client) notFound()
 
-  let flow: CampaignFlow | null = null
-  let flowError: string | null = null
-  try {
-    flow = await ensureCampaignFlow(clientId)
-  } catch (err) {
-    flowError = err instanceof Error ? err.message : String(err)
-    console.error('[campagne-flow] ensureCampaignFlow failed:', flowError, err)
-  }
+  const flows = await getCampaignFlowsByClient(clientId)
 
-  if (flowError || !flow) {
-    return (
-      <div className="mx-auto max-w-3xl space-y-6">
-        <Link
-          href={`/admin/clients/${clientId}/edit`}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-indigo-600"
-        >
-          ← Terug naar klant
-        </Link>
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
-          <h2 className="text-base font-bold text-red-900">Campagne-flow kon niet worden geladen</h2>
-          <p className="mt-2 text-sm text-red-800">
-            Er ging iets mis bij het opzetten van de campagne-flow. Hieronder staat de exacte
-            foutmelding zodat de oorzaak achterhaald kan worden.
-          </p>
-          <pre className="mt-3 whitespace-pre-wrap rounded-lg bg-white p-3 text-xs text-red-900 ring-1 ring-red-200">
-            {flowError ?? 'Onbekende fout — geen flow geretourneerd.'}
-          </pre>
-          <p className="mt-3 text-[11px] text-red-700">
-            Meest waarschijnlijke oorzaak: de migratietabellen (<code>campaign_flows</code>,{' '}
-            <code>campaign_flow_steps</code>, <code>campaign_flow_step_variants</code>,{' '}
-            <code>campaign_flow_step_outcomes</code>) ontbreken of hebben verouderde schema-cache.
-          </p>
-        </div>
-      </div>
-    )
+  // Bepaal welke flow standaard geselecteerd is. Volgorde:
+  // 1. ?flow=<id> uit URL als die geldig is
+  // 2. eerste flow in de lijst
+  let selectedFlowId: string | null = null
+  if (selectedFlowParam && flows.some((f) => f.id === selectedFlowParam)) {
+    selectedFlowId = selectedFlowParam
+  } else if (flows.length > 0) {
+    selectedFlowId = flows[0].id
   }
 
   return (
@@ -80,19 +57,19 @@ export default async function OperatorCampaignFlowPage({ params }: Props) {
 
         <div className="mt-5">
           <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
-            Campagne-flow
+            Campagne-flows
           </div>
           <h1 className="mt-1 text-3xl font-semibold tracking-tight text-gray-900">
             {client.company_name}
           </h1>
           <p className="mt-1 text-sm text-gray-500">
-            Bouw het visuele mailpad dat de klant op &ldquo;Mijn campagne&rdquo; ziet. Per stap
-            configureer je varianten en de drie uitkomsten (geen reactie / positief / afgehaakt).
+            Beheer de visuele campagne-flows voor deze klant. Voeg meerdere campagnes toe als de
+            klant er meer dan één heeft — de klant kiest in zijn dashboard welke flow hij wil zien.
           </p>
         </div>
       </div>
 
-      <FlowEditor clientId={clientId} initialFlow={flow} />
+      <FlowsManager clientId={clientId} flows={flows} selectedFlowId={selectedFlowId} />
     </div>
   )
 }
