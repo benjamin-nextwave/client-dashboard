@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { ensureCampaignFlow } from '@/lib/data/campaign-flow'
+import { ensureCampaignFlow, type CampaignFlow } from '@/lib/data/campaign-flow'
 import { FlowEditor } from './_components/flow-editor'
 
 export const dynamic = 'force-dynamic'
@@ -22,7 +22,42 @@ export default async function OperatorCampaignFlowPage({ params }: Props) {
 
   if (!client) notFound()
 
-  const flow = await ensureCampaignFlow(clientId)
+  let flow: CampaignFlow | null = null
+  let flowError: string | null = null
+  try {
+    flow = await ensureCampaignFlow(clientId)
+  } catch (err) {
+    flowError = err instanceof Error ? err.message : String(err)
+    console.error('[campagne-flow] ensureCampaignFlow failed:', flowError, err)
+  }
+
+  if (flowError || !flow) {
+    return (
+      <div className="mx-auto max-w-3xl space-y-6">
+        <Link
+          href={`/admin/clients/${clientId}/edit`}
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-indigo-600"
+        >
+          ← Terug naar klant
+        </Link>
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
+          <h2 className="text-base font-bold text-red-900">Campagne-flow kon niet worden geladen</h2>
+          <p className="mt-2 text-sm text-red-800">
+            Er ging iets mis bij het opzetten van de campagne-flow. Hieronder staat de exacte
+            foutmelding zodat de oorzaak achterhaald kan worden.
+          </p>
+          <pre className="mt-3 whitespace-pre-wrap rounded-lg bg-white p-3 text-xs text-red-900 ring-1 ring-red-200">
+            {flowError ?? 'Onbekende fout — geen flow geretourneerd.'}
+          </pre>
+          <p className="mt-3 text-[11px] text-red-700">
+            Meest waarschijnlijke oorzaak: de migratietabellen (<code>campaign_flows</code>,{' '}
+            <code>campaign_flow_steps</code>, <code>campaign_flow_step_variants</code>,{' '}
+            <code>campaign_flow_step_outcomes</code>) ontbreken of hebben verouderde schema-cache.
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="mx-auto max-w-5xl space-y-8">
