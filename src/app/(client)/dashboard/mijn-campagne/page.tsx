@@ -8,6 +8,7 @@ import { ProposalApprovalBlock } from './_components/proposal-approval-block'
 import { DncBlock } from './_components/dnc-block'
 import { ArchiveSection } from './_components/archive-section'
 import { ContactBlock } from './_components/contact-block'
+import { CampaignFlowSection } from './_components/campaign-flow-section'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Mijn campagne' }
@@ -144,6 +145,9 @@ export default async function MijnCampagnePage() {
         proposalTitle={state.proposalTitle}
         proposalAcknowledged={!proposalNeedsApproval && !!state.proposalAcknowledgedAt}
       />
+
+      {/* ─── Campaign flow visualisatie ─── */}
+      <CampaignFlowSection clientId={profile.client_id} />
     </div>
   )
 }
