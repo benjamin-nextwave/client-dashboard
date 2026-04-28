@@ -15,7 +15,12 @@ export function FlowEditor({ clientId, initialFlow }: Props) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
-  const [flow, setFlow] = useState(initialFlow)
+  // Toon optimistisch een nieuwe publish-state tijdens de transitie. Wordt
+  // teruggezet zodra de server-data binnen is via router.refresh().
+  const [optimisticPublished, setOptimisticPublished] = useState<boolean | null>(null)
+
+  const flow = initialFlow
+  const isPublished = optimisticPublished ?? flow.isPublished
 
   const handleAddStep = () => {
     setError(null)
@@ -28,15 +33,16 @@ export function FlowEditor({ clientId, initialFlow }: Props) {
 
   const handleTogglePublish = () => {
     setError(null)
-    const newPublished = !flow.isPublished
-    setFlow({ ...flow, isPublished: newPublished })
+    const newPublished = !isPublished
+    setOptimisticPublished(newPublished)
     startTransition(async () => {
       const result = await setFlowPublished(clientId, newPublished)
       if (result.error) {
         setError(result.error)
-        setFlow({ ...flow, isPublished: !newPublished })
+        setOptimisticPublished(null)
       } else {
         router.refresh()
+        setOptimisticPublished(null)
       }
     })
   }
@@ -49,7 +55,7 @@ export function FlowEditor({ clientId, initialFlow }: Props) {
           <div className="min-w-0">
             <h2 className="text-sm font-semibold text-gray-900">Zichtbaarheid</h2>
             <p className="mt-0.5 text-xs text-gray-500">
-              {flow.isPublished
+              {isPublished
                 ? 'De flow is zichtbaar onderaan de Mijn campagne pagina van deze klant.'
                 : 'De flow is nog niet zichtbaar voor de klant.'}
             </p>
@@ -59,12 +65,12 @@ export function FlowEditor({ clientId, initialFlow }: Props) {
             onClick={handleTogglePublish}
             disabled={pending || flow.steps.length === 0}
             className={`group inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wide shadow-sm transition-all disabled:cursor-not-allowed disabled:opacity-50 ${
-              flow.isPublished
+              isPublished
                 ? 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-300 hover:bg-emerald-200'
                 : 'bg-gray-900 text-white hover:bg-indigo-600 hover:shadow-md'
             }`}
           >
-            {flow.isPublished ? (
+            {isPublished ? (
               <>
                 <span className="h-2 w-2 rounded-full bg-emerald-500" />
                 Zichtbaar voor klant
