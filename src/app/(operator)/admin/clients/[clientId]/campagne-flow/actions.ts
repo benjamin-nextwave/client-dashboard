@@ -33,14 +33,19 @@ async function getFlowIdForClient(clientId: string): Promise<string | null> {
 
 async function getClientIdForStep(stepId: string): Promise<string | null> {
   const supabase = createAdminClient()
-  const { data } = await supabase
+  const { data: step } = await supabase
     .from('campaign_flow_steps')
-    .select('flow_id, campaign_flows!inner(client_id)')
+    .select('flow_id')
     .eq('id', stepId)
     .maybeSingle()
-  if (!data) return null
-  // @ts-expect-error supabase nested join typing
-  return (data.campaign_flows?.client_id as string) ?? null
+  if (!step) return null
+
+  const { data: flow } = await supabase
+    .from('campaign_flows')
+    .select('client_id')
+    .eq('id', step.flow_id)
+    .maybeSingle()
+  return flow?.client_id ?? null
 }
 
 async function getClientIdForOutcome(outcomeId: string): Promise<string | null> {
