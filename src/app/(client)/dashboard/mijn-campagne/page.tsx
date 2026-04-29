@@ -9,6 +9,7 @@ import { DncBlock } from './_components/dnc-block'
 import { ArchiveSection } from './_components/archive-section'
 import { ContactBlock } from './_components/contact-block'
 import { CampaignFlowSection } from './_components/campaign-flow-section'
+import { getTranslator } from '@/lib/i18n/server'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Mijn campagne' }
@@ -41,6 +42,7 @@ export default async function MijnCampagnePage() {
   // Clients only see variants that are explicitly published by the operator
   const variants = allVariants.filter((v) => v.isPublished)
 
+  const t = await getTranslator()
   const tasks = deriveTasks(state)
 
   // Onboarding is done as soon as *every* task is completed — regardless
@@ -76,19 +78,25 @@ export default async function MijnCampagnePage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Mijn campagne</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-gray-900">{t('campaign.title')}</h1>
         <p className="mt-1 text-sm text-gray-500">
           {onboardingDone
-            ? 'Je onboarding is afgerond. Alle documenten vind je hieronder terug.'
-            : 'Volg de voortgang van je onboarding en geef waar nodig goedkeuring.'}
+            ? t('campaign.introOnboardingDone')
+            : t('campaign.introInProgress')}
         </p>
       </div>
 
       {onboardingDone && !variantsNeedApproval && !proposalNeedsApproval ? (
-        <OnboardingCompleteBanner />
+        <OnboardingCompleteBanner
+          title={t('campaign.onboardingCompleteTitle')}
+          body={t('campaign.onboardingCompleteBody')}
+        />
       ) : onboardingDone ? (
         <>
-          <OnboardingCompleteBanner />
+          <OnboardingCompleteBanner
+            title={t('campaign.onboardingCompleteTitle')}
+            body={t('campaign.onboardingCompleteBody')}
+          />
           {proposalNeedsApproval && (
             <ProposalApprovalBlock
               title={state.proposalTitle!}
@@ -152,7 +160,7 @@ export default async function MijnCampagnePage() {
   )
 }
 
-function OnboardingCompleteBanner() {
+function OnboardingCompleteBanner({ title, body }: { title: string; body: string }) {
   return (
     <section className="relative overflow-hidden rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-5 shadow-sm">
       <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-gradient-to-br from-emerald-400/25 to-transparent blur-3xl" />
@@ -163,10 +171,8 @@ function OnboardingCompleteBanner() {
           </svg>
         </div>
         <div className="min-w-0 flex-1">
-          <h2 className="text-base font-bold text-gray-900">Onboarding voltooid</h2>
-          <p className="mt-0.5 text-xs leading-relaxed text-gray-600">
-            Bedankt! Alle stappen zijn afgerond. Ons team gaat verder met de laatste voorbereidingen.
-          </p>
+          <h2 className="text-base font-bold text-gray-900">{title}</h2>
+          <p className="mt-0.5 text-xs leading-relaxed text-gray-600">{body}</p>
         </div>
       </div>
     </section>

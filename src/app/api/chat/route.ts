@@ -2,6 +2,7 @@ import { streamText, type UIMessage } from 'ai'
 import { anthropic } from '@ai-sdk/anthropic'
 import { createClient } from '@/lib/supabase/server'
 import { buildChatSystemPrompt } from '@/lib/data/chat-context'
+import { getLocale } from '@/lib/i18n/server'
 
 // Simple in-memory rate limiter
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
@@ -80,7 +81,8 @@ export async function POST(req: Request) {
       return new Response('No messages provided', { status: 400 })
     }
 
-    const systemPrompt = await buildChatSystemPrompt(profile.client_id)
+    const locale = await getLocale()
+    const systemPrompt = await buildChatSystemPrompt(profile.client_id, locale)
 
     const result = streamText({
       model: anthropic('claude-haiku-4-5-20251001'),

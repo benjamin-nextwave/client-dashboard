@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { excludeContact } from '@/lib/actions/preview-actions'
 import type { PreviewContact } from '@/lib/data/preview-data'
+import { useWebhookLocale } from '@/lib/i18n/client'
 
 const RATING_OPTIONS = [
   { value: '5', emoji: '\u{1F929}', label: 'Uitstekend' },
@@ -24,6 +25,7 @@ interface Props {
 
 export function PreviewTable({ contacts, clientId, clientName }: Props) {
   const router = useRouter()
+  const localeInfo = useWebhookLocale()
   const [removing, setRemoving] = useState<string | null>(null)
   const [excludedIds, setExcludedIds] = useState<Set<string>>(new Set())
   const [notification, setNotification] = useState<{
@@ -115,6 +117,7 @@ export function PreviewTable({ contacts, clientId, clientName }: Props) {
         body: JSON.stringify({
           client_id: clientId,
           client_name: clientName,
+          ...localeInfo,
           rating: rating,
           rating_label: ratingOption?.label ?? '',
           rating_emoji: ratingOption?.emoji ?? '',

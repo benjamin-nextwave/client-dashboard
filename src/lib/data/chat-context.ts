@@ -1,10 +1,20 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { LOCALE_ENGLISH_NAMES, type Locale } from '@/lib/i18n'
+
+const LANGUAGE_DIRECTIVES: Record<Locale, string> = {
+  nl: 'Je spreekt Nederlands. Antwoord altijd in het Nederlands, ongeacht de taal van de vraag.',
+  en: 'You speak English. Always reply in English, regardless of the language of the question.',
+  hi: 'आप हिन्दी में बात करते हैं। प्रश्न की भाषा कुछ भी हो, हमेशा हिन्दी में उत्तर दें।',
+}
 
 /**
  * Build a system prompt with the client's full dashboard context for the chatbot.
  * Includes all data the client can see: contacts, leads, analytics, breakdowns, and CSV uploads.
  */
-export async function buildChatSystemPrompt(clientId: string): Promise<string> {
+export async function buildChatSystemPrompt(
+  clientId: string,
+  locale: Locale = 'nl'
+): Promise<string> {
   const supabase = createAdminClient()
 
   // Fetch all data in parallel
@@ -163,7 +173,10 @@ export async function buildChatSystemPrompt(clientId: string): Promise<string> {
   // Reply rate
   const replyRate = totalEmailsSent > 0 ? ((totalReplies / totalEmailsSent) * 100).toFixed(1) : '0'
 
-  return `Je bent een behulpzame AI-assistent voor het NextWave dashboard van ${companyName}. Je spreekt Nederlands.
+  const langDirective = LANGUAGE_DIRECTIVES[locale]
+  const langName = LOCALE_ENGLISH_NAMES[locale]
+
+  return `You are a helpful AI assistant for the NextWave dashboard of ${companyName}. The user has chosen ${langName} as their preferred language. ${langDirective}
 
 CAMPAGNEOVERZICHT:
 - Totaal contacten in database: ${uniqueContacts}

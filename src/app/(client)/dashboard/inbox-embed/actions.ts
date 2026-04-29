@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { getLocaleForWebhook } from '@/lib/i18n/server'
 
 const WEBHOOK_PASSWORD_HELP = 'https://hook.eu2.make.com/38p6m3y88ok5rtcrv6nfpurysgywlkuw'
 
@@ -14,6 +15,8 @@ export async function requestInboxPasswordHelp(): Promise<{ error?: string; emai
     return { error: 'Je bent niet ingelogd.' }
   }
 
+  const localeInfo = await getLocaleForWebhook()
+
   try {
     const res = await fetch(WEBHOOK_PASSWORD_HELP, {
       method: 'POST',
@@ -23,6 +26,7 @@ export async function requestInboxPasswordHelp(): Promise<{ error?: string; emai
         email: user.email,
         user_id: user.id,
         client_id: user.app_metadata?.client_id ?? null,
+        ...localeInfo,
         timestamp: new Date().toISOString(),
       }),
     })

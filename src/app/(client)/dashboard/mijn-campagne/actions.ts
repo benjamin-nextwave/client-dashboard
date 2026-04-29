@@ -9,6 +9,7 @@ import {
   type CampaignFormValues,
   type LocationEntry,
 } from '@/lib/validations/campaign-form'
+import { getLocaleForWebhook } from '@/lib/i18n/server'
 
 const WEBHOOK_CAMPAIGN_READY = 'https://hook.eu2.make.com/nx6392ay1en939gg5dyh718o7jcwi1wy'
 const WEBHOOK_FORM_SUBMITTED = 'https://hook.eu2.make.com/3ygu3f88qqlmle9y7vkp0ilkl83kgipg'
@@ -106,6 +107,7 @@ export async function acknowledgeMailVariants(): Promise<{ error?: string }> {
   }
 
   const acknowledgedAt = new Date().toISOString()
+  const localeInfo = await getLocaleForWebhook()
 
   try {
     const res = await fetch(WEBHOOK_VARIANTS_ACKNOWLEDGED, {
@@ -117,6 +119,7 @@ export async function acknowledgeMailVariants(): Promise<{ error?: string }> {
         client_name: clientRes.data.company_name,
         client_email: loginEmail,
         notification_email: clientRes.data.notification_email ?? null,
+        ...localeInfo,
         acknowledged_at: acknowledgedAt,
         variants: (variantsRes.data ?? []).map((v) => ({
           mail_number: v.mail_number,
@@ -183,6 +186,7 @@ export async function acknowledgeProposal(): Promise<{ error?: string }> {
   }
 
   const acknowledgedAt = new Date().toISOString()
+  const localeInfo = await getLocaleForWebhook()
 
   try {
     const res = await fetch(WEBHOOK_VARIANTS_ACKNOWLEDGED, {
@@ -194,6 +198,7 @@ export async function acknowledgeProposal(): Promise<{ error?: string }> {
         client_name: client.company_name,
         client_email: loginEmail,
         notification_email: client.notification_email ?? null,
+        ...localeInfo,
         proposal_title: client.campaign_proposal_title,
         proposal_body: client.campaign_proposal_body,
         acknowledged_at: acknowledgedAt,
@@ -394,6 +399,7 @@ export async function submitCampaignForm(
   }
 
   const submittedAt = new Date().toISOString()
+  const localeInfo = await getLocaleForWebhook()
 
   // Insert a new submission row (one-row-per-submission history)
   const { error: insertError } = await admin
@@ -424,6 +430,7 @@ export async function submitCampaignForm(
     event: 'campaign_form_submitted',
     client_id: clientId,
     client_name: client?.company_name ?? null,
+    ...localeInfo,
     submitted_at: submittedAt,
     answers: {
       companyName: answers.companyName,
@@ -500,6 +507,7 @@ export async function confirmCampaignApproval(): Promise<{ error?: string }> {
   }
 
   const completedAt = new Date().toISOString()
+  const localeInfo = await getLocaleForWebhook()
 
   // Fire webhook first; if it fails, don't lock the state
   try {
@@ -509,6 +517,7 @@ export async function confirmCampaignApproval(): Promise<{ error?: string }> {
       body: JSON.stringify({
         client_id: client.id,
         client_name: client.company_name,
+        ...localeInfo,
         event: 'campaign_approved',
         preview_approved_at: client.campaign_preview_approved_at,
         variants_approved_at: client.campaign_variants_approved_at,

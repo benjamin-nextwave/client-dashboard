@@ -5,6 +5,8 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { VARIANT_REASONS } from '@/lib/data/feedback-types'
+import { getLocaleForWebhook, getLocaleForUser } from '@/lib/i18n/server'
+import { LOCALE_ENGLISH_NAMES } from '@/lib/i18n'
 
 const WEBHOOK_FEEDBACK_SUBMITTED = 'https://hook.eu2.make.com/kef3iqn8i45ndloebambpsqlvc69zrhs'
 const WEBHOOK_FEEDBACK_REPLY = 'https://hook.eu2.make.com/m1efmwo1fg7id6ckc415m4oqd81adxl3'
@@ -87,6 +89,7 @@ export async function submitFeedback(input: {
   }
 
   // Fire submission webhook (fire-and-forget)
+  const localeInfo = await getLocaleForWebhook()
   try {
     fetch(WEBHOOK_FEEDBACK_SUBMITTED, {
       method: 'POST',
@@ -96,6 +99,7 @@ export async function submitFeedback(input: {
         client_id: clientId,
         company_name: client?.company_name ?? 'Onbekend',
         user_email: user.email,
+        ...localeInfo,
         category: parsed.data.category,
         title: parsed.data.title,
         description: parsed.data.description,
@@ -195,6 +199,10 @@ export async function notifyClientFeedbackReply(
     if (authUser?.user?.email) loginEmail = authUser.user.email
   }
 
+  // Operator triggert dit, maar de KLANT is de doelgroep van de mail —
+  // gebruik dus de taal van de klant, niet die van de operator.
+  const clientLocale = profile ? await getLocaleForUser(profile.id) : 'nl'
+
   try {
     const res = await fetch(WEBHOOK_FEEDBACK_REPLY, {
       method: 'POST',
@@ -206,6 +214,8 @@ export async function notifyClientFeedbackReply(
         client_name: client.company_name,
         client_email: loginEmail,
         notification_email: client.notification_email ?? null,
+        language: LOCALE_ENGLISH_NAMES[clientLocale],
+        language_code: clientLocale,
         category: feedback.category,
         title: feedback.title,
         original_request: feedback.description,

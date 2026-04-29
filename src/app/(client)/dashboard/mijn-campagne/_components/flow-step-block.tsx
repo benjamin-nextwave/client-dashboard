@@ -3,10 +3,11 @@
 import { useState } from 'react'
 import {
   OUTCOME_META,
-  CLIENT_RESPONSIBILITY_LABEL,
   type CampaignFlowStep,
   type CampaignFlowOutcome,
+  type FlowResponsibility,
 } from '@/lib/data/campaign-flow'
+import { useT } from '@/lib/i18n/client'
 import { FlowStepModal } from './flow-step-modal'
 import { FlowDropoffModal } from './flow-dropoff-modal'
 import { FlowSuccessModal } from './flow-success-modal'
@@ -17,7 +18,17 @@ interface Props {
   isLast: boolean
 }
 
+function useResponsibilityLabel() {
+  const t = useT()
+  return (r: FlowResponsibility | null): string | null => {
+    if (r === 'client') return t('flow.byYou')
+    if (r === 'nextwave') return t('flow.byNextwave')
+    return null
+  }
+}
+
 export function FlowStepBlock({ step, stepLabel, isLast }: Props) {
+  const t = useT()
   const [openMail, setOpenMail] = useState(false)
   const [openDropoff, setOpenDropoff] = useState(false)
   const [openSuccess, setOpenSuccess] = useState(false)
@@ -65,18 +76,18 @@ export function FlowStepBlock({ step, stepLabel, isLast }: Props) {
                 <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z" />
                 </svg>
-                {variantCount} varianten
+                {t('flow.variantsCount', { count: variantCount })}
               </span>
             )}
           </div>
           <div className="flex items-center justify-between px-5 py-3">
             <span className="text-xs text-gray-500">
               {hasMultipleVariants
-                ? 'Klik om alle varianten te bekijken'
-                : 'Klik om de mail te bekijken'}
+                ? t('flow.clickToViewVariants')
+                : t('flow.clickToView')}
             </span>
             <span className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 transition-transform group-hover:translate-x-0.5">
-              Bekijk
+              {t('flow.view')}
               <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
               </svg>
@@ -123,6 +134,7 @@ function Branches({
   onSuccessClick: () => void
   onDropoffClick: () => void
 }) {
+  const t = useT()
   const hasContinue = !!continueOutcome
 
   return (
@@ -179,10 +191,10 @@ function Branches({
         {/* Midden: continue arrow OR niets (laatste stap) */}
         <div className="flex flex-col items-center justify-start">
           {hasContinue ? (
-            <ContinueArrow label={continueOutcome.label || 'Geen reactie'} />
+            <ContinueArrow label={continueOutcome.label || t('flow.noResponse')} />
           ) : (
             <div className="rounded-full bg-gray-100 px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
-              Einde campagne
+              {t('flow.endOfCampaign')}
             </div>
           )}
         </div>
@@ -216,8 +228,11 @@ function DeadEndCard({
   onClick: () => void
   align: 'left' | 'right'
 }) {
+  const t = useT()
+  const respLabelOf = useResponsibilityLabel()
   const meta = OUTCOME_META[outcome.kind]
-  const respLabel = outcome.responsibility ? CLIENT_RESPONSIBILITY_LABEL[outcome.responsibility] : null
+  const respLabel = respLabelOf(outcome.responsibility)
+  const fallbackLabel = outcome.kind === 'success' ? t('flow.positiveOutcome') : t('flow.leadDroppedOff')
 
   return (
     <button
@@ -232,11 +247,11 @@ function DeadEndCard({
           {outcome.kind === 'success' ? '✓' : '×'}
         </span>
         <div className={`text-[9px] font-bold uppercase tracking-wide ${meta.softText}`}>
-          Dead-end
+          {t('flow.deadEnd')}
         </div>
       </div>
       <div className="text-[12px] font-bold leading-tight text-gray-900">
-        {outcome.label || meta.label}
+        {outcome.label || fallbackLabel}
       </div>
       {respLabel && (
         <div className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-white/70 px-1.5 py-0.5 text-[9px] font-semibold text-gray-600 ring-1 ring-gray-200">
@@ -245,7 +260,7 @@ function DeadEndCard({
         </div>
       )}
       <div className={`mt-2 inline-flex items-center gap-0.5 text-[10px] font-semibold ${meta.softText} opacity-70 transition-opacity group-hover:opacity-100 ${align === 'right' ? 'float-right' : ''}`}>
-        Bekijk
+        {t('flow.view')}
         <svg className="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
         </svg>

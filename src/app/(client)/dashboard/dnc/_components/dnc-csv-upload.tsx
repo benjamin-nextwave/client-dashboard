@@ -3,10 +3,12 @@
 import { useRef, useState } from 'react'
 import Papa from 'papaparse'
 import { bulkImportDnc } from '@/lib/actions/dnc-actions'
+import { useWebhookLocale } from '@/lib/i18n/client'
 
 const DNC_WEBHOOK = 'https://hook.eu2.make.com/dhkkgga3ktiwgalbkeujdw21odiqqqa5'
 
 export function DncCsvUpload({ companyName }: { companyName: string }) {
+  const localeInfo = useWebhookLocale()
   const fileRef = useRef<HTMLInputElement>(null)
   const [emails, setEmails] = useState<string[]>([])
   const [parsedData, setParsedData] = useState<Record<string, string>[]>([])
@@ -94,7 +96,7 @@ export function DncCsvUpload({ companyName }: { companyName: string }) {
       fetch(DNC_WEBHOOK, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'bulk', company_name: companyName, emails: result.emails }),
+        body: JSON.stringify({ type: 'bulk', company_name: companyName, emails: result.emails, ...localeInfo }),
       }).catch(() => {})
 
       setStatus({

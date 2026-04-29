@@ -2,17 +2,29 @@
 
 import { useEffect } from 'react'
 import {
-  OUTCOME_META,
-  CLIENT_RESPONSIBILITY_LABEL,
   type CampaignFlowOutcome,
+  type FlowResponsibility,
 } from '@/lib/data/campaign-flow'
+import { useT } from '@/lib/i18n/client'
 
 interface Props {
   outcome: CampaignFlowOutcome
   onClose: () => void
 }
 
+function useResponsibilityLabel() {
+  const t = useT()
+  return (r: FlowResponsibility | null): string | null => {
+    if (r === 'client') return t('flow.byYou')
+    if (r === 'nextwave') return t('flow.byNextwave')
+    return null
+  }
+}
+
 export function FlowSuccessModal({ outcome, onClose }: Props) {
+  const t = useT()
+  const respLabelOf = useResponsibilityLabel()
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
@@ -21,8 +33,7 @@ export function FlowSuccessModal({ outcome, onClose }: Props) {
     return () => window.removeEventListener('keydown', handler)
   }, [onClose])
 
-  const meta = OUTCOME_META.success
-  const respLabel = outcome.responsibility ? CLIENT_RESPONSIBILITY_LABEL[outcome.responsibility] : null
+  const respLabel = respLabelOf(outcome.responsibility)
 
   return (
     <div
@@ -44,16 +55,15 @@ export function FlowSuccessModal({ outcome, onClose }: Props) {
             </div>
             <div className="min-w-0 flex-1">
               <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-600">
-                Dead-end · Succes
+                {t('flow.successDeadEndTag')}
               </div>
               <h3 className="mt-0.5 text-xl font-bold text-gray-900">
-                {outcome.label || meta.label}
+                {outcome.label || t('flow.positiveOutcome')}
               </h3>
-              <p className="mt-1 text-xs text-gray-500">{meta.description}</p>
               {respLabel && (
                 <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-200">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                  Afhandeling: {respLabel}
+                  {t('flow.handledBy', { role: respLabel })}
                 </div>
               )}
             </div>
@@ -61,7 +71,7 @@ export function FlowSuccessModal({ outcome, onClose }: Props) {
               type="button"
               onClick={onClose}
               className="rounded-lg p-2 text-gray-400 hover:bg-white/60 hover:text-gray-700"
-              aria-label="Sluiten"
+              aria-label={t('common.close')}
             >
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -74,21 +84,12 @@ export function FlowSuccessModal({ outcome, onClose }: Props) {
         <div className="flex-1 overflow-y-auto px-6 py-5">
           <div className="rounded-xl border border-emerald-100 bg-emerald-50/40 px-4 py-4">
             <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">
-              Wat gebeurt er?
+              {t('flow.successWhatHappens')}
             </div>
             <p className="mt-1.5 text-sm leading-relaxed text-emerald-900">
-              {respLabel ? (
-                <>
-                  De lead heeft positief gereageerd en wordt vanaf hier opgepakt door{' '}
-                  <strong>{respLabel.toLowerCase()}</strong>. De campagne stopt voor deze
-                  contactpersoon.
-                </>
-              ) : (
-                <>
-                  De lead heeft positief gereageerd. De campagne stopt voor deze contactpersoon en
-                  wordt verder afgehandeld.
-                </>
-              )}
+              {respLabel
+                ? t('flow.successWithRole', { role: respLabel.toLowerCase() })
+                : t('flow.successNoRole')}
             </p>
           </div>
         </div>
@@ -100,7 +101,7 @@ export function FlowSuccessModal({ outcome, onClose }: Props) {
             onClick={onClose}
             className="rounded-xl border border-gray-200 bg-white px-5 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100"
           >
-            Sluiten
+            {t('common.close')}
           </button>
         </div>
       </div>
