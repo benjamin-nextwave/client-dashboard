@@ -67,27 +67,27 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| NEWS-01 | TBD | Pending |
-| NEWS-02 | TBD | Pending |
-| NEWS-03 | TBD | Pending |
-| NEWS-04 | TBD | Pending |
-| NEWS-05 | TBD | Pending |
-| NEWS-06 | TBD | Pending |
-| DELIVER-01 | TBD | Pending |
-| DELIVER-02 | TBD | Pending |
-| DELIVER-03 | TBD | Pending |
-| DELIVER-04 | TBD | Pending |
-| DELIVER-05 | TBD | Pending |
-| ARCH-01 | TBD | Pending |
-| ARCH-02 | TBD | Pending |
-| ARCH-03 | TBD | Pending |
-| ARCH-04 | TBD | Pending |
+| NEWS-01 | Phase 9 | Pending |
+| NEWS-02 | Phase 9 | Pending |
+| NEWS-03 | Phase 9 | Pending |
+| NEWS-04 | Phase 9 | Pending |
+| NEWS-05 | Phase 9 | Pending |
+| NEWS-06 | Phase 9 | Pending |
+| DELIVER-01 | Phase 10 | Pending |
+| DELIVER-02 | Phase 10 | Pending |
+| DELIVER-03 | Phase 10 | Pending |
+| DELIVER-04 | Phase 10 | Pending |
+| DELIVER-05 | Phase 10 | Pending |
+| ARCH-01 | Phase 10 | Pending |
+| ARCH-02 | Phase 10 | Pending |
+| ARCH-03 | Phase 10 | Pending |
+| ARCH-04 | Phase 10 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 15 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 15 ⚠️ (will be filled by roadmap)
+- Mapped to phases: 15 ✓
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-29*
-*Last updated: 2026-04-29 after milestone v1.1 initialization*
+*Last updated: 2026-04-29 — traceability mapped to Phases 9-10 after roadmap creation*

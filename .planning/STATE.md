@@ -10,10 +10,10 @@ See: .planning/PROJECT.md (updated 2026-04-29)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 9 — News Authoring & Schema (not started)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-04-29 — Milestone v1.1 started
+Status: Roadmap complete; ready to spec Phase 9
+Last activity: 2026-04-29 — Roadmap for v1.1 created (Phases 9-10)
 
 ## Milestone v1.0 Outcomes (archived)
 
@@ -31,6 +31,10 @@ See `.planning/MILESTONES.md` and `.planning/milestones/v1.0-ROADMAP.md` for ful
 
 Decisions are logged in PROJECT.md Key Decisions table.
 
+**v1.1 roadmap decisions:**
+- Two-phase split for News Broadcasting (Phase 9 authoring + schema, Phase 10 delivery + archive) — chosen over one-phase for tighter cohesion and clearer success criteria; each phase delivers an independently verifiable capability
+- `news_dismissals` table created in Phase 9 (with `news_items`) so Phase 10 has no schema dependency to wait on
+
 ### Pending Todos
 
 None.
@@ -46,9 +50,10 @@ No active blockers.
 
 ## Session Continuity
 
-Last session: 2026-04-29 — milestone v1.1 initialized
-Stopped at: Defining requirements for v1.1
-Next action: complete `/gsd-new-milestone` workflow → roadmap → `/gsd-spec-phase 9`
+Last session: 2026-04-29 — v1.1 roadmap created (Phases 9-10)
+Stopped at: Roadmap complete, traceability updated, ready to spec Phase 9
+Next action: `/gsd-spec-phase 9` to break Phase 9 (News Authoring & Schema) into plans
 
 ---
 *Milestone switched: 2026-04-29 — v1.0 (shipped) → v1.1 News Broadcasting*
+*Last updated: 2026-04-29 after v1.1 roadmap creation*

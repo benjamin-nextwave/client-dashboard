@@ -3,6 +3,7 @@
 ## Milestones
 
 - ✅ **v1.0 MVP** — Phases 1-8 (shipped 2026-02-15)
+- 🚧 **v1.1 News Broadcasting** — Phases 9-10 (started 2026-04-29)
 
 ## Phases
 
@@ -22,6 +23,40 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 
 </details>
 
+### v1.1 News Broadcasting (Phases 9-10)
+
+- [ ] **Phase 9: News Authoring & Schema** — Operator-side news CRUD with multilingual content + image storage and database groundwork
+- [ ] **Phase 10: Client News Delivery & Archive** — Client-side overlay-on-open, persistent dismissal, and megaphone sidebar archive
+
+## Phase Details
+
+### Phase 9: News Authoring & Schema
+**Goal**: Operators can author, manage, and publish multilingual news items, with all schema and storage groundwork in place to serve them to clients
+**Depends on**: Phase 1 (multi-tenancy foundation), Phase 2 (operator admin pattern)
+**Requirements**: NEWS-01, NEWS-02, NEWS-03, NEWS-04, NEWS-05, NEWS-06
+**Justification**: All operator-facing authoring requirements share the same admin UI surface, the same `news_items` table, and the same Supabase Storage bucket for images. Bundling them produces tight cohesion: every requirement directly contributes to "operator can broadcast a multilingual announcement." Splitting would scatter database migrations across phases. The `news_dismissals` table is also created here so Phase 10 has nothing to wait on schema-wise.
+**Success Criteria** (what must be TRUE):
+  1. An operator can open the operator admin panel, create a news item with an image, and fill in title + body in Dutch, English, and Hindi (devanagari) variants
+  2. An operator can edit any field of any language variant of an existing news item and the change persists
+  3. An operator can preview a news item in any of its three language variants before publishing
+  4. An operator can publish a draft (making it visible to clients) and withdraw a published item (removing it from clients) from the admin list view
+  5. The admin list view shows every news item with its status (draft / published / withdrawn) and creation/publish timestamps
+**Plans**: TBD
+
+### Phase 10: Client News Delivery & Archive
+**Goal**: Clients receive published news as a full-screen overlay on dashboard open, can dismiss it permanently per user, and can revisit all current news from a megaphone-button sidebar in the topbar
+**Depends on**: Phase 9 (news_items + news_dismissals tables, published news data), Phase 3 (client dashboard shell + topbar)
+**Requirements**: DELIVER-01, DELIVER-02, DELIVER-03, DELIVER-04, DELIVER-05, ARCH-01, ARCH-02, ARCH-03, ARCH-04
+**Justification**: All client-facing delivery and archive requirements share the same data source (published news_items + per-user news_dismissals), the same client topbar surface, and the same NL/EN/Hindi rendering logic. Overlay and sidebar are two views of the same dataset; building them together avoids duplicating data-fetching code and keeps localization consistent in one phase.
+**Success Criteria** (what must be TRUE):
+  1. When a client opens their dashboard and there is a published news item they have not yet dismissed, a full-screen overlay appears showing the image, title, and body in the active language, dismissable only via a single localized "Ik heb het gelezen" button
+  2. After a client dismisses a news item, that user never sees the same item as an overlay again — even after logout, login, or page reload
+  3. A megaphone button appears in the client topbar immediately to the left of the existing "Ververs data" button
+  4. Clicking the megaphone opens a sidebar listing all currently-published (non-withdrawn) news items, most-recent first, each showing title + short text preview
+  5. Clicking a sidebar item displays the full news content (image + title + body) in the active language; if the operator withdraws an item, it disappears from any active overlay queue and from the sidebar within one page reload
+**Plans**: TBD
+**UI hint**: yes
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -34,7 +69,9 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 | 6. CSV Import/Export & DNC Management | v1.0 | 4/4 | Complete | 2026-02-15 |
 | 7. Contact Preview & Sent Emails | v1.0 | 2/2 | Complete | 2026-02-15 |
 | 8. Polish & Error Monitoring | v1.0 | 2/2 | Complete | 2026-02-15 |
+| 9. News Authoring & Schema | v1.1 | 0/0 | Not started | — |
+| 10. Client News Delivery & Archive | v1.1 | 0/0 | Not started | — |
 
 ---
 *Roadmap created: 2026-02-15*
-*Last updated: 2026-02-15 after v1.0 milestone completion*
+*Last updated: 2026-04-29 — appended v1.1 News Broadcasting (Phases 9-10)*
