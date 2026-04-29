@@ -79,7 +79,7 @@ completed: 2026-04-29
 
 1. **Task 1: Write the news_broadcasting migration (tables + bucket + RLS + storage policies)** — `1943223` (feat)
 
-**Plan metadata:** _to be added by orchestrator final commit_
+**Plan metadata:** `3faa8bc` (docs: complete news_broadcasting migration plan — SUMMARY + STATE + ROADMAP)
 
 ## Files Created/Modified
 - `supabase/migrations/20260429000002_news_broadcasting.sql` (created) — Full DDL for news_items + news_dismissals, Storage bucket creation for news-images, all RLS policies on both tables, and all storage.objects policies for the bucket. Forward-only DDL — no DROP statements, no seed data, no backfill.
