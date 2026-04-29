@@ -3,12 +3,13 @@
 import { useRef, useState } from 'react'
 import Papa from 'papaparse'
 import { bulkImportDnc } from '@/lib/actions/dnc-actions'
-import { useWebhookLocale } from '@/lib/i18n/client'
+import { useWebhookLocale, useT } from '@/lib/i18n/client'
 
 const DNC_WEBHOOK = 'https://hook.eu2.make.com/dhkkgga3ktiwgalbkeujdw21odiqqqa5'
 
 export function DncCsvUpload({ companyName }: { companyName: string }) {
   const localeInfo = useWebhookLocale()
+  const t = useT()
   const fileRef = useRef<HTMLInputElement>(null)
   const [emails, setEmails] = useState<string[]>([])
   const [parsedData, setParsedData] = useState<Record<string, string>[]>([])
@@ -101,7 +102,7 @@ export function DncCsvUpload({ companyName }: { companyName: string }) {
 
       setStatus({
         type: 'success',
-        message: `${result.imported} van ${emails.length} adressen geimporteerd.`,
+        message: t('dnc.csvSuccess', { imported: result.imported, total: emails.length }),
       })
       setEmails([])
       if (fileRef.current) fileRef.current.value = ''
@@ -119,13 +120,8 @@ export function DncCsvUpload({ companyName }: { companyName: string }) {
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-6">
-      <h3 className="text-sm font-medium text-gray-900">
-        CSV bulk-import
-      </h3>
-      <p className="mt-1 text-xs text-gray-500">
-        Upload een CSV-bestand met een e-mailkolom om adressen in bulk toe te
-        voegen.
-      </p>
+      <h3 className="text-sm font-medium text-gray-900">{t('dnc.csvUploadTitle')}</h3>
+      <p className="mt-1 text-xs text-gray-500">{t('dnc.csvUploadDescription')}</p>
 
       <div className="mt-3">
         <input
@@ -140,7 +136,7 @@ export function DncCsvUpload({ companyName }: { companyName: string }) {
       {status.type === 'pick_column' && (
         <div className="mt-3 space-y-2">
           <label className="block text-sm font-medium text-gray-700">
-            Selecteer de kolom met e-mailadressen
+            {t('dnc.csvPickColumn')}
           </label>
           <select
             value={selectedColumn ?? ''}
@@ -158,13 +154,13 @@ export function DncCsvUpload({ companyName }: { companyName: string }) {
               onClick={handleColumnConfirm}
               className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
             >
-              Bevestigen
+              {t('dnc.csvConfirm')}
             </button>
             <button
               onClick={reset}
               className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
-              Annuleren
+              {t('common.cancel')}
             </button>
           </div>
         </div>
@@ -173,25 +169,25 @@ export function DncCsvUpload({ companyName }: { companyName: string }) {
       {status.type === 'preview' && (
         <div className="mt-3 flex items-center gap-3">
           <span className="text-sm text-gray-700">
-            {status.count} e-mailadressen gevonden
+            {t('dnc.csvFoundEmails', { count: status.count })}
           </span>
           <button
             onClick={handleImport}
             className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
           >
-            Importeren
+            {t('dnc.csvImport')}
           </button>
           <button
             onClick={reset}
             className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
-            Annuleren
+            {t('common.cancel')}
           </button>
         </div>
       )}
 
       {status.type === 'importing' && (
-        <p className="mt-3 text-sm text-gray-500">Importeren...</p>
+        <p className="mt-3 text-sm text-gray-500">{t('dnc.csvImporting')}</p>
       )}
 
       {status.type === 'success' && (

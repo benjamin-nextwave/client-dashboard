@@ -325,6 +325,15 @@ export const en: Translations = {
     columnJobTitle: 'Job title',
     columnIndustry: 'Industry',
     columnStatus: 'Status',
+    searchButton: 'Search',
+    clearSearch: 'Clear',
+    foundCount: '{count} contacts found',
+    foundCountSingular: '1 contact found',
+    foundFor: 'for "{query}"',
+    moreFields: '+{count} fields',
+    pagination: 'Page {current} of {total}',
+    paginationPrevious: 'Previous',
+    paginationNext: 'Next',
   },
 
   dnc: {
@@ -411,6 +420,22 @@ export const en: Translations = {
       'Choose the dashboard language. This choice is remembered for your next login.',
     helpSection: 'Help & support',
     helpDescription: 'View the help per section or contact the team.',
+    accountTitle: 'Account',
+    fieldName: 'Name',
+    fieldEmail: 'Email address',
+    fieldOrganization: 'Organisation',
+    notSet: 'Not set',
+    contactToChange: 'Contact your account manager to change account details.',
+    notificationsTitle: 'Notifications',
+    notificationsToggleTitle: 'Notifications for new leads',
+    notificationsToggleDesc: 'Receive a notification when a new positive lead comes in',
+    notificationEmailLabel: 'Notification email address',
+    notificationEmailHint: 'Leave empty to send notifications to your login email address.',
+    aboutTitle: 'About this dashboard',
+    aboutLine1: 'This dashboard is managed by NextWave Solutions.',
+    aboutLine2:
+      'Campaign data is automatically synced from your active campaigns. Data is updated every 15 minutes.',
+    aboutLine3: 'Questions? Contact your account manager.',
   },
 
   onboarding: {

@@ -324,6 +324,15 @@ export const hi: Translations = {
     columnJobTitle: 'पद का नाम',
     columnIndustry: 'उद्योग',
     columnStatus: 'स्थिति',
+    searchButton: 'खोजें',
+    clearSearch: 'साफ़ करें',
+    foundCount: '{count} संपर्क मिले',
+    foundCountSingular: '1 संपर्क मिला',
+    foundFor: '"{query}" के लिए',
+    moreFields: '+{count} फ़ील्ड्स',
+    pagination: '{total} में से पृष्ठ {current}',
+    paginationPrevious: 'पिछला',
+    paginationNext: 'अगला',
   },
 
   dnc: {
@@ -410,6 +419,22 @@ export const hi: Translations = {
       'डैशबोर्ड की भाषा चुनें। यह विकल्प अगले लॉगिन के लिए याद रखा जाएगा।',
     helpSection: 'मदद और सहायता',
     helpDescription: 'प्रत्येक अनुभाग के लिए मदद देखें या टीम से संपर्क करें।',
+    accountTitle: 'खाता',
+    fieldName: 'नाम',
+    fieldEmail: 'ईमेल पता',
+    fieldOrganization: 'संगठन',
+    notSet: 'सेट नहीं',
+    contactToChange: 'खाता विवरण बदलने के लिए अपने अकाउंट मैनेजर से संपर्क करें।',
+    notificationsTitle: 'सूचनाएं',
+    notificationsToggleTitle: 'नई लीड्स के लिए सूचनाएं',
+    notificationsToggleDesc: 'जब कोई नई सकारात्मक लीड आए तो एक सूचना प्राप्त करें',
+    notificationEmailLabel: 'सूचना ईमेल पता',
+    notificationEmailHint: 'अपने लॉगिन ईमेल पते पर सूचनाएं भेजने के लिए खाली छोड़ दें।',
+    aboutTitle: 'इस डैशबोर्ड के बारे में',
+    aboutLine1: 'यह डैशबोर्ड NextWave Solutions द्वारा प्रबंधित है।',
+    aboutLine2:
+      'कैम्पेन डेटा आपके सक्रिय कैम्पेन से स्वचालित रूप से सिंक होता है। डेटा हर 15 मिनट में अपडेट होता है।',
+    aboutLine3: 'कोई सवाल? अपने अकाउंट मैनेजर से संपर्क करें।',
   },
 
   onboarding: {

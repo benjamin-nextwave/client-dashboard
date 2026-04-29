@@ -295,6 +295,15 @@ export interface Translations {
     columnJobTitle: string
     columnIndustry: string
     columnStatus: string
+    searchButton: string
+    clearSearch: string
+    foundCount: string
+    foundCountSingular: string
+    foundFor: string
+    moreFields: string
+    pagination: string
+    paginationPrevious: string
+    paginationNext: string
   }
   dnc: {
     title: string
@@ -374,6 +383,21 @@ export interface Translations {
     languageDescription: string
     helpSection: string
     helpDescription: string
+    accountTitle: string
+    fieldName: string
+    fieldEmail: string
+    fieldOrganization: string
+    notSet: string
+    contactToChange: string
+    notificationsTitle: string
+    notificationsToggleTitle: string
+    notificationsToggleDesc: string
+    notificationEmailLabel: string
+    notificationEmailHint: string
+    aboutTitle: string
+    aboutLine1: string
+    aboutLine2: string
+    aboutLine3: string
   }
   onboarding: {
     title: string
@@ -734,6 +758,15 @@ export const nl: Translations = {
     columnJobTitle: 'Functietitel',
     columnIndustry: 'Industrie',
     columnStatus: 'Status',
+    searchButton: 'Zoeken',
+    clearSearch: 'Wissen',
+    foundCount: '{count} contacten gevonden',
+    foundCountSingular: '1 contact gevonden',
+    foundFor: 'voor "{query}"',
+    moreFields: '+{count} velden',
+    pagination: 'Pagina {current} van {total}',
+    paginationPrevious: 'Vorige',
+    paginationNext: 'Volgende',
   },
 
   dnc: {
@@ -820,6 +853,22 @@ export const nl: Translations = {
       'Kies de taal van het dashboard. Deze keuze wordt onthouden voor de volgende keer dat je inlogt.',
     helpSection: 'Uitleg & ondersteuning',
     helpDescription: 'Bekijk de uitleg per onderdeel of neem contact op met het team.',
+    accountTitle: 'Account',
+    fieldName: 'Naam',
+    fieldEmail: 'E-mailadres',
+    fieldOrganization: 'Organisatie',
+    notSet: 'Niet ingesteld',
+    contactToChange: 'Neem contact op met je accountmanager om accountgegevens te wijzigen.',
+    notificationsTitle: 'Meldingen',
+    notificationsToggleTitle: 'Notificaties bij nieuwe leads',
+    notificationsToggleDesc: 'Ontvang een melding wanneer een nieuwe positieve lead binnenkomt',
+    notificationEmailLabel: 'Notificatie e-mailadres',
+    notificationEmailHint: 'Laat leeg om meldingen naar je login e-mailadres te sturen.',
+    aboutTitle: 'Over dit dashboard',
+    aboutLine1: 'Dit dashboard wordt beheerd door NextWave Solutions.',
+    aboutLine2:
+      'Campagnegegevens worden automatisch gesynchroniseerd vanuit je actieve campagnes. De data wordt elke 15 minuten bijgewerkt.',
+    aboutLine3: 'Heb je vragen? Neem contact op met je accountmanager.',
   },
 
   onboarding: {

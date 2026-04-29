@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { ContactDetail } from './contact-detail'
+import { useT } from '@/lib/i18n/client'
 
 type ContactRow = {
   id: string
@@ -28,6 +29,7 @@ export function ContactsTable({
   currentPage,
   search,
 }: ContactsTableProps) {
+  const t = useT()
   const [selectedContact, setSelectedContact] = useState<ContactRow | null>(null)
   const pageSize = 50
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
@@ -73,7 +75,7 @@ export function ContactsTable({
             type="text"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Zoek op naam, bedrijf, e-mail..."
+            placeholder={t('contacts.searchPlaceholder')}
             className="block w-full rounded-lg border border-gray-300 py-2.5 pl-10 pr-4 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
         </div>
@@ -81,7 +83,7 @@ export function ContactsTable({
           type="submit"
           className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-500"
         >
-          Zoeken
+          {t('contacts.searchButton')}
         </button>
         {search && (
           <button
@@ -89,18 +91,16 @@ export function ContactsTable({
             onClick={() => navigate(0, '')}
             className="rounded-lg bg-gray-100 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-200"
           >
-            Wissen
+            {t('contacts.clearSearch')}
           </button>
         )}
       </form>
 
       {/* Results count */}
       <div className="mb-3 text-sm text-gray-500">
-        {total.toLocaleString('nl-NL')} {total === 1 ? 'contact' : 'contacten'} gevonden
+        {total === 1 ? t('contacts.foundCountSingular') : t('contacts.foundCount', { count: total.toLocaleString('nl-NL') })}
         {search && (
-          <span>
-            {' '}voor &ldquo;{search}&rdquo;
-          </span>
+          <span> {t('contacts.foundFor', { query: search })}</span>
         )}
       </div>
 
@@ -143,7 +143,7 @@ export function ContactsTable({
                     ))}
                     {columns.length > 5 && (
                       <td className="px-4 py-3 text-sm text-gray-400">
-                        +{columns.length - 5} velden
+                        {t('contacts.moreFields', { count: columns.length - 5 })}
                       </td>
                     )}
                   </tr>
@@ -156,7 +156,7 @@ export function ContactsTable({
           {totalPages > 1 && (
             <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3">
               <p className="text-sm text-gray-500">
-                Pagina {currentPage + 1} van {totalPages}
+                {t('contacts.pagination', { current: currentPage + 1, total: totalPages })}
               </p>
               <div className="flex gap-2">
                 <button
@@ -165,7 +165,7 @@ export function ContactsTable({
                   disabled={currentPage === 0}
                   className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                 >
-                  Vorige
+                  {t('contacts.paginationPrevious')}
                 </button>
                 <button
                   type="button"
@@ -173,7 +173,7 @@ export function ContactsTable({
                   disabled={currentPage >= totalPages - 1}
                   className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                 >
-                  Volgende
+                  {t('contacts.paginationNext')}
                 </button>
               </div>
             </div>
@@ -181,7 +181,7 @@ export function ContactsTable({
         </div>
       ) : (
         <div className="rounded-lg bg-gray-50 p-8 text-center text-sm text-gray-500">
-          {search ? 'Geen contacten gevonden voor deze zoekopdracht.' : 'Nog geen contacten beschikbaar.'}
+          {search ? t('inbox.noResultsForSearch') : t('contacts.empty')}
         </div>
       )}
 

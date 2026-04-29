@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { updateNotificationSettings } from '@/lib/actions/preferences-actions'
+import { useT } from '@/lib/i18n/client'
 
 interface PreferencesFormProps {
   email: string
@@ -18,6 +19,7 @@ export function PreferencesForm({
   notificationEmail,
   notificationsEnabled: initialEnabled,
 }: PreferencesFormProps) {
+  const t = useT()
   const [notifEmail, setNotifEmail] = useState(notificationEmail ?? email)
   const [notifEnabled, setNotifEnabled] = useState(initialEnabled)
   const [isPending, startTransition] = useTransition()
@@ -42,34 +44,32 @@ export function PreferencesForm({
     <div className="space-y-6">
       {/* Account info */}
       <div className="rounded-lg bg-white p-6 shadow-sm">
-        <h2 className="mb-4 text-lg font-semibold text-gray-900">Account</h2>
+        <h2 className="mb-4 text-lg font-semibold text-gray-900">{t('settings.accountTitle')}</h2>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-500">Naam</label>
-            <p className="mt-1 text-sm text-gray-900">{displayName || 'Niet ingesteld'}</p>
+            <label className="block text-sm font-medium text-gray-500">{t('settings.fieldName')}</label>
+            <p className="mt-1 text-sm text-gray-900">{displayName || t('settings.notSet')}</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500">E-mailadres</label>
+            <label className="block text-sm font-medium text-gray-500">{t('settings.fieldEmail')}</label>
             <p className="mt-1 text-sm text-gray-900">{email}</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500">Organisatie</label>
+            <label className="block text-sm font-medium text-gray-500">{t('settings.fieldOrganization')}</label>
             <p className="mt-1 text-sm text-gray-900">{companyName}</p>
           </div>
-          <p className="text-xs text-gray-400">
-            Neem contact op met uw accountmanager om accountgegevens te wijzigen.
-          </p>
+          <p className="text-xs text-gray-400">{t('settings.contactToChange')}</p>
         </div>
       </div>
 
       {/* Notification preferences */}
       <div className="rounded-lg bg-white p-6 shadow-sm">
-        <h2 className="mb-4 text-lg font-semibold text-gray-900">Meldingen</h2>
+        <h2 className="mb-4 text-lg font-semibold text-gray-900">{t('settings.notificationsTitle')}</h2>
         <div className="space-y-4">
           <label className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-900">Notificaties bij nieuwe leads</p>
-              <p className="text-xs text-gray-500">Ontvang een melding wanneer een nieuwe positieve lead binnenkomt</p>
+              <p className="text-sm font-medium text-gray-900">{t('settings.notificationsToggleTitle')}</p>
+              <p className="text-xs text-gray-500">{t('settings.notificationsToggleDesc')}</p>
             </div>
             <button
               type="button"
@@ -91,7 +91,7 @@ export function PreferencesForm({
           {notifEnabled && (
             <div>
               <label htmlFor="notif-email" className="block text-sm font-medium text-gray-700">
-                Notificatie e-mailadres
+                {t('settings.notificationEmailLabel')}
               </label>
               <input
                 id="notif-email"
@@ -101,9 +101,7 @@ export function PreferencesForm({
                 placeholder={email}
                 className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[var(--brand-color)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-color)]"
               />
-              <p className="mt-1 text-xs text-gray-400">
-                Laat leeg om meldingen naar uw login e-mailadres te sturen.
-              </p>
+              <p className="mt-1 text-xs text-gray-400">{t('settings.notificationEmailHint')}</p>
             </div>
           )}
 
@@ -114,10 +112,10 @@ export function PreferencesForm({
               disabled={isPending}
               className="rounded-md bg-[var(--brand-color)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
             >
-              {isPending ? 'Opslaan...' : 'Opslaan'}
+              {isPending ? `${t('common.save')}...` : t('common.save')}
             </button>
             {saved && (
-              <span className="text-sm text-green-600">Opgeslagen!</span>
+              <span className="text-sm text-green-600">{t('common.saved')}</span>
             )}
             {error && (
               <span className="text-sm text-red-600">{error}</span>
@@ -128,16 +126,11 @@ export function PreferencesForm({
 
       {/* Dashboard info */}
       <div className="rounded-lg bg-white p-6 shadow-sm">
-        <h2 className="mb-4 text-lg font-semibold text-gray-900">Over dit dashboard</h2>
+        <h2 className="mb-4 text-lg font-semibold text-gray-900">{t('settings.aboutTitle')}</h2>
         <div className="space-y-2 text-sm text-gray-600">
-          <p>Dit dashboard wordt beheerd door NextWave Solutions.</p>
-          <p>
-            Campagnegegevens worden automatisch gesynchroniseerd vanuit uw actieve campagnes.
-            De data wordt elke 15 minuten bijgewerkt.
-          </p>
-          <p className="text-xs text-gray-400 pt-2">
-            Heeft u vragen? Neem contact op met uw accountmanager.
-          </p>
+          <p>{t('settings.aboutLine1')}</p>
+          <p>{t('settings.aboutLine2')}</p>
+          <p className="text-xs text-gray-400 pt-2">{t('settings.aboutLine3')}</p>
         </div>
       </div>
     </div>

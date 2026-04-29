@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { excludeContact } from '@/lib/actions/preview-actions'
 import type { PreviewContact } from '@/lib/data/preview-data'
-import { useWebhookLocale } from '@/lib/i18n/client'
+import { useWebhookLocale, useT } from '@/lib/i18n/client'
 
 const RATING_OPTIONS = [
   { value: '5', emoji: '\u{1F929}', label: 'Uitstekend' },
@@ -26,6 +26,7 @@ interface Props {
 export function PreviewTable({ contacts, clientId, clientName }: Props) {
   const router = useRouter()
   const localeInfo = useWebhookLocale()
+  const t = useT()
   const [removing, setRemoving] = useState<string | null>(null)
   const [excludedIds, setExcludedIds] = useState<Set<string>>(new Set())
   const [notification, setNotification] = useState<{
@@ -187,7 +188,7 @@ export function PreviewTable({ contacts, clientId, clientName }: Props) {
           </svg>
           <input
             type="text"
-            placeholder="Zoek op naam, bedrijf, functie..."
+            placeholder={t('preview.searchPlaceholder')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm text-gray-900 placeholder-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
@@ -211,7 +212,7 @@ export function PreviewTable({ contacts, clientId, clientName }: Props) {
               d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"
             />
           </svg>
-          Deel feedback over de lijst
+          {t('preview.feedbackTitle')}
         </button>
       </div>
 
@@ -220,10 +221,10 @@ export function PreviewTable({ contacts, clientId, clientName }: Props) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="mx-4 max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl bg-white p-6 shadow-xl">
             <h3 className="text-lg font-semibold text-gray-900">
-              Feedback over de contactlijst
+              {t('preview.feedbackTitle')}
             </h3>
             <p className="mt-1 text-sm text-gray-500">
-              Wat vind je van de kwaliteit van deze lijst?
+              {t('preview.feedbackIntro')}
             </p>
 
             {/* Emoji rating */}
@@ -248,7 +249,7 @@ export function PreviewTable({ contacts, clientId, clientName }: Props) {
 
             {/* Text feedback */}
             <textarea
-              placeholder="Eventuele opmerkingen of suggesties..."
+              placeholder={t('preview.feedbackPlaceholder')}
               value={feedbackText}
               onChange={(e) => setFeedbackText(e.target.value)}
               rows={3}
@@ -387,7 +388,7 @@ export function PreviewTable({ contacts, clientId, clientName }: Props) {
                   </td>
                   <td className="whitespace-nowrap px-2 py-3 text-right text-sm">
                     {isExcluded ? (
-                      <span className="text-xs text-red-400">Verwijderd</span>
+                      <span className="text-xs text-red-400">{t('preview.excluded')}</span>
                     ) : (
                       <button
                         onClick={() => handleExclude(contact.id)}
