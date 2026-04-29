@@ -113,3 +113,69 @@ export async function deleteCampaignVariantsPdf(clientId: string): Promise<void>
     await supabase.storage.from(CAMPAIGN_PDF_BUCKET).remove(paths)
   }
 }
+
+// --- News images (Phase 9) ---
+
+const NEWS_BUCKET = 'news-images'
+const MAX_NEWS_IMAGE_SIZE = 2 * 1024 * 1024 // 2MB
+const ALLOWED_NEWS_TYPES = [
+  'image/png',
+  'image/jpeg',
+  'image/webp',
+] as const
+
+function getNewsExtension(mimeType: string): string {
+  const map: Record<string, string> = {
+    'image/png': 'png',
+    'image/jpeg': 'jpg',
+    'image/webp': 'webp',
+  }
+  return map[mimeType] || 'png'
+}
+
+export async function uploadNewsImage(
+  newsItemId: string,
+  file: File
+): Promise<{ url: string; path: string } | { error: string }> {
+  if (!ALLOWED_NEWS_TYPES.includes(file.type as (typeof ALLOWED_NEWS_TYPES)[number])) {
+    return { error: `Ongeldig bestandstype: ${file.type}. Toegestaan: PNG, JPEG, WebP.` }
+  }
+
+  if (file.size > MAX_NEWS_IMAGE_SIZE) {
+    return { error: 'Bestand is te groot. Maximaal 2MB.' }
+  }
+
+  const ext = getNewsExtension(file.type)
+  // Time-based suffix busts CDN cache when the operator replaces the image.
+  const path = `${newsItemId}/image-${Date.now()}.${ext}`
+
+  const supabase = createAdminClient()
+
+  const { error } = await supabase.storage
+    .from(NEWS_BUCKET)
+    .upload(path, file, {
+      upsert: true,
+      contentType: file.type,
+    })
+
+  if (error) {
+    return { error: `Upload mislukt: ${error.message}` }
+  }
+
+  const { data: publicUrlData } = supabase.storage
+    .from(NEWS_BUCKET)
+    .getPublicUrl(path)
+
+  return { url: publicUrlData.publicUrl, path }
+}
+
+export async function deleteNewsImage(newsItemId: string): Promise<void> {
+  const supabase = createAdminClient()
+  const { data: files } = await supabase.storage
+    .from(NEWS_BUCKET)
+    .list(newsItemId)
+  if (files && files.length > 0) {
+    const paths = files.map((f) => `${newsItemId}/${f.name}`)
+    await supabase.storage.from(NEWS_BUCKET).remove(paths)
+  }
+}
