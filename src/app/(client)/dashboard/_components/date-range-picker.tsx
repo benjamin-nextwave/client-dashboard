@@ -1,13 +1,7 @@
 'use client'
 
 import { useRouter, useSearchParams } from 'next/navigation'
-
-const PRESETS = [
-  { label: '7 dagen', value: '7d' },
-  { label: '30 dagen', value: '30d' },
-  { label: '90 dagen', value: '90d' },
-  { label: 'Alles', value: 'all' },
-] as const
+import { useT } from '@/lib/i18n/client'
 
 interface DateRangePickerProps {
   currentRange: string
@@ -16,6 +10,13 @@ interface DateRangePickerProps {
 export function DateRangePicker({ currentRange }: DateRangePickerProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const t = useT()
+  const PRESETS = [
+    { label: t('overview.range7d'), value: '7d' },
+    { label: t('overview.range30d'), value: '30d' },
+    { label: t('overview.range90d'), value: '90d' },
+    { label: t('overview.rangeAll'), value: 'all' },
+  ]
 
   function handleSelect(value: string) {
     const params = new URLSearchParams(searchParams.toString())
@@ -31,7 +32,7 @@ export function DateRangePicker({ currentRange }: DateRangePickerProps) {
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-sm text-gray-500">Periode:</span>
+      <span className="text-sm text-gray-500">{t('overview.period')}</span>
       {PRESETS.map((preset) => {
         const isActive =
           currentRange === preset.value ||

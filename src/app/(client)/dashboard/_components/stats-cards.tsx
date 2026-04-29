@@ -1,5 +1,7 @@
 'use client'
 
+import { useT } from '@/lib/i18n/client'
+
 interface StatsCardsProps {
   emailsSent: number
   uniqueReplies: number
@@ -13,9 +15,10 @@ export function StatsCards({
   bounced,
   periodLabel,
 }: StatsCardsProps) {
+  const t = useT()
   const cards = [
     {
-      label: 'Verzonden e-mails',
+      label: t('overview.statEmailsSent'),
       value: emailsSent.toLocaleString('nl-NL'),
       icon: (
         <svg className="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -25,8 +28,8 @@ export function StatsCards({
       color: 'bg-blue-50',
     },
     {
-      label: 'Unieke reacties',
-      subtitle: 'Excl. out-of-office en automatische antwoorden',
+      label: t('overview.statUniqueReplies'),
+      subtitle: t('overview.statUniqueRepliesSubtitle'),
       value: uniqueReplies.toLocaleString('nl-NL'),
       icon: (
         <svg className="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -36,7 +39,7 @@ export function StatsCards({
       color: 'bg-green-50',
     },
     {
-      label: 'Bounced',
+      label: t('overview.statBounced'),
       value: bounced.toLocaleString('nl-NL'),
       icon: (
         <svg className="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">

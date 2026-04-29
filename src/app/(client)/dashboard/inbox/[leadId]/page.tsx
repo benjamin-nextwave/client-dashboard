@@ -11,6 +11,7 @@ import { ObjectionButton } from '../_components/objection-form'
 import { VacancySnippets } from '../_components/vacancy-snippets'
 import { LeadNotes } from '../_components/lead-notes'
 import { ThreadRealtimeProvider } from '../_components/thread-realtime-provider'
+import { getTranslator } from '@/lib/i18n/server'
 
 // ── Maintenance mode toggle (keep in sync with ../page.tsx) ─────────
 const MAINTENANCE_MODE = false
@@ -28,6 +29,8 @@ export default async function LeadThreadPage({
   const client = await getClientBranding()
   if (!client) redirect('/login')
 
+  const t = await getTranslator()
+
   if (MAINTENANCE_MODE) {
     return (
       <div>
@@ -35,7 +38,7 @@ export default async function LeadThreadPage({
           href="/dashboard/inbox"
           className="inline-block text-sm text-gray-500 hover:text-gray-700"
         >
-          &larr; Terug naar inbox
+          &larr; {t('inbox.backToInbox')}
         </Link>
         <div className="mt-8 flex flex-col items-center justify-center rounded-xl border border-amber-200 bg-amber-50 px-6 py-12 text-center">
           <svg className="h-12 w-12 text-amber-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -136,7 +139,7 @@ export default async function LeadThreadPage({
           href="/dashboard/inbox"
           className="inline-block text-sm text-gray-500 hover:text-gray-700"
         >
-          &larr; Terug naar inbox
+          &larr; {t('inbox.backToInbox')}
         </Link>
         <ArchiveButton leadId={lead.id} isArchived={!!lead.archived_at} />
       </div>

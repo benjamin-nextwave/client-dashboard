@@ -1,5 +1,7 @@
 'use client'
 
+import { useT } from '@/lib/i18n/client'
+
 /* ── Fake SVG chart primitives (purely decorative, no real data) ── */
 
 function FakeBarChart({ bars, color }: { bars: number[]; color: string }) {
@@ -101,12 +103,13 @@ function FakeLegend({ items }: { items: { color: string; label: string }[] }) {
 /* ── Blur overlay ── */
 
 function ComingSoonOverlay() {
+  const t = useT()
   return (
     <div className="absolute inset-0 z-10 flex items-center justify-center backdrop-blur-[6px]">
       <div className="rounded-xl bg-white/80 px-6 py-4 text-center shadow-sm">
-        <p className="text-sm font-semibold text-gray-700">Coming soon</p>
+        <p className="text-sm font-semibold text-gray-700">{t('overview.comingSoon')}</p>
         <p className="mt-1 max-w-xs text-xs text-gray-500">
-          Momenteel is het Nextwave team hard aan het werk om deze statistieken te verwerken. Binnenkort beschikbaar!
+          {t('overview.comingSoonDescription')}
         </p>
       </div>
     </div>
@@ -132,6 +135,7 @@ function ChartCard({ title, children }: { title: string; children: React.ReactNo
 /* ── Main export ── */
 
 export function ComingSoonCharts() {
+  const t = useT()
   const blue = '#3B82F6'
   const blueShades = ['#3B82F6', '#60A5FA', '#93C5FD', '#BFDBFE', '#DBEAFE']
   const red = '#EF4444'
@@ -142,10 +146,10 @@ export function ComingSoonCharts() {
       {/* ── ICP sectie ── */}
       <div>
         <h2 className="mb-4 text-lg font-bold text-gray-900">
-          Ideal Customer Profile (ICP)
+          {t('overview.icpTitle')}
         </h2>
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-          <ChartCard title="Functietitel ICP">
+          <ChartCard title={`${t('overview.chartJobTitle')} ICP`}>
             <FakeBarChart bars={[65, 48, 35, 22, 15, 10]} color={blue} />
             <FakeLegend
               items={[
@@ -158,7 +162,7 @@ export function ComingSoonCharts() {
             />
           </ChartCard>
 
-          <ChartCard title="Locatie ICP">
+          <ChartCard title={`${t('overview.chartLocation')} ICP`}>
             <FakeDonut colors={blueShades} />
             <FakeLegend
               items={[
@@ -171,7 +175,7 @@ export function ComingSoonCharts() {
             />
           </ChartCard>
 
-          <ChartCard title="Bedrijfsgrootte ICP">
+          <ChartCard title={`${t('overview.chartCompanySize')} ICP`}>
             <FakeLineChart points={[10, 35, 60, 80, 55, 30, 15]} color={blue} />
             <FakeLegend
               items={[
@@ -189,10 +193,10 @@ export function ComingSoonCharts() {
       {/* ── WCP sectie ── */}
       <div>
         <h2 className="mb-4 text-lg font-bold text-gray-900">
-          Worst Customer Profile (WCP)
+          {t('overview.wcpTitle')}
         </h2>
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-          <ChartCard title="Functietitel WCP">
+          <ChartCard title={`${t('overview.chartJobTitle')} WCP`}>
             <FakeBarChart bars={[50, 40, 30, 20, 12, 8]} color={red} />
             <FakeLegend
               items={[
@@ -205,7 +209,7 @@ export function ComingSoonCharts() {
             />
           </ChartCard>
 
-          <ChartCard title="Locatie WCP">
+          <ChartCard title={`${t('overview.chartLocation')} WCP`}>
             <FakeDonut colors={redShades} />
             <FakeLegend
               items={[
@@ -218,7 +222,7 @@ export function ComingSoonCharts() {
             />
           </ChartCard>
 
-          <ChartCard title="Bedrijfsgrootte WCP">
+          <ChartCard title={`${t('overview.chartCompanySize')} WCP`}>
             <FakeLineChart points={[5, 20, 45, 70, 85, 60, 40]} color={red} />
             <FakeLegend
               items={[

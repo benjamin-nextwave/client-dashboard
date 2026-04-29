@@ -75,6 +75,264 @@ export interface Translations {
     successWithRole: string
     successNoRole: string
   }
+  overview: {
+    title: string
+    noDataTitle: string
+    noDataDescription: string
+    period: string
+    range7d: string
+    range30d: string
+    range90d: string
+    rangeAll: string
+    rangeAllPeriod: string
+    rangePeriodLast: string
+    statEmailsSent: string
+    statUniqueReplies: string
+    statUniqueRepliesSubtitle: string
+    statBounced: string
+    refreshHint: string
+    dailyOverview: string
+    dailyNoData: string
+    legendSent: string
+    legendReplies: string
+    refreshButton: string
+    refreshing: string
+    refreshDone: string
+    refreshFailed: string
+    connectionFailed: string
+    refreshHintBelow: string
+    icpTitle: string
+    wcpTitle: string
+    chartJobTitle: string
+    chartLocation: string
+    chartCompanySize: string
+    comingSoon: string
+    comingSoonDescription: string
+  }
+  inbox: {
+    title: string
+    empty: string
+    emptyDescription: string
+    search: string
+    sortNewest: string
+    sortOldest: string
+    folderAll: string
+    folderUnreplied: string
+    folderReplied: string
+    backToInbox: string
+    sentBy: string
+    receivedAt: string
+    replyButton: string
+    replyPlaceholder: string
+    sendReply: string
+    sendingReply: string
+    replySent: string
+    replyFailed: string
+    inIframeNote: string
+    interest: string
+    interestPositive: string
+    interestNeutral: string
+    interestNegative: string
+    interestNotSet: string
+    leadDetailsTitle: string
+    noReplyYet: string
+    repliedAlready: string
+    threadShowMore: string
+    passwordHelpTitle: string
+    passwordHelpBody: string
+    passwordHelpButton: string
+    passwordHelpSent: string
+    passwordHelpError: string
+  }
+  leads: {
+    title: string
+    description: string
+    weeklyAddsBanner: string
+    empty: string
+    emptyDescription: string
+    filterAll: string
+    filterTotal: string
+    weekHeader: string
+    leadCount: string
+    leadCountSingular: string
+    sentSubject: string
+    sentBody: string
+    replySubject: string
+    replyBody: string
+    notes: string
+    noNotes: string
+    aiJustification: string
+    aiJustificationButton: string
+    aiJustificationLoading: string
+    submitObjection: string
+    objectionPending: string
+    objectionApproved: string
+    objectionRejected: string
+    objectionStep1Title: string
+    objectionStep2Title: string
+    objectionStep3Title: string
+    objectionPrivacyTitle: string
+    objectionPrivacyText: string
+    objectionPrivacyAck: string
+    objectionContinue: string
+    objectionStartChat: string
+    objectionChatPlaceholder: string
+    objectionChatMinTurns: string
+    objectionToClassify: string
+    objectionPickLabel: string
+    objectionExplanationLabel: string
+    objectionExplanationPlaceholder: string
+    objectionSubmit: string
+    objectionSubmitting: string
+  }
+  preview: {
+    title: string
+    description: string
+    empty: string
+    emptyDescription: string
+    searchPlaceholder: string
+    contactCount: string
+    contactCountSingular: string
+    excluded: string
+    excludeButton: string
+    excluding: string
+    notificationContactRemoved: string
+    feedbackTitle: string
+    feedbackIntro: string
+    ratingLabel: string
+    ratingExcellent: string
+    ratingGood: string
+    ratingNeutral: string
+    ratingMediocre: string
+    ratingBad: string
+    feedbackPlaceholder: string
+    wantsNewListLabel: string
+    jobTitleFeedbackLabel: string
+    industryFeedbackLabel: string
+    generalNotesLabel: string
+    submitFeedback: string
+    feedbackSubmitting: string
+    feedbackSuccess: string
+    feedbackSuccessNewList: string
+  }
+  contacts: {
+    title: string
+    description: string
+    empty: string
+    emptyDescription: string
+    searchPlaceholder: string
+    contactCount: string
+    contactCountSingular: string
+    columnName: string
+    columnEmail: string
+    columnCompany: string
+    columnJobTitle: string
+    columnIndustry: string
+    columnStatus: string
+  }
+  dnc: {
+    title: string
+    description: string
+    addEmailTitle: string
+    addEmailPlaceholder: string
+    addEmailButton: string
+    addEmailSuccess: string
+    addEmailError: string
+    addDomainTitle: string
+    addDomainPlaceholder: string
+    addDomainButton: string
+    addDomainSuccess: string
+    addDomainError: string
+    csvUploadTitle: string
+    csvUploadDescription: string
+    csvPickColumn: string
+    csvConfirm: string
+    csvCancel: string
+    csvFoundEmails: string
+    csvImport: string
+    csvImporting: string
+    csvSuccess: string
+    csvError: string
+    listTitle: string
+    listEmpty: string
+    typeEmail: string
+    typeDomain: string
+    removeButton: string
+  }
+  sent: {
+    title: string
+    description: string
+    empty: string
+    emptyDescription: string
+    columnDate: string
+    columnSubject: string
+    columnRecipient: string
+    columnStatus: string
+    backToSent: string
+    sentTo: string
+    sentAt: string
+  }
+  feedback: {
+    title: string
+    description: string
+    newRequestTitle: string
+    categoryLabel: string
+    categoryBug: string
+    categoryFeature: string
+    categoryOptimization: string
+    categoryOther: string
+    categoryCampaignPerformance: string
+    categoryNewMailVariants: string
+    titleLabel: string
+    titlePlaceholder: string
+    descriptionLabel: string
+    descriptionPlaceholder: string
+    submitButton: string
+    submitting: string
+    submitSuccess: string
+    submitError: string
+    yourRequests: string
+    statusNew: string
+    statusInProgress: string
+    statusThinking: string
+    statusDenied: string
+    statusApplied: string
+    operatorReply: string
+    noRequestsYet: string
+  }
+  settings: {
+    title: string
+    description: string
+    profileSection: string
+    languageSection: string
+    languageDescription: string
+    helpSection: string
+    helpDescription: string
+  }
+  onboarding: {
+    title: string
+    welcome: string
+    description: string
+    nextButton: string
+  }
+  campaignSubPages: {
+    formTitle: string
+    formDescription: string
+    formCannotResubmit: string
+    formAlreadySubmitted: string
+    repliesTitle: string
+    repliesDescription: string
+    backToCampaign: string
+  }
+  chat: {
+    placeholder: string
+    sendButton: string
+    rateLimited: string
+    error: string
+    welcomeMessage: string
+    minimize: string
+    expand: string
+  }
 }
 
 export const nl: Translations = {
@@ -172,5 +430,286 @@ export const nl: Translations = {
       'De lead heeft positief gereageerd en wordt vanaf hier opgepakt door {role}. De campagne stopt voor deze contactpersoon.',
     successNoRole:
       'De lead heeft positief gereageerd. De campagne stopt voor deze contactpersoon en wordt verder afgehandeld.',
+  },
+
+  overview: {
+    title: 'Overzicht',
+    noDataTitle: 'Nog geen data',
+    noDataDescription:
+      'Klik op "Ververs de data" om de nieuwste statistieken op te halen uit uw Instantly workspace.',
+    period: 'Periode:',
+    range7d: '7 dagen',
+    range30d: '30 dagen',
+    range90d: '90 dagen',
+    rangeAll: 'Alles',
+    rangeAllPeriod: 'Alle tijd',
+    rangePeriodLast: 'Afgelopen {days} dagen',
+    statEmailsSent: 'Verzonden e-mails',
+    statUniqueReplies: 'Unieke reacties',
+    statUniqueRepliesSubtitle: 'Excl. out-of-office en automatische antwoorden',
+    statBounced: 'Bounced',
+    refreshHint: 'Klik op "Ververs de data" om de nieuwste statistieken op te halen.',
+    dailyOverview: 'Dagelijks overzicht',
+    dailyNoData: 'Geen data beschikbaar voor deze periode',
+    legendSent: 'Verzonden',
+    legendReplies: 'Reacties',
+    refreshButton: 'Ververs de data',
+    refreshing: 'Data wordt ververst...',
+    refreshDone: 'Data ververst!',
+    refreshFailed: 'Verversen mislukt. Probeer het opnieuw.',
+    connectionFailed: 'Verbinding mislukt. Probeer het opnieuw.',
+    refreshHintBelow: 'Zonder te verversen wordt mogelijk gedateerde data getoond',
+    icpTitle: 'Ideal Customer Profile (ICP)',
+    wcpTitle: 'Worst Customer Profile (WCP)',
+    chartJobTitle: 'Functietitel',
+    chartLocation: 'Locatie',
+    chartCompanySize: 'Bedrijfsgrootte',
+    comingSoon: 'Coming soon',
+    comingSoonDescription:
+      'Momenteel is het Nextwave team hard aan het werk om deze statistieken te verwerken. Binnenkort beschikbaar!',
+  },
+
+  inbox: {
+    title: 'Inbox',
+    empty: 'Geen positieve reacties',
+    emptyDescription: 'Zodra er een lead positief reageert verschijnt hij hier.',
+    search: 'Zoeken...',
+    sortNewest: 'Nieuwste eerst',
+    sortOldest: 'Oudste eerst',
+    folderAll: 'Alle',
+    folderUnreplied: 'Onbeantwoord',
+    folderReplied: 'Beantwoord',
+    backToInbox: 'Terug naar inbox',
+    sentBy: 'Van',
+    receivedAt: 'Ontvangen op',
+    replyButton: 'Beantwoorden',
+    replyPlaceholder: 'Typ je antwoord...',
+    sendReply: 'Verstuur antwoord',
+    sendingReply: 'Verzenden...',
+    replySent: 'Antwoord verzonden',
+    replyFailed: 'Versturen mislukt. Probeer het opnieuw.',
+    inIframeNote: 'Deze inbox draait via een externe provider en is daarom niet vertaalbaar.',
+    interest: 'Interesse',
+    interestPositive: 'Positief',
+    interestNeutral: 'Neutraal',
+    interestNegative: 'Negatief',
+    interestNotSet: 'Niet ingesteld',
+    leadDetailsTitle: 'Lead-details',
+    noReplyYet: 'Nog niet beantwoord',
+    repliedAlready: 'Reeds beantwoord',
+    threadShowMore: 'Toon meer berichten',
+    passwordHelpTitle: 'Wachtwoord vergeten?',
+    passwordHelpBody:
+      'Klik hieronder en we sturen je een nieuwe inloglink per e-mail. Geen zorgen, je hoeft niets te onthouden.',
+    passwordHelpButton: 'Stuur me een nieuwe link',
+    passwordHelpSent: 'We hebben een e-mail naar {email} gestuurd met instructies.',
+    passwordHelpError: 'Er ging iets mis. Probeer het later opnieuw.',
+  },
+
+  leads: {
+    title: 'Campagne leads',
+    description:
+      'Hieronder staan de leads die handmatig zijn toegevoegd vanuit de lopende campagnes.',
+    weeklyAddsBanner: 'Nieuwe leads worden wekelijks toegevoegd.',
+    empty: 'Nog geen leads',
+    emptyDescription: 'Zodra er leads zijn toegevoegd verschijnen ze hier.',
+    filterAll: 'Alle',
+    filterTotal: 'Totaal',
+    weekHeader: 'Week {week} · {year}',
+    leadCount: '{count} leads',
+    leadCountSingular: '1 lead',
+    sentSubject: 'Verzonden onderwerp',
+    sentBody: 'Verzonden bericht',
+    replySubject: 'Reactie onderwerp',
+    replyBody: 'Reactie',
+    notes: 'Notities',
+    noNotes: 'Geen notities',
+    aiJustification: 'AI-onderbouwing',
+    aiJustificationButton: 'Bekijk AI-onderbouwing',
+    aiJustificationLoading: 'AI-onderbouwing wordt opgesteld...',
+    submitObjection: 'Bezwaar indienen',
+    objectionPending: 'Bezwaar in behandeling',
+    objectionApproved: 'Bezwaar goedgekeurd',
+    objectionRejected: 'Bezwaar afgewezen',
+    objectionStep1Title: 'Privacy & toestemming',
+    objectionStep2Title: 'AI-coach',
+    objectionStep3Title: 'Categorisering',
+    objectionPrivacyTitle: 'Voordat je begint',
+    objectionPrivacyText:
+      'Je gesprek met de AI-coach wordt opgeslagen en gedeeld met onze operators voor de beoordeling van je bezwaar.',
+    objectionPrivacyAck: 'Ik ga akkoord met deze verwerking',
+    objectionContinue: 'Doorgaan',
+    objectionStartChat: 'Start gesprek',
+    objectionChatPlaceholder: 'Beschrijf je bezwaar...',
+    objectionChatMinTurns: 'Stuur minstens {n} berichten voordat je verder kunt.',
+    objectionToClassify: 'Categoriseer dit bezwaar',
+    objectionPickLabel: 'Welke categorie past het beste?',
+    objectionExplanationLabel: 'Korte toelichting',
+    objectionExplanationPlaceholder: 'Voeg een korte toelichting toe (min. 10 tekens)',
+    objectionSubmit: 'Bezwaar indienen',
+    objectionSubmitting: 'Versturen...',
+  },
+
+  preview: {
+    title: 'Voorvertoning',
+    description: 'Bekijk welke contacten in de komende 7 dagen worden benaderd.',
+    empty: 'Geen voorvertoning beschikbaar',
+    emptyDescription: 'Er staan geen contacten gepland voor de komende 7 dagen.',
+    searchPlaceholder: 'Zoek op naam, e-mail, bedrijf...',
+    contactCount: '{count} contacten',
+    contactCountSingular: '1 contact',
+    excluded: 'Uitgesloten',
+    excludeButton: 'Uitsluiten',
+    excluding: 'Uitsluiten...',
+    notificationContactRemoved: 'Contact verwijderd uit de lijst.',
+    feedbackTitle: 'Feedback geven',
+    feedbackIntro: 'Beoordeel deze voorvertoning en geef ons feedback.',
+    ratingLabel: 'Hoe beoordeel je deze lijst?',
+    ratingExcellent: 'Uitstekend',
+    ratingGood: 'Goed',
+    ratingNeutral: 'Neutraal',
+    ratingMediocre: 'Matig',
+    ratingBad: 'Slecht',
+    feedbackPlaceholder: 'Optionele toelichting...',
+    wantsNewListLabel: 'Ik wil een volledig nieuwe lijst',
+    jobTitleFeedbackLabel: 'Welke functietitels wil je wel/niet zien?',
+    industryFeedbackLabel: 'Welke industrieën wil je wel/niet zien?',
+    generalNotesLabel: 'Overige opmerkingen',
+    submitFeedback: 'Feedback versturen',
+    feedbackSubmitting: 'Versturen...',
+    feedbackSuccess: 'Bedankt voor je feedback!',
+    feedbackSuccessNewList:
+      'Binnen 24 uur ontvang je een nieuwe lijst binnen het dashboard.',
+  },
+
+  contacts: {
+    title: 'Contacten',
+    description: 'Een overzicht van alle contacten in jouw campagnes.',
+    empty: 'Nog geen contacten',
+    emptyDescription: 'Contacten verschijnen hier zodra ze zijn toegevoegd aan een campagne.',
+    searchPlaceholder: 'Zoek op naam, e-mail, bedrijf...',
+    contactCount: '{count} contacten',
+    contactCountSingular: '1 contact',
+    columnName: 'Naam',
+    columnEmail: 'E-mail',
+    columnCompany: 'Bedrijf',
+    columnJobTitle: 'Functietitel',
+    columnIndustry: 'Industrie',
+    columnStatus: 'Status',
+  },
+
+  dnc: {
+    title: 'Do Not Contact',
+    description:
+      'E-mailadressen en domeinen op deze lijst worden uitgesloten van toekomstige campagnes.',
+    addEmailTitle: 'E-mailadres toevoegen',
+    addEmailPlaceholder: 'naam@voorbeeld.nl',
+    addEmailButton: 'Toevoegen',
+    addEmailSuccess: 'E-mailadres toegevoegd.',
+    addEmailError: 'Toevoegen mislukt.',
+    addDomainTitle: 'Domein toevoegen',
+    addDomainPlaceholder: 'voorbeeld.nl',
+    addDomainButton: 'Toevoegen',
+    addDomainSuccess: 'Domein toegevoegd.',
+    addDomainError: 'Toevoegen mislukt.',
+    csvUploadTitle: 'CSV bulk-import',
+    csvUploadDescription:
+      'Upload een CSV-bestand met een e-mailkolom om adressen in bulk toe te voegen.',
+    csvPickColumn: 'Selecteer de kolom met e-mailadressen',
+    csvConfirm: 'Bevestigen',
+    csvCancel: 'Annuleren',
+    csvFoundEmails: '{count} e-mailadressen gevonden',
+    csvImport: 'Importeren',
+    csvImporting: 'Importeren...',
+    csvSuccess: '{imported} van {total} adressen geïmporteerd.',
+    csvError: 'Fout bij het lezen van het CSV-bestand.',
+    listTitle: 'Geblokkeerde adressen',
+    listEmpty: 'Geen geblokkeerde adressen',
+    typeEmail: 'E-mail',
+    typeDomain: 'Domein',
+    removeButton: 'Verwijderen',
+  },
+
+  sent: {
+    title: 'Verzonden e-mails',
+    description: 'Een overzicht van alle verzonden e-mails per campagne.',
+    empty: 'Geen verzonden e-mails',
+    emptyDescription: 'Verzonden e-mails verschijnen hier zodra de campagne is gestart.',
+    columnDate: 'Datum',
+    columnSubject: 'Onderwerp',
+    columnRecipient: 'Ontvanger',
+    columnStatus: 'Status',
+    backToSent: 'Terug naar verzonden',
+    sentTo: 'Verzonden naar',
+    sentAt: 'Verzonden op',
+  },
+
+  feedback: {
+    title: 'Contact',
+    description: 'Stel je vraag of geef feedback aan ons team.',
+    newRequestTitle: 'Nieuw verzoek',
+    categoryLabel: 'Categorie',
+    categoryBug: 'Bug / fout',
+    categoryFeature: 'Nieuwe functie',
+    categoryOptimization: 'Verbetering',
+    categoryOther: 'Anders',
+    categoryCampaignPerformance: 'Campagne-prestatie',
+    categoryNewMailVariants: 'Nieuwe mailvarianten',
+    titleLabel: 'Titel',
+    titlePlaceholder: 'Korte samenvatting...',
+    descriptionLabel: 'Beschrijving',
+    descriptionPlaceholder: 'Beschrijf zo duidelijk mogelijk...',
+    submitButton: 'Verzenden',
+    submitting: 'Verzenden...',
+    submitSuccess: 'Bedankt! Je verzoek is ontvangen.',
+    submitError: 'Versturen mislukt. Probeer het opnieuw.',
+    yourRequests: 'Jouw eerdere verzoeken',
+    statusNew: 'Nieuw',
+    statusInProgress: 'In behandeling',
+    statusThinking: 'Wordt overwogen',
+    statusDenied: 'Afgewezen',
+    statusApplied: 'Doorgevoerd',
+    operatorReply: 'Antwoord van NextWave',
+    noRequestsYet: 'Je hebt nog geen verzoeken ingediend.',
+  },
+
+  settings: {
+    title: 'Instellingen & uitleg',
+    description: 'Beheer je voorkeuren en bekijk uitleg over het dashboard.',
+    profileSection: 'Profiel',
+    languageSection: 'Taal',
+    languageDescription:
+      'Kies de taal van het dashboard. Deze keuze wordt onthouden voor de volgende keer dat je inlogt.',
+    helpSection: 'Uitleg & ondersteuning',
+    helpDescription: 'Bekijk de uitleg per onderdeel of neem contact op met het team.',
+  },
+
+  onboarding: {
+    title: 'Welkom',
+    welcome: 'Welkom op je nieuwe dashboard',
+    description:
+      'Hieronder volgt een korte uitleg om je op weg te helpen. Klik op "Doorgaan" om te beginnen.',
+    nextButton: 'Doorgaan',
+  },
+
+  campaignSubPages: {
+    formTitle: 'Campagne-vragenlijst',
+    formDescription: 'Vul deze vragenlijst in zodat wij je campagne kunnen opzetten.',
+    formCannotResubmit:
+      'Je hebt het formulier al ingediend. Neem contact op als je iets wilt aanpassen.',
+    formAlreadySubmitted: 'Formulier reeds ingediend',
+    repliesTitle: 'Mijn antwoorden',
+    repliesDescription: 'Een overzicht van de antwoorden die je hebt ingediend.',
+    backToCampaign: 'Terug naar mijn campagne',
+  },
+
+  chat: {
+    placeholder: 'Stel een vraag over je campagne...',
+    sendButton: 'Verstuur',
+    rateLimited: 'Te veel berichten. Probeer het over een minuut opnieuw.',
+    error: 'Er ging iets mis. Probeer het opnieuw.',
+    welcomeMessage: 'Hoi! Ik help je graag met vragen over je dashboard. Stel maar!',
+    minimize: 'Minimaliseren',
+    expand: 'Open chat',
   },
 }
