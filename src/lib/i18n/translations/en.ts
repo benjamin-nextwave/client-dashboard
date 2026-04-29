@@ -148,6 +148,17 @@ export const en: Translations = {
     replySent: 'Reply sent',
     replyFailed: 'Sending failed. Please try again.',
     inIframeNote: 'This inbox runs through an external provider and cannot be translated.',
+    safariBannerLabel: 'Note:',
+    safariBannerText:
+      'The inbox is currently not supported in Safari. Use Google Chrome (incognito if needed) for the best experience.',
+    embedTitle: 'Email Inbox',
+    embedLoginPrompt: 'Log in to view your inbox',
+    embedPasswordWarning:
+      'Note: the inbox login does not use the same password as the dashboard.',
+    embedEmailField: 'Email address',
+    embedPasswordField: 'Password',
+    embedLoginButton: 'Sign in',
+    embedForgotPassword: "Forgot password / can't sign in",
     interest: 'Interest',
     interestPositive: 'Positive',
     interestNeutral: 'Neutral',

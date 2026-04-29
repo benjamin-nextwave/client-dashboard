@@ -3,6 +3,7 @@
 import { useState, useCallback, useTransition, useEffect } from 'react'
 import { requestInboxPasswordHelp } from '../actions'
 import { SAFARI_BANNER_HIDE_EVENT, SAFARI_BANNER_SHOW_EVENT } from '@/components/client/safari-banner'
+import { useT } from '@/lib/i18n/client'
 
 interface InboxEmbedFrameProps {
   proxyBaseUrl: string
@@ -10,6 +11,7 @@ interface InboxEmbedFrameProps {
 }
 
 export function InboxEmbedFrame({ proxyBaseUrl, targetHost }: InboxEmbedFrameProps) {
+  const t = useT()
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
@@ -70,8 +72,8 @@ export function InboxEmbedFrame({ proxyBaseUrl, targetHost }: InboxEmbedFramePro
               <svg className="mx-auto h-10 w-10 text-brand" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
               </svg>
-              <h2 className="mt-3 text-lg font-semibold text-gray-900">E-mail Inbox</h2>
-              <p className="mt-1 text-sm text-gray-600">Log in om je inbox te bekijken</p>
+              <h2 className="mt-3 text-lg font-semibold text-gray-900">{t('inbox.embedTitle')}</h2>
+              <p className="mt-1 text-sm text-gray-600">{t('inbox.embedLoginPrompt')}</p>
             </div>
 
             <div className="mb-4 rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-700">
@@ -87,7 +89,7 @@ export function InboxEmbedFrame({ proxyBaseUrl, targetHost }: InboxEmbedFramePro
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
                 <label htmlFor="inbox-email" className="block text-sm font-medium text-gray-700">
-                  E-mailadres
+                  {t('inbox.embedEmailField')}
                 </label>
                 <input
                   id="inbox-email"
@@ -102,7 +104,7 @@ export function InboxEmbedFrame({ proxyBaseUrl, targetHost }: InboxEmbedFramePro
 
               <div>
                 <label htmlFor="inbox-password" className="block text-sm font-medium text-gray-700">
-                  Wachtwoord
+                  {t('inbox.embedPasswordField')}
                 </label>
                 <input
                   id="inbox-password"
@@ -119,7 +121,7 @@ export function InboxEmbedFrame({ proxyBaseUrl, targetHost }: InboxEmbedFramePro
                 disabled={isLoading}
                 className="w-full rounded-md bg-brand px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {isLoading ? 'Inloggen...' : 'Inloggen'}
+                {isLoading ? `${t('inbox.embedLoginButton')}...` : t('inbox.embedLoginButton')}
               </button>
             </form>
 
@@ -144,7 +146,7 @@ export function InboxEmbedFrame({ proxyBaseUrl, targetHost }: InboxEmbedFramePro
                 disabled={helpPending}
                 className="w-full rounded-lg border-2 border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900 transition-all hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {helpPending ? 'Even geduld...' : 'Wachtwoord vergeten / inloggen lukt niet'}
+                {helpPending ? `${t('common.loading')}` : t('inbox.embedForgotPassword')}
               </button>
 
               {helpResult && (

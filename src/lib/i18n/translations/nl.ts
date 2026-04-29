@@ -129,6 +129,15 @@ export interface Translations {
     replySent: string
     replyFailed: string
     inIframeNote: string
+    safariBannerLabel: string
+    safariBannerText: string
+    embedTitle: string
+    embedLoginPrompt: string
+    embedPasswordWarning: string
+    embedEmailField: string
+    embedPasswordField: string
+    embedLoginButton: string
+    embedForgotPassword: string
     interest: string
     interestPositive: string
     interestNeutral: string
@@ -579,6 +588,17 @@ export const nl: Translations = {
     replySent: 'Antwoord verzonden',
     replyFailed: 'Versturen mislukt. Probeer het opnieuw.',
     inIframeNote: 'Deze inbox draait via een externe provider en is daarom niet vertaalbaar.',
+    safariBannerLabel: 'Let op:',
+    safariBannerText:
+      'De inbox wordt momenteel niet ondersteund in Safari. Gebruik Google Chrome (eventueel incognito) voor de beste ervaring.',
+    embedTitle: 'E-mail Inbox',
+    embedLoginPrompt: 'Log in om je inbox te bekijken',
+    embedPasswordWarning:
+      'Let op: de login van de inbox heeft niet hetzelfde wachtwoord als het dashboard.',
+    embedEmailField: 'E-mailadres',
+    embedPasswordField: 'Wachtwoord',
+    embedLoginButton: 'Inloggen',
+    embedForgotPassword: 'Wachtwoord vergeten / inloggen lukt niet',
     interest: 'Interesse',
     interestPositive: 'Positief',
     interestNeutral: 'Neutraal',
