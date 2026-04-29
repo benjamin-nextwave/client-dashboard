@@ -11,9 +11,9 @@ See: .planning/PROJECT.md (updated 2026-04-29)
 ## Current Position
 
 Phase: 9 — News Authoring & Schema
-Plan: 3/6 complete
-Status: Wave 2 complete — 09-03 (server actions for news_items: create/update/publish/withdraw/delete) landed. DB push still deferred to 09-06. Wave 3 plan 09-04 (form/card/preview-modal components) is unblocked and can start now.
-Last activity: 2026-04-29 — 09-03 written: `src/app/(operator)/admin/news/actions.ts` (created — 5 named exports: createNewsItem, updateNewsItem, publishNewsItem, withdrawNewsItem, deleteNewsItem; server-authoritative publish gate via DB re-read; narrow-column UPDATE in updateNewsItem; server-managed image_path)
+Plan: 4/6 complete
+Status: Wave 3 complete — 09-04 (3 React components: NewsPreviewModal + NewsContentRenderer + NewsForm + NewsCard) landed. DB push still deferred to 09-06. Wave 4 plan 09-05 (routes: /admin/news list + /new + /[id]/edit + Nieuws nav link) is unblocked and can start now.
+Last activity: 2026-04-29 — 09-04 written: `src/components/admin/news-preview-modal.tsx` (NewsContentRenderer + NewsPreviewModal — Phase-10-reusable presentational renderer), `src/components/admin/news-form.tsx` (NewsForm with 3-language tabs + image input + preview modal wired to RHF watch()), `src/components/admin/news-card.tsx` (NewsCard with thumbnail + status-aware Publish/Withdraw button via useTransition).
 
 ## Milestone v1.0 Outcomes (archived)
 
@@ -60,6 +60,16 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - getOperatorProfileId returns null deliberately for Phase 9 — news_items.created_by is nullable (D-08) and operator routes are gated by the (operator) layout. Per-operator audit attribution is a future concern.
 - Status-precondition guards (publish requires status='draft', withdraw requires status='published') prevent crafted re-publish or re-withdraw POSTs from producing weird states — UI in 09-04 only renders the right button per status, but these are belt-and-suspenders.
 
+**Phase 9 / Plan 09-04 decisions:**
+- NewsContentRenderer is a SEPARATE export from news-preview-modal.tsx (not just an internal component) — Phase 10 imports it directly for the client-side overlay surface without re-implementing the renderer (D-05 reuse contract).
+- All 6 RHF inputs in NewsForm are always mounted via `hidden` for inactive tabs — switching tabs MUST NOT remount the inputs (would lose typed-but-not-yet-saved values across switches).
+- register() loop with template-literal field names: `register(\`title_${lang}\` as const)` — 2 register() calls × 3 langs = 6 actual registrations; matches the planner's skeleton and keeps field names narrow-typed.
+- File input in NewsForm uses literal `name="image"` attribute and is intentionally NOT registered with RHF — files are not part of the form state model; server reads via formData.get('image') (T-09-30 contract).
+- NewsCard uses useTransition (not useActionState) for Publish/Withdraw — these are id-keyed RPC calls, not form submissions; useTransition gives the pending flag without needing an inline form.
+- Body in NewsContentRenderer is rendered as a React text node `{body}` with whitespace-pre-wrap — preserves operator-entered newlines without parsing as HTML (T-09-19 mitigation; React auto-escapes).
+- alert() for error surfacing in NewsCard — toast infrastructure is out of scope for Phase 9; alert is acceptable v1.1 quality bar (3 internal operators, deterministic flow).
+- displayTitle = NL preferred → EN fallback → '(zonder titel)' literal — drafts are explicitly allowed to be partial (NEWS-01 acceptance); the literal is a stable Dutch placeholder for the rare empty-empty case.
+
 ### Pending Todos
 
 None.
@@ -75,10 +85,10 @@ No active blockers.
 
 ## Session Continuity
 
-Last session: 2026-04-29 — Plan 09-03 executed (5 server actions: createNewsItem, updateNewsItem, publishNewsItem, withdrawNewsItem, deleteNewsItem). One task commit: `426b44a`.
-Stopped at: Wave 2 complete (09-03 landed). Wave 3 plan 09-04 (form/card/preview-modal components) ready to start; it can import the 5 actions directly from `@/app/(operator)/admin/news/actions` and useActionState-bind createNewsItem + updateNewsItem.bind(null, id).
-Next action: Execute plan 09-04 (news-form.tsx with 3 language tabs + image input, news-card.tsx with publish/withdraw button per status, news-preview-modal.tsx with NewsContentRenderer reusable for Phase 10).
+Last session: 2026-04-29 — Plan 09-04 executed (3 React components: NewsPreviewModal + NewsContentRenderer in news-preview-modal.tsx, NewsForm in news-form.tsx, NewsCard in news-card.tsx). Three task commits: `24e7653`, `d2ac020`, `8cafddd`.
+Stopped at: Wave 3 complete (09-04 landed). Wave 4 plan 09-05 (routes: /admin/news list + /new + /[id]/edit + Nieuws nav link) ready to start; it can `import { NewsForm }` for create/edit pages and `import { NewsCard }` for the list page, plus `import { NewsContentRenderer }` will be reused by Phase 10 directly.
+Next action: Execute plan 09-05 (3 route pages + Nieuws nav link integration in operator-header.tsx).
 
 ---
 *Milestone switched: 2026-04-29 — v1.0 (shipped) → v1.1 News Broadcasting*
-*Last updated: 2026-04-29 after plan 09-03 (server actions: create/update/publish/withdraw/delete)*
+*Last updated: 2026-04-29 after plan 09-04 (components: news-form, news-preview-modal, news-card)*
