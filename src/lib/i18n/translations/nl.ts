@@ -143,6 +143,72 @@ export interface Translations {
     passwordHelpButton: string
     passwordHelpSent: string
     passwordHelpError: string
+    folderInbox: string
+    folderArchived: string
+    folderArchivedEmpty: string
+    folderNewPlaceholder: string
+    folderNewTitle: string
+    folderConfirm: string
+    folderRename: string
+    folderDelete: string
+    folderDeleteConfirm: string
+    statusFilterAll: string
+    statusFilterActionRequired: string
+    statusFilterInConversation: string
+    searchPlaceholderFull: string
+    refreshButton: string
+    refreshButtonProgress: string
+    refreshTitle: string
+    composeNew: string
+    resultsCount: string
+    noResultsForSearch: string
+    composeTitle: string
+    composeRecipient: string
+    composeSubject: string
+    composeBody: string
+    composeSend: string
+    composeSending: string
+    composeSelectLead: string
+    archiveButton: string
+    archived: string
+    moveToFolder: string
+    notesTitle: string
+    notesPlaceholder: string
+    notesEmpty: string
+    saveNote: string
+    leadName: string
+    leadEmail: string
+    leadCompany: string
+    leadJobTitle: string
+    leadOpenLinkedIn: string
+    leadOpenVacancy: string
+    threadLoading: string
+    threadEmpty: string
+    threadShowFullEmail: string
+    threadHideFullEmail: string
+    objectionFlowTitle: string
+    objectionStartButton: string
+    objectionFlowStep: string
+    objectionConsentIntro: string
+    objectionConsentItem1: string
+    objectionConsentItem2: string
+    objectionConsentItem3: string
+    objectionContinueChat: string
+    objectionPreviousStep: string
+    objectionAiTyping: string
+    objectionAiInitial: string
+    objectionMinTurnsRemaining: string
+    objectionContinueClassify: string
+    objectionLabelPositive: string
+    objectionLabelMaybeLater: string
+    objectionLabelMisunderstanding: string
+    objectionLabelOther: string
+    objectionAcceptLabel: string
+    objectionPropose: string
+    objectionFinalSubmit: string
+    objectionAlreadyPending: string
+    objectionApprovedNote: string
+    objectionRejectedNote: string
   }
   leads: {
     title: string
@@ -504,6 +570,78 @@ export const nl: Translations = {
     passwordHelpButton: 'Stuur me een nieuwe link',
     passwordHelpSent: 'We hebben een e-mail naar {email} gestuurd met instructies.',
     passwordHelpError: 'Er ging iets mis. Probeer het later opnieuw.',
+    folderInbox: 'Inbox',
+    folderArchived: 'Afgehandeld',
+    folderArchivedEmpty: 'Geen afgehandelde leads.',
+    folderNewPlaceholder: 'Mapnaam...',
+    folderNewTitle: 'Nieuw mapje',
+    folderConfirm: 'OK',
+    folderRename: 'Hernoemen',
+    folderDelete: 'Verwijderen',
+    folderDeleteConfirm:
+      'Weet u zeker dat u dit mapje wilt verwijderen? Leads worden terug naar Inbox verplaatst.',
+    statusFilterAll: 'Alles',
+    statusFilterActionRequired: 'Actie vereist',
+    statusFilterInConversation: 'In gesprek',
+    searchPlaceholderFull: 'Zoek op naam, e-mail of bedrijf...',
+    refreshButton: 'Verversen',
+    refreshButtonProgress: 'Verversen...',
+    refreshTitle: 'Mist u recente e-mails? Klik hier om te verversen.',
+    composeNew: 'Nieuwe e-mail',
+    resultsCount: '{shown} van {total} leads',
+    noResultsForSearch: 'Geen leads gevonden voor deze zoekopdracht.',
+    composeTitle: 'Nieuwe e-mail',
+    composeRecipient: 'Aan',
+    composeSubject: 'Onderwerp',
+    composeBody: 'Bericht',
+    composeSend: 'Verzenden',
+    composeSending: 'Verzenden...',
+    composeSelectLead: 'Kies een lead',
+    archiveButton: 'Markeer als afgehandeld',
+    archived: 'Afgehandeld',
+    moveToFolder: 'Verplaats naar map',
+    notesTitle: 'Notities',
+    notesPlaceholder: 'Voeg een notitie toe...',
+    notesEmpty: 'Nog geen notities.',
+    saveNote: 'Opslaan',
+    leadName: 'Naam',
+    leadEmail: 'E-mail',
+    leadCompany: 'Bedrijf',
+    leadJobTitle: 'Functie',
+    leadOpenLinkedIn: 'Open LinkedIn',
+    leadOpenVacancy: 'Open vacature',
+    threadLoading: 'Berichten laden...',
+    threadEmpty: 'Geen berichten in deze thread.',
+    threadShowFullEmail: 'Toon volledig bericht',
+    threadHideFullEmail: 'Verberg volledig bericht',
+    objectionFlowTitle: 'Bezwaar indienen',
+    objectionStartButton: 'Bezwaar indienen',
+    objectionFlowStep: 'Stap {current} van {total}',
+    objectionConsentIntro:
+      'Voordat je begint vragen we je toestemming voor de volgende verwerking:',
+    objectionConsentItem1:
+      'Je gesprek met de AI-coach wordt opgeslagen voor beoordeling.',
+    objectionConsentItem2:
+      'Onze operators kunnen het bezwaar samen met de chatlog inzien.',
+    objectionConsentItem3: 'De gegevens worden alleen gebruikt voor de beoordeling.',
+    objectionContinueChat: 'Doorgaan naar gesprek',
+    objectionPreviousStep: 'Vorige stap',
+    objectionAiTyping: 'AI denkt na...',
+    objectionAiInitial:
+      'Hoi! Ik help je om je bezwaar duidelijk te formuleren. Wat is er gebeurd?',
+    objectionMinTurnsRemaining:
+      'Nog {remaining} {label} nodig voor verder kunt.',
+    objectionContinueClassify: 'Doorgaan naar categorisering',
+    objectionLabelPositive: 'Positieve interesse na alles',
+    objectionLabelMaybeLater: 'Mogelijk later interessant',
+    objectionLabelMisunderstanding: 'Misverstand / verkeerd geclassificeerd',
+    objectionLabelOther: 'Andere reden',
+    objectionAcceptLabel: 'Accepteer label',
+    objectionPropose: 'Stel ander label voor',
+    objectionFinalSubmit: 'Bezwaar versturen',
+    objectionAlreadyPending: 'Je bezwaar is in behandeling.',
+    objectionApprovedNote: 'Je bezwaar is goedgekeurd.',
+    objectionRejectedNote: 'Je bezwaar is afgewezen.',
   },
 
   leads: {

@@ -14,6 +14,7 @@ import {
   generateLabelJustification,
   submitLeadObjection,
 } from '@/lib/actions/campaign-leads-actions'
+import { useT } from '@/lib/i18n/client'
 
 // Hoeveel echte berichten van de klant minimaal moeten zijn gestuurd voordat
 // de definitief-indienen knop verschijnt. De AI duwt door — de klant moet
@@ -34,6 +35,7 @@ const DATE_ONLY_FMT = new Intl.DateTimeFormat('nl-NL', {
 })
 
 export function LeadCard({ lead }: { lead: CampaignLead }) {
+  const t = useT()
   const [open, setOpen] = useState(false)
   const meta = LABEL_META[lead.label]
 
@@ -42,7 +44,7 @@ export function LeadCard({ lead }: { lead: CampaignLead }) {
   const expandable = true // Knoppen zitten altijd in het uitgeklapte deel.
 
   // Status-pill rechts in de header
-  const objectionBadge = renderObjectionBadge(lead)
+  const objectionBadge = renderObjectionBadge(lead, t)
 
   return (
     <article className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md">
@@ -95,7 +97,7 @@ export function LeadCard({ lead }: { lead: CampaignLead }) {
             <div className="grid gap-4 md:grid-cols-2">
               {hasSent && (
                 <ThreadBlock
-                  title="Verzonden mail"
+                  title={t('leads.sentSubject')}
                   accent="bg-blue-100 text-blue-700"
                   date={lead.sentAt ? DATE_ONLY_FMT.format(new Date(lead.sentAt)) : null}
                   subject={lead.sentSubject}
@@ -104,7 +106,7 @@ export function LeadCard({ lead }: { lead: CampaignLead }) {
               )}
               {hasReply && (
                 <ThreadBlock
-                  title="Positieve reactie"
+                  title={t('leads.replyBody')}
                   accent="bg-emerald-100 text-emerald-700"
                   date={DATE_ONLY_FMT.format(new Date(lead.receivedAt))}
                   subject={lead.replySubject}
@@ -117,7 +119,7 @@ export function LeadCard({ lead }: { lead: CampaignLead }) {
           {lead.notes && (
             <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50/70 p-3">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-700">
-                Notitie
+                {t('leads.notes')}
               </p>
               <p className="mt-1 whitespace-pre-wrap text-sm text-amber-900">{lead.notes}</p>
             </div>
@@ -131,7 +133,7 @@ export function LeadCard({ lead }: { lead: CampaignLead }) {
   )
 }
 
-function renderObjectionBadge(lead: CampaignLead) {
+function renderObjectionBadge(lead: CampaignLead, t: ReturnType<typeof useT>) {
   if (!lead.objectionStatus) return null
   const cls =
     lead.objectionStatus === 'pending'
@@ -141,10 +143,10 @@ function renderObjectionBadge(lead: CampaignLead) {
         : 'border-rose-200 bg-rose-50 text-rose-700'
   const label =
     lead.objectionStatus === 'pending'
-      ? 'Bezwaar in behandeling'
+      ? t('leads.objectionPending')
       : lead.objectionStatus === 'approved'
-        ? 'Bezwaar goedgekeurd'
-        : 'Bezwaar afgekeurd'
+        ? t('leads.objectionApproved')
+        : t('leads.objectionRejected')
   return (
     <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${cls}`}>
       {label}
@@ -165,6 +167,7 @@ function ThreadBlock({
   subject: string | null
   body: string | null
 }) {
+  const t = useT()
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-4">
       <div className="mb-2 flex items-center justify-between">
@@ -180,7 +183,7 @@ function ThreadBlock({
         <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-700">{body}</p>
       )}
       {!subject && !body && (
-        <p className="text-xs italic text-gray-400">Geen inhoud beschikbaar.</p>
+        <p className="text-xs italic text-gray-400">{t('flow.noMailContent')}</p>
       )}
     </div>
   )
@@ -189,6 +192,7 @@ function ThreadBlock({
 // ─── AI-onderbouwing ──────────────────────────────────────────────────
 
 function JustificationSection({ lead }: { lead: CampaignLead }) {
+  const t = useT()
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -221,7 +225,7 @@ function JustificationSection({ lead }: { lead: CampaignLead }) {
               </svg>
             </span>
             <p className="text-[11px] font-semibold uppercase tracking-wide text-indigo-700">
-              Waarom past dit label?
+              {t('leads.aiJustification')}
             </p>
           </div>
           <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-800">{text}</p>
@@ -237,7 +241,7 @@ function JustificationSection({ lead }: { lead: CampaignLead }) {
             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" />
             </svg>
-            {pending ? 'Onderbouwing genereren…' : 'Waarom voldoet deze lead aan het lead label?'}
+            {pending ? t('leads.aiJustificationLoading') : t('leads.aiJustificationButton')}
           </button>
           {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
         </div>
@@ -249,6 +253,7 @@ function JustificationSection({ lead }: { lead: CampaignLead }) {
 // ─── Bezwaar-flow ──────────────────────────────────────────────────────
 
 function ObjectionSection({ lead }: { lead: CampaignLead }) {
+  const t = useT()
   const status = lead.objectionStatus
   const [modalOpen, setModalOpen] = useState(false)
 
@@ -268,7 +273,7 @@ function ObjectionSection({ lead }: { lead: CampaignLead }) {
         <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
         </svg>
-        Bezwaar indienen
+        {t('leads.submitObjection')}
       </button>
 
       {modalOpen && (
@@ -282,6 +287,7 @@ function ObjectionSection({ lead }: { lead: CampaignLead }) {
 }
 
 function ObjectionHistory({ lead }: { lead: CampaignLead }) {
+  const t = useT()
   const status = lead.objectionStatus
   if (!status) return null
 
@@ -292,12 +298,12 @@ function ObjectionHistory({ lead }: { lead: CampaignLead }) {
   return (
     <div className="mt-4 rounded-lg border border-gray-200 bg-white p-4">
       <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
-        Bezwaar
+        {t('leads.submitObjection')}
       </p>
 
       {proposedMeta && (
         <div className="mb-3 rounded-md border border-gray-100 bg-gray-50 p-3">
-          <p className="text-[11px] font-medium text-gray-500">Voorgesteld label</p>
+          <p className="text-[11px] font-medium text-gray-500">{t('leads.objectionPickLabel')}</p>
           <span
             className={`mt-1 inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${proposedMeta.badge}`}
           >
@@ -315,12 +321,12 @@ function ObjectionHistory({ lead }: { lead: CampaignLead }) {
       {lead.objectionText && (
         <details className="mb-3 rounded-md border border-gray-100 bg-gray-50 p-3">
           <summary className="cursor-pointer text-[11px] font-medium text-gray-500 hover:text-gray-700">
-            Bekijk je gesprek met de beoordelaar
+            {t('leads.objectionStep2Title')}
           </summary>
           <p className="mt-2 whitespace-pre-wrap text-sm text-gray-700">{lead.objectionText}</p>
           {lead.objectionSubmittedAt && (
             <p className="mt-2 text-[11px] text-gray-400">
-              Ingediend op {DATE_ONLY_FMT.format(new Date(lead.objectionSubmittedAt))}
+              {DATE_ONLY_FMT.format(new Date(lead.objectionSubmittedAt))}
             </p>
           )}
         </details>
@@ -328,7 +334,7 @@ function ObjectionHistory({ lead }: { lead: CampaignLead }) {
 
       {status === 'pending' ? (
         <div className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
-          Je bezwaar wordt momenteel beoordeeld door het Nextwave team.
+          {t('inbox.objectionAlreadyPending')}
         </div>
       ) : (
         <div
@@ -341,7 +347,7 @@ function ObjectionHistory({ lead }: { lead: CampaignLead }) {
               status === 'approved' ? 'text-emerald-700' : 'text-rose-700'
             }`}
           >
-            {status === 'approved' ? 'Bezwaar goedgekeurd' : 'Bezwaar afgekeurd'}
+            {status === 'approved' ? t('leads.objectionApproved') : t('leads.objectionRejected')}
             {lead.objectionResolvedAt && (
               <span className="ml-2 font-normal text-gray-500">
                 · {DATE_ONLY_FMT.format(new Date(lead.objectionResolvedAt))}
@@ -436,6 +442,7 @@ function ConsentStep({
   onCancel: () => void
   onContinue: () => void
 }) {
+  const t = useT()
   return (
     <div className="p-6 sm:p-8">
       <div className="flex items-start gap-4">
@@ -446,33 +453,27 @@ function ConsentStep({
         </div>
         <div className="min-w-0 flex-1">
           <h2 className="text-xl font-semibold tracking-tight text-gray-900">
-            Voor je begint
+            {t('inbox.objectionConsentIntro')}
           </h2>
-          <p className="mt-3 text-sm leading-relaxed text-gray-700">
-            <span className="font-semibold">De inhoud van dit gesprek wordt gedeeld met het Nextwave team voor de beoordeling van het bezwaar.</span>{' '}
-            Je start nu een gesprek met een AI beoordelaar. Hij of zij stelt je een aantal vragen en
-            geeft een eerlijke voorspelling van hoe het bezwaar bekeken wordt.
-          </p>
 
           <ul className="mt-4 space-y-2 text-sm text-gray-700">
             <li className="flex items-start gap-2">
               <svg className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
               </svg>
-              Je gesprek wordt volledig opgeslagen en is leesbaar voor onze beoordelaars.
+              {t('inbox.objectionConsentItem1')}
             </li>
             <li className="flex items-start gap-2">
               <svg className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
               </svg>
-              Per lead kan slechts één bezwaar worden ingediend.
+              {t('inbox.objectionConsentItem2')}
             </li>
             <li className="flex items-start gap-2">
               <svg className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
               </svg>
-              De AI beoordelaar geeft een inschatting, geen definitief oordeel — die ligt bij het
-              Nextwave team.
+              {t('inbox.objectionConsentItem3')}
             </li>
           </ul>
         </div>
@@ -484,14 +485,14 @@ function ConsentStep({
           onClick={onCancel}
           className="rounded-lg px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100"
         >
-          Annuleren
+          {t('common.cancel')}
         </button>
         <button
           type="button"
           onClick={onContinue}
           className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gray-800"
         >
-          Doorgaan naar gesprek
+          {t('inbox.objectionContinueChat')}
         </button>
       </div>
     </div>
@@ -509,6 +510,7 @@ function ChatStep({
   onClose: () => void
   onContinue: (transcript: string) => void
 }) {
+  const t = useT()
   const [input, setInput] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -549,9 +551,9 @@ function ChatStep({
             </svg>
           </span>
           <div>
-            <h2 className="text-sm font-semibold text-gray-900">Gesprek met beoordelaar</h2>
+            <h2 className="text-sm font-semibold text-gray-900">{t('leads.objectionStep2Title')}</h2>
             <p className="text-[11px] text-gray-500">
-              Stap 1 van 2 · {Math.min(userTurns, MIN_USER_TURNS)}/{MIN_USER_TURNS} berichten verstuurd
+              {t('inbox.objectionFlowStep', { current: 1, total: 2 })} · {Math.min(userTurns, MIN_USER_TURNS)}/{MIN_USER_TURNS}
             </p>
           </div>
         </div>
@@ -559,7 +561,7 @@ function ChatStep({
           type="button"
           onClick={onClose}
           className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-          aria-label="Sluiten"
+          aria-label={t('common.close')}
         >
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -570,7 +572,7 @@ function ChatStep({
       <div className="max-h-[55vh] min-h-[280px] space-y-3 overflow-y-auto bg-gray-50/40 p-5">
         {messages.length === 0 && (
           <div className="rounded-md border border-dashed border-gray-200 bg-white p-3 text-center text-xs text-gray-500">
-            Begin met je bezwaar in een paar zinnen — de beoordelaar zal je vragen stellen.
+            {t('inbox.objectionAiInitial')}
           </div>
         )}
         {messages.map((m) => {
@@ -607,7 +609,7 @@ function ChatStep({
         )}
         {error && (
           <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">
-            Er ging iets mis met de chat. Probeer het opnieuw.
+            {t('chat.error')}
           </div>
         )}
         <div ref={messagesEndRef} />
@@ -619,7 +621,7 @@ function ChatStep({
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={messages.length === 0 ? 'Waarom denk je dat dit label niet klopt?' : 'Reageer…'}
+            placeholder={t('leads.objectionChatPlaceholder')}
             disabled={isStreaming}
             maxLength={1000}
             className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-gray-50 disabled:text-gray-500"
@@ -628,7 +630,7 @@ function ChatStep({
             type="submit"
             disabled={isStreaming || !input.trim()}
             className="inline-flex items-center justify-center rounded-md bg-gray-900 px-3 py-2 text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-            aria-label="Verzend bericht"
+            aria-label={t('chat.sendButton')}
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.269 3.126A59.768 59.768 0 0 1 21.485 12 59.77 59.77 0 0 1 3.27 20.876L5.999 12zm0 0h7.5" />
@@ -641,20 +643,20 @@ function ChatStep({
         {canContinue ? (
           <>
             <p className="text-xs text-gray-600">
-              Klaar met praten? Ga door naar de laatste stap om je bezwaar in te dienen.
+              {t('inbox.objectionContinueClassify')}
             </p>
             <button
               type="button"
               onClick={() => onContinue(formatTranscript(messages))}
               className="rounded-md bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-rose-700"
             >
-              Doorgaan naar bezwaar indienen
+              {t('inbox.objectionContinueClassify')}
             </button>
           </>
         ) : (
           <p className="text-xs text-gray-500">
-            Stuur eerst minimaal {MIN_USER_TURNS} berichten met de beoordelaar
-            {userTurns > 0 ? ` (${userTurns}/${MIN_USER_TURNS})` : ''}.
+            {t('leads.objectionChatMinTurns', { n: MIN_USER_TURNS })}
+            {userTurns > 0 ? ` (${userTurns}/${MIN_USER_TURNS})` : ''}
           </p>
         )}
       </div>
@@ -675,6 +677,7 @@ function ClassifyStep({
   onBack: () => void
   onClose: () => void
 }) {
+  const t = useT()
   const router = useRouter()
   const [proposedLabel, setProposedLabel] = useState<LeadLabel | ''>('')
   const [note, setNote] = useState('')
@@ -687,15 +690,15 @@ function ClassifyStep({
     e.preventDefault()
     setError(null)
     if (!proposedLabel) {
-      setError('Kies een label dat volgens jou wel past.')
+      setError(t('leads.objectionPickLabel'))
       return
     }
     if (note.trim().length < 10) {
-      setError('Geef minimaal 10 tekens toelichting bij je voorgestelde label.')
+      setError(t('leads.objectionExplanationPlaceholder'))
       return
     }
     if (transcript.trim().length < 10) {
-      setError('Het gesprek lijkt leeg. Ga terug en probeer opnieuw.')
+      setError(t('common.error'))
       return
     }
     startTransition(async () => {
@@ -726,15 +729,15 @@ function ClassifyStep({
             </svg>
           </span>
           <div>
-            <h2 className="text-sm font-semibold text-gray-900">Voorgesteld label kiezen</h2>
-            <p className="text-[11px] text-gray-500">Stap 2 van 2 · Definitief indienen</p>
+            <h2 className="text-sm font-semibold text-gray-900">{t('leads.objectionToClassify')}</h2>
+            <p className="text-[11px] text-gray-500">{t('inbox.objectionFlowStep', { current: 2, total: 2 })}</p>
           </div>
         </div>
         <button
           type="button"
           onClick={onClose}
           className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-          aria-label="Sluiten"
+          aria-label={t('common.close')}
         >
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -745,7 +748,7 @@ function ClassifyStep({
       <div className="max-h-[60vh] overflow-y-auto p-5">
         <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
-            Huidig label
+            {t('leads.objectionPickLabel')}
           </p>
           <span
             className={`mt-1 inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${currentMeta.badge}`}
@@ -757,9 +760,9 @@ function ClassifyStep({
 
         <fieldset className="mt-5">
           <legend className="text-sm font-semibold text-gray-900">
-            Welk label past volgens jou wél?
+            {t('leads.objectionPickLabel')}
           </legend>
-          <p className="mt-1 text-xs text-gray-500">Kies één optie.</p>
+          <p className="mt-1 text-xs text-gray-500">{t('leads.objectionExplanationLabel')}</p>
 
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             {labelOptions.map((labelKey) => {
@@ -797,10 +800,10 @@ function ClassifyStep({
 
         <div className="mt-5">
           <label htmlFor="proposedNote" className="text-sm font-semibold text-gray-900">
-            Toelichting <span className="text-red-500">*</span>
+            {t('leads.objectionExplanationLabel')} <span className="text-red-500">*</span>
           </label>
           <p className="mt-1 text-xs text-gray-500">
-            Leg in een paar zinnen uit waarom dit label volgens jou beter past dan het huidige.
+            {t('leads.objectionExplanationPlaceholder')}
           </p>
           <textarea
             id="proposedNote"
@@ -810,11 +813,11 @@ function ClassifyStep({
             minLength={10}
             maxLength={2000}
             required
-            placeholder="Bijvoorbeeld: de lead vraagt expliciet om telefonisch contact, niet om een meeting…"
+            placeholder={t('leads.objectionExplanationPlaceholder')}
             className="mt-2 w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-rose-500 focus:outline-none focus:ring-2 focus:ring-rose-500/20"
           />
           <p className="mt-1 text-[11px] text-gray-400">
-            {note.trim().length}/2000 tekens
+            {note.trim().length}/2000
           </p>
         </div>
 
@@ -832,7 +835,7 @@ function ClassifyStep({
           disabled={pending}
           className="rounded-md px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-50"
         >
-          ← Terug naar gesprek
+          ← {t('inbox.objectionPreviousStep')}
         </button>
         <div className="flex items-center gap-2">
           <button
@@ -841,14 +844,14 @@ function ClassifyStep({
             disabled={pending}
             className="rounded-md px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-50"
           >
-            Annuleren
+            {t('common.cancel')}
           </button>
           <button
             type="submit"
             disabled={pending || !proposedLabel || note.trim().length < 10}
             className="rounded-md bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-rose-700 disabled:opacity-60"
           >
-            {pending ? 'Indienen…' : 'Bezwaar definitief indienen'}
+            {pending ? t('leads.objectionSubmitting') : t('inbox.objectionFinalSubmit')}
           </button>
         </div>
       </div>
