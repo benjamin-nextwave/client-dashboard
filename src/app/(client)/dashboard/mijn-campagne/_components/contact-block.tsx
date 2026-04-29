@@ -1,8 +1,13 @@
+'use client'
+
+import { useT } from '@/lib/i18n/client'
+
 interface Props {
   isOnboardingComplete: boolean
 }
 
 export function ContactBlock({ isOnboardingComplete }: Props) {
+  const t = useT()
   return (
     <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
       <div className="flex items-start gap-4">
@@ -12,60 +17,31 @@ export function ContactBlock({ isOnboardingComplete }: Props) {
           </svg>
         </div>
         <div className="min-w-0 flex-1">
-          <h3 className="text-base font-semibold text-gray-900">Contact en ondersteuning</h3>
+          <h3 className="text-base font-semibold text-gray-900">{t('campaign.contactBlockTitle')}</h3>
           <div className="mt-3 space-y-3 text-sm leading-relaxed text-gray-600">
-            {!isOnboardingComplete ? (
-              <>
-                <p>
-                  Heb je vragen, opmerkingen of aanvullingen over jouw mailvarianten, voorvertoning
-                  of iets anders gedurende deze onboarding-periode? Neem dan direct contact op met{' '}
-                  <a
-                    href="mailto:benjamin@nextwave-solutions.nl"
-                    className="font-semibold text-indigo-600 hover:text-indigo-700 hover:underline"
-                  >
-                    benjamin@nextwave-solutions.nl
-                  </a>
-                  .
-                </p>
-                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs leading-relaxed text-amber-900">
-                  <strong className="font-semibold">Let op:</strong> Dit directe contact geldt
-                  uitsluitend voor de duur van de onboarding. Zodra de onboarding is afgerond
-                  verloopt alle communicatie via de{' '}
-                  <a href="/dashboard/feedback" className="font-semibold underline hover:text-amber-950">
-                    contactpagina
-                  </a>{' '}
-                  van het dashboard. Alleen in dringende noodgevallen kun je daarna terecht bij{' '}
-                  <a
-                    href="mailto:merlijn@nextwave-solutions.nl"
-                    className="font-semibold underline hover:text-amber-950"
-                  >
-                    merlijn@nextwave-solutions.nl
-                  </a>
-                  . Na de onboarding vervalt het contact met Benjamin.
-                </div>
-              </>
-            ) : (
-              <>
-                <p>
-                  De onboarding is afgerond. Voor vragen, opmerkingen of feedback maak je gebruik
-                  van de{' '}
-                  <a href="/dashboard/feedback" className="font-semibold text-indigo-600 hover:text-indigo-700 hover:underline">
-                    contactpagina
-                  </a>{' '}
-                  van dit dashboard.
-                </p>
-                <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-xs leading-relaxed text-gray-700">
-                  Alleen in dringende gevallen kun je terecht bij{' '}
-                  <a
-                    href="mailto:merlijn@nextwave-solutions.nl"
-                    className="font-semibold text-gray-900 underline hover:text-gray-950"
-                  >
-                    merlijn@nextwave-solutions.nl
-                  </a>
-                  .
-                </div>
-              </>
-            )}
+            <p>{t('campaign.contactBlockDescription')}</p>
+            <div className="flex flex-wrap gap-3">
+              {!isOnboardingComplete && (
+                <a
+                  href="mailto:benjamin@nextwave-solutions.nl"
+                  className="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-100"
+                >
+                  benjamin@nextwave-solutions.nl
+                </a>
+              )}
+              <a
+                href="/dashboard/feedback"
+                className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+              >
+                {t('campaign.contactBlockButton')}
+              </a>
+              <a
+                href="mailto:merlijn@nextwave-solutions.nl"
+                className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+              >
+                merlijn@nextwave-solutions.nl
+              </a>
+            </div>
           </div>
         </div>
       </div>

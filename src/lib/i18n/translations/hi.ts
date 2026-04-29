@@ -47,6 +47,34 @@ export const hi: Translations = {
     onboardingCompleteTitle: 'ऑनबोर्डिंग पूर्ण',
     onboardingCompleteBody:
       'धन्यवाद! सभी चरण पूरे हो गए हैं। हमारी टीम अंतिम तैयारियाँ करेगी।',
+    proposalNewBadge: 'नया प्रस्ताव',
+    proposalApprove: 'स्वीकृत करें',
+    proposalApproved: 'आपकी स्वीकृति के लिए धन्यवाद',
+    proposalApprovedBody:
+      'NextWave परिवर्तन लागू करेगा। जब आपका कैम्पेन फिर से लागू परिवर्तनों के साथ लाइव होगा तो आपको ईमेल द्वारा सूचित किया जाएगा।',
+    proposalSending: 'भेजा जा रहा है...',
+    proposalShowMore: 'सब पढ़ें',
+    proposalShowLess: 'कम दिखाएं',
+    variantsNewBadge: 'नए मेल प्रकार',
+    variantsApprove: 'स्वीकृत करें',
+    variantsApproved: 'मेल प्रकार स्वीकृत',
+    variantsApprovedBody:
+      'धन्यवाद! मेल प्रकार स्वीकृत हैं और आपके कैम्पेन में उपयोग किए जाएंगे।',
+    variantsViewButton: 'प्रकार देखें',
+    archiveTitle: 'संदर्भ संग्रह',
+    archiveDescription: 'यहाँ अपने पहले भेजे गए या स्वीकृत दस्तावेज़ देखें।',
+    archiveFormSubmissions: 'भरे गए फ़ॉर्म',
+    archiveVariantsPdf: 'मेल प्रकार (PDF)',
+    archiveVariants: 'मेल प्रकार',
+    archiveProposal: 'कैम्पेन प्रस्ताव',
+    archiveOpenSubmissions: 'जवाब देखें',
+    archiveDownloadPdf: 'PDF डाउनलोड करें',
+    archiveOpenVariants: 'प्रकार देखें',
+    archiveOpenProposal: 'प्रस्ताव देखें',
+    contactBlockTitle: 'संपर्क और सहायता',
+    contactBlockDescription:
+      'कोई प्रश्न या प्रतिक्रिया है? NextWave टीम से संपर्क करें।',
+    contactBlockButton: 'प्रश्न पूछें',
   },
 
   flow: {

@@ -47,6 +47,34 @@ export const en: Translations = {
     onboardingCompleteTitle: 'Onboarding complete',
     onboardingCompleteBody:
       'Thank you! All steps are done. Our team will handle the final preparations.',
+    proposalNewBadge: 'New proposal',
+    proposalApprove: 'Approve',
+    proposalApproved: 'Thanks for your approval',
+    proposalApprovedBody:
+      'NextWave will apply the changes. You will receive an email when your campaign is live again with the applied changes.',
+    proposalSending: 'Submitting...',
+    proposalShowMore: 'Read all',
+    proposalShowLess: 'Show less',
+    variantsNewBadge: 'New mail variants',
+    variantsApprove: 'Approve',
+    variantsApproved: 'Mail variants approved',
+    variantsApprovedBody:
+      'Thanks! The mail variants are approved and will be used in your campaign.',
+    variantsViewButton: 'View variants',
+    archiveTitle: 'Reference archive',
+    archiveDescription: 'Find all your previously submitted or approved documents here.',
+    archiveFormSubmissions: 'Submitted forms',
+    archiveVariantsPdf: 'Mail variants (PDF)',
+    archiveVariants: 'Mail variants',
+    archiveProposal: 'Campaign proposal',
+    archiveOpenSubmissions: 'View answers',
+    archiveDownloadPdf: 'Download PDF',
+    archiveOpenVariants: 'View variants',
+    archiveOpenProposal: 'View proposal',
+    contactBlockTitle: 'Contact & support',
+    contactBlockDescription:
+      'Got a question or feedback? Reach out to the NextWave team.',
+    contactBlockButton: 'Ask a question',
   },
 
   flow: {

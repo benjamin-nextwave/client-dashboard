@@ -39,6 +39,31 @@ export interface Translations {
     introInProgress: string
     onboardingCompleteTitle: string
     onboardingCompleteBody: string
+    proposalNewBadge: string
+    proposalApprove: string
+    proposalApproved: string
+    proposalApprovedBody: string
+    proposalSending: string
+    proposalShowMore: string
+    proposalShowLess: string
+    variantsNewBadge: string
+    variantsApprove: string
+    variantsApproved: string
+    variantsApprovedBody: string
+    variantsViewButton: string
+    archiveTitle: string
+    archiveDescription: string
+    archiveFormSubmissions: string
+    archiveVariantsPdf: string
+    archiveVariants: string
+    archiveProposal: string
+    archiveOpenSubmissions: string
+    archiveDownloadPdf: string
+    archiveOpenVariants: string
+    archiveOpenProposal: string
+    contactBlockTitle: string
+    contactBlockDescription: string
+    contactBlockButton: string
   }
   flow: {
     sectionBadge: string
@@ -481,6 +506,34 @@ export const nl: Translations = {
     onboardingCompleteTitle: 'Onboarding voltooid',
     onboardingCompleteBody:
       'Bedankt! Alle stappen zijn afgerond. Ons team gaat verder met de laatste voorbereidingen.',
+    proposalNewBadge: 'Nieuw voorstel',
+    proposalApprove: 'Goedkeuren',
+    proposalApproved: 'Bedankt voor de goedkeuring',
+    proposalApprovedBody:
+      'NextWave gaat de aanpassingen toepassen. Je krijgt via mail te horen wanneer je campagne weer live staat met de toegepaste aanpassingen.',
+    proposalSending: 'Versturen...',
+    proposalShowMore: 'Alles lezen',
+    proposalShowLess: 'Minder tonen',
+    variantsNewBadge: 'Nieuwe mailvarianten',
+    variantsApprove: 'Goedkeuren',
+    variantsApproved: 'Mailvarianten goedgekeurd',
+    variantsApprovedBody:
+      'Bedankt! De mailvarianten zijn goedgekeurd en worden meegenomen in je campagne.',
+    variantsViewButton: 'Bekijk varianten',
+    archiveTitle: 'Terug te vinden',
+    archiveDescription: 'Hier vind je al je eerder ingediende of goedgekeurde documenten terug.',
+    archiveFormSubmissions: 'Ingevulde formulieren',
+    archiveVariantsPdf: 'Mailvarianten (PDF)',
+    archiveVariants: 'Mailvarianten',
+    archiveProposal: 'Campagne-voorstel',
+    archiveOpenSubmissions: 'Bekijk antwoorden',
+    archiveDownloadPdf: 'Download PDF',
+    archiveOpenVariants: 'Bekijk varianten',
+    archiveOpenProposal: 'Bekijk voorstel',
+    contactBlockTitle: 'Contact & ondersteuning',
+    contactBlockDescription:
+      'Heb je een vraag of feedback? Neem contact op met het NextWave team.',
+    contactBlockButton: 'Stel een vraag',
   },
 
   flow: {

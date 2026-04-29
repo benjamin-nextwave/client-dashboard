@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import type { MailVariant } from '@/lib/data/campaign'
 import { MailVariantsModal } from './mail-variants-modal'
 import { acknowledgeMailVariants } from '../actions'
+import { useT } from '@/lib/i18n/client'
 
 interface Props {
   variants: MailVariant[]
@@ -21,6 +22,7 @@ export function MailVariantsApprovalBlock({
   lastAcknowledgedAt,
   isPostOnboarding,
 }: Props) {
+  const t = useT()
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [pending, startTransition] = useTransition()
@@ -67,17 +69,16 @@ export function MailVariantsApprovalBlock({
             </svg>
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="text-lg font-bold text-gray-900">Bedankt voor de goedkeuring</h3>
+            <h3 className="text-lg font-bold text-gray-900">{t('campaign.proposalApproved')}</h3>
             <p className="mt-1 text-sm leading-relaxed text-gray-600">
-              NextWave gaat de aanpassingen toepassen. Je krijgt via mail te horen wanneer je campagne weer live staat
-              met de toegepaste aanpassingen.
+              {t('campaign.proposalApprovedBody')}
             </p>
             <button
               type="button"
               onClick={() => router.refresh()}
               className="mt-4 rounded-lg border border-gray-200 bg-white px-4 py-2 text-xs font-semibold text-gray-700 shadow-sm transition-all hover:border-emerald-300 hover:text-emerald-700"
             >
-              Sluiten
+              {t('common.close')}
             </button>
           </div>
         </div>
@@ -94,7 +95,7 @@ export function MailVariantsApprovalBlock({
           <div className="relative">
             <div className="inline-flex items-center gap-1.5 rounded-full border border-indigo-200/60 bg-white/80 px-3 py-1 text-[11px] font-semibold text-indigo-700 backdrop-blur">
               <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.8)]" />
-              Nieuw voorstel
+              {t('campaign.variantsNewBadge')}
             </div>
             <h3 className="mt-3 text-lg font-bold text-gray-900">
               Nieuwe mailvarianten ter goedkeuring
@@ -132,11 +133,11 @@ export function MailVariantsApprovalBlock({
                       <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.25" strokeWidth="4" />
                       <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
                     </svg>
-                    Versturen...
+                    {t('campaign.proposalSending')}
                   </>
                 ) : (
                   <>
-                    Goedkeuren
+                    {t('campaign.variantsApprove')}
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                     </svg>
@@ -232,11 +233,11 @@ export function MailVariantsApprovalBlock({
                       <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.25" strokeWidth="4" />
                       <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
                     </svg>
-                    Versturen...
+                    {t('campaign.proposalSending')}
                   </>
                 ) : (
                   <>
-                    Goedkeuren
+                    {t('campaign.variantsApprove')}
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                     </svg>
