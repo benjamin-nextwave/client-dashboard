@@ -9,6 +9,7 @@ import {
   type VariantReason,
 } from '@/lib/data/feedback-types'
 import { EmptyState } from '@/components/ui/empty-state'
+import { useT } from '@/lib/i18n/client'
 
 type CategoryValue =
   | 'campaign_performance'
@@ -139,6 +140,7 @@ const STATUS_CONFIG: Record<
 }
 
 export function FeedbackPage({ feedbackRequests }: { feedbackRequests: FeedbackRequest[] }) {
+  const t = useT()
   const [category, setCategory] = useState<CategoryValue>('campaign_performance')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -185,18 +187,15 @@ export function FeedbackPage({ feedbackRequests }: { feedbackRequests: FeedbackR
     <div className="space-y-10">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Contact & feedback</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Stel een vraag, geef feedback over de campagne of het dashboard, of vraag nieuwe
-          mailvarianten aan. Je krijgt een reactie van ons team zodra het is opgepakt.
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight text-gray-900">{t('feedback.title')}</h1>
+        <p className="mt-1 text-sm text-gray-500">{t('feedback.description')}</p>
       </div>
 
       {/* Submission Form */}
       <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
         <div className="border-b border-gray-100 px-6 py-4">
-          <h2 className="text-base font-semibold text-gray-900">Nieuw verzoek indienen</h2>
-          <p className="mt-0.5 text-sm text-gray-500">Kies waar je contact over wilt opnemen.</p>
+          <h2 className="text-base font-semibold text-gray-900">{t('feedback.newRequestTitle')}</h2>
+          <p className="mt-0.5 text-sm text-gray-500">{t('feedback.descriptionPlaceholder')}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6 p-6">
@@ -270,7 +269,7 @@ export function FeedbackPage({ feedbackRequests }: { feedbackRequests: FeedbackR
           <div className="space-y-4">
             <div>
               <label htmlFor="title" className="block text-sm font-medium text-gray-700">
-                Titel
+                {t('feedback.titleLabel')}
               </label>
               <input
                 id="title"
@@ -279,14 +278,14 @@ export function FeedbackPage({ feedbackRequests }: { feedbackRequests: FeedbackR
                 onChange={(e) => setTitle(e.target.value)}
                 required
                 maxLength={200}
-                placeholder="Korte samenvatting van je verzoek"
+                placeholder={t('feedback.titlePlaceholder')}
                 className="mt-1.5 block w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm shadow-sm transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
             </div>
 
             <div>
               <label htmlFor="description" className="block text-sm font-medium text-gray-700">
-                Toelichting
+                {t('feedback.descriptionLabel')}
               </label>
               <textarea
                 id="description"
@@ -320,11 +319,11 @@ export function FeedbackPage({ feedbackRequests }: { feedbackRequests: FeedbackR
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                   </svg>
-                  Bezig met indienen...
+                  {t('feedback.submitting')}
                 </>
               ) : (
                 <>
-                  Verzoek indienen
+                  {t('feedback.submitButton')}
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
                   </svg>
@@ -348,7 +347,7 @@ export function FeedbackPage({ feedbackRequests }: { feedbackRequests: FeedbackR
       {/* Past Submissions */}
       <div>
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-gray-900">Mijn verzoeken</h2>
+          <h2 className="text-base font-semibold text-gray-900">{t('feedback.yourRequests')}</h2>
           {feedbackRequests.length > 0 && (
             <span className="text-sm text-gray-400">
               {feedbackRequests.length} verzoek{feedbackRequests.length !== 1 ? 'en' : ''}
@@ -363,8 +362,8 @@ export function FeedbackPage({ feedbackRequests }: { feedbackRequests: FeedbackR
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 20.25c4.97 0 9-3.694 9-8.25s-4.03-8.25-9-8.25S3 7.444 3 12c0 2.104.859 4.023 2.273 5.48.432.447.74 1.04.586 1.641a4.483 4.483 0 0 1-.923 1.785A5.969 5.969 0 0 0 6 21c1.282 0 2.47-.402 3.445-1.087.81.22 1.668.337 2.555.337Z" />
               </svg>
             }
-            title="Geen verzoeken"
-            description="Je hebt nog geen verzoeken ingediend."
+            title={t('feedback.yourRequests')}
+            description={t('feedback.noRequestsYet')}
           />
         ) : (
           <div className="space-y-3">
@@ -428,7 +427,7 @@ export function FeedbackPage({ feedbackRequests }: { feedbackRequests: FeedbackR
                           </svg>
                         </span>
                         <div>
-                          <p className="text-xs font-semibold text-gray-500">Reactie van NextWave</p>
+                          <p className="text-xs font-semibold text-gray-500">{t('feedback.operatorReply')}</p>
                           <p className="mt-0.5 whitespace-pre-wrap text-sm text-gray-700">
                             {req.operator_response}
                           </p>

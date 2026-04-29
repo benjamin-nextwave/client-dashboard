@@ -3,6 +3,7 @@
 import { useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { archiveLead, unarchiveLead } from '@/lib/actions/inbox-actions'
+import { useT } from '@/lib/i18n/client'
 
 interface ArchiveButtonProps {
   leadId: string
@@ -10,6 +11,7 @@ interface ArchiveButtonProps {
 }
 
 export function ArchiveButton({ leadId, isArchived }: ArchiveButtonProps) {
+  const t = useT()
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
 
@@ -42,14 +44,14 @@ export function ArchiveButton({ leadId, isArchived }: ArchiveButtonProps) {
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
           </svg>
-          Verplaats naar Inbox
+          {t('inbox.folderInbox')}
         </>
       ) : (
         <>
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
-          Verplaats naar Afgehandeld
+          {t('inbox.archiveButton')}
         </>
       )}
     </button>

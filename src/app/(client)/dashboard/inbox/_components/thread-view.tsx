@@ -6,6 +6,7 @@ import { refreshThread } from '@/lib/actions/inbox-actions'
 import { ThreadMessage } from './thread-message'
 import { ReplyForm } from './reply-form'
 import { RefreshOverlay } from './refresh-overlay'
+import { useT } from '@/lib/i18n/client'
 
 interface CachedEmail {
   id: string
@@ -38,6 +39,7 @@ export function ThreadView({
   leadId,
   replySubject,
 }: ThreadViewProps) {
+  const t = useT()
   const [isRefreshing, startRefresh] = useTransition()
   const router = useRouter()
 
@@ -51,7 +53,7 @@ export function ThreadView({
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-xl font-bold text-gray-900">Gesprek</h2>
+        <h2 className="text-xl font-bold text-gray-900">{t('leads.objectionStep2Title')}</h2>
         <button
           type="button"
           onClick={() => {
@@ -61,7 +63,7 @@ export function ThreadView({
             })
           }}
           disabled={isRefreshing}
-          title="Mist u recente berichten? Klik hier om te verversen."
+          title={t('inbox.refreshTitle')}
           className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 px-2.5 py-1.5 text-sm text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
         >
           {isRefreshing ? (
@@ -74,7 +76,7 @@ export function ThreadView({
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
           )}
-          <span>{isRefreshing ? 'Verversen...' : 'Verversen'}</span>
+          <span>{isRefreshing ? t('inbox.refreshButtonProgress') : t('inbox.refreshButton')}</span>
         </button>
       </div>
 
@@ -95,9 +97,7 @@ export function ThreadView({
 
       {emails.length === 0 ? (
         <div className="rounded-lg border border-gray-200 bg-white p-8 text-center">
-          <p className="text-gray-500">
-            Geen e-mails gevonden. De gespreksgeschiedenis wordt geladen...
-          </p>
+          <p className="text-gray-500">{t('inbox.threadEmpty')}</p>
         </div>
       ) : (
         <div className={`rounded-lg border border-gray-200 bg-white p-4 ${isRefreshing ? 'pointer-events-none opacity-40 blur-[1px] transition-all duration-300' : ''}`}>
