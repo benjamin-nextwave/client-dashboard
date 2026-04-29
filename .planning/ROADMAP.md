@@ -44,7 +44,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 **Plans**: 6 plans across 5 waves
 
 **Wave 1** *(parallel — independent)*:
-- [ ] 09-01-PLAN.md — Migration: news_items + news_dismissals + news-images bucket + RLS + storage policies
+- [x] 09-01-PLAN.md — Migration: news_items + news_dismissals + news-images bucket + RLS + storage policies — completed 2026-04-29 (`1943223`)
 - [ ] 09-02-PLAN.md — Zod schemas (newsDraftSchema, newsPublishSchema) + uploadNewsImage helper + i18n keys (nl/en/hi)
 
 **Wave 2** *(blocked on 09-01, 09-02)*:
@@ -92,9 +92,9 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 | 6. CSV Import/Export & DNC Management | v1.0 | 4/4 | Complete | 2026-02-15 |
 | 7. Contact Preview & Sent Emails | v1.0 | 2/2 | Complete | 2026-02-15 |
 | 8. Polish & Error Monitoring | v1.0 | 2/2 | Complete | 2026-02-15 |
-| 9. News Authoring & Schema | v1.1 | 0/6 | Not started | — |
+| 9. News Authoring & Schema | v1.1 | 1/6 | In progress | — |
 | 10. Client News Delivery & Archive | v1.1 | 0/0 | Not started | — |
 
 ---
 *Roadmap created: 2026-02-15*
-*Last updated: 2026-04-29 — appended v1.1 News Broadcasting (Phases 9-10)*
+*Last updated: 2026-04-29 — Phase 9 plan 09-01 complete (news_broadcasting migration)*

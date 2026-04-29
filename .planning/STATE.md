@@ -11,9 +11,9 @@ See: .planning/PROJECT.md (updated 2026-04-29)
 ## Current Position
 
 Phase: 9 — News Authoring & Schema
-Plan: 0/6 complete
-Status: Ready to execute (SPEC + CONTEXT + 6 plans across 5 waves locked, plan-checker passed)
-Last activity: 2026-04-29 — Phase 9 plans created and verified
+Plan: 1/6 complete
+Status: Wave 1 partial — 09-01 migration file written and committed (DB push deferred to 09-06). Wave 1 plan 09-02 (Zod schemas + storage helper + i18n keys) is parallel-eligible and can start now.
+Last activity: 2026-04-29 — 09-01 migration file written (`supabase/migrations/20260429000002_news_broadcasting.sql`)
 
 ## Milestone v1.0 Outcomes (archived)
 
@@ -35,6 +35,12 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Two-phase split for News Broadcasting (Phase 9 authoring + schema, Phase 10 delivery + archive) — chosen over one-phase for tighter cohesion and clearer success criteria; each phase delivers an independently verifiable capability
 - `news_dismissals` table created in Phase 9 (with `news_items`) so Phase 10 has no schema dependency to wait on
 
+**Phase 9 / Plan 09-01 decisions:**
+- Migration timestamp `20260429000002` chosen sequentially after `20260429000001_profile_language.sql` on the same date
+- `news-images` Storage bucket excludes `image/svg+xml` (whitelist: png/jpeg/webp only) — deliberate divergence from `client-logos` to reduce XSS surface on operator-authored content (T-09-07)
+- Migration is forward-only DDL — DB push deferred to plan 09-06 (BLOCKING wave 5) so all server actions / components / routes in waves 2-4 are written against the migration text before a single push lands the schema
+- `news_dismissals` uses composite PK `(user_id, news_item_id)` for natural idempotency on Phase-10 INSERT-ON-CONFLICT writes
+
 ### Pending Todos
 
 None.
@@ -50,10 +56,10 @@ No active blockers.
 
 ## Session Continuity
 
-Last session: 2026-04-29 — Phase 9 SPEC + CONTEXT + 6 plans created, plan-checker passed (after 1 revision iteration)
-Stopped at: Plans verified, ready for execute-phase
-Next action: `/gsd-execute-phase 9` to run waves 1-5 (autonomous through wave 4, manual smoke verification at wave 5)
+Last session: 2026-04-29 — Plan 09-01 executed (news_broadcasting migration file written and committed `1943223`)
+Stopped at: Wave 1 plan 09-01 complete; 09-02 (parallel sibling in Wave 1) ready to start
+Next action: Execute plan 09-02 (Zod schemas + uploadNewsImage helper + i18n keys for `operator.news.*`)
 
 ---
 *Milestone switched: 2026-04-29 — v1.0 (shipped) → v1.1 News Broadcasting*
-*Last updated: 2026-04-29 after v1.1 roadmap creation*
+*Last updated: 2026-04-29 after plan 09-01 (news_broadcasting migration)*
