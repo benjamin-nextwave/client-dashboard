@@ -509,4 +509,57 @@ export const hi: Translations = {
     minimize: 'छोटा करें',
     expand: 'चैट खोलें',
   },
+
+  operator: {
+    nav: {
+      news: 'समाचार',
+    },
+    news: {
+      pageTitle: 'समाचार घोषणाएँ',
+      pageDescription: 'सभी क्लाइंट डैशबोर्ड पर दिखाई देने वाली घोषणाओं को प्रबंधित करें।',
+      createButton: 'नई घोषणा',
+      backToList: 'अवलोकन पर लौटें',
+
+      listEmpty: 'अभी तक कोई घोषणा नहीं। बनाने के लिए "नई घोषणा" पर क्लिक करें।',
+      cardEditAction: 'संपादित करें',
+      cardPublishAction: 'प्रकाशित करें',
+      cardWithdrawAction: 'वापस लें',
+      cardCreatedAt: 'बनाया गया',
+      cardPublishedAt: 'प्रकाशित',
+
+      statusDraft: 'मसौदा',
+      statusPublished: 'प्रकाशित',
+      statusWithdrawn: 'वापस लिया गया',
+
+      sectionContent: 'सामग्री',
+      sectionContentDescription: 'प्रकाशित करने से पहले तीनों भाषाओं के लिए शीर्षक और मुख्य पाठ भरें।',
+      sectionImage: 'छवि',
+      sectionImageDescription: 'वैकल्पिक — शीर्षक और मुख्य पाठ के ऊपर दिखाई जाती है। अधिकतम 2 MB, PNG/JPEG/WebP।',
+      tabNl: 'डच',
+      tabEn: 'अंग्रेज़ी',
+      tabHi: 'हिन्दी',
+      fieldTitle: 'शीर्षक',
+      fieldBody: 'मुख्य पाठ',
+      fieldImage: 'छवि चुनें',
+      fieldImageHint: 'PNG, JPEG या WebP — अधिकतम 2 MB',
+      previewButton: 'पूर्वावलोकन',
+
+      saveDraft: 'मसौदा सहेजें',
+      saving: 'सहेजा जा रहा है...',
+      publishButton: 'प्रकाशित करें',
+      publishing: 'प्रकाशित किया जा रहा है...',
+      withdrawButton: 'वापस लें',
+      withdrawing: 'वापस लिया जा रहा है...',
+
+      publishGate: 'प्रकाशन तभी संभव है जब तीनों भाषा प्रकारों (NL, EN, हिन्दी) में शीर्षक और मुख्य पाठ हो।',
+      saveSuccess: 'मसौदा सहेजा गया।',
+      publishSuccess: 'घोषणा प्रकाशित।',
+      withdrawSuccess: 'घोषणा वापस ली गई।',
+
+      previewModalTitle: 'पूर्वावलोकन',
+      previewModalLanguageLabel: 'भाषा',
+      previewModalCloseButton: 'बंद करें',
+      previewNoImage: 'कोई छवि नहीं',
+    },
+  },
 }

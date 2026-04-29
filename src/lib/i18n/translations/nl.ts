@@ -461,6 +461,65 @@ export interface Translations {
     minimize: string
     expand: string
   }
+  operator: {
+    nav: {
+      news: string
+    }
+    news: {
+      // Page chrome
+      pageTitle: string
+      pageDescription: string
+      createButton: string
+      backToList: string
+
+      // List view
+      listEmpty: string
+      cardEditAction: string
+      cardPublishAction: string
+      cardWithdrawAction: string
+      cardCreatedAt: string
+      cardPublishedAt: string
+
+      // Status badges
+      statusDraft: string
+      statusPublished: string
+      statusWithdrawn: string
+
+      // Form section labels
+      sectionContent: string
+      sectionContentDescription: string
+      sectionImage: string
+      sectionImageDescription: string
+      tabNl: string
+      tabEn: string
+      tabHi: string
+      fieldTitle: string
+      fieldBody: string
+      fieldImage: string
+      fieldImageHint: string
+      previewButton: string
+
+      // Submit buttons
+      saveDraft: string
+      saving: string
+      publishButton: string
+      publishing: string
+      withdrawButton: string
+      withdrawing: string
+
+      // Validation / status messages
+      publishGate: string
+      saveSuccess: string
+      publishSuccess: string
+      withdrawSuccess: string
+
+      // Preview modal
+      previewModalTitle: string
+      previewModalLanguageLabel: string
+      previewModalCloseButton: string
+      previewNoImage: string
+    }
+  }
 }
 
 export const nl: Translations = {
@@ -979,5 +1038,58 @@ export const nl: Translations = {
     welcomeMessage: 'Hoi! Ik help je graag met vragen over je dashboard. Stel maar!',
     minimize: 'Minimaliseren',
     expand: 'Open chat',
+  },
+
+  operator: {
+    nav: {
+      news: 'Nieuws',
+    },
+    news: {
+      pageTitle: 'Nieuwsberichten',
+      pageDescription: 'Beheer aankondigingen die in alle klantdashboards verschijnen.',
+      createButton: 'Nieuw nieuwsbericht',
+      backToList: 'Terug naar overzicht',
+
+      listEmpty: 'Nog geen nieuwsberichten. Klik op "Nieuw nieuwsbericht" om er één aan te maken.',
+      cardEditAction: 'Bewerken',
+      cardPublishAction: 'Publiceren',
+      cardWithdrawAction: 'Intrekken',
+      cardCreatedAt: 'Aangemaakt',
+      cardPublishedAt: 'Gepubliceerd',
+
+      statusDraft: 'Concept',
+      statusPublished: 'Gepubliceerd',
+      statusWithdrawn: 'Ingetrokken',
+
+      sectionContent: 'Inhoud',
+      sectionContentDescription: 'Vul titel en tekst in voor alle drie de talen voordat je publiceert.',
+      sectionImage: 'Afbeelding',
+      sectionImageDescription: 'Optioneel — wordt boven titel en tekst getoond. Max 2 MB, PNG/JPEG/WebP.',
+      tabNl: 'Nederlands',
+      tabEn: 'Engels',
+      tabHi: 'Hindi',
+      fieldTitle: 'Titel',
+      fieldBody: 'Tekst',
+      fieldImage: 'Afbeelding kiezen',
+      fieldImageHint: 'PNG, JPEG of WebP — max 2 MB',
+      previewButton: 'Voorvertoning',
+
+      saveDraft: 'Concept opslaan',
+      saving: 'Opslaan...',
+      publishButton: 'Publiceren',
+      publishing: 'Publiceren...',
+      withdrawButton: 'Intrekken',
+      withdrawing: 'Intrekken...',
+
+      publishGate: 'Publiceren is pas mogelijk als alle drie de taalvarianten (NL, EN, Hindi) een titel en tekst hebben.',
+      saveSuccess: 'Concept opgeslagen.',
+      publishSuccess: 'Nieuwsbericht gepubliceerd.',
+      withdrawSuccess: 'Nieuwsbericht ingetrokken.',
+
+      previewModalTitle: 'Voorvertoning',
+      previewModalLanguageLabel: 'Taal',
+      previewModalCloseButton: 'Sluiten',
+      previewNoImage: 'Geen afbeelding',
+    },
   },
 }

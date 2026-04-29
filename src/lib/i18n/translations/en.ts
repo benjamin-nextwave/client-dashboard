@@ -509,4 +509,57 @@ export const en: Translations = {
     minimize: 'Minimise',
     expand: 'Open chat',
   },
+
+  operator: {
+    nav: {
+      news: 'News',
+    },
+    news: {
+      pageTitle: 'News announcements',
+      pageDescription: 'Manage announcements shown across all client dashboards.',
+      createButton: 'New announcement',
+      backToList: 'Back to overview',
+
+      listEmpty: 'No announcements yet. Click "New announcement" to create one.',
+      cardEditAction: 'Edit',
+      cardPublishAction: 'Publish',
+      cardWithdrawAction: 'Withdraw',
+      cardCreatedAt: 'Created',
+      cardPublishedAt: 'Published',
+
+      statusDraft: 'Draft',
+      statusPublished: 'Published',
+      statusWithdrawn: 'Withdrawn',
+
+      sectionContent: 'Content',
+      sectionContentDescription: 'Fill in title and body for all three languages before publishing.',
+      sectionImage: 'Image',
+      sectionImageDescription: 'Optional — shown above the title and body. Max 2 MB, PNG/JPEG/WebP.',
+      tabNl: 'Dutch',
+      tabEn: 'English',
+      tabHi: 'Hindi',
+      fieldTitle: 'Title',
+      fieldBody: 'Body',
+      fieldImage: 'Choose image',
+      fieldImageHint: 'PNG, JPEG or WebP — max 2 MB',
+      previewButton: 'Preview',
+
+      saveDraft: 'Save draft',
+      saving: 'Saving...',
+      publishButton: 'Publish',
+      publishing: 'Publishing...',
+      withdrawButton: 'Withdraw',
+      withdrawing: 'Withdrawing...',
+
+      publishGate: 'Publishing is only possible when all three language variants (NL, EN, Hindi) have a title and body.',
+      saveSuccess: 'Draft saved.',
+      publishSuccess: 'Announcement published.',
+      withdrawSuccess: 'Announcement withdrawn.',
+
+      previewModalTitle: 'Preview',
+      previewModalLanguageLabel: 'Language',
+      previewModalCloseButton: 'Close',
+      previewNoImage: 'No image',
+    },
+  },
 }
