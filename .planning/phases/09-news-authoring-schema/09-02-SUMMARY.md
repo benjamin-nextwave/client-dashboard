@@ -87,7 +87,7 @@ completed: 2026-04-29
 2. **Task 2: Add uploadNewsImage to src/lib/supabase/storage.ts** — `a6d42db` (feat)
 3. **Task 3: Add operator.news.* + operator.nav.news translation keys to nl/en/hi** — `6f70694` (feat)
 
-**Plan metadata:** _final commit pending — added in the docs commit that lands SUMMARY.md, STATE.md, ROADMAP.md, REQUIREMENTS.md_
+**Plan metadata:** `3ade564` (docs: complete Zod + uploadNewsImage + i18n plan — SUMMARY + STATE + ROADMAP)
 
 ## Files Created/Modified
 
