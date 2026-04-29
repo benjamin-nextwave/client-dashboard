@@ -403,6 +403,7 @@ function LabelPickerDropdown({
   creatingLabel: boolean
   onClose: () => void
 }) {
+  const t = useT()
   return (
     <>
       {/* Backdrop */}
@@ -433,7 +434,7 @@ function LabelPickerDropdown({
                     onDelete(label.id)
                   }}
                   className="ml-2 rounded p-0.5 text-gray-300 hover:text-red-500"
-                  title="Label verwijderen"
+                  title={t('common.delete')}
                 >
                   <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -454,7 +455,7 @@ function LabelPickerDropdown({
             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
             </svg>
-            Nieuw label
+            {t('common.add')}
           </button>
         ) : (
           <div className="px-3 py-2">
@@ -462,7 +463,7 @@ function LabelPickerDropdown({
               type="text"
               value={newLabelName}
               onChange={(e) => setNewLabelName(e.target.value)}
-              placeholder="Labelnaam (1-3 woorden)"
+              placeholder={t('inbox.folderNewPlaceholder')}
               maxLength={30}
               className="w-full rounded border border-gray-200 px-2 py-1 text-xs text-gray-700 focus:border-blue-400 focus:outline-none"
               autoFocus
@@ -492,14 +493,14 @@ function LabelPickerDropdown({
                 }}
                 className="rounded px-2 py-1 text-[10px] text-gray-500 hover:bg-gray-100"
               >
-                Annuleren
+                {t('common.cancel')}
               </button>
               <button
                 onClick={onCreateLabel}
                 disabled={creatingLabel || !newLabelName.trim()}
                 className="rounded bg-blue-600 px-2 py-1 text-[10px] font-medium text-white hover:bg-blue-700 disabled:opacity-50"
               >
-                {creatingLabel ? '...' : 'Aanmaken'}
+                {creatingLabel ? '...' : t('common.add')}
               </button>
             </div>
           </div>

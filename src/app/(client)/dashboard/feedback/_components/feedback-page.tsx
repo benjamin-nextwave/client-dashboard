@@ -203,8 +203,8 @@ export function FeedbackPage({ feedbackRequests }: { feedbackRequests: FeedbackR
           <div className="grid gap-4 lg:grid-cols-2">
             <CategoryGroup
               variant="campagne"
-              title="Over de campagne"
-              description="Feedback over resultaten, mailvarianten of de inhoud van je campagne."
+              title={t('feedback.categoryCampaignPerformance')}
+              description={t('feedback.descriptionPlaceholder')}
               icon={
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
@@ -216,8 +216,8 @@ export function FeedbackPage({ feedbackRequests }: { feedbackRequests: FeedbackR
             />
             <CategoryGroup
               variant="dashboard"
-              title="Over het dashboard"
-              description="Vragen over dit platform: storingen, nieuwe functies of verbeteringen."
+              title={t('feedback.categoryFeature')}
+              description={t('feedback.descriptionPlaceholder')}
               icon={
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25m18 0A2.25 2.25 0 0 0 18.75 3H5.25A2.25 2.25 0 0 0 3 5.25m18 0V12a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 12V5.25" />
@@ -233,10 +233,10 @@ export function FeedbackPage({ feedbackRequests }: { feedbackRequests: FeedbackR
           {category === 'new_mail_variants' && (
             <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-4">
               <div className="text-sm font-semibold text-indigo-900">
-                Wat wil je aangepast hebben?
+                {t('feedback.categoryNewMailVariants')}
               </div>
               <p className="mt-0.5 text-xs text-indigo-700">
-                Selecteer één of meerdere punten — dit helpt ons de juiste varianten te schrijven.
+                {t('feedback.descriptionPlaceholder')}
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {VARIANT_REASONS.map((reason) => {

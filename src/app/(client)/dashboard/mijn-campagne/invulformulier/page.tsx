@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { canSubmitCampaignForm, getCampaignState } from '@/lib/data/campaign'
 import { CampaignForm } from './_components/campaign-form'
 import { submitCampaignForm } from '../actions'
+import { getTranslator } from '@/lib/i18n/server'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Invulformulier' }
@@ -40,6 +41,8 @@ export default async function InvulformulierPage() {
     redirect('/dashboard/mijn-campagne/antwoorden')
   }
 
+  const t = await getTranslator()
+
   return (
     <div className="mx-auto max-w-3xl space-y-8">
       <Link
@@ -49,7 +52,7 @@ export default async function InvulformulierPage() {
         <svg className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
         </svg>
-        Terug naar mijn campagne
+        {t('campaignSubPages.backToCampaign')}
       </Link>
 
       <header className="relative overflow-hidden rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 via-white to-violet-50 p-8 shadow-sm">
@@ -60,11 +63,10 @@ export default async function InvulformulierPage() {
             Eenmalig invullen
           </div>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight text-gray-900">
-            Invulformulier campagne
+            {t('campaignSubPages.formTitle')}
           </h1>
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-gray-600">
-            Beantwoord de onderstaande vragen zo volledig mogelijk. Je kunt het formulier maar
-            één keer indienen, dus neem de tijd. Na indienen kun je je antwoorden wel terugzien.
+            {t('campaignSubPages.formDescription')}
           </p>
         </div>
       </header>
