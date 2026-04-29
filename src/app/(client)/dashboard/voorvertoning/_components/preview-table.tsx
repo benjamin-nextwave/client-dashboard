@@ -6,12 +6,12 @@ import { excludeContact } from '@/lib/actions/preview-actions'
 import type { PreviewContact } from '@/lib/data/preview-data'
 import { useWebhookLocale, useT } from '@/lib/i18n/client'
 
-const RATING_OPTIONS = [
-  { value: '5', emoji: '\u{1F929}', label: 'Uitstekend' },
-  { value: '4', emoji: '\u{1F60A}', label: 'Goed' },
-  { value: '3', emoji: '\u{1F610}', label: 'Neutraal' },
-  { value: '2', emoji: '\u{1F615}', label: 'Matig' },
-  { value: '1', emoji: '\u{1F61E}', label: 'Slecht' },
+const RATING_VALUES = [
+  { value: '5', emoji: '\u{1F929}' },
+  { value: '4', emoji: '\u{1F60A}' },
+  { value: '3', emoji: '\u{1F610}' },
+  { value: '2', emoji: '\u{1F615}' },
+  { value: '1', emoji: '\u{1F61E}' },
 ]
 
 const WEBHOOK_URL =
@@ -27,6 +27,15 @@ export function PreviewTable({ contacts, clientId, clientName }: Props) {
   const router = useRouter()
   const localeInfo = useWebhookLocale()
   const t = useT()
+  const RATING_OPTIONS = RATING_VALUES.map((r) => ({
+    ...r,
+    label:
+      r.value === '5' ? t('preview.ratingExcellent')
+      : r.value === '4' ? t('preview.ratingGood')
+      : r.value === '3' ? t('preview.ratingNeutral')
+      : r.value === '2' ? t('preview.ratingMediocre')
+      : t('preview.ratingBad'),
+  }))
   const [removing, setRemoving] = useState<string | null>(null)
   const [excludedIds, setExcludedIds] = useState<Set<string>>(new Set())
   const [notification, setNotification] = useState<{
@@ -263,7 +272,7 @@ export function PreviewTable({ contacts, clientId, clientName }: Props) {
                 onClick={handleRequestNewList}
                 className="mt-3 w-full rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700 transition-colors hover:bg-red-100"
               >
-                <span className="text-base">{'\u{1F621}'}</span> Deze lijst is zo slecht dat ik een nieuwe wil
+                <span className="text-base">{'\u{1F621}'}</span> {t('preview.wantsNewListLabel')}
               </button>
             )}
 
@@ -271,15 +280,15 @@ export function PreviewTable({ contacts, clientId, clientName }: Props) {
             {wantsNewList && (
               <div className="mt-4 space-y-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
                 <p className="text-sm font-medium text-amber-800">
-                  Help ons een betere lijst samen te stellen:
+                  {t('preview.feedbackTitle')}:
                 </p>
 
                 <div>
                   <label className="mb-1 block text-sm font-medium text-gray-700">
-                    Wat moet er beter aan de functietitels? <span className="text-red-500">*</span>
+                    {t('preview.jobTitleFeedbackLabel')} <span className="text-red-500">*</span>
                   </label>
                   <textarea
-                    placeholder="Bijv. meer C-level, minder junior posities..."
+                    placeholder={t('preview.jobTitleFeedbackLabel')}
                     value={jobTitleFeedback}
                     onChange={(e) => setJobTitleFeedback(e.target.value)}
                     rows={2}
@@ -289,10 +298,10 @@ export function PreviewTable({ contacts, clientId, clientName }: Props) {
 
                 <div>
                   <label className="mb-1 block text-sm font-medium text-gray-700">
-                    Wat moet er beter aan de sector/industrie? <span className="text-red-500">*</span>
+                    {t('preview.industryFeedbackLabel')} <span className="text-red-500">*</span>
                   </label>
                   <textarea
-                    placeholder="Bijv. meer focus op IT, geen overheid..."
+                    placeholder={t('preview.industryFeedbackLabel')}
                     value={industryFeedback}
                     onChange={(e) => setIndustryFeedback(e.target.value)}
                     rows={2}
@@ -302,10 +311,10 @@ export function PreviewTable({ contacts, clientId, clientName }: Props) {
 
                 <div>
                   <label className="mb-1 block text-sm font-medium text-gray-700">
-                    Overige opmerkingen
+                    {t('preview.generalNotesLabel')}
                   </label>
                   <textarea
-                    placeholder="Andere wensen of opmerkingen..."
+                    placeholder={t('preview.generalNotesLabel')}
                     value={generalNotes}
                     onChange={(e) => setGeneralNotes(e.target.value)}
                     rows={2}
@@ -321,7 +330,7 @@ export function PreviewTable({ contacts, clientId, clientName }: Props) {
                 onClick={resetFeedbackForm}
                 className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100"
               >
-                Annuleren
+                {t('common.cancel')}
               </button>
               <button
                 onClick={handleFeedbackSubmit}
@@ -333,7 +342,7 @@ export function PreviewTable({ contacts, clientId, clientName }: Props) {
                 }
                 className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
               >
-                {submitting ? 'Verzenden...' : 'Versturen'}
+                {submitting ? t('preview.feedbackSubmitting') : t('preview.submitFeedback')}
               </button>
             </div>
           </div>
