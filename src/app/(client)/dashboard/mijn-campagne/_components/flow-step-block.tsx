@@ -11,6 +11,7 @@ import { useT } from '@/lib/i18n/client'
 import { FlowStepModal } from './flow-step-modal'
 import { FlowDropoffModal } from './flow-dropoff-modal'
 import { FlowSuccessModal } from './flow-success-modal'
+import { displayOutcomeLabel } from './flow-outcome-label'
 
 interface Props {
   step: CampaignFlowStep
@@ -191,7 +192,7 @@ function Branches({
         {/* Midden: continue arrow OR niets (laatste stap) */}
         <div className="flex flex-col items-center justify-start">
           {hasContinue ? (
-            <ContinueArrow label={continueOutcome.label || t('flow.noResponse')} />
+            <ContinueArrow label={displayOutcomeLabel(continueOutcome, t)} />
           ) : (
             <div className="rounded-full bg-gray-100 px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
               {t('flow.endOfCampaign')}
@@ -232,7 +233,7 @@ function DeadEndCard({
   const respLabelOf = useResponsibilityLabel()
   const meta = OUTCOME_META[outcome.kind]
   const respLabel = respLabelOf(outcome.responsibility)
-  const fallbackLabel = outcome.kind === 'success' ? t('flow.positiveOutcome') : t('flow.leadDroppedOff')
+  const displayLabel = displayOutcomeLabel(outcome, t)
 
   return (
     <button
@@ -251,7 +252,7 @@ function DeadEndCard({
         </div>
       </div>
       <div className="text-[12px] font-bold leading-tight text-gray-900">
-        {outcome.label || fallbackLabel}
+        {displayLabel}
       </div>
       {respLabel && (
         <div className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-white/70 px-1.5 py-0.5 text-[9px] font-semibold text-gray-600 ring-1 ring-gray-200">

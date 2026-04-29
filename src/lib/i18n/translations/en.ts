@@ -392,6 +392,7 @@ export const en: Translations = {
     csvUploadTitle: 'CSV bulk import',
     csvUploadDescription:
       'Upload a CSV file with an email column to add addresses in bulk.',
+    csvChooseFile: 'Choose file',
     csvPickColumn: 'Select the column containing email addresses',
     csvConfirm: 'Confirm',
     csvCancel: 'Cancel',
@@ -459,6 +460,9 @@ export const en: Translations = {
       'Choose the dashboard language. This choice is remembered for your next login.',
     helpSection: 'Help & support',
     helpDescription: 'View the help per section or contact the team.',
+    videoGeneral: 'General dashboard intro',
+    videoReply: 'Replying to emails',
+    videoInbox: 'Logging in to the inbox',
     accountTitle: 'Account',
     fieldName: 'Name',
     fieldEmail: 'Email address',

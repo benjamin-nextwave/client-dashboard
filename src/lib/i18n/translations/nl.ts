@@ -354,6 +354,7 @@ export interface Translations {
     addDomainError: string
     csvUploadTitle: string
     csvUploadDescription: string
+    csvChooseFile: string
     csvPickColumn: string
     csvConfirm: string
     csvCancel: string
@@ -417,6 +418,9 @@ export interface Translations {
     languageDescription: string
     helpSection: string
     helpDescription: string
+    videoGeneral: string
+    videoReply: string
+    videoInbox: string
     accountTitle: string
     fieldName: string
     fieldEmail: string
@@ -859,6 +863,7 @@ export const nl: Translations = {
     csvUploadTitle: 'CSV bulk-import',
     csvUploadDescription:
       'Upload een CSV-bestand met een e-mailkolom om adressen in bulk toe te voegen.',
+    csvChooseFile: 'Bestand kiezen',
     csvPickColumn: 'Selecteer de kolom met e-mailadressen',
     csvConfirm: 'Bevestigen',
     csvCancel: 'Annuleren',
@@ -926,6 +931,9 @@ export const nl: Translations = {
       'Kies de taal van het dashboard. Deze keuze wordt onthouden voor de volgende keer dat je inlogt.',
     helpSection: 'Uitleg & ondersteuning',
     helpDescription: 'Bekijk de uitleg per onderdeel of neem contact op met het team.',
+    videoGeneral: 'Algemene dashboard uitleg',
+    videoReply: 'Reageren op mails',
+    videoInbox: 'Inloggen in de inbox',
     accountTitle: 'Account',
     fieldName: 'Naam',
     fieldEmail: 'E-mailadres',

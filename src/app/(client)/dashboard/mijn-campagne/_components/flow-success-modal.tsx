@@ -6,6 +6,7 @@ import {
   type FlowResponsibility,
 } from '@/lib/data/campaign-flow'
 import { useT } from '@/lib/i18n/client'
+import { displayOutcomeLabel } from './flow-outcome-label'
 
 interface Props {
   outcome: CampaignFlowOutcome
@@ -58,7 +59,7 @@ export function FlowSuccessModal({ outcome, onClose }: Props) {
                 {t('flow.successDeadEndTag')}
               </div>
               <h3 className="mt-0.5 text-xl font-bold text-gray-900">
-                {outcome.label || t('flow.positiveOutcome')}
+                {displayOutcomeLabel(outcome, t)}
               </h3>
               {respLabel && (
                 <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-200">

@@ -10,6 +10,7 @@ import {
 } from '@/lib/data/feedback-types'
 import { EmptyState } from '@/components/ui/empty-state'
 import { useT } from '@/lib/i18n/client'
+import type { TranslationKey } from '@/lib/i18n'
 
 type CategoryValue =
   | 'campaign_performance'
@@ -65,9 +66,22 @@ const CATEGORIES: CategoryDef[] = [
   },
 ]
 
-const CATEGORY_LABELS: Record<string, string> = Object.fromEntries(
-  CATEGORIES.map((c) => [c.value, c.label])
-)
+const CATEGORY_LABEL_KEYS: Record<string, TranslationKey> = {
+  campaign_performance: 'feedback.categoryCampaignPerformance',
+  new_mail_variants: 'feedback.categoryNewMailVariants',
+  bug: 'feedback.categoryBug',
+  new_feature: 'feedback.categoryFeature',
+  optimization: 'feedback.categoryOptimization',
+  other: 'feedback.categoryOther',
+}
+
+const STATUS_LABEL_KEYS: Record<string, TranslationKey> = {
+  new: 'feedback.statusNew',
+  in_progress: 'feedback.statusInProgress',
+  thinking: 'feedback.statusThinking',
+  denied: 'feedback.statusDenied',
+  applied: 'feedback.statusApplied',
+}
 
 const CATEGORY_TAG_COLORS: Record<string, string> = {
   campaign_performance: 'bg-emerald-100 text-emerald-700',
@@ -80,10 +94,9 @@ const CATEGORY_TAG_COLORS: Record<string, string> = {
 
 const STATUS_CONFIG: Record<
   string,
-  { label: string; bg: string; text: string; border: string; icon: React.ReactNode }
+  { bg: string; text: string; border: string; icon: React.ReactNode }
 > = {
   new: {
-    label: 'Nieuw',
     bg: 'bg-gray-50',
     text: 'text-gray-600',
     border: 'border-gray-200',
@@ -94,7 +107,6 @@ const STATUS_CONFIG: Record<
     ),
   },
   in_progress: {
-    label: 'In behandeling',
     bg: 'bg-blue-50',
     text: 'text-blue-700',
     border: 'border-blue-200',
@@ -105,7 +117,6 @@ const STATUS_CONFIG: Record<
     ),
   },
   thinking: {
-    label: 'In overweging',
     bg: 'bg-yellow-50',
     text: 'text-yellow-700',
     border: 'border-yellow-200',
@@ -116,7 +127,6 @@ const STATUS_CONFIG: Record<
     ),
   },
   denied: {
-    label: 'Afgewezen',
     bg: 'bg-red-50',
     text: 'text-red-700',
     border: 'border-red-200',
@@ -127,7 +137,6 @@ const STATUS_CONFIG: Record<
     ),
   },
   applied: {
-    label: 'Doorgevoerd',
     bg: 'bg-green-50',
     text: 'text-green-700',
     border: 'border-green-200',
@@ -387,9 +396,13 @@ export function FeedbackPage({ feedbackRequests }: { feedbackRequests: FeedbackR
                           <h3 className="text-sm font-semibold text-gray-900">{req.title}</h3>
                           <div className="mt-0.5 flex flex-wrap items-center gap-2">
                             <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${catColor}`}>
-                              {CATEGORY_LABELS[req.category] ?? req.category}
+                              {CATEGORY_LABEL_KEYS[req.category]
+                                ? t(CATEGORY_LABEL_KEYS[req.category])
+                                : req.category}
                             </span>
-                            <span className={`text-xs font-medium ${status.text}`}>{status.label}</span>
+                            <span className={`text-xs font-medium ${status.text}`}>
+                              {t(STATUS_LABEL_KEYS[req.status] ?? STATUS_LABEL_KEYS.new)}
+                            </span>
                           </div>
                         </div>
                       </div>

@@ -7,6 +7,7 @@ import {
   type FlowResponsibility,
 } from '@/lib/data/campaign-flow'
 import { useT } from '@/lib/i18n/client'
+import { displayOutcomeLabel } from './flow-outcome-label'
 
 interface Props {
   outcome: CampaignFlowOutcome
@@ -61,7 +62,7 @@ export function FlowDropoffModal({ outcome, onClose }: Props) {
                 {t('flow.deadEnd')}
               </div>
               <h3 className="mt-0.5 text-xl font-bold text-gray-900">
-                {outcome.label || t('flow.leadDroppedOff')}
+                {displayOutcomeLabel(outcome, t)}
               </h3>
               <p className="mt-1 text-xs text-gray-500">{t('flow.dropoffIntro')}</p>
               {respLabel && (

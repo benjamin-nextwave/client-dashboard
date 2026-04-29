@@ -391,6 +391,7 @@ export const hi: Translations = {
     csvUploadTitle: 'CSV बल्क-इम्पोर्ट',
     csvUploadDescription:
       'पतों को थोक में जोड़ने के लिए ईमेल कॉलम वाली एक CSV फ़ाइल अपलोड करें।',
+    csvChooseFile: 'फ़ाइल चुनें',
     csvPickColumn: 'ईमेल पतों वाला कॉलम चुनें',
     csvConfirm: 'पुष्टि करें',
     csvCancel: 'रद्द करें',
@@ -458,6 +459,9 @@ export const hi: Translations = {
       'डैशबोर्ड की भाषा चुनें। यह विकल्प अगले लॉगिन के लिए याद रखा जाएगा।',
     helpSection: 'मदद और सहायता',
     helpDescription: 'प्रत्येक अनुभाग के लिए मदद देखें या टीम से संपर्क करें।',
+    videoGeneral: 'डैशबोर्ड का सामान्य परिचय',
+    videoReply: 'ईमेल का जवाब देना',
+    videoInbox: 'इनबॉक्स में लॉग इन करना',
     accountTitle: 'खाता',
     fieldName: 'नाम',
     fieldEmail: 'ईमेल पता',

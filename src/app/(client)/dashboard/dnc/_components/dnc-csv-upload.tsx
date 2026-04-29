@@ -126,11 +126,18 @@ export function DncCsvUpload({ companyName }: { companyName: string }) {
       <div className="mt-3">
         <input
           ref={fileRef}
+          id="dnc-csv-file"
           type="file"
           accept=".csv"
           onChange={handleFileChange}
-          className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-gray-100 file:px-4 file:py-2 file:text-sm file:font-medium file:text-gray-700 hover:file:bg-gray-200"
+          className="sr-only"
         />
+        <label
+          htmlFor="dnc-csv-file"
+          className="inline-flex cursor-pointer items-center rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
+        >
+          {t('dnc.csvChooseFile')}
+        </label>
       </div>
 
       {status.type === 'pick_column' && (
