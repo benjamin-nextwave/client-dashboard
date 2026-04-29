@@ -2,22 +2,31 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useT } from '@/lib/i18n/client'
 
 interface OperatorHeaderProps {
   signOutAction: () => Promise<void>
 }
 
-const NAV = [
-  { href: '/admin', label: 'Klanten', match: (p: string) => p === '/admin' || p.startsWith('/admin/clients') },
-  { href: '/admin/overzicht', label: 'Overzicht', match: (p: string) => p.startsWith('/admin/overzicht') },
-  { href: '/admin/errors', label: 'Fouten', match: (p: string) => p.startsWith('/admin/errors') },
-  { href: '/admin/feedback', label: 'Feedback', match: (p: string) => p.startsWith('/admin/feedback') },
-  { href: '/admin/bezwaren', label: 'Bezwaren', match: (p: string) => p.startsWith('/admin/bezwaren') },
-  { href: '/admin/mail-client', label: 'Mailen', match: (p: string) => p.startsWith('/admin/mail-client') },
-]
-
 export function OperatorHeader({ signOutAction }: OperatorHeaderProps) {
   const pathname = usePathname() ?? ''
+  const t = useT()
+
+  // NAV is built inside the component so the news entry can use the t() helper
+  // (D-19: news label is the only localized nav entry; existing labels stay
+  // hardcoded Dutch — out of scope to refactor in Phase 9). The news entry sits
+  // between Overzicht and Fouten, grouping content/announcements before
+  // operational tabs. The match predicate uses startsWith('/admin/news') so
+  // /admin/news/new and /admin/news/[id]/edit also light up the active state.
+  const NAV = [
+    { href: '/admin', label: 'Klanten', match: (p: string) => p === '/admin' || p.startsWith('/admin/clients') },
+    { href: '/admin/overzicht', label: 'Overzicht', match: (p: string) => p.startsWith('/admin/overzicht') },
+    { href: '/admin/news', label: t('operator.nav.news'), match: (p: string) => p.startsWith('/admin/news') },
+    { href: '/admin/errors', label: 'Fouten', match: (p: string) => p.startsWith('/admin/errors') },
+    { href: '/admin/feedback', label: 'Feedback', match: (p: string) => p.startsWith('/admin/feedback') },
+    { href: '/admin/bezwaren', label: 'Bezwaren', match: (p: string) => p.startsWith('/admin/bezwaren') },
+    { href: '/admin/mail-client', label: 'Mailen', match: (p: string) => p.startsWith('/admin/mail-client') },
+  ]
 
   return (
     <header className="sticky top-0 z-40 border-b border-gray-200 bg-white/80 backdrop-blur-xl">
