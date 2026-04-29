@@ -11,9 +11,9 @@ See: .planning/PROJECT.md (updated 2026-04-29)
 ## Current Position
 
 Phase: 9 — News Authoring & Schema
-Plan: 2/6 complete
-Status: Wave 1 complete — 09-01 (migration file) and 09-02 (Zod schemas + uploadNewsImage helper + operator.news.* i18n keys for nl/en/hi) both landed. DB push still deferred to 09-06. Wave 2 plan 09-03 (server actions: create/update/publish/withdraw) is unblocked and can start now.
-Last activity: 2026-04-29 — 09-02 written: `src/lib/validations/news.ts` (created), `src/lib/supabase/storage.ts` (uploadNewsImage + deleteNewsImage), `src/lib/i18n/translations/{nl,en,hi}.ts` (operator namespace with 35 keys per language)
+Plan: 3/6 complete
+Status: Wave 2 complete — 09-03 (server actions for news_items: create/update/publish/withdraw/delete) landed. DB push still deferred to 09-06. Wave 3 plan 09-04 (form/card/preview-modal components) is unblocked and can start now.
+Last activity: 2026-04-29 — 09-03 written: `src/app/(operator)/admin/news/actions.ts` (created — 5 named exports: createNewsItem, updateNewsItem, publishNewsItem, withdrawNewsItem, deleteNewsItem; server-authoritative publish gate via DB re-read; narrow-column UPDATE in updateNewsItem; server-managed image_path)
 
 ## Milestone v1.0 Outcomes (archived)
 
@@ -49,6 +49,17 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - operator.* namespace added as a NEW top-level Translations key — no existing namespace touched (purely additive across nl/en/hi); Hindi values use devanagari Unicode (no transliteration)
 - `Translations` interface in nl.ts is the compile-time source of truth — `tsc --noEmit` verifies en.ts and hi.ts both provide the full operator namespace shape (35 keys + nav.news)
 
+**Phase 9 / Plan 09-03 decisions:**
+- publishNewsItem re-reads the news_items row from the DB BEFORE applying newsPublishSchema — the FormData payload is NOT the gate input. Operators cannot bypass the all-3-langs requirement by crafting a FormData with all fields filled for a row whose DB columns are still partial (T-09-15). The two non-gated actions (create + update) read FormData directly because they do not enforce the 6-fields gate.
+- updateNewsItem's UPDATE statement explicitly lists exactly the 6 content columns by name (no spread, no whitelist). status/published_at/withdrawn_at/created_at/created_by/image_path are reachable ONLY via the dedicated transition functions (publish/withdraw/delete + the post-upload UPDATE) — makes "this UPDATE cannot touch status" a code-review-able guarantee (T-09-16).
+- readRawFromFormData reads ONLY the 6 language fields. The form sends the image as a File under name='image'; image_path is set entirely server-side via the uploadNewsImage flow (T-09-30) — a forged FormData with image_path cannot poison the DB.
+- Two-step image upload: insert with image_path=null FIRST, then conditional follow-up UPDATE with the bucket-relative path returned by uploadNewsImage — the row always represents what's persisted, the upload is non-fatal (matches createClient/uploadClientLogo).
+- createNewsItem redirects to /admin/news/{id}/edit (NOT /admin/news) so the operator lands on the edit page to keep filling the other languages — pages plan 09-05 must NOT add an extra redirect.
+- updateNewsItem returns { error: '' } (does NOT redirect) — the form stays on the edit page for live editing.
+- publishNewsItem and withdrawNewsItem are NOT useActionState-shaped — they take a single id and return { error?: string }. 09-04 will call them via `<form action={fn.bind(null, id)}>` or `useTransition`.
+- getOperatorProfileId returns null deliberately for Phase 9 — news_items.created_by is nullable (D-08) and operator routes are gated by the (operator) layout. Per-operator audit attribution is a future concern.
+- Status-precondition guards (publish requires status='draft', withdraw requires status='published') prevent crafted re-publish or re-withdraw POSTs from producing weird states — UI in 09-04 only renders the right button per status, but these are belt-and-suspenders.
+
 ### Pending Todos
 
 None.
@@ -64,10 +75,10 @@ No active blockers.
 
 ## Session Continuity
 
-Last session: 2026-04-29 — Plan 09-02 executed (Zod schemas + uploadNewsImage/deleteNewsImage helpers + operator.news.* i18n keys for nl/en/hi). Three task commits: `1b2baba`, `a6d42db`, `6f70694`.
-Stopped at: Wave 1 complete (09-01 + 09-02 both landed). Wave 2 plan 09-03 (server actions: create/update/publish/withdraw + image upload wrapper) ready to start; it can import newsDraftSchema/newsPublishSchema from `@/lib/validations/news` and uploadNewsImage from `@/lib/supabase/storage` immediately.
-Next action: Execute plan 09-03 (server actions for news_items: create/update/publish/withdraw with Zod safeParse + admin-client writes + uploadNewsImage on file submission).
+Last session: 2026-04-29 — Plan 09-03 executed (5 server actions: createNewsItem, updateNewsItem, publishNewsItem, withdrawNewsItem, deleteNewsItem). One task commit: `426b44a`.
+Stopped at: Wave 2 complete (09-03 landed). Wave 3 plan 09-04 (form/card/preview-modal components) ready to start; it can import the 5 actions directly from `@/app/(operator)/admin/news/actions` and useActionState-bind createNewsItem + updateNewsItem.bind(null, id).
+Next action: Execute plan 09-04 (news-form.tsx with 3 language tabs + image input, news-card.tsx with publish/withdraw button per status, news-preview-modal.tsx with NewsContentRenderer reusable for Phase 10).
 
 ---
 *Milestone switched: 2026-04-29 — v1.0 (shipped) → v1.1 News Broadcasting*
-*Last updated: 2026-04-29 after plan 09-02 (Zod schemas + uploadNewsImage + operator i18n namespace)*
+*Last updated: 2026-04-29 after plan 09-03 (server actions: create/update/publish/withdraw/delete)*

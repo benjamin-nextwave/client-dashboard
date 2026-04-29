@@ -48,7 +48,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 - [x] 09-02-PLAN.md — Zod schemas (newsDraftSchema, newsPublishSchema) + uploadNewsImage helper + i18n keys (nl/en/hi) — completed 2026-04-29 (`1b2baba` + `a6d42db` + `6f70694`)
 
 **Wave 2** *(blocked on 09-01, 09-02)*:
-- [ ] 09-03-PLAN.md — Server actions: create/update/publish/withdraw/delete news items
+- [x] 09-03-PLAN.md — Server actions: create/update/publish/withdraw/delete news items — completed 2026-04-29 (`426b44a`)
 
 **Wave 3** *(blocked on 09-02, 09-03)*:
 - [ ] 09-04-PLAN.md — Components: news-form (3-tab + image), news-preview-modal (Phase-10 reusable), news-card
@@ -92,9 +92,9 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 | 6. CSV Import/Export & DNC Management | v1.0 | 4/4 | Complete | 2026-02-15 |
 | 7. Contact Preview & Sent Emails | v1.0 | 2/2 | Complete | 2026-02-15 |
 | 8. Polish & Error Monitoring | v1.0 | 2/2 | Complete | 2026-02-15 |
-| 9. News Authoring & Schema | v1.1 | 2/6 | In progress | — |
+| 9. News Authoring & Schema | v1.1 | 3/6 | In progress | — |
 | 10. Client News Delivery & Archive | v1.1 | 0/0 | Not started | — |
 
 ---
 *Roadmap created: 2026-02-15*
-*Last updated: 2026-04-29 — Phase 9 plan 09-02 complete (Zod schemas + uploadNewsImage + i18n keys)*
+*Last updated: 2026-04-29 — Phase 9 plan 09-03 complete (server actions: create/update/publish/withdraw/delete)*
