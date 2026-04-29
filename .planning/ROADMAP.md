@@ -41,7 +41,30 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
   3. An operator can preview a news item in any of its three language variants before publishing
   4. An operator can publish a draft (making it visible to clients) and withdraw a published item (removing it from clients) from the admin list view
   5. The admin list view shows every news item with its status (draft / published / withdrawn) and creation/publish timestamps
-**Plans**: TBD
+**Plans**: 6 plans across 5 waves
+
+**Wave 1** *(parallel — independent)*:
+- [ ] 09-01-PLAN.md — Migration: news_items + news_dismissals + news-images bucket + RLS + storage policies
+- [ ] 09-02-PLAN.md — Zod schemas (newsDraftSchema, newsPublishSchema) + uploadNewsImage helper + i18n keys (nl/en/hi)
+
+**Wave 2** *(blocked on 09-01, 09-02)*:
+- [ ] 09-03-PLAN.md — Server actions: create/update/publish/withdraw/delete news items
+
+**Wave 3** *(blocked on 09-02, 09-03)*:
+- [ ] 09-04-PLAN.md — Components: news-form (3-tab + image), news-preview-modal (Phase-10 reusable), news-card
+
+**Wave 4** *(blocked on 09-03, 09-04)*:
+- [ ] 09-05-PLAN.md — Routes: /admin/news (list), /new (create), /[id]/edit (edit + action panel) + Nieuws nav link
+
+**Wave 5** *(blocked on Waves 1-4 — autonomous: false, manual smoke verification)*:
+- [ ] 09-06-PLAN.md — [BLOCKING] supabase db push --linked + end-to-end smoke verification
+
+**Cross-cutting constraints** (truths that appear in 2+ plans):
+- Server-authoritative publish gate: all 6 language fields must be non-empty before status transitions to `published` (newsPublishSchema refine + DB re-read in publishNewsItem)
+- Soft-delete withdraw: status transitions to `withdrawn` + `withdrawn_at` timestamp; row remains in admin list (NEWS-04, NEWS-05)
+- Multilingual content lives on the row (title_nl/en/hi, body_nl/en/hi); operator UI chrome strings live in `operator.news.*` i18n namespace (D-23, D-24)
+- Image storage: `news-images` bucket, 2MB, png/jpeg/webp only; `image_path` is server-managed (never read from formData)
+- Component reuse: news-preview-modal exports a presentational `NewsContentRenderer` that Phase 10 will reuse for the client overlay (D-05)
 
 ### Phase 10: Client News Delivery & Archive
 **Goal**: Clients receive published news as a full-screen overlay on dashboard open, can dismiss it permanently per user, and can revisit all current news from a megaphone-button sidebar in the topbar
@@ -69,7 +92,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 | 6. CSV Import/Export & DNC Management | v1.0 | 4/4 | Complete | 2026-02-15 |
 | 7. Contact Preview & Sent Emails | v1.0 | 2/2 | Complete | 2026-02-15 |
 | 8. Polish & Error Monitoring | v1.0 | 2/2 | Complete | 2026-02-15 |
-| 9. News Authoring & Schema | v1.1 | 0/0 | Not started | — |
+| 9. News Authoring & Schema | v1.1 | 0/6 | Not started | — |
 | 10. Client News Delivery & Archive | v1.1 | 0/0 | Not started | — |
 
 ---

@@ -10,10 +10,10 @@ See: .planning/PROJECT.md (updated 2026-04-29)
 
 ## Current Position
 
-Phase: 9 — News Authoring & Schema (not started)
-Plan: —
-Status: Roadmap complete; ready to spec Phase 9
-Last activity: 2026-04-29 — Roadmap for v1.1 created (Phases 9-10)
+Phase: 9 — News Authoring & Schema
+Plan: 0/6 complete
+Status: Ready to execute (SPEC + CONTEXT + 6 plans across 5 waves locked, plan-checker passed)
+Last activity: 2026-04-29 — Phase 9 plans created and verified
 
 ## Milestone v1.0 Outcomes (archived)
 
@@ -50,9 +50,9 @@ No active blockers.
 
 ## Session Continuity
 
-Last session: 2026-04-29 — v1.1 roadmap created (Phases 9-10)
-Stopped at: Roadmap complete, traceability updated, ready to spec Phase 9
-Next action: `/gsd-spec-phase 9` to break Phase 9 (News Authoring & Schema) into plans
+Last session: 2026-04-29 — Phase 9 SPEC + CONTEXT + 6 plans created, plan-checker passed (after 1 revision iteration)
+Stopped at: Plans verified, ready for execute-phase
+Next action: `/gsd-execute-phase 9` to run waves 1-5 (autonomous through wave 4, manual smoke verification at wave 5)
 
 ---
 *Milestone switched: 2026-04-29 — v1.0 (shipped) → v1.1 News Broadcasting*
