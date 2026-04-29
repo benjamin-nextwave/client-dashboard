@@ -54,7 +54,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 - [x] 09-04-PLAN.md — Components: news-form (3-tab + image), news-preview-modal (Phase-10 reusable), news-card — completed 2026-04-29 (`24e7653` + `d2ac020` + `8cafddd`)
 
 **Wave 4** *(blocked on 09-03, 09-04)*:
-- [ ] 09-05-PLAN.md — Routes: /admin/news (list), /new (create), /[id]/edit (edit + action panel) + Nieuws nav link
+- [x] 09-05-PLAN.md — Routes: /admin/news (list), /new (create), /[id]/edit (edit + action panel) + Nieuws nav link — completed 2026-04-29 (`066915a` + `4f2b019` + `bd5f949` + `cddffb8`)
 
 **Wave 5** *(blocked on Waves 1-4 — autonomous: false, manual smoke verification)*:
 - [ ] 09-06-PLAN.md — [BLOCKING] supabase db push --linked + end-to-end smoke verification
@@ -92,9 +92,9 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 | 6. CSV Import/Export & DNC Management | v1.0 | 4/4 | Complete | 2026-02-15 |
 | 7. Contact Preview & Sent Emails | v1.0 | 2/2 | Complete | 2026-02-15 |
 | 8. Polish & Error Monitoring | v1.0 | 2/2 | Complete | 2026-02-15 |
-| 9. News Authoring & Schema | v1.1 | 4/6 | In progress | — |
+| 9. News Authoring & Schema | v1.1 | 5/6 | In progress | — |
 | 10. Client News Delivery & Archive | v1.1 | 0/0 | Not started | — |
 
 ---
 *Roadmap created: 2026-02-15*
-*Last updated: 2026-04-29 — Phase 9 plan 09-04 complete (components: news-form, news-preview-modal, news-card)*
+*Last updated: 2026-04-29 — Phase 9 plan 09-05 complete (routes: /admin/news list + new + edit + operator-header Nieuws nav)*

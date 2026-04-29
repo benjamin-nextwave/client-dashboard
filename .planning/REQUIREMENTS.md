@@ -10,12 +10,12 @@ Requirements for the News Broadcasting milestone. Each maps to roadmap phases.
 
 ### News Authoring (Operator)
 
-- [ ] **NEWS-01**: Operator can create a news item with an image, title, and body, providing variants in Dutch, English, and Hindi (devanagari)
-- [ ] **NEWS-02**: Operator can edit any field of any language variant of an existing news item
-- [ ] **NEWS-03**: Operator can publish a draft news item, after which it becomes visible to all client dashboards
-- [ ] **NEWS-04**: Operator can withdraw a published news item, after which it disappears from all client dashboards
-- [ ] **NEWS-05**: Operator can see a list of all news items showing status (draft / published / withdrawn) and creation/publish timestamps
-- [ ] **NEWS-06**: Operator can preview a news item in any of its language variants before publishing
+- [x] **NEWS-01**: Operator can create a news item with an image, title, and body, providing variants in Dutch, English, and Hindi (devanagari)
+- [x] **NEWS-02**: Operator can edit any field of any language variant of an existing news item
+- [x] **NEWS-03**: Operator can publish a draft news item, after which it becomes visible to all client dashboards
+- [x] **NEWS-04**: Operator can withdraw a published news item, after which it disappears from all client dashboards
+- [x] **NEWS-05**: Operator can see a list of all news items showing status (draft / published / withdrawn) and creation/publish timestamps
+- [x] **NEWS-06**: Operator can preview a news item in any of its language variants before publishing
 
 ### Client News Delivery
 
@@ -67,12 +67,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| NEWS-01 | Phase 9 | Pending |
-| NEWS-02 | Phase 9 | Pending |
-| NEWS-03 | Phase 9 | Pending |
-| NEWS-04 | Phase 9 | Pending |
-| NEWS-05 | Phase 9 | Pending |
-| NEWS-06 | Phase 9 | Pending |
+| NEWS-01 | Phase 9 | Complete (09-05, awaiting 09-06 DB push for live verification) |
+| NEWS-02 | Phase 9 | Complete (09-05, awaiting 09-06 DB push for live verification) |
+| NEWS-03 | Phase 9 | Complete (09-05, awaiting 09-06 DB push for live verification) |
+| NEWS-04 | Phase 9 | Complete (09-05, awaiting 09-06 DB push for live verification) |
+| NEWS-05 | Phase 9 | Complete (09-05, awaiting 09-06 DB push for live verification) |
+| NEWS-06 | Phase 9 | Complete (09-04, awaiting 09-06 DB push for live verification) |
 | DELIVER-01 | Phase 10 | Pending |
 | DELIVER-02 | Phase 10 | Pending |
 | DELIVER-03 | Phase 10 | Pending |
@@ -90,4 +90,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-04-29*
-*Last updated: 2026-04-29 — traceability mapped to Phases 9-10 after roadmap creation*
+*Last updated: 2026-04-29 — NEWS-01..05 marked complete after 09-05 (routes + nav); NEWS-06 was completed by 09-04 (preview modal); live verification deferred to 09-06 DB push*

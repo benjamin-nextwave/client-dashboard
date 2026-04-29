@@ -11,9 +11,9 @@ See: .planning/PROJECT.md (updated 2026-04-29)
 ## Current Position
 
 Phase: 9 — News Authoring & Schema
-Plan: 4/6 complete
-Status: Wave 3 complete — 09-04 (3 React components: NewsPreviewModal + NewsContentRenderer + NewsForm + NewsCard) landed. DB push still deferred to 09-06. Wave 4 plan 09-05 (routes: /admin/news list + /new + /[id]/edit + Nieuws nav link) is unblocked and can start now.
-Last activity: 2026-04-29 — 09-04 written: `src/components/admin/news-preview-modal.tsx` (NewsContentRenderer + NewsPreviewModal — Phase-10-reusable presentational renderer), `src/components/admin/news-form.tsx` (NewsForm with 3-language tabs + image input + preview modal wired to RHF watch()), `src/components/admin/news-card.tsx` (NewsCard with thumbnail + status-aware Publish/Withdraw button via useTransition).
+Plan: 5/6 complete
+Status: Wave 4 complete — 09-05 (3 route pages + 3 chrome client components + operator-header NAV refactor) landed. The full operator authoring flow is wired end-to-end: list at /admin/news, create at /admin/news/new, edit + status-aware action panel at /admin/news/[id]/edit, plus a localized "Nieuws" nav entry in the operator header. Build compiles cleanly; live verification waits on 09-06 (BLOCKING: supabase db push). Wave 5 plan 09-06 (manual: 1 task, autonomous=false) is the only remaining Phase 9 work.
+Last activity: 2026-04-29 — 09-05 written: `src/app/(operator)/admin/news/page.tsx` (server-component list, force-dynamic, getPublicUrl), `src/app/(operator)/admin/news/new/page.tsx` (create), `src/app/(operator)/admin/news/[id]/edit/page.tsx` (edit + bound updateNewsItem), three client-component chrome files in `src/app/(operator)/admin/news/_components/` (news-list-chrome, news-page-headers, news-item-action-panel), and operator-header.tsx refactored to host an in-component NAV with localized "Nieuws" entry between Overzicht and Fouten.
 
 ## Milestone v1.0 Outcomes (archived)
 
@@ -70,6 +70,15 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - alert() for error surfacing in NewsCard — toast infrastructure is out of scope for Phase 9; alert is acceptable v1.1 quality bar (3 internal operators, deterministic flow).
 - displayTitle = NL preferred → EN fallback → '(zonder titel)' literal — drafts are explicitly allowed to be partial (NEWS-01 acceptance); the literal is a stable Dutch placeholder for the rare empty-empty case.
 
+**Phase 9 / Plan 09-05 decisions:**
+- Empty-state UI for the list page lives INSIDE NewsListChrome (a client component using useT()) — not as a hardcoded server-component EmptyState. Keeps all chrome strings in i18n (D-23) and the empty-state consistent with the rest of the chrome (operator.news.listEmpty + operator.news.createButton).
+- image_path is NOT in the edit page's NewsForm defaultValues — would have been a TypeScript error against NewsDraftValues (form state owns only the 6 lang fields, T-09-30: image_path is server-managed). Existing image is shown via the form's currentImageUrl prop instead. Plan body listed image_path; that line was dropped as a Rule 3 blocking-issue auto-fix.
+- useT() invoked as a function `t('operator.news.<key>')`, not as property access — matches the project's actual Translator type (a string-key function) and 09-04's existing call sites. Same calibration as 09-04 deviation #1.
+- Status label in EditNewsHeader (Concept/Gepubliceerd/Ingetrokken) is computed server-side as a stable Dutch literal and passed in as a prop. v1.1 corner-case label (3 internal operators), comparable to (zonder titel) in NewsCard.
+- NAV array moved INSIDE OperatorHeader function so the news entry can call t() — existing labels stay hardcoded Dutch (out of scope to refactor in Phase 9). Verified that no external consumer imports the NAV symbol from operator-header.tsx (only the OperatorHeader component itself is imported, by (operator)/layout.tsx).
+- News nav entry positioned between Overzicht and Fouten (per D-19). Match predicate uses startsWith('/admin/news') so subroutes (/new, /[id]/edit) light up active state.
+- Action panel shows Delete unconditionally with a confirm() prompt as the safety gate. router.refresh() after publish/withdraw success (status badge updates without scroll loss); router.push('/admin/news') after delete success.
+
 ### Pending Todos
 
 None.
@@ -85,10 +94,10 @@ No active blockers.
 
 ## Session Continuity
 
-Last session: 2026-04-29 — Plan 09-04 executed (3 React components: NewsPreviewModal + NewsContentRenderer in news-preview-modal.tsx, NewsForm in news-form.tsx, NewsCard in news-card.tsx). Three task commits: `24e7653`, `d2ac020`, `8cafddd`.
-Stopped at: Wave 3 complete (09-04 landed). Wave 4 plan 09-05 (routes: /admin/news list + /new + /[id]/edit + Nieuws nav link) ready to start; it can `import { NewsForm }` for create/edit pages and `import { NewsCard }` for the list page, plus `import { NewsContentRenderer }` will be reused by Phase 10 directly.
-Next action: Execute plan 09-05 (3 route pages + Nieuws nav link integration in operator-header.tsx).
+Last session: 2026-04-29 — Plan 09-05 executed (3 route pages + 3 chrome client components + 1 modified header). Four task commits: `066915a` (list page + NewsListChrome), `4f2b019` (new page + page-headers), `bd5f949` (edit page + action panel), `cddffb8` (operator-header Nieuws nav).
+Stopped at: Wave 4 complete (09-05 landed). Only Wave 5 plan 09-06 (BLOCKING manual `supabase db push --linked` + end-to-end smoke verification) remains in Phase 9. 09-06 is autonomous=false (requires user to run the live DB push command and verify the flow against real DB state).
+Next action: Execute plan 09-06 — manual schema push + smoke test of the operator authoring flow end-to-end.
 
 ---
 *Milestone switched: 2026-04-29 — v1.0 (shipped) → v1.1 News Broadcasting*
-*Last updated: 2026-04-29 after plan 09-04 (components: news-form, news-preview-modal, news-card)*
+*Last updated: 2026-04-29 after plan 09-05 (routes: /admin/news list + new + edit + operator-header Nieuws nav)*
