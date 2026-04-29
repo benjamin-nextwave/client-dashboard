@@ -27,7 +27,25 @@ Clients can see their campaign performance and reply to positive leads directly 
 
 ### Active
 
-(None yet — define with `/gsd:new-milestone`)
+- News Broadcasting — operator-broadcast multilingual announcements with overlay-on-open + sidebar archive (v1.1)
+
+## Current Milestone: v1.1 News Broadcasting
+
+**Goal:** Operators can broadcast multilingual news/announcements to all client dashboards via a persistent overlay-on-open + sidebar archive, with controlled retraction.
+
+**Target features:**
+- Operator-side news CRUD: create / edit / withdraw with image, title, body
+- 3 languages per news item: Dutch / English / Hindi (devanagari)
+- Client-side full-screen overlay on dashboard open for unread news, with single "Ik heb het gelezen" dismiss button
+- Persistent dismissal tracking per user (overlay never re-shows)
+- Megaphone button in client topbar (left of "ververs data") opens sidebar with title + preview, click for full message
+- Operator can withdraw published news — disappears from client dashboards immediately
+
+**Key context:**
+- Broadcast scope: applies to ALL clients across all tenants (system-wide announcement from operator)
+- Stack unchanged: Next.js 15 + Supabase (Storage for images, Postgres + RLS for data)
+- Client UI is Dutch — Hindi script uses devanagari Unicode
+- Look-and-feel: professional (consistent with existing dashboard style)
 
 ### Out of Scope
 
@@ -79,5 +97,22 @@ Platform serves 15+ B2B clients with 3 operator admins (Merlijn, Kix, Benjamin).
 | Soft-delete via is_excluded | Preserves data, integrates with DNC filter | ✓ Good |
 | Await logError (not fire-and-forget) | Serverless safety — ensures error is written before function exits | ✓ Good |
 
+## Evolution
+
+This document evolves at phase transitions and milestone boundaries.
+
+**After each phase transition** (via `/gsd-transition`):
+1. Requirements invalidated? → Move to Out of Scope with reason
+2. Requirements validated? → Move to Validated with phase reference
+3. New requirements emerged? → Add to Active
+4. Decisions to log? → Add to Key Decisions
+5. "What This Is" still accurate? → Update if drifted
+
+**After each milestone** (via `/gsd-complete-milestone`):
+1. Full review of all sections
+2. Core Value check — still the right priority?
+3. Audit Out of Scope — reasons still valid?
+4. Update Context with current state
+
 ---
-*Last updated: 2026-02-15 after v1.0 milestone*
+*Last updated: 2026-04-29 — started milestone v1.1 News Broadcasting*
