@@ -3,6 +3,7 @@
 @theme inline {
   --color-brand: var(--brand-color, #3B82F6);
   --animate-fadeIn: fadeIn 0.4s ease-out;
+  --animate-slideInFromRight: slideInFromRight 0.25s ease-out;
 }
 
 @keyframes fadeIn {
@@ -13,5 +14,14 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes slideInFromRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
   }
 }
