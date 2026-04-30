@@ -4,7 +4,7 @@ import { cookies } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { isLocale, type Locale } from './index'
+import { isLocale } from './index'
 import { LOCALE_COOKIE_NAME } from './server'
 
 export async function setLocale(locale: string): Promise<{ error?: string }> {
@@ -35,5 +35,3 @@ export async function setLocale(locale: string): Promise<{ error?: string }> {
   revalidatePath('/', 'layout')
   return {}
 }
-
-export type { Locale }
