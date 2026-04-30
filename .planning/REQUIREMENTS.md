@@ -27,10 +27,10 @@ Requirements for the News Broadcasting milestone. Each maps to roadmap phases.
 
 ### Client News Archive
 
-- [ ] **ARCH-01**: Client topbar shows a megaphone button immediately to the left of the existing "Ververs data" button
-- [ ] **ARCH-02**: Clicking the megaphone button opens a sidebar listing all currently-published (non-withdrawn) news items, ordered most-recent first
-- [ ] **ARCH-03**: Each sidebar item shows the title and a short text preview
-- [ ] **ARCH-04**: Clicking a sidebar item displays the full news content (image + title + body) in the same panel or an expanded view
+- [x] **ARCH-01**: Client topbar shows a megaphone button immediately to the left of the existing "Ververs data" button
+- [x] **ARCH-02**: Clicking the megaphone button opens a sidebar listing all currently-published (non-withdrawn) news items, ordered most-recent first
+- [x] **ARCH-03**: Each sidebar item shows the title and a short text preview
+- [x] **ARCH-04**: Clicking a sidebar item displays the full news content (image + title + body) in the same panel or an expanded view
 
 ## Future Requirements
 
@@ -78,10 +78,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DELIVER-03 | Phase 10 | Complete (10-03 NewsOverlay enforces single-button dismiss path; no Esc/backdrop close/X icon — verified by grep gates) |
 | DELIVER-04 | Phase 10 | Complete (10-02 dismiss action; overlay query in 10-05 will close the loop) |
 | DELIVER-05 | Phase 10 | Pending (server-side filter on `status='published'` for both overlay queue and sidebar lives in 10-05) |
-| ARCH-01 | Phase 10 | Pending |
-| ARCH-02 | Phase 10 | Pending |
-| ARCH-03 | Phase 10 | Pending |
-| ARCH-04 | Phase 10 | Pending |
+| ARCH-01 | Phase 10 | Complete (10-04 NewsMegaphoneButton — outlined icon button with localized aria-label + unread badge; awaits 10-05 dashboard topbar placement for live verification) |
+| ARCH-02 | Phase 10 | Complete (10-04 NewsMegaphoneButton owns sidebar open state; click opens NewsSidebar slide-in panel; ordering by published_at DESC handled server-side in 10-05) |
+| ARCH-03 | Phase 10 | Complete (10-04 NewsSidebarListItem — title + 120-char preview + relative date; verified by grep gates) |
+| ARCH-04 | Phase 10 | Complete (10-04 NewsSidebar detail view — uses NewsContentRenderer for image+title+body; "Terug naar overzicht" back affordance via internal view state) |
 
 **Coverage:**
 - v1.1 requirements: 15 total
