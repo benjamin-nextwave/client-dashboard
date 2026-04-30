@@ -21,7 +21,7 @@ Requirements for the News Broadcasting milestone. Each maps to roadmap phases.
 
 - [ ] **DELIVER-01**: Client sees an unread published news item as a full-screen overlay when opening their dashboard
 - [ ] **DELIVER-02**: Overlay displays the news image, title, and body in a single language variant
-- [ ] **DELIVER-03**: Overlay can only be dismissed via a single button labeled "Ik heb het gelezen" (or its translation in the active language)
+- [x] **DELIVER-03**: Overlay can only be dismissed via a single button labeled "Ik heb het gelezen" (or its translation in the active language)
 - [x] **DELIVER-04**: Once a client dismisses a news item, that user never sees the same item as an overlay again
 - [ ] **DELIVER-05**: A withdrawn news item disappears from any active overlay queue and from the sidebar within one page reload
 
@@ -73,11 +73,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | NEWS-04 | Phase 9 | Complete (09-05, awaiting 09-06 DB push for live verification) |
 | NEWS-05 | Phase 9 | Complete (09-05, awaiting 09-06 DB push for live verification) |
 | NEWS-06 | Phase 9 | Complete (09-04, awaiting 09-06 DB push for live verification) |
-| DELIVER-01 | Phase 10 | Pending |
-| DELIVER-02 | Phase 10 | Pending |
-| DELIVER-03 | Phase 10 | Pending |
+| DELIVER-01 | Phase 10 | Pending (overlay component built in 10-03; awaits 10-05 dashboard wiring to fetch + pass items prop) |
+| DELIVER-02 | Phase 10 | Pending (overlay reuses NewsContentRenderer in 10-03; awaits 10-05 to resolve image_url + pre-localize per profiles.language) |
+| DELIVER-03 | Phase 10 | Complete (10-03 NewsOverlay enforces single-button dismiss path; no Esc/backdrop close/X icon — verified by grep gates) |
 | DELIVER-04 | Phase 10 | Complete (10-02 dismiss action; overlay query in 10-05 will close the loop) |
-| DELIVER-05 | Phase 10 | Pending |
+| DELIVER-05 | Phase 10 | Pending (server-side filter on `status='published'` for both overlay queue and sidebar lives in 10-05) |
 | ARCH-01 | Phase 10 | Pending |
 | ARCH-02 | Phase 10 | Pending |
 | ARCH-03 | Phase 10 | Pending |
@@ -90,4 +90,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-04-29*
-*Last updated: 2026-04-30 — DELIVER-04 marked complete after 10-02 (dismissNewsItem server action); overlay-side filter query still pending in 10-05*
+*Last updated: 2026-04-30 — DELIVER-03 marked complete after 10-03 (NewsOverlay enforces single-button dismiss); DELIVER-01/02/05 await 10-05 wiring*
