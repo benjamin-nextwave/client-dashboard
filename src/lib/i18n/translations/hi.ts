@@ -562,4 +562,18 @@ export const hi: Translations = {
       previewNoImage: 'कोई छवि नहीं',
     },
   },
+  client: {
+    news: {
+      dismissButton: 'मैंने इसे पढ़ लिया है',
+      megaphoneAriaLabel: 'समाचार अवलोकन खोलें',
+      sidebarTitle: 'समाचार',
+      sidebarBackToList: 'सूची पर वापस जाएं',
+      sidebarEmpty: 'कोई समाचार नहीं।',
+      relativeTimeJustNow: 'अभी',
+      relativeTimeMinutes: '{count} मिनट पहले',
+      relativeTimeHours: '{count} घंटे पहले',
+      relativeTimeDays: '{count} दिन पहले',
+      relativeTimeWeeks: '{count} सप्ताह पहले',
+    },
+  },
 }

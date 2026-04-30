@@ -520,6 +520,20 @@ export interface Translations {
       previewNoImage: string
     }
   }
+  client: {
+    news: {
+      dismissButton: string
+      megaphoneAriaLabel: string
+      sidebarTitle: string
+      sidebarBackToList: string
+      sidebarEmpty: string
+      relativeTimeJustNow: string
+      relativeTimeMinutes: string
+      relativeTimeHours: string
+      relativeTimeDays: string
+      relativeTimeWeeks: string
+    }
+  }
 }
 
 export const nl: Translations = {
@@ -1090,6 +1104,20 @@ export const nl: Translations = {
       previewModalLanguageLabel: 'Taal',
       previewModalCloseButton: 'Sluiten',
       previewNoImage: 'Geen afbeelding',
+    },
+  },
+  client: {
+    news: {
+      dismissButton: 'Ik heb het gelezen',
+      megaphoneAriaLabel: 'Open nieuwsoverzicht',
+      sidebarTitle: 'Nieuws',
+      sidebarBackToList: 'Terug naar overzicht',
+      sidebarEmpty: 'Geen nieuwsberichten.',
+      relativeTimeJustNow: 'zojuist',
+      relativeTimeMinutes: '{count} min geleden',
+      relativeTimeHours: '{count} uur geleden',
+      relativeTimeDays: '{count} dagen geleden',
+      relativeTimeWeeks: '{count} weken geleden',
     },
   },
 }

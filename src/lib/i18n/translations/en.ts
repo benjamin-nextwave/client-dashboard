@@ -562,4 +562,18 @@ export const en: Translations = {
       previewNoImage: 'No image',
     },
   },
+  client: {
+    news: {
+      dismissButton: 'I have read it',
+      megaphoneAriaLabel: 'Open news overview',
+      sidebarTitle: 'News',
+      sidebarBackToList: 'Back to overview',
+      sidebarEmpty: 'No news items.',
+      relativeTimeJustNow: 'just now',
+      relativeTimeMinutes: '{count} min ago',
+      relativeTimeHours: '{count} h ago',
+      relativeTimeDays: '{count} days ago',
+      relativeTimeWeeks: '{count} weeks ago',
+    },
+  },
 }
