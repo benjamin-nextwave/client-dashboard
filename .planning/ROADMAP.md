@@ -81,7 +81,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 
 **Wave 1** *(parallel — independent)*:
 - [x] 10-01-PLAN.md — i18n keys: extend Translations interface + add `client.news.*` namespace to nl/en/hi — completed 2026-04-30 (`2e807fd`)
-- [ ] 10-02-PLAN.md — Server action: dismissNewsItem (request-scoped client; reads user_id server-side; idempotent upsert into news_dismissals)
+- [x] 10-02-PLAN.md — Server action: dismissNewsItem (request-scoped client; reads user_id server-side; idempotent upsert into news_dismissals) — completed 2026-04-30 (`56d9a1d`)
 
 **Wave 2** *(blocked on Wave 1 — file-disjoint, parallel)*:
 - [ ] 10-03-PLAN.md — Component: NewsOverlay (queue + single-button dismiss; no Esc/backdrop close; body scroll lock; brand-color CTA)
@@ -108,8 +108,8 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 | 7. Contact Preview & Sent Emails | v1.0 | 2/2 | Complete | 2026-02-15 |
 | 8. Polish & Error Monitoring | v1.0 | 2/2 | Complete | 2026-02-15 |
 | 9. News Authoring & Schema | v1.1 | 6/6 | Complete | 2026-04-30 |
-| 10. Client News Delivery & Archive | v1.1 | 1/6 | In progress (Wave 1) | — |
+| 10. Client News Delivery & Archive | v1.1 | 2/6 | In progress (Wave 1 done) | — |
 
 ---
 *Roadmap created: 2026-02-15*
-*Last updated: 2026-04-30 — Phase 10 Plan 01 (i18n) complete*
+*Last updated: 2026-04-30 — Phase 10 Plan 02 (dismissNewsItem server action) complete; Wave 1 done*

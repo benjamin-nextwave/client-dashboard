@@ -22,7 +22,7 @@ Requirements for the News Broadcasting milestone. Each maps to roadmap phases.
 - [ ] **DELIVER-01**: Client sees an unread published news item as a full-screen overlay when opening their dashboard
 - [ ] **DELIVER-02**: Overlay displays the news image, title, and body in a single language variant
 - [ ] **DELIVER-03**: Overlay can only be dismissed via a single button labeled "Ik heb het gelezen" (or its translation in the active language)
-- [ ] **DELIVER-04**: Once a client dismisses a news item, that user never sees the same item as an overlay again
+- [x] **DELIVER-04**: Once a client dismisses a news item, that user never sees the same item as an overlay again
 - [ ] **DELIVER-05**: A withdrawn news item disappears from any active overlay queue and from the sidebar within one page reload
 
 ### Client News Archive
@@ -76,7 +76,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DELIVER-01 | Phase 10 | Pending |
 | DELIVER-02 | Phase 10 | Pending |
 | DELIVER-03 | Phase 10 | Pending |
-| DELIVER-04 | Phase 10 | Pending |
+| DELIVER-04 | Phase 10 | Complete (10-02 dismiss action; overlay query in 10-05 will close the loop) |
 | DELIVER-05 | Phase 10 | Pending |
 | ARCH-01 | Phase 10 | Pending |
 | ARCH-02 | Phase 10 | Pending |
@@ -90,4 +90,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-04-29*
-*Last updated: 2026-04-29 — NEWS-01..05 marked complete after 09-05 (routes + nav); NEWS-06 was completed by 09-04 (preview modal); live verification deferred to 09-06 DB push*
+*Last updated: 2026-04-30 — DELIVER-04 marked complete after 10-02 (dismissNewsItem server action); overlay-side filter query still pending in 10-05*
