@@ -11,9 +11,9 @@ See: .planning/PROJECT.md (updated 2026-04-29)
 ## Current Position
 
 Phase: 10 — Client News Delivery & Archive
-Plan: 0/6 complete
-Status: Ready to execute (SPEC + CONTEXT + 6 plans across 4 waves locked, plan-checker passed; animations adjusted to use Tailwind 4 keyframes in globals.css since project doesn't have tailwindcss-animate)
-Last activity: 2026-04-30 — Phase 10 plans created and verified (6 plans, 4 waves)
+Plan: 1/6 complete
+Status: Wave 1 in progress — 10-01 (i18n) ✅, 10-02 (dismiss server action) next
+Last activity: 2026-04-30 — Plan 10-01 executed (`2e807fd`); client.news.* namespace added to nl/en/hi (10 keys × 3 locales); Translations interface extended; tsc --noEmit passes
 
 ## Milestone v1.0 Outcomes (archived)
 
@@ -70,6 +70,14 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - alert() for error surfacing in NewsCard — toast infrastructure is out of scope for Phase 9; alert is acceptable v1.1 quality bar (3 internal operators, deterministic flow).
 - displayTitle = NL preferred → EN fallback → '(zonder titel)' literal — drafts are explicitly allowed to be partial (NEWS-01 acceptance); the literal is a stable Dutch placeholder for the rare empty-empty case.
 
+**Phase 10 / Plan 10-01 decisions:**
+- `client.news.*` added as a NEW top-level Translations key in nl.ts (interface SOT) + values in nl/en/hi — same calibration as Phase 9's `operator.news.*` (purely additive, no existing namespace touched)
+- 10 keys total: 6 base UI strings (dismissButton, megaphoneAriaLabel, sidebarTitle, sidebarBackToList, sidebarEmpty, relativeTimeJustNow) + 4 relative-time variants (relativeTimeMinutes/Hours/Days/Weeks) — matches CONTEXT.md D-21 surface and gives the sidebar list-item a complete time-string vocabulary
+- `{count}` interpolation token used for all 4 relativeTime* count-bearing strings — matches the project's existing makeTranslator pattern (e.g. overview.rangePeriodLast: 'Afgelopen {days} dagen')
+- Hindi values use authentic devanagari (no transliteration) — same convention as operator.news.*; dismiss button in HI is `मैंने इसे पढ़ लिया है`
+- EN sidebarBackToList chosen as 'Back to overview' rather than 'Back to list' (per plan body) — pairs with NL 'Terug naar overzicht' for consistent semantics
+- TypeScript compile-time gate verified (T-10-01 mitigation): `tsc --noEmit` passes silently after the 3-file edit, proving en.ts and hi.ts both satisfy the extended Translations shape
+
 **Phase 9 / Plan 09-05 decisions:**
 - Empty-state UI for the list page lives INSIDE NewsListChrome (a client component using useT()) — not as a hardcoded server-component EmptyState. Keeps all chrome strings in i18n (D-23) and the empty-state consistent with the rest of the chrome (operator.news.listEmpty + operator.news.createButton).
 - image_path is NOT in the edit page's NewsForm defaultValues — would have been a TypeScript error against NewsDraftValues (form state owns only the 6 lang fields, T-09-30: image_path is server-managed). Existing image is shown via the form's currentImageUrl prop instead. Plan body listed image_path; that line was dropped as a Rule 3 blocking-issue auto-fix.
@@ -94,10 +102,10 @@ No active blockers.
 
 ## Session Continuity
 
-Last session: 2026-04-30 — Phase 10 SPEC + CONTEXT + 6 plans created. Plan-checker passed with 4 non-blocking warnings; 2 animation-related warnings addressed (Tailwind 4 keyframes added to plan 10-04 Task 0 — slideInFromRight; overlay uses existing animate-fadeIn). User delegated all implementation choices ("vertrouw dat jij de beste keuzes kan maken voor gebruikersvriendelijkheid en professionele uitstraling"); 28 decisions documented in CONTEXT.md.
-Stopped at: Plans verified, ready for execute-phase.
-Next action: `/gsd-execute-phase 10` — waves 1-3 autonomous (i18n + dismissAction + 3 components + dashboard wiring), wave 4 manual smoke verify.
+Last session: 2026-04-30 — Plan 10-01 executed (i18n strings, ~2 min). Added `client.news.*` namespace (10 keys) to nl/en/hi and extended the `Translations` interface in nl.ts. All 13 acceptance gates passed; `npx tsc --noEmit` passes. Wave 1 partner plan 10-02 (dismissNewsItem server action) is the next step, then Wave 2 components (10-03 NewsOverlay, 10-04 NewsMegaphoneButton + NewsSidebar) can consume the new keys via `useT()` with full type-narrow autocomplete.
+Stopped at: 10-01 complete, ready to execute 10-02 (or continue Wave 1 in parallel via execute-phase orchestrator).
+Next action: `/gsd-execute-phase 10` — continue Wave 1 (10-02), then Wave 2 (10-03 + 10-04 parallel), Wave 3 (10-05), Wave 4 manual smoke (10-06).
 
 ---
 *Milestone switched: 2026-04-29 — v1.0 (shipped) → v1.1 News Broadcasting*
-*Last updated: 2026-04-30 after Phase 9 closeout (live smoke verified)*
+*Last updated: 2026-04-30 — Plan 10-01 complete (i18n)*
