@@ -19,11 +19,11 @@ Requirements for the News Broadcasting milestone. Each maps to roadmap phases.
 
 ### Client News Delivery
 
-- [ ] **DELIVER-01**: Client sees an unread published news item as a full-screen overlay when opening their dashboard
-- [ ] **DELIVER-02**: Overlay displays the news image, title, and body in a single language variant
+- [x] **DELIVER-01**: Client sees an unread published news item as a full-screen overlay when opening their dashboard
+- [x] **DELIVER-02**: Overlay displays the news image, title, and body in a single language variant
 - [x] **DELIVER-03**: Overlay can only be dismissed via a single button labeled "Ik heb het gelezen" (or its translation in the active language)
 - [x] **DELIVER-04**: Once a client dismisses a news item, that user never sees the same item as an overlay again
-- [ ] **DELIVER-05**: A withdrawn news item disappears from any active overlay queue and from the sidebar within one page reload
+- [x] **DELIVER-05**: A withdrawn news item disappears from any active overlay queue and from the sidebar within one page reload
 
 ### Client News Archive
 
@@ -73,13 +73,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | NEWS-04 | Phase 9 | Complete (09-05, awaiting 09-06 DB push for live verification) |
 | NEWS-05 | Phase 9 | Complete (09-05, awaiting 09-06 DB push for live verification) |
 | NEWS-06 | Phase 9 | Complete (09-04, awaiting 09-06 DB push for live verification) |
-| DELIVER-01 | Phase 10 | Pending (overlay component built in 10-03; awaits 10-05 dashboard wiring to fetch + pass items prop) |
-| DELIVER-02 | Phase 10 | Pending (overlay reuses NewsContentRenderer in 10-03; awaits 10-05 to resolve image_url + pre-localize per profiles.language) |
+| DELIVER-01 | Phase 10 | Complete (10-05 wires dashboard/page.tsx with the two-query unread queue + reverse to oldest-first; NewsOverlay receives items prop; awaits 10-06 manual smoke) |
+| DELIVER-02 | Phase 10 | Complete (10-05 pre-localizes title/body per profiles.language with NL fallback + resolves image_url server-side via getPublicUrl on `news-images` bucket) |
 | DELIVER-03 | Phase 10 | Complete (10-03 NewsOverlay enforces single-button dismiss path; no Esc/backdrop close/X icon — verified by grep gates) |
-| DELIVER-04 | Phase 10 | Complete (10-02 dismiss action; overlay query in 10-05 will close the loop) |
-| DELIVER-05 | Phase 10 | Pending (server-side filter on `status='published'` for both overlay queue and sidebar lives in 10-05) |
-| ARCH-01 | Phase 10 | Complete (10-04 NewsMegaphoneButton — outlined icon button with localized aria-label + unread badge; awaits 10-05 dashboard topbar placement for live verification) |
-| ARCH-02 | Phase 10 | Complete (10-04 NewsMegaphoneButton owns sidebar open state; click opens NewsSidebar slide-in panel; ordering by published_at DESC handled server-side in 10-05) |
+| DELIVER-04 | Phase 10 | Complete (10-02 dismiss action + 10-05 dashboard query filters out the user's dismissed ids via TS Set lookup — closed loop) |
+| DELIVER-05 | Phase 10 | Complete (10-05 both queries `.eq('status', 'published')` — withdrawn items disappear from overlay queue and sidebar within one page reload) |
+| ARCH-01 | Phase 10 | Complete (10-04 NewsMegaphoneButton + 10-05 places it in `flex items-center gap-3` immediately left of `<RefreshButton />` in the dashboard header) |
+| ARCH-02 | Phase 10 | Complete (10-04 NewsMegaphoneButton owns sidebar open state + 10-05 fetches archive ordered by `published_at DESC`) |
 | ARCH-03 | Phase 10 | Complete (10-04 NewsSidebarListItem — title + 120-char preview + relative date; verified by grep gates) |
 | ARCH-04 | Phase 10 | Complete (10-04 NewsSidebar detail view — uses NewsContentRenderer for image+title+body; "Terug naar overzicht" back affordance via internal view state) |
 
@@ -90,4 +90,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-04-29*
-*Last updated: 2026-04-30 — DELIVER-03 marked complete after 10-03 (NewsOverlay enforces single-button dismiss); DELIVER-01/02/05 await 10-05 wiring*
+*Last updated: 2026-04-30 — DELIVER-01/02/05 + ARCH-01/02 marked complete after 10-05 (dashboard/page.tsx wiring); only Wave 4 (10-06 manual smoke) remains to close out milestone v1.1*

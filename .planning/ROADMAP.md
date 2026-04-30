@@ -88,7 +88,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 - [x] 10-04-PLAN.md — Components: NewsMegaphoneButton + NewsSidebar (outlined icon button with unread badge; right slide-in panel with list↔detail; standard close conventions) — completed 2026-04-30 (`26b67f8` + `11763d3` + `83bd57e`)
 
 **Wave 3** *(blocked on Wave 2)*:
-- [ ] 10-05-PLAN.md — Wire dashboard/page.tsx: two server-side queries (archive + dismissals), pre-localize per profiles.language, resolve image_url via getPublicUrl, render NewsMegaphoneButton left of RefreshButton + NewsOverlay as sibling
+- [x] 10-05-PLAN.md — Wire dashboard/page.tsx: two server-side queries (archive + dismissals), pre-localize per profiles.language, resolve image_url via getPublicUrl, render NewsMegaphoneButton left of RefreshButton + NewsOverlay as sibling — completed 2026-04-30 (`c117cbb`)
 
 **Wave 4** *(blocked on Wave 3 — autonomous: false, manual smoke)*:
 - [ ] 10-06-PLAN.md — End-to-end manual verification against live DB across two roles (operator + client) covering all 9 requirements + tri-locale rendering + RLS sanity
@@ -108,8 +108,8 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 | 7. Contact Preview & Sent Emails | v1.0 | 2/2 | Complete | 2026-02-15 |
 | 8. Polish & Error Monitoring | v1.0 | 2/2 | Complete | 2026-02-15 |
 | 9. News Authoring & Schema | v1.1 | 6/6 | Complete | 2026-04-30 |
-| 10. Client News Delivery & Archive | v1.1 | 4/6 | In progress (Wave 2 done; Wave 3 unblocked) | — |
+| 10. Client News Delivery & Archive | v1.1 | 5/6 | In progress (Wave 3 done; only Wave 4 manual smoke remaining) | — |
 
 ---
 *Roadmap created: 2026-02-15*
-*Last updated: 2026-04-30 — Phase 10 Plan 04 (NewsMegaphoneButton + NewsSidebar pair; Wave 2 complete)*
+*Last updated: 2026-04-30 — Phase 10 Plan 05 (dashboard/page.tsx wiring; Wave 3 complete; only Wave 4 manual smoke remaining)*
