@@ -3,7 +3,7 @@
 ## Milestones
 
 - ✅ **v1.0 MVP** — Phases 1-8 (shipped 2026-02-15)
-- 🚧 **v1.1 News Broadcasting** — Phases 9-10 (started 2026-04-29)
+- ✅ **v1.1 News Broadcasting** — Phases 9-10 (shipped 2026-04-30)
 
 ## Phases
 
@@ -26,7 +26,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 ### v1.1 News Broadcasting (Phases 9-10)
 
 - [x] **Phase 9: News Authoring & Schema** — Operator-side news CRUD with multilingual content + image storage and database groundwork — completed 2026-04-30
-- [ ] **Phase 10: Client News Delivery & Archive** — Client-side overlay-on-open, persistent dismissal, and megaphone sidebar archive
+- [x] **Phase 10: Client News Delivery & Archive** — Client-side overlay-on-open, persistent dismissal, and megaphone sidebar archive — completed 2026-04-30
 
 ## Phase Details
 
@@ -91,7 +91,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 - [x] 10-05-PLAN.md — Wire dashboard/page.tsx: two server-side queries (archive + dismissals), pre-localize per profiles.language, resolve image_url via getPublicUrl, render NewsMegaphoneButton left of RefreshButton + NewsOverlay as sibling — completed 2026-04-30 (`c117cbb`)
 
 **Wave 4** *(blocked on Wave 3 — autonomous: false, manual smoke)*:
-- [ ] 10-06-PLAN.md — End-to-end manual verification against live DB across two roles (operator + client) covering all 9 requirements + tri-locale rendering + RLS sanity
+- [x] 10-06-PLAN.md — End-to-end manual verification: all 12 smoke steps pass; 3 UX issues surfaced + fixed inline (form data persist via defaultValue + key, megaphone badge removed since overlay-on-open makes it always-zero, megaphone alignment fix items-center → items-start). Bug surfaced + fixed: smoke commit (`0bdedb2`). — completed 2026-04-30
 
 **UI hint**: yes
 
@@ -108,7 +108,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 | 7. Contact Preview & Sent Emails | v1.0 | 2/2 | Complete | 2026-02-15 |
 | 8. Polish & Error Monitoring | v1.0 | 2/2 | Complete | 2026-02-15 |
 | 9. News Authoring & Schema | v1.1 | 6/6 | Complete | 2026-04-30 |
-| 10. Client News Delivery & Archive | v1.1 | 5/6 | In progress (Wave 3 done; only Wave 4 manual smoke remaining) | — |
+| 10. Client News Delivery & Archive | v1.1 | 6/6 | Complete | 2026-04-30 |
 
 ---
 *Roadmap created: 2026-02-15*

@@ -6,14 +6,14 @@ See: .planning/PROJECT.md (updated 2026-04-29)
 
 **Core value:** Clients can see their campaign performance and reply to positive leads directly from their branded dashboard — keeping the entire outreach workflow in one place.
 
-**Current focus:** v1.1 News Broadcasting — operator-broadcast multilingual announcements with overlay-on-open + sidebar archive
+**Current focus:** v1.1 SHIPPED — News Broadcasting (Phase 9 + Phase 10) live and smoke-verified. Awaiting next milestone.
 
 ## Current Position
 
-Phase: 10 — Client News Delivery & Archive
-Plan: 5/6 complete
-Status: Wave 1 ✅, Wave 2 ✅, Wave 3 ✅ (10-05 dashboard wiring done) — Wave 4 (10-06 manual smoke verification, autonomous: false) is the only remaining plan to close out Phase 10 and milestone v1.1
-Last activity: 2026-04-30 — Plan 10-05 executed (`c117cbb`, ~2min); modified src/app/(client)/dashboard/page.tsx with two server-side queries (full archive recent-first + current user's dismissals) using request-scoped RLS-bound supabase client, pre-localized title/body server-side per profiles.language with NL fallback, resolved image_path → public URL via supabase.storage.from('news-images').getPublicUrl, derived unread overlay queue via TS Set filter + slice().reverse() for oldest-first ordering (D-17 two-query pattern over subquery interpolation), wrapped existing RefreshButton in flex container with NewsMegaphoneButton immediately to its left (ARCH-01), mounted NewsOverlay as last child sibling (DELIVER-01); all existing OverzichtDashboard / getOverviewStats / getDailyStats / date-range / metadata / dynamic = 'force-dynamic' / getClientBranding redirect logic preserved verbatim; all 17 acceptance grep gates pass strictly; tsc --noEmit passes
+Phase: 10 of 10 (all complete)
+Plan: 12 of 12 (all complete across Phases 9 + 10)
+Status: v1.1 SHIPPED
+Last activity: 2026-04-30 — v1.1 milestone shipped; Phase 10 closed with 12-step smoke verified and 3 inline fixes (defaultValue + key on NewsForm, removed unread badge, megaphone alignment via items-start)
 
 ## Milestone v1.0 Outcomes (archived)
 
@@ -147,8 +147,8 @@ No active blockers.
 ## Session Continuity
 
 Last session: 2026-04-30 — Plan 10-05 executed (~2 min, 1 task commit `c117cbb`). Modified `src/app/(client)/dashboard/page.tsx` with two server-side Supabase queries (archive: all news_items where status='published' ordered by published_at DESC; dismissals: news_dismissals.news_item_id where user_id = current session user) using the request-scoped RLS-bound `createClient()` (NOT admin). Pre-localized title/body server-side per `profiles.language` (resolved via `getLocale()`) with NL safety-net fallback. Resolved image_path → public URL once per row via `supabase.storage.from('news-images').getPublicUrl(row.image_path)` in a closure-scoped helper. Filtered the unread overlay queue in TS via Set lookup against dismissalIds, then `.slice().reverse()` to flip recent-first → oldest-first per DELIVER-01 / D-17. Wrapped the existing bare `<RefreshButton />` in a `flex items-center gap-3` container with `<NewsMegaphoneButton unreadCount={...} archiveItems={...} />` immediately to its left (ARCH-01). Mounted `<NewsOverlay items={unreadItems} />` as the last child sibling of the outer page div (DELIVER-01 — overlay self-mounts as `fixed inset-0`). All existing logic preserved verbatim: getDateRange, getOverviewStats(client.id, …), getDailyStats(client.id, …), OverzichtDashboard rendering, dynamic = 'force-dynamic', metadata export, getClientBranding redirect-on-null. Two-query pattern over subquery interpolation deliberately chosen per D-17 (avoids template-string UUID interpolation; type-safe Set filter is mechanically equivalent). All 17 acceptance grep gates pass strictly; `npx tsc --noEmit` passes silently project-wide. Zero deviations from the plan; only the import combination of `Locale` + `Translator` into one `import type` line was a cosmetic adjustment.
-Stopped at: 10-05 done — Wave 3 fully complete. Wave 4 (10-06 manual smoke verification, autonomous: false) is the only remaining plan to close out Phase 10 and milestone v1.1. After 10-06 the milestone v1.1 News Broadcasting is fully shipped.
-Next action: `/gsd-execute-phase 10` — execute 10-06 (manual smoke across operator + client roles, tri-locale rendering, RLS sanity).
+Stopped at: v1.1 SHIPPED. Phase 10 closed with 12-step smoke verified live; 3 UX issues surfaced + fixed inline (commit `0bdedb2`): defaultValue + key={row.id} on NewsForm to fix soft-nav RHF defaultValues race, removed unread badge from megaphone (overlay-on-open makes it always-zero), megaphone alignment items-center → items-start with gap-2 to align with RefreshButton's actual button instead of its taller wrapper.
+Next action: `/gsd-complete-milestone` to archive v1.1 + prep for next version.
 
 ---
 *Milestone switched: 2026-04-29 — v1.0 (shipped) → v1.1 News Broadcasting*

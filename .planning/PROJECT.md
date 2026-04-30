@@ -24,12 +24,13 @@ Clients can see their campaign performance and reply to positive leads directly 
 - ✓ Instantly.ai API integration for campaign data, replies, and email sending — v1.0
 - ✓ Role-based authentication (operator vs. client) — v1.0
 - ✓ Meetings page (external URL redirect per client) — v1.0
+- ✓ News Broadcasting — operator-broadcast multilingual (NL/EN/Hindi) news with overlay-on-open + persistent per-user dismissal + megaphone sidebar archive — v1.1
 
 ### Active
 
-- News Broadcasting — operator-broadcast multilingual announcements with overlay-on-open + sidebar archive (v1.1)
+(None yet — define with `/gsd-new-milestone`)
 
-## Current Milestone: v1.1 News Broadcasting
+## Current Milestone: v1.1 News Broadcasting (SHIPPED 2026-04-30)
 
 **Goal:** Operators can broadcast multilingual news/announcements to all client dashboards via a persistent overlay-on-open + sidebar archive, with controlled retraction.
 
@@ -115,4 +116,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-29 — started milestone v1.1 News Broadcasting*
+*Last updated: 2026-04-30 — milestone v1.1 News Broadcasting SHIPPED (Phases 9 + 10 complete)*
