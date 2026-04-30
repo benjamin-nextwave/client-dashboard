@@ -77,7 +77,22 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
   3. A megaphone button appears in the client topbar immediately to the left of the existing "Ververs data" button
   4. Clicking the megaphone opens a sidebar listing all currently-published (non-withdrawn) news items, most-recent first, each showing title + short text preview
   5. Clicking a sidebar item displays the full news content (image + title + body) in the active language; if the operator withdraws an item, it disappears from any active overlay queue and from the sidebar within one page reload
-**Plans**: TBD
+**Plans**: 6 plans across 4 waves
+
+**Wave 1** *(parallel — independent)*:
+- [ ] 10-01-PLAN.md — i18n keys: extend Translations interface + add `client.news.*` namespace to nl/en/hi
+- [ ] 10-02-PLAN.md — Server action: dismissNewsItem (request-scoped client; reads user_id server-side; idempotent upsert into news_dismissals)
+
+**Wave 2** *(blocked on Wave 1 — file-disjoint, parallel)*:
+- [ ] 10-03-PLAN.md — Component: NewsOverlay (queue + single-button dismiss; no Esc/backdrop close; body scroll lock; brand-color CTA)
+- [ ] 10-04-PLAN.md — Components: NewsMegaphoneButton + NewsSidebar (outlined icon button with unread badge; right slide-in panel with list↔detail; standard close conventions)
+
+**Wave 3** *(blocked on Wave 2)*:
+- [ ] 10-05-PLAN.md — Wire dashboard/page.tsx: two server-side queries (archive + dismissals), pre-localize per profiles.language, resolve image_url via getPublicUrl, render NewsMegaphoneButton left of RefreshButton + NewsOverlay as sibling
+
+**Wave 4** *(blocked on Wave 3 — autonomous: false, manual smoke)*:
+- [ ] 10-06-PLAN.md — End-to-end manual verification against live DB across two roles (operator + client) covering all 9 requirements + tri-locale rendering + RLS sanity
+
 **UI hint**: yes
 
 ## Progress
@@ -93,8 +108,8 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 | 7. Contact Preview & Sent Emails | v1.0 | 2/2 | Complete | 2026-02-15 |
 | 8. Polish & Error Monitoring | v1.0 | 2/2 | Complete | 2026-02-15 |
 | 9. News Authoring & Schema | v1.1 | 6/6 | Complete | 2026-04-30 |
-| 10. Client News Delivery & Archive | v1.1 | 0/0 | Not started | — |
+| 10. Client News Delivery & Archive | v1.1 | 0/6 | Ready to execute | — |
 
 ---
 *Roadmap created: 2026-02-15*
-*Last updated: 2026-04-30 — Phase 9 closed (all 6 plans complete + live smoke verified)*
+*Last updated: 2026-04-30 — Phase 10 plans created (6 plans across 4 waves)*

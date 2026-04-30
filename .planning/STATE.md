@@ -10,10 +10,10 @@ See: .planning/PROJECT.md (updated 2026-04-29)
 
 ## Current Position
 
-Phase: 10 — Client News Delivery & Archive (not started)
-Plan: —
-Status: Phase 9 COMPLETE — all 6/6 plans landed, migration deployed live via Supabase Studio, end-to-end smoke verified (operator can create/edit/publish/withdraw news with multilingual content + image; publish gate, soft-delete, status badges, preview modal all work against live DB). Bug fixed during smoke: `export type { Locale }` from a `'use server'` file → ReferenceError on client dashboard (`040a936`). Ready to spec Phase 10 (client-side overlay + sidebar — DELIVER-01..05 + ARCH-01..04).
-Last activity: 2026-04-30 — Phase 9 closed; smoke verified; live DB now contains news_items + news_dismissals + news-images bucket with RLS.
+Phase: 10 — Client News Delivery & Archive
+Plan: 0/6 complete
+Status: Ready to execute (SPEC + CONTEXT + 6 plans across 4 waves locked, plan-checker passed; animations adjusted to use Tailwind 4 keyframes in globals.css since project doesn't have tailwindcss-animate)
+Last activity: 2026-04-30 — Phase 10 plans created and verified (6 plans, 4 waves)
 
 ## Milestone v1.0 Outcomes (archived)
 
@@ -94,9 +94,9 @@ No active blockers.
 
 ## Session Continuity
 
-Last session: 2026-04-30 — Phase 9 closed (all 6 plans + live smoke verified). Migration deployed via Supabase Studio Option B (due to pre-existing migration drift on 20 unrelated migrations). `migration repair --status applied 20260429000002` registered the version. End-to-end smoke verified: create / edit / publish gate / withdraw / preview modal / image upload (incl. SVG rejection) all pass against live DB. Bug fixed during smoke: `export type { Locale }` from `'use server'` file → ReferenceError on client dashboard (`040a936`).
-Stopped at: Phase 9 fully complete; Phase 10 not started.
-Next action: `/gsd-spec-phase 10` — lock client-side delivery + sidebar requirements (DELIVER-01..05, ARCH-01..04).
+Last session: 2026-04-30 — Phase 10 SPEC + CONTEXT + 6 plans created. Plan-checker passed with 4 non-blocking warnings; 2 animation-related warnings addressed (Tailwind 4 keyframes added to plan 10-04 Task 0 — slideInFromRight; overlay uses existing animate-fadeIn). User delegated all implementation choices ("vertrouw dat jij de beste keuzes kan maken voor gebruikersvriendelijkheid en professionele uitstraling"); 28 decisions documented in CONTEXT.md.
+Stopped at: Plans verified, ready for execute-phase.
+Next action: `/gsd-execute-phase 10` — waves 1-3 autonomous (i18n + dismissAction + 3 components + dashboard wiring), wave 4 manual smoke verify.
 
 ---
 *Milestone switched: 2026-04-29 — v1.0 (shipped) → v1.1 News Broadcasting*
