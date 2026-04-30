@@ -64,6 +64,7 @@ export default async function EditNewsPage({ params }: EditNewsPageProps) {
       <EditNewsHeader statusLabel={statusLabel} />
 
       <NewsForm
+        key={row.id}
         action={boundUpdate}
         isEditing
         currentImageUrl={currentImageUrl}

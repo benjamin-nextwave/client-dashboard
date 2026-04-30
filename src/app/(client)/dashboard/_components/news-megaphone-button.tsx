@@ -8,30 +8,25 @@ import { NewsSidebar, type NewsSidebarItem } from './news-sidebar'
 // NewsMegaphoneButton — outlined icon-button + slide-in sidebar (ARCH-01..04).
 //
 // Owns the sidebar's open/close state internally so the dashboard page only
-// needs to drop <NewsMegaphoneButton unreadCount={...} archiveItems={...} />
-// next to <RefreshButton />.
+// needs to drop <NewsMegaphoneButton archiveItems={...} /> next to
+// <RefreshButton />.
 //
 // Visual treatment is deliberately SECONDARY (outlined neutral, NOT brand-
 // colored) — the brand-color CTA is reserved for primary actions like
-// RefreshButton. The unread badge is the visual signal for unread news.
+// RefreshButton. No unread badge: every published item is shown immediately
+// as a full-screen overlay on dashboard open, so an "unread count" badge
+// would always be 0 in practice (overlay forces dismissal-on-sight).
 // =============================================================================
 
 export interface NewsMegaphoneButtonProps {
-  unreadCount: number
   archiveItems: NewsSidebarItem[]
 }
 
 export function NewsMegaphoneButton({
-  unreadCount,
   archiveItems,
 }: NewsMegaphoneButtonProps) {
   const t = useT()
   const [open, setOpen] = useState(false)
-
-  // Cap displayed badge count per D-13: counts greater than nine collapse to
-  // the literal token below, keeping the badge visually compact.
-  const badgeLabel = unreadCount > 9 ? '9+' : String(unreadCount)
-  const showBadge = unreadCount > 0
 
   return (
     <>
@@ -39,17 +34,9 @@ export function NewsMegaphoneButton({
         type="button"
         onClick={() => setOpen(true)}
         aria-label={t('client.news.megaphoneAriaLabel')}
-        className="relative inline-flex items-center justify-center rounded-xl border border-gray-200 bg-white px-3 py-3 text-gray-600 shadow-sm transition-all hover:bg-gray-50 hover:text-gray-900"
+        className="inline-flex items-center justify-center rounded-xl border border-gray-200 bg-white px-3 py-3 text-gray-600 shadow-sm transition-all hover:bg-gray-50 hover:text-gray-900"
       >
         <MegaphoneIcon />
-        {showBadge && (
-          <span
-            className="absolute -right-1 -top-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold leading-none text-white"
-            aria-hidden="true"
-          >
-            {badgeLabel}
-          </span>
-        )}
       </button>
 
       <NewsSidebar

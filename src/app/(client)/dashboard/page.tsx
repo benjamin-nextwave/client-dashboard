@@ -190,13 +190,10 @@ export default async function OverzichtPage({
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex items-start justify-between">
         <h1 className="text-2xl font-bold text-gray-900">{t('overview.title')}</h1>
-        <div className="flex items-center gap-3">
-          <NewsMegaphoneButton
-            unreadCount={unreadItems.length}
-            archiveItems={archiveItems}
-          />
+        <div className="flex items-start gap-2">
+          <NewsMegaphoneButton archiveItems={archiveItems} />
           <RefreshButton />
         </div>
       </div>

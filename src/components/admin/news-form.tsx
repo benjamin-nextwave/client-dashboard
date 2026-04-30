@@ -247,6 +247,7 @@ export function NewsForm({
                     id={`title_${lang}`}
                     type="text"
                     maxLength={200}
+                    defaultValue={defaultValues?.[`title_${lang}`] ?? ''}
                     {...register(`title_${lang}` as const)}
                     className={inputClass(!!errors[`title_${lang}` as const])}
                   />
@@ -260,6 +261,7 @@ export function NewsForm({
                     id={`body_${lang}`}
                     rows={10}
                     maxLength={10000}
+                    defaultValue={defaultValues?.[`body_${lang}`] ?? ''}
                     {...register(`body_${lang}` as const)}
                     className={inputClass(!!errors[`body_${lang}` as const]) + ' resize-y'}
                   />
