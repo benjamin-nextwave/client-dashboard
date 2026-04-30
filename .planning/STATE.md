@@ -10,10 +10,10 @@ See: .planning/PROJECT.md (updated 2026-04-29)
 
 ## Current Position
 
-Phase: 9 — News Authoring & Schema
-Plan: 5/6 complete
-Status: Wave 4 complete — 09-05 (3 route pages + 3 chrome client components + operator-header NAV refactor) landed. The full operator authoring flow is wired end-to-end: list at /admin/news, create at /admin/news/new, edit + status-aware action panel at /admin/news/[id]/edit, plus a localized "Nieuws" nav entry in the operator header. Build compiles cleanly; live verification waits on 09-06 (BLOCKING: supabase db push). Wave 5 plan 09-06 (manual: 1 task, autonomous=false) is the only remaining Phase 9 work.
-Last activity: 2026-04-29 — 09-05 written: `src/app/(operator)/admin/news/page.tsx` (server-component list, force-dynamic, getPublicUrl), `src/app/(operator)/admin/news/new/page.tsx` (create), `src/app/(operator)/admin/news/[id]/edit/page.tsx` (edit + bound updateNewsItem), three client-component chrome files in `src/app/(operator)/admin/news/_components/` (news-list-chrome, news-page-headers, news-item-action-panel), and operator-header.tsx refactored to host an in-component NAV with localized "Nieuws" entry between Overzicht and Fouten.
+Phase: 10 — Client News Delivery & Archive (not started)
+Plan: —
+Status: Phase 9 COMPLETE — all 6/6 plans landed, migration deployed live via Supabase Studio, end-to-end smoke verified (operator can create/edit/publish/withdraw news with multilingual content + image; publish gate, soft-delete, status badges, preview modal all work against live DB). Bug fixed during smoke: `export type { Locale }` from a `'use server'` file → ReferenceError on client dashboard (`040a936`). Ready to spec Phase 10 (client-side overlay + sidebar — DELIVER-01..05 + ARCH-01..04).
+Last activity: 2026-04-30 — Phase 9 closed; smoke verified; live DB now contains news_items + news_dismissals + news-images bucket with RLS.
 
 ## Milestone v1.0 Outcomes (archived)
 
@@ -94,10 +94,10 @@ No active blockers.
 
 ## Session Continuity
 
-Last session: 2026-04-29 — Plan 09-05 executed (3 route pages + 3 chrome client components + 1 modified header). Four task commits: `066915a` (list page + NewsListChrome), `4f2b019` (new page + page-headers), `bd5f949` (edit page + action panel), `cddffb8` (operator-header Nieuws nav).
-Stopped at: Wave 4 complete (09-05 landed). Only Wave 5 plan 09-06 (BLOCKING manual `supabase db push --linked` + end-to-end smoke verification) remains in Phase 9. 09-06 is autonomous=false (requires user to run the live DB push command and verify the flow against real DB state).
-Next action: Execute plan 09-06 — manual schema push + smoke test of the operator authoring flow end-to-end.
+Last session: 2026-04-30 — Phase 9 closed (all 6 plans + live smoke verified). Migration deployed via Supabase Studio Option B (due to pre-existing migration drift on 20 unrelated migrations). `migration repair --status applied 20260429000002` registered the version. End-to-end smoke verified: create / edit / publish gate / withdraw / preview modal / image upload (incl. SVG rejection) all pass against live DB. Bug fixed during smoke: `export type { Locale }` from `'use server'` file → ReferenceError on client dashboard (`040a936`).
+Stopped at: Phase 9 fully complete; Phase 10 not started.
+Next action: `/gsd-spec-phase 10` — lock client-side delivery + sidebar requirements (DELIVER-01..05, ARCH-01..04).
 
 ---
 *Milestone switched: 2026-04-29 — v1.0 (shipped) → v1.1 News Broadcasting*
-*Last updated: 2026-04-29 after plan 09-05 (routes: /admin/news list + new + edit + operator-header Nieuws nav)*
+*Last updated: 2026-04-30 after Phase 9 closeout (live smoke verified)*

@@ -25,7 +25,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 
 ### v1.1 News Broadcasting (Phases 9-10)
 
-- [ ] **Phase 9: News Authoring & Schema** — Operator-side news CRUD with multilingual content + image storage and database groundwork
+- [x] **Phase 9: News Authoring & Schema** — Operator-side news CRUD with multilingual content + image storage and database groundwork — completed 2026-04-30
 - [ ] **Phase 10: Client News Delivery & Archive** — Client-side overlay-on-open, persistent dismissal, and megaphone sidebar archive
 
 ## Phase Details
@@ -57,7 +57,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 - [x] 09-05-PLAN.md — Routes: /admin/news (list), /new (create), /[id]/edit (edit + action panel) + Nieuws nav link — completed 2026-04-29 (`066915a` + `4f2b019` + `bd5f949` + `cddffb8`)
 
 **Wave 5** *(blocked on Waves 1-4 — autonomous: false, manual smoke verification)*:
-- [ ] 09-06-PLAN.md — [BLOCKING] supabase db push --linked + end-to-end smoke verification
+- [x] 09-06-PLAN.md — Migration deployed via Supabase Studio (Option B, due to pre-existing migration drift in other files), `migration repair` registered the version. End-to-end smoke verified — all NEWS-01..06 acceptance criteria pass live. Bug surfaced + fixed: `export type { Locale }` from `'use server'` file (`040a936`). — completed 2026-04-30
 
 **Cross-cutting constraints** (truths that appear in 2+ plans):
 - Server-authoritative publish gate: all 6 language fields must be non-empty before status transitions to `published` (newsPublishSchema refine + DB re-read in publishNewsItem)
@@ -92,9 +92,9 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 | 6. CSV Import/Export & DNC Management | v1.0 | 4/4 | Complete | 2026-02-15 |
 | 7. Contact Preview & Sent Emails | v1.0 | 2/2 | Complete | 2026-02-15 |
 | 8. Polish & Error Monitoring | v1.0 | 2/2 | Complete | 2026-02-15 |
-| 9. News Authoring & Schema | v1.1 | 5/6 | In progress | — |
+| 9. News Authoring & Schema | v1.1 | 6/6 | Complete | 2026-04-30 |
 | 10. Client News Delivery & Archive | v1.1 | 0/0 | Not started | — |
 
 ---
 *Roadmap created: 2026-02-15*
-*Last updated: 2026-04-29 — Phase 9 plan 09-05 complete (routes: /admin/news list + new + edit + operator-header Nieuws nav)*
+*Last updated: 2026-04-30 — Phase 9 closed (all 6 plans complete + live smoke verified)*
