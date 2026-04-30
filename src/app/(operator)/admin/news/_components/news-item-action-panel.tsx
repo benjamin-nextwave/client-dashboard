@@ -76,7 +76,7 @@ export function NewsItemActionPanel({ newsItemId, status }: NewsItemActionPanelP
         Acties
       </div>
       <div className="flex flex-wrap gap-2">
-        {status === 'draft' && (
+        {(status === 'draft' || status === 'withdrawn') && (
           <button
             type="button"
             onClick={onPublish}
