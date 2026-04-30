@@ -130,7 +130,7 @@ export function NewsCard({ item }: NewsCardProps) {
           >
             {t('operator.news.cardEditAction')}
           </Link>
-          {item.status === 'draft' && (
+          {(item.status === 'draft' || item.status === 'withdrawn') && (
             <button
               type="button"
               onClick={onPublish}
@@ -150,7 +150,6 @@ export function NewsCard({ item }: NewsCardProps) {
               {pending ? t('operator.news.withdrawing') : t('operator.news.cardWithdrawAction')}
             </button>
           )}
-          {/* withdrawn: only Edit action visible (no further state transition in Phase 9) */}
         </div>
       </div>
     </div>

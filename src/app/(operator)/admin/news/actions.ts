@@ -172,9 +172,9 @@ export async function publishNewsItem(
     return { error: `Nieuwsbericht niet gevonden: ${readError?.message ?? 'onbekend'}` }
   }
 
-  // Only drafts can be published. (Republishing a withdrawn item is a Phase-10/v1.2 flow.)
-  if (row.status !== 'draft') {
-    return { error: `Alleen concepten kunnen worden gepubliceerd (status: ${row.status}).` }
+  // Drafts and withdrawn items can be (re)published. Already-published rows reject.
+  if (row.status !== 'draft' && row.status !== 'withdrawn') {
+    return { error: `Alleen concepten of ingetrokken berichten kunnen worden gepubliceerd (status: ${row.status}).` }
   }
 
   // Step 2: Validate against publish gate.
@@ -194,15 +194,27 @@ export async function publishNewsItem(
     return { error: message }
   }
 
-  // Step 3: Transition status.
+  // Step 3: Transition status. Stamp fresh published_at (re-publish should bring
+  // the item back to the top of the recency-sorted sidebar) and clear withdrawn_at
+  // (it's no longer withdrawn).
   const { error: updateError } = await supabase
     .from('news_items')
-    .update({ status: 'published', published_at: new Date().toISOString() })
+    .update({
+      status: 'published',
+      published_at: new Date().toISOString(),
+      withdrawn_at: null,
+    })
     .eq('id', newsItemId)
 
   if (updateError) {
     return { error: `Publiceren mislukt: ${updateError.message}` }
   }
+
+  // Step 4: Clear any prior dismissals for this item so re-publishing brings the
+  // overlay back for users who dismissed the previous publication. For an
+  // initial draft → published transition this is a harmless no-op (no prior
+  // dismissals exist yet).
+  await supabase.from('news_dismissals').delete().eq('news_item_id', newsItemId)
 
   revalidatePath('/admin/news')
   revalidatePath(`/admin/news/${newsItemId}/edit`)
