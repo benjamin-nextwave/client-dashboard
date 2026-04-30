@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getContactsPage, getContactColumns } from '@/lib/data/contacts-data'
 import { ContactsTable } from './_components/contacts-table'
+import { getTranslator } from '@/lib/i18n/server'
 
 export const dynamic = 'force-dynamic'
 
@@ -27,9 +28,11 @@ export default async function ContactenPage({ searchParams }: ContactenPageProps
     getContactColumns(clientId),
   ])
 
+  const t = await getTranslator()
+
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold text-gray-900">Contacten</h1>
+      <h1 className="mb-6 text-2xl font-bold text-gray-900">{t('contacts.title')}</h1>
       <ContactsTable
         contacts={contacts.map((c) => ({ id: c.id, data: c.data }))}
         columns={columns}

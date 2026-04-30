@@ -1,7 +1,10 @@
 'use client'
 
 import { format } from 'date-fns'
-import { nl } from 'date-fns/locale'
+import { nl, enUS, hi } from 'date-fns/locale'
+import { useT, useLocale } from '@/lib/i18n/client'
+
+const DATE_LOCALES = { nl, en: enUS, hi }
 
 interface ThreadMessageProps {
   fromAddress: string
@@ -21,9 +24,12 @@ export function ThreadMessage({
   timestamp,
   isFromClient,
 }: ThreadMessageProps) {
+  const t = useT()
+  const locale = useLocale()
+  const dateLocale = DATE_LOCALES[locale] ?? nl
   const formattedDate = (() => {
     try {
-      return format(new Date(timestamp), 'dd MMM yyyy, HH:mm', { locale: nl })
+      return format(new Date(timestamp), 'dd MMM yyyy, HH:mm', { locale: dateLocale })
     } catch {
       return timestamp
     }
@@ -69,7 +75,7 @@ export function ThreadMessage({
             {bodyText}
           </pre>
         ) : (
-          <p className="text-sm italic opacity-60">Geen inhoud</p>
+          <p className="text-sm italic opacity-60">{t('inbox.threadEmpty')}</p>
         )}
       </div>
     </div>

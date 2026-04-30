@@ -2,47 +2,43 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-15)
+See: .planning/PROJECT.md (updated 2026-04-30)
 
-**Core value:** Clients can see their campaign performance and reply to positive leads directly from their branded dashboard -- keeping the entire outreach workflow in one place.
+**Core value:** Clients can see their campaign performance and reply to positive leads directly from their branded dashboard — keeping the entire outreach workflow in one place.
 
-**Current focus:** v1.0 MVP shipped — planning next milestone
+**Current focus:** v1.1 SHIPPED — awaiting next milestone
 
 ## Current Position
 
-Phase: 8 of 8 (all complete)
-Plan: 25 of 25 (all complete)
-Status: v1.0 SHIPPED
-Last activity: 2026-02-15 -- v1.0 milestone completed
+Phase: 10 of 10 (all complete)
+Plan: 12 of 12 (all complete across Phases 9 + 10)
+Status: v1.1 SHIPPED + archived
+Last activity: 2026-04-30 — v1.1 News Broadcasting milestone closed; phase directories moved to .planning/milestones/v1.1-phases/
 
-Progress: [█████████████████████████] 25/25 total plans complete
-
-## Performance Metrics
+## Milestone v1.0 Outcomes (archived)
 
 **Velocity:**
 - Total plans completed: 25
 - Average duration: ~3.2 min
 - Total execution time: ~81 min
+- 38/38 v1 requirements shipped
 
-**By Phase:**
+See `.planning/MILESTONES.md` and `.planning/milestones/v1.0-ROADMAP.md` for full v1.0 history.
 
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 01-foundation-multi-tenancy | 3/3 | ~20 min | ~7 min |
-| 02-operator-admin-core | 3/3 | ~10 min | ~3 min |
-| 03-client-dashboard-shell-branding | 2/2 | ~5 min | ~2.5 min |
-| 04-instantly-ai-integration-campaign-stats | 5/5 | ~9 min | ~1.8 min |
-| 05-inbox-reply-functionality | 4/4 | ~8 min | ~2 min |
-| 06-csv-import-export-dnc-management | 4/4 | ~13 min | ~3.3 min |
-| 07-contact-preview-sent-emails | 2/2 | ~9 min | ~4.5 min |
-| 08-polish-error-monitoring | 2/2 | ~6 min | ~3 min |
+## Milestone v1.1 Outcomes (archived)
+
+**Velocity:**
+- Total plans completed: 12
+- Timeline: 2026-04-29 → 2026-04-30 (two-day cycle)
+- 15/15 v1.1 requirements shipped + live-verified
+
+See `.planning/MILESTONES.md` and `.planning/milestones/v1.1-ROADMAP.md` for full v1.1 history.
 
 ## Accumulated Context
 
 ### Decisions
 
-Decisions are logged in PROJECT.md Key Decisions table.
-All v1.0 decisions reviewed and marked with outcomes at milestone completion.
+Decisions are logged in PROJECT.md Key Decisions table. See `.planning/milestones/v1.1-ROADMAP.md` for milestone-scoped decisions.
 
 ### Pending Todos
 
@@ -50,19 +46,23 @@ None.
 
 ### Blockers/Concerns
 
-No active blockers. v1.0 shipped.
+No active blockers carried into the next milestone.
 
-**Known items for future milestones:**
+**Known items carried from v1.0:**
 - CSV processing at scale (20k+ rows) relies on client-side PapaParse — monitor for edge cases
 - Instantly API rate limits (500ms inter-campaign delay) may need tuning under heavier load
 - Custom Access Token Hook requires manual Supabase Dashboard setup per deployment
 
+**Tech debt added by v1.1:**
+- Pre-existing migration drift on the linked Supabase project — 20 migrations from April 10 onwards exist as files locally but `supabase_migrations.schema_migrations` doesn't have them recorded. Future `supabase db push --linked` runs will re-attempt them. Run `supabase migration repair --status applied <each-version>` to reconcile before the next milestone needs migrations.
+- `NewsContentRenderer` lives in `src/components/admin/news-preview-modal.tsx` but is used by both operator (admin preview) and client (overlay + sidebar detail). Naming wart only; future cleanup could move to `src/components/news/content-renderer.tsx`.
+
 ## Session Continuity
 
-Last session: 2026-02-15 (v1.0 MILESTONE COMPLETE)
-Stopped at: Milestone archival complete
-Next action: `/gsd:new-milestone` for next version
+Last session: 2026-04-30 — milestone v1.1 closed (12 plans across Phases 9 + 10, all live-verified). Archives created at `.planning/milestones/v1.1-ROADMAP.md` + `v1.1-REQUIREMENTS.md` + `v1.1-phases/`. ROADMAP.md collapsed to one-line summary entries. REQUIREMENTS.md removed via `git rm` (fresh file will be created by `/gsd-new-milestone`).
+Stopped at: v1.1 milestone fully shipped + archived; ready for next milestone.
+Next action: `/gsd-new-milestone` to start the next cycle (questioning → research → requirements → roadmap).
 
 ---
-*State initialized: 2026-02-15*
-*Last updated: 2026-02-15 after v1.0 milestone completion*
+*Milestone shipped: 2026-04-30 — v1.1 News Broadcasting (12 plans, 15 requirements)*
+*Last updated: 2026-04-30 after v1.1 milestone close*

@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { getClientBranding } from '@/lib/client/get-client-branding'
 import { createClient } from '@/lib/supabase/server'
 import { PreferencesForm } from './_components/preferences-form'
+import { getTranslator } from '@/lib/i18n/server'
 
 export const metadata: Metadata = { title: 'Instellingen & uitleg' }
 export const dynamic = 'force-dynamic'
@@ -27,12 +28,12 @@ export default async function VoorkeurenPage() {
     .eq('id', client.id)
     .single()
 
+  const t = await getTranslator()
+
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900">Instellingen & uitleg</h1>
-      <p className="mt-1 text-sm text-gray-600">
-        Beheer uw accountinstellingen en bekijk uitlegvideo&apos;s.
-      </p>
+      <h1 className="text-2xl font-bold text-gray-900">{t('settings.title')}</h1>
+      <p className="mt-1 text-sm text-gray-600">{t('settings.description')}</p>
 
       <div className="mt-6 space-y-6">
         <PreferencesForm
@@ -45,18 +46,16 @@ export default async function VoorkeurenPage() {
       </div>
 
       <div className="mt-10">
-        <h2 className="text-lg font-bold text-gray-900">Uitlegvideo&apos;s</h2>
-        <p className="mt-1 text-sm text-gray-600">
-          Bekijk onderstaande video&apos;s voor een uitleg over de verschillende onderdelen van het dashboard.
-        </p>
+        <h2 className="text-lg font-bold text-gray-900">{t('settings.helpSection')}</h2>
+        <p className="mt-1 text-sm text-gray-600">{t('settings.helpDescription')}</p>
 
         <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
           {[
-            { title: 'Algemene dashboard uitleg', id: 'b38fb5e422e947df8e3e3632c7093ffd' },
-            { title: 'Reageren op mails', id: '41fbd7812a784bcea74b8e791ddb7279' },
-            { title: 'Inloggen in de inbox', id: '87e25d43233745d8bd3771c71706389f' },
+            { title: t('settings.videoGeneral'), id: 'b38fb5e422e947df8e3e3632c7093ffd' },
+            { title: t('settings.videoReply'), id: '41fbd7812a784bcea74b8e791ddb7279' },
+            { title: t('settings.videoInbox'), id: '87e25d43233745d8bd3771c71706389f' },
           ].map((video) => (
-            <div key={video.title} className="overflow-hidden rounded-lg bg-white shadow-sm">
+            <div key={video.id} className="overflow-hidden rounded-lg bg-white shadow-sm">
               <div className="px-5 py-3">
                 <h3 className="text-sm font-semibold text-gray-900">{video.title}</h3>
               </div>

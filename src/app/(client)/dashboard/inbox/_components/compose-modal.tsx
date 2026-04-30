@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { composeNewEmail } from '@/lib/actions/inbox-actions'
 import type { InboxLead } from '@/lib/data/inbox-data'
+import { useT } from '@/lib/i18n/client'
 
 const composeSchema = z.object({
   subject: z.string().min(1, 'Onderwerp is verplicht'),
@@ -25,6 +26,7 @@ export function ComposeModal({
   onClose,
   leads,
 }: ComposeModalProps) {
+  const t = useT()
   const [isPending, startTransition] = useTransition()
   const [selectedLead, setSelectedLead] = useState<InboxLead | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
@@ -105,27 +107,27 @@ export function ComposeModal({
           type="button"
           onClick={handleClose}
           className="absolute right-4 top-4 text-gray-400 hover:text-gray-600"
-          aria-label="Sluiten"
+          aria-label={t('common.close')}
         >
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
 
-        <h2 className="mb-4 text-lg font-semibold text-gray-900">Nieuwe e-mail</h2>
+        <h2 className="mb-4 text-lg font-semibold text-gray-900">{t('inbox.composeNew')}</h2>
 
         {!selectedLead ? (
           <div>
             <input
               type="text"
-              placeholder="Zoek op naam, e-mail of bedrijf..."
+              placeholder={t('inbox.searchPlaceholderFull')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="mb-3 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
             <div className="max-h-64 overflow-y-auto rounded-md border border-gray-200">
               {filteredLeads.length === 0 ? (
-                <p className="p-4 text-center text-sm text-gray-500">Geen leads gevonden.</p>
+                <p className="p-4 text-center text-sm text-gray-500">{t('inbox.noResultsForSearch')}</p>
               ) : (
                 filteredLeads.map((lead) => {
                   const name = [lead.first_name, lead.last_name].filter(Boolean).join(' ') || lead.email
@@ -149,14 +151,14 @@ export function ComposeModal({
         ) : (
           <div>
             <div className="mb-4 flex items-center gap-2 rounded-md bg-gray-50 px-3 py-2">
-              <span className="text-xs text-gray-500">Aan:</span>
+              <span className="text-xs text-gray-500">{t('inbox.composeRecipient')}:</span>
               <span className="text-sm font-medium text-gray-900">{selectedLead.email}</span>
               <button
                 type="button"
                 onClick={() => setSelectedLead(null)}
                 className="ml-auto text-xs text-gray-400 hover:text-gray-600"
               >
-                Wijzig
+                {t('common.edit')}
               </button>
             </div>
 
@@ -175,7 +177,7 @@ export function ComposeModal({
             <form onSubmit={handleSubmit(onSubmit)}>
               <div className="mb-3">
                 <label htmlFor="compose-subject" className="mb-1 block text-xs font-medium text-gray-600">
-                  Onderwerp
+                  {t('inbox.composeSubject')}
                 </label>
                 <input
                   id="compose-subject"
@@ -188,14 +190,14 @@ export function ComposeModal({
 
               <div className="mb-4">
                 <label htmlFor="compose-body" className="mb-1 block text-xs font-medium text-gray-600">
-                  Bericht
+                  {t('inbox.composeBody')}
                 </label>
                 <textarea
                   id="compose-body"
                   rows={6}
                   {...register('body')}
                   className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  placeholder="Typ uw bericht..."
+                  placeholder={t('inbox.replyPlaceholder')}
                 />
                 {errors.body && <p className="mt-1 text-xs text-red-600">{errors.body.message}</p>}
               </div>
@@ -206,14 +208,14 @@ export function ComposeModal({
                   onClick={handleClose}
                   className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                 >
-                  Annuleren
+                  {t('common.cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={isPending}
                   className="rounded-md bg-[var(--brand-color)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 transition-opacity disabled:opacity-50"
                 >
-                  {isPending ? 'Versturen...' : 'Versturen'}
+                  {isPending ? t('inbox.sendingReply') : t('inbox.sendReply')}
                 </button>
               </div>
             </form>

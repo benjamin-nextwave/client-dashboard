@@ -4,8 +4,10 @@ import { useState } from 'react'
 import { removeDncEntry } from '@/lib/actions/dnc-actions'
 import type { DncEntry } from '@/lib/actions/dnc-actions'
 import { EmptyState } from '@/components/ui/empty-state'
+import { useT } from '@/lib/i18n/client'
 
 export function DncList({ entries }: { entries: DncEntry[] }) {
+  const t = useT()
   const [feedback, setFeedback] = useState<{
     type: 'success' | 'error'
     message: string
@@ -21,7 +23,7 @@ export function DncList({ entries }: { entries: DncEntry[] }) {
     if ('error' in result) {
       setFeedback({ type: 'error', message: result.error })
     } else {
-      setFeedback({ type: 'success', message: 'Vermelding verwijderd.' })
+      setFeedback({ type: 'success', message: t('common.saved') })
     }
 
     setRemoving(null)
@@ -38,8 +40,8 @@ export function DncList({ entries }: { entries: DncEntry[] }) {
             <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
           </svg>
         }
-        title="Geen DNC-vermeldingen"
-        description="Voeg e-mailadressen of domeinen toe die u wilt uitsluiten van campagnes."
+        title={t('dnc.listEmpty')}
+        description={t('dnc.description')}
       />
     )
   }
@@ -63,16 +65,16 @@ export function DncList({ entries }: { entries: DncEntry[] }) {
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                Type
+                {t('contacts.columnStatus')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                Waarde
+                {t('common.view')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                Toegevoegd op
+                {t('sent.columnDate')}
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
-                Actie
+                {t('common.delete')}
               </th>
             </tr>
           </thead>
@@ -80,7 +82,7 @@ export function DncList({ entries }: { entries: DncEntry[] }) {
             {entries.map((entry) => (
               <tr key={entry.id}>
                 <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
-                  {entry.entry_type === 'email' ? 'E-mail' : 'Domein'}
+                  {entry.entry_type === 'email' ? t('dnc.typeEmail') : t('dnc.typeDomain')}
                 </td>
                 <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
                   {entry.value}
@@ -94,7 +96,7 @@ export function DncList({ entries }: { entries: DncEntry[] }) {
                     disabled={removing === entry.id}
                     className="text-red-600 hover:text-red-800 disabled:opacity-50"
                   >
-                    {removing === entry.id ? 'Bezig...' : 'Verwijderen'}
+                    {removing === entry.id ? `${t('common.delete')}...` : t('common.delete')}
                   </button>
                 </td>
               </tr>

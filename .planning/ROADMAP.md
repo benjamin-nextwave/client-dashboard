@@ -3,6 +3,7 @@
 ## Milestones
 
 - ✅ **v1.0 MVP** — Phases 1-8 (shipped 2026-02-15)
+- ✅ **v1.1 News Broadcasting** — Phases 9-10 (shipped 2026-04-30)
 
 ## Phases
 
@@ -22,6 +23,16 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 
 </details>
 
+<details>
+<summary>✅ v1.1 News Broadcasting (Phases 9-10) — SHIPPED 2026-04-30</summary>
+
+- [x] Phase 9: News Authoring & Schema (6/6 plans) — completed 2026-04-30
+- [x] Phase 10: Client News Delivery & Archive (6/6 plans) — completed 2026-04-30
+
+Full details: `.planning/milestones/v1.1-ROADMAP.md`
+
+</details>
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -34,7 +45,9 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 | 6. CSV Import/Export & DNC Management | v1.0 | 4/4 | Complete | 2026-02-15 |
 | 7. Contact Preview & Sent Emails | v1.0 | 2/2 | Complete | 2026-02-15 |
 | 8. Polish & Error Monitoring | v1.0 | 2/2 | Complete | 2026-02-15 |
+| 9. News Authoring & Schema | v1.1 | 6/6 | Complete | 2026-04-30 |
+| 10. Client News Delivery & Archive | v1.1 | 6/6 | Complete | 2026-04-30 |
 
 ---
 *Roadmap created: 2026-02-15*
-*Last updated: 2026-02-15 after v1.0 milestone completion*
+*Last updated: 2026-04-30 — v1.1 milestone shipped + archived*

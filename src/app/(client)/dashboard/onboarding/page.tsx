@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { getClientBranding } from '@/lib/client/get-client-branding'
 import { createClient } from '@/lib/supabase/server'
 import { OnboardingTimeline } from './_components/onboarding-timeline'
+import { getTranslator } from '@/lib/i18n/server'
 
 export const metadata: Metadata = { title: 'Onboarding' }
 export const dynamic = 'force-dynamic'
@@ -11,6 +12,7 @@ export default async function OnboardingPage() {
   const client = await getClientBranding()
   if (!client) redirect('/login')
 
+  const t = await getTranslator()
   const supabase = await createClient()
 
   // Check if client is in onboarding
@@ -33,10 +35,8 @@ export default async function OnboardingPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="text-2xl font-bold text-gray-900">Onboarding</h1>
-      <p className="mt-2 text-sm text-gray-500">
-        Hieronder zie je de stappen die doorlopen worden om jouw campagne live te krijgen.
-      </p>
+      <h1 className="text-2xl font-bold text-gray-900">{t('onboarding.title')}</h1>
+      <p className="mt-2 text-sm text-gray-500">{t('onboarding.description')}</p>
 
       <OnboardingTimeline steps={steps ?? []} />
     </div>

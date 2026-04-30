@@ -1,11 +1,40 @@
 import Link from 'next/link'
 import { getClientList } from '@/lib/data/admin-stats'
+import { getActivityTimeline } from '@/lib/data/activity-timeline'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { ClientOverviewList } from './_components/client-overview-list'
 
 export const dynamic = 'force-dynamic'
 
+async function getOpenObjectionCounts(): Promise<{
+  campaignLeads: number
+  inboxLeads: number
+}> {
+  const admin = createAdminClient()
+  const [{ count: campaignCount }, { count: inboxCount }] = await Promise.all([
+    admin
+      .from('campaign_leads')
+      .select('id', { count: 'exact', head: true })
+      .eq('objection_status', 'pending'),
+    admin
+      .from('synced_leads')
+      .select('id', { count: 'exact', head: true })
+      .eq('objection_status', 'submitted'),
+  ])
+  return {
+    campaignLeads: campaignCount ?? 0,
+    inboxLeads: inboxCount ?? 0,
+  }
+}
+
 export default async function AdminPage() {
-  const clients = await getClientList()
+  const [clients, events, objectionCounts] = await Promise.all([
+    getClientList(),
+    getActivityTimeline(),
+    getOpenObjectionCounts(),
+  ])
+
+  const totalOpenObjections = objectionCounts.campaignLeads + objectionCounts.inboxLeads
 
   const activeCount = clients.filter((c) => c.status === 'active').length
   const onboardingCount = clients.filter((c) => c.status === 'onboarding').length
@@ -54,6 +83,86 @@ export default async function AdminPage() {
           </div>
         </div>
       </section>
+
+      {/* Pending objections notification */}
+      {totalOpenObjections > 0 && (
+        <Link
+          href="/admin/bezwaren"
+          className="group flex items-center justify-between gap-4 rounded-2xl border border-rose-200 bg-gradient-to-r from-rose-50 to-amber-50 px-6 py-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+        >
+          <div className="flex items-center gap-3">
+            <div className="relative flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-rose-500 text-white shadow-lg shadow-rose-500/30">
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+              </svg>
+              <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-gray-900 px-1 text-[10px] font-bold text-white shadow">
+                {totalOpenObjections}
+              </span>
+            </div>
+            <div>
+              <div className="text-sm font-semibold text-gray-900">
+                {totalOpenObjections} {totalOpenObjections === 1 ? 'bezwaar' : 'bezwaren'} wachten op beoordeling
+              </div>
+              <div className="text-xs text-gray-600">
+                {objectionCounts.campaignLeads > 0 && (
+                  <span>
+                    {objectionCounts.campaignLeads} op campagne {objectionCounts.campaignLeads === 1 ? 'lead' : 'leads'}
+                  </span>
+                )}
+                {objectionCounts.campaignLeads > 0 && objectionCounts.inboxLeads > 0 && ' · '}
+                {objectionCounts.inboxLeads > 0 && (
+                  <span>
+                    {objectionCounts.inboxLeads} op inbox {objectionCounts.inboxLeads === 1 ? 'lead' : 'leads'}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="inline-flex items-center gap-1 text-xs font-semibold text-rose-700 transition-transform group-hover:translate-x-0.5">
+            Behandelen
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+            </svg>
+          </div>
+        </Link>
+      )}
+
+      {/* Activity notification */}
+      {(() => {
+        const unseenCount = events.filter((e) => !e.seen).length
+        if (unseenCount === 0) return null
+        return (
+          <Link
+            href="/admin/overzicht"
+            className="group flex items-center justify-between gap-4 rounded-2xl border border-indigo-200 bg-gradient-to-r from-indigo-50 to-violet-50 px-6 py-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+          >
+            <div className="flex items-center gap-3">
+              <div className="relative flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-indigo-500 text-white shadow-lg shadow-indigo-500/30">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
+                </svg>
+                <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white shadow">
+                  {unseenCount}
+                </span>
+              </div>
+              <div>
+                <div className="text-sm font-semibold text-gray-900">
+                  {unseenCount} nieuwe {unseenCount === 1 ? 'activiteit' : 'activiteiten'}
+                </div>
+                <div className="text-xs text-gray-500">
+                  Bekijk de tijdlijn om te zien wat er is veranderd.
+                </div>
+              </div>
+            </div>
+            <div className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 transition-transform group-hover:translate-x-0.5">
+              Bekijken
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+              </svg>
+            </div>
+          </Link>
+        )
+      })()}
 
       {/* Client list */}
       {clients.length === 0 ? (

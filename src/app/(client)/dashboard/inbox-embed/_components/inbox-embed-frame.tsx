@@ -1,6 +1,9 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useTransition, useEffect } from 'react'
+import { requestInboxPasswordHelp } from '../actions'
+import { SAFARI_BANNER_HIDE_EVENT, SAFARI_BANNER_SHOW_EVENT } from '@/components/client/safari-banner'
+import { useT } from '@/lib/i18n/client'
 
 interface InboxEmbedFrameProps {
   proxyBaseUrl: string
@@ -8,12 +11,29 @@ interface InboxEmbedFrameProps {
 }
 
 export function InboxEmbedFrame({ proxyBaseUrl, targetHost }: InboxEmbedFrameProps) {
+  const t = useT()
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [iframeLoaded, setIframeLoaded] = useState(false)
+  const [helpPending, startHelp] = useTransition()
+  const [helpResult, setHelpResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+
+  // Verberg de Safari-banner zodra de inbox-login gelukt is, zodat de iframe
+  // hoger in beeld kan. Zet 'm terug wanneer de component unmount (bv. naar
+  // andere pagina navigeren).
+  useEffect(() => {
+    if (isLoggedIn) {
+      window.dispatchEvent(new Event(SAFARI_BANNER_HIDE_EVENT))
+    } else {
+      window.dispatchEvent(new Event(SAFARI_BANNER_SHOW_EVENT))
+    }
+    return () => {
+      window.dispatchEvent(new Event(SAFARI_BANNER_SHOW_EVENT))
+    }
+  }, [isLoggedIn])
 
   const handleLogin = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
@@ -52,8 +72,8 @@ export function InboxEmbedFrame({ proxyBaseUrl, targetHost }: InboxEmbedFramePro
               <svg className="mx-auto h-10 w-10 text-brand" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
               </svg>
-              <h2 className="mt-3 text-lg font-semibold text-gray-900">E-mail Inbox</h2>
-              <p className="mt-1 text-sm text-gray-600">Log in om je inbox te bekijken</p>
+              <h2 className="mt-3 text-lg font-semibold text-gray-900">{t('inbox.embedTitle')}</h2>
+              <p className="mt-1 text-sm text-gray-600">{t('inbox.embedLoginPrompt')}</p>
             </div>
 
             <div className="mb-4 rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-700">
@@ -69,7 +89,7 @@ export function InboxEmbedFrame({ proxyBaseUrl, targetHost }: InboxEmbedFramePro
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
                 <label htmlFor="inbox-email" className="block text-sm font-medium text-gray-700">
-                  E-mailadres
+                  {t('inbox.embedEmailField')}
                 </label>
                 <input
                   id="inbox-email"
@@ -84,7 +104,7 @@ export function InboxEmbedFrame({ proxyBaseUrl, targetHost }: InboxEmbedFramePro
 
               <div>
                 <label htmlFor="inbox-password" className="block text-sm font-medium text-gray-700">
-                  Wachtwoord
+                  {t('inbox.embedPasswordField')}
                 </label>
                 <input
                   id="inbox-password"
@@ -101,9 +121,46 @@ export function InboxEmbedFrame({ proxyBaseUrl, targetHost }: InboxEmbedFramePro
                 disabled={isLoading}
                 className="w-full rounded-md bg-brand px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {isLoading ? 'Inloggen...' : 'Inloggen'}
+                {isLoading ? `${t('inbox.embedLoginButton')}...` : t('inbox.embedLoginButton')}
               </button>
             </form>
+
+            {/* Password help */}
+            <div className="mt-5 border-t border-gray-100 pt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setHelpResult(null)
+                  startHelp(async () => {
+                    const result = await requestInboxPasswordHelp()
+                    if (result.error) {
+                      setHelpResult({ type: 'error', message: result.error })
+                    } else {
+                      setHelpResult({
+                        type: 'success',
+                        message: `${result.email} is zojuist gemaild met het wachtwoord en de uitleg om in te loggen.`,
+                      })
+                    }
+                  })
+                }}
+                disabled={helpPending}
+                className="w-full rounded-lg border-2 border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900 transition-all hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {helpPending ? `${t('common.loading')}` : t('inbox.embedForgotPassword')}
+              </button>
+
+              {helpResult && (
+                <div
+                  className={`mt-3 rounded-lg p-3 text-sm ${
+                    helpResult.type === 'success'
+                      ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200'
+                      : 'bg-red-50 text-red-700 ring-1 ring-red-200'
+                  }`}
+                >
+                  {helpResult.message}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -128,10 +185,14 @@ export function InboxEmbedFrame({ proxyBaseUrl, targetHost }: InboxEmbedFramePro
         style={{
           border: 'none',
           position: 'absolute',
-          top: '-115px',
-          left: '-96px',
-          width: 'calc(100% + 96px)',
-          height: 'calc(100% + 115px)',
+          top: '-65px',
+          left: '-90px',
+          // Zoom uit door te schalen; compenseer width/height zodat de iframe
+          // nog steeds het volledige zichtbare gebied vult.
+          transform: 'scale(0.83)',
+          transformOrigin: 'top left',
+          width: 'calc(100% / 0.83 + 150px)',
+          height: 'calc((100% + 65px) / 0.83)',
           display: 'block',
           opacity: iframeLoaded ? 1 : 0,
           transition: 'opacity 0.3s ease',

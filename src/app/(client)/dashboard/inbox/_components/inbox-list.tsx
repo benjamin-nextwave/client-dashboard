@@ -8,6 +8,7 @@ import { createFolder, renameFolder, deleteFolder } from '@/lib/actions/folder-a
 import { InboxItem } from './inbox-item'
 import { ComposeModal } from './compose-modal'
 import { RefreshOverlay } from './refresh-overlay'
+import { useT } from '@/lib/i18n/client'
 
 interface InboxListProps {
   leads: InboxLead[]
@@ -19,6 +20,7 @@ type FolderTab = 'inbox' | 'archived' | string // string = custom folder id
 type StatusFilter = 'all' | 'action_required' | 'in_conversation'
 
 export function InboxList({ leads, isRecruitment, folders }: InboxListProps) {
+  const t = useT()
   const [showCompose, setShowCompose] = useState(false)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
@@ -108,7 +110,7 @@ export function InboxList({ leads, isRecruitment, folders }: InboxListProps) {
   }
 
   function handleDeleteFolder(folderId: string) {
-    if (!confirm('Weet u zeker dat u dit mapje wilt verwijderen? Leads worden terug naar Inbox verplaatst.')) return
+    if (!confirm(t('inbox.folderDeleteConfirm'))) return
     startTransition(async () => {
       await deleteFolder(folderId)
       if (activeTab === folderId) setActiveTab('inbox')
@@ -151,7 +153,7 @@ export function InboxList({ leads, isRecruitment, folders }: InboxListProps) {
       {/* Folder tabs */}
       <div className="mt-6 flex items-center border-b border-gray-200">
         <div className="flex flex-1 flex-wrap">
-          {renderTab('inbox', 'Inbox', inboxLeads.length)}
+          {renderTab('inbox', t('inbox.folderInbox'), inboxLeads.length)}
           {folders.map((f) => {
             const isEditing = editingFolderId === f.id
             return (
@@ -188,7 +190,7 @@ export function InboxList({ leads, isRecruitment, folders }: InboxListProps) {
               </div>
             )
           })}
-          {renderTab('archived', 'Afgehandeld', archivedLeads.length)}
+          {renderTab('archived', t('inbox.folderArchived'), archivedLeads.length)}
         </div>
 
         {/* Add folder button */}
@@ -201,23 +203,23 @@ export function InboxList({ leads, isRecruitment, folders }: InboxListProps) {
               type="text"
               value={newFolderName}
               onChange={(e) => setNewFolderName(e.target.value)}
-              placeholder="Mapnaam..."
+              placeholder={t('inbox.folderNewPlaceholder')}
               className="w-28 rounded border border-gray-300 px-2 py-1 text-sm focus:border-[var(--brand-color)] focus:outline-none"
               autoFocus
               onKeyDown={(e) => { if (e.key === 'Escape') { setShowNewFolder(false); setNewFolderName('') } }}
             />
             <button type="submit" disabled={isPending || !newFolderName.trim()} className="rounded bg-[var(--brand-color)] px-2 py-1 text-xs text-white hover:opacity-90 disabled:opacity-50">
-              OK
+              {t('inbox.folderConfirm')}
             </button>
             <button type="button" onClick={() => { setShowNewFolder(false); setNewFolderName('') }} className="rounded px-2 py-1 text-xs text-gray-500 hover:text-gray-700">
-              Annuleer
+              {t('common.cancel')}
             </button>
           </form>
         ) : (
           <button
             type="button"
             onClick={() => setShowNewFolder(true)}
-            title="Nieuw mapje"
+            title={t('inbox.folderNewTitle')}
             className="ml-2 flex-shrink-0 rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -245,14 +247,14 @@ export function InboxList({ leads, isRecruitment, folders }: InboxListProps) {
                 }}
                 className="block w-full px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-50"
               >
-                Hernoemen
+                {t('inbox.folderRename')}
               </button>
               <button
                 type="button"
                 onClick={() => handleDeleteFolder(folderMenuId)}
                 className="block w-full px-3 py-1.5 text-left text-sm text-red-600 hover:bg-red-50"
               >
-                Verwijderen
+                {t('inbox.folderDelete')}
               </button>
             </div>
           </div>
@@ -278,7 +280,7 @@ export function InboxList({ leads, isRecruitment, folders }: InboxListProps) {
             </svg>
             <input
               type="text"
-              placeholder="Zoek op naam, e-mail of bedrijf..."
+              placeholder={t('inbox.searchPlaceholderFull')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full rounded-md border border-gray-300 py-2 pl-9 pr-3 text-sm placeholder:text-gray-400 focus:border-[var(--brand-color)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-color)]"
@@ -290,9 +292,9 @@ export function InboxList({ leads, isRecruitment, folders }: InboxListProps) {
               onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
               className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:border-[var(--brand-color)] focus:outline-none focus:ring-1 focus:ring-[var(--brand-color)]"
             >
-              <option value="all">Alles</option>
-              <option value="action_required">Actie vereist</option>
-              <option value="in_conversation">In gesprek</option>
+              <option value="all">{t('inbox.statusFilterAll')}</option>
+              <option value="action_required">{t('inbox.statusFilterActionRequired')}</option>
+              <option value="in_conversation">{t('inbox.statusFilterInConversation')}</option>
             </select>
           )}
         </div>
@@ -306,7 +308,7 @@ export function InboxList({ leads, isRecruitment, folders }: InboxListProps) {
               })
             }}
             disabled={isRefreshing}
-            title="Mist u recente e-mails? Klik hier om te verversen."
+            title={t('inbox.refreshTitle')}
             className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
           >
             {isRefreshing ? (
@@ -319,7 +321,7 @@ export function InboxList({ leads, isRecruitment, folders }: InboxListProps) {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
             )}
-            <span>{isRefreshing ? 'Verversen...' : 'Verversen'}</span>
+            <span>{isRefreshing ? t('inbox.refreshButtonProgress') : t('inbox.refreshButton')}</span>
           </button>
           {activeTab !== 'archived' && (
             <button
@@ -327,7 +329,7 @@ export function InboxList({ leads, isRecruitment, folders }: InboxListProps) {
               onClick={() => setShowCompose(true)}
               className="rounded-md bg-[var(--brand-color)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 transition-opacity"
             >
-              Nieuwe e-mail
+              {t('inbox.composeNew')}
             </button>
           )}
         </div>
@@ -335,7 +337,7 @@ export function InboxList({ leads, isRecruitment, folders }: InboxListProps) {
 
       {/* Results count */}
       <p className="mt-2 text-xs text-gray-500">
-        {filteredLeads.length} van {activeLeads.length} leads
+        {t('inbox.resultsCount', { shown: filteredLeads.length, total: activeLeads.length })}
       </p>
 
       {isRefreshing && (
@@ -348,8 +350,8 @@ export function InboxList({ leads, isRecruitment, folders }: InboxListProps) {
         {filteredLeads.length === 0 ? (
           <div className="py-8 text-center text-sm text-gray-500">
             {activeTab === 'archived'
-              ? 'Geen afgehandelde leads.'
-              : 'Geen leads gevonden voor deze zoekopdracht.'}
+              ? t('inbox.folderArchivedEmpty')
+              : t('inbox.noResultsForSearch')}
           </div>
         ) : (
           <div className="divide-y divide-gray-100">

@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { sendReply } from '@/lib/actions/inbox-actions'
+import { useT } from '@/lib/i18n/client'
 
 const replySchema = z.object({
   subject: z.string().min(1, 'Onderwerp is verplicht'),
@@ -26,6 +27,7 @@ export function ReplyForm({
   lastEmailId,
   replySubject,
 }: ReplyFormProps) {
+  const t = useT()
   const [isPending, startTransition] = useTransition()
   const [feedback, setFeedback] = useState<{
     type: 'success' | 'error'
@@ -49,7 +51,7 @@ export function ReplyForm({
     return (
       <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-center">
         <p className="text-sm text-gray-500">
-          Kan niet antwoorden - geen eerdere e-mails gevonden.
+          {t('inbox.threadEmpty')}
         </p>
       </div>
     )
@@ -70,7 +72,7 @@ export function ReplyForm({
       if ('error' in result) {
         setFeedback({ type: 'error', message: result.error })
       } else {
-        setFeedback({ type: 'success', message: 'E-mail succesvol verzonden!' })
+        setFeedback({ type: 'success', message: t('inbox.replySent') })
         reset({ subject: replySubject ? `Re: ${replySubject}` : '', body: '' })
         setTimeout(() => setFeedback(null), 4000)
       }
@@ -82,7 +84,7 @@ export function ReplyForm({
       onSubmit={handleSubmit(onSubmit)}
       className="rounded-lg border border-gray-200 bg-white p-4"
     >
-      <h3 className="mb-3 text-sm font-semibold text-gray-700">Antwoorden</h3>
+      <h3 className="mb-3 text-sm font-semibold text-gray-700">{t('inbox.replyButton')}</h3>
 
       {feedback && (
         <div
@@ -101,7 +103,7 @@ export function ReplyForm({
           htmlFor="reply-subject"
           className="mb-1 block text-xs font-medium text-gray-600"
         >
-          Onderwerp
+          {t('inbox.composeSubject')}
         </label>
         <input
           id="reply-subject"
@@ -119,14 +121,14 @@ export function ReplyForm({
           htmlFor="reply-body"
           className="mb-1 block text-xs font-medium text-gray-600"
         >
-          Bericht
+          {t('inbox.composeBody')}
         </label>
         <textarea
           id="reply-body"
           rows={4}
           {...register('body')}
           className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          placeholder="Typ uw antwoord..."
+          placeholder={t('inbox.replyPlaceholder')}
         />
         {errors.body && (
           <p className="mt-1 text-xs text-red-600">{errors.body.message}</p>
@@ -139,7 +141,7 @@ export function ReplyForm({
           disabled={isPending}
           className="rounded-md bg-[var(--brand-color)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 transition-opacity disabled:opacity-50"
         >
-          {isPending ? 'Versturen...' : 'Versturen'}
+          {isPending ? t('inbox.sendingReply') : t('inbox.sendReply')}
         </button>
       </div>
     </form>

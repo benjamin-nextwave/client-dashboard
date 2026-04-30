@@ -1,5 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getCampaignLeadsWithObjections } from '@/lib/data/campaign-leads'
 import { ObjectionList } from './_components/objection-list'
+import { CampaignLeadObjectionsSection } from './_components/campaign-lead-objections-section'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,14 +28,42 @@ export default async function BezwarenPage() {
     client_company_name: clientMap.get(o.client_id) ?? 'Onbekend',
   }))
 
-  return (
-    <div>
-      <h2 className="text-2xl font-bold text-gray-900">Bezwaren</h2>
-      <p className="mt-1 text-sm text-gray-500">
-        Beoordeel ingediende bezwaren van klanten op leads.
-      </p>
+  const campaignLeadObjections = await getCampaignLeadsWithObjections()
+  const pendingCampaignCount = campaignLeadObjections.filter(
+    (l) => l.objectionStatus === 'pending'
+  ).length
 
-      <ObjectionList objections={objections} />
+  return (
+    <div className="space-y-10">
+      <div>
+        <h2 className="text-2xl font-bold text-gray-900">Bezwaren</h2>
+        <p className="mt-1 text-sm text-gray-500">
+          Beoordeel ingediende bezwaren van klanten op leads.
+        </p>
+      </div>
+
+      <section>
+        <div className="flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-gray-900">Campagne lead bezwaren</h3>
+          {pendingCampaignCount > 0 && (
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
+              {pendingCampaignCount} open
+            </span>
+          )}
+        </div>
+        <p className="mt-1 text-sm text-gray-500">
+          Bezwaren op handmatig toegevoegde leads vanuit campagnes.
+        </p>
+        <CampaignLeadObjectionsSection leads={campaignLeadObjections} />
+      </section>
+
+      <section>
+        <h3 className="text-lg font-semibold text-gray-900">Inbox bezwaren</h3>
+        <p className="mt-1 text-sm text-gray-500">
+          Bezwaren op positieve leads uit de Instantly-inbox.
+        </p>
+        <ObjectionList objections={objections} />
+      </section>
     </div>
   )
 }
