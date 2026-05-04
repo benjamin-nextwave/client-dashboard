@@ -2,11 +2,10 @@
 
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import type { Lead, LeadClassification } from '../_lib/types'
+import type { LeadWithStatus, LeadClassification } from '../_lib/types'
 import { CLASSIFICATION_LABEL } from '../_lib/labels'
 
-// "not_interested" wordt bewust niet als filter getoond (out of scope per prompt).
-// De label/badge blijft wel beschikbaar voor leads die toevallig die waarde hebben.
+// "not_interested" wordt bewust niet als filter getoond.
 const CATEGORIES: LeadClassification[] = [
   'meeting_request',
   'phone_request',
@@ -16,13 +15,17 @@ const CATEGORIES: LeadClassification[] = [
   'not_now_maybe_later',
 ]
 
-export function FilterSidebar({ leads }: { leads: Lead[] }) {
+export function FilterSidebar({ leads }: { leads: LeadWithStatus[] }) {
   const params = useSearchParams()
   const active = params.get('classification')
 
-  const counts = CATEGORIES.reduce<Record<LeadClassification, number>>(
+  const inboxCount = leads.filter((l) => l.awaitingOurReply).length
+
+  const folderCounts = CATEGORIES.reduce<Record<LeadClassification, number>>(
     (acc, cat) => {
-      acc[cat] = leads.filter((l) => l.classification === cat).length
+      acc[cat] = leads.filter(
+        (l) => l.classification === cat && !l.awaitingOurReply
+      ).length
       return acc
     },
     {} as Record<LeadClassification, number>
@@ -40,14 +43,17 @@ export function FilterSidebar({ leads }: { leads: Lead[] }) {
   return (
     <nav className="flex flex-col gap-1 p-3">
       <p className="px-3 pb-2 pt-1 text-xs font-semibold uppercase tracking-wider text-gray-500">
-        Filteren
+        Inbox
       </p>
       <Link href="/dashboard/lead-inbox" className={itemClasses(!active)}>
         <span className="font-medium">Alle</span>
         <span className={!active ? 'text-white/80 text-xs' : 'text-gray-500 text-xs'}>
-          {leads.length}
+          {inboxCount}
         </span>
       </Link>
+      <p className="mt-3 px-3 pb-2 pt-1 text-xs font-semibold uppercase tracking-wider text-gray-500">
+        Beantwoord
+      </p>
       {CATEGORIES.map((cat) => {
         const isActive = active === cat
         return (
@@ -64,7 +70,7 @@ export function FilterSidebar({ leads }: { leads: Lead[] }) {
                   : 'ml-2 shrink-0 text-gray-500 text-xs'
               }
             >
-              {counts[cat]}
+              {folderCounts[cat]}
             </span>
           </Link>
         )

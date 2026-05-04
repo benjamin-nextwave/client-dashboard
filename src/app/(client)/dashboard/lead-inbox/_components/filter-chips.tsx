@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import type { Lead, LeadClassification } from '../_lib/types'
+import type { LeadWithStatus, LeadClassification } from '../_lib/types'
 import { CLASSIFICATION_LABEL } from '../_lib/labels'
 
 // "not_interested" wordt bewust niet als filter getoond.
@@ -15,9 +15,11 @@ const CATEGORIES: LeadClassification[] = [
   'not_now_maybe_later',
 ]
 
-export function FilterChips({ leads }: { leads: Lead[] }) {
+export function FilterChips({ leads }: { leads: LeadWithStatus[] }) {
   const params = useSearchParams()
   const active = params.get('classification')
+
+  const inboxCount = leads.filter((l) => l.awaitingOurReply).length
 
   function chipClasses(isActive: boolean) {
     return [
@@ -31,10 +33,12 @@ export function FilterChips({ leads }: { leads: Lead[] }) {
   return (
     <div className="flex gap-2 overflow-x-auto px-4 py-3">
       <Link href="/dashboard/lead-inbox" className={chipClasses(!active)}>
-        Alle ({leads.length})
+        Alle ({inboxCount})
       </Link>
       {CATEGORIES.map((cat) => {
-        const count = leads.filter((l) => l.classification === cat).length
+        const count = leads.filter(
+          (l) => l.classification === cat && !l.awaitingOurReply
+        ).length
         const isActive = active === cat
         return (
           <Link

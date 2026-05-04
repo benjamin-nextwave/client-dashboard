@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useSearchParams, useSelectedLayoutSegment } from 'next/navigation'
 import type { ReactNode } from 'react'
-import type { Lead } from '../_lib/types'
+import type { LeadWithStatus } from '../_lib/types'
 import { FilterChips } from './filter-chips'
 import { FilterSidebar } from './filter-sidebar'
 import { LeadListPane } from './lead-list-pane'
@@ -12,7 +12,7 @@ export function InboxShell({
   leads,
   children,
 }: {
-  leads: Lead[]
+  leads: LeadWithStatus[]
   children: ReactNode
 }) {
   const params = useSearchParams()
@@ -47,7 +47,9 @@ export function InboxShell({
         </div>
         <header className="hidden items-baseline justify-between border-b border-gray-200 px-4 py-3 lg:flex">
           <h1 className="text-base font-semibold text-gray-900">Lead Inbox</h1>
-          <span className="text-xs text-gray-500">{leads.length} leads</span>
+          <span className="text-xs text-gray-500">
+            {leads.filter((l) => l.awaitingOurReply).length} wacht op antwoord
+          </span>
         </header>
         <LeadListPane leads={leads} />
       </section>

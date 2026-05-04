@@ -65,6 +65,7 @@ values (
       'received_at',       '2026-05-03T09:14:22Z',
       'ai_interest_value', 3,
       'classification',    'meeting_request',
+      'direction',         'inbound',
       'raw_payload',       jsonb_build_object('source', 'seed', 'note', 'dummy data — sprint 1')
     )
   )
@@ -101,6 +102,7 @@ values (
       'received_at',       '2026-05-02T11:02:08Z',
       'ai_interest_value', 2,
       'classification',    'meeting_request',
+      'direction',         'inbound',
       'raw_payload',       jsonb_build_object('source', 'seed', 'note', 'dummy data — sprint 1')
     ),
     jsonb_build_object(
@@ -113,6 +115,7 @@ values (
       'received_at',       '2026-05-04T08:47:31Z',
       'ai_interest_value', 4,
       'classification',    'meeting_request',
+      'direction',         'inbound',
       'raw_payload',       jsonb_build_object('source', 'seed', 'note', 'dummy data — sprint 1, follow-up')
     )
   )
