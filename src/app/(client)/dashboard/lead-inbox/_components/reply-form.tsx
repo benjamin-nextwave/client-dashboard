@@ -69,13 +69,7 @@ export function ReplyForm({
       />
       <div className="flex items-center justify-between gap-3 border-t border-gray-100 px-5 py-3">
         <div className="text-xs">
-          {error ? (
-            <span className="text-rose-700">{error}</span>
-          ) : (
-            <span className="text-gray-500">
-              Wordt verzonden via Make + Instantly.
-            </span>
-          )}
+          {error && <span className="text-rose-700">{error}</span>}
         </div>
         <button
           type="submit"
