@@ -1,44 +1,29 @@
 import type { Metadata } from 'next'
-import { LeadTable } from './_components/lead-table'
-import { HARDCODED_CUSTOMER_ID } from './_lib/constants'
-import { getLeadsForCustomer } from './_lib/queries'
 
 export const metadata: Metadata = { title: 'Lead Inbox' }
-export const dynamic = 'force-dynamic'
 
-export default async function LeadInboxPage() {
-  const leads = await getLeadsForCustomer(HARDCODED_CUSTOMER_ID)
-
+export default function LeadInboxEmptyState() {
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-gray-900">Lead Inbox</h1>
-      <p className="mt-1 text-sm text-gray-600">
-        Positieve replies vanuit Instantly, gesynchroniseerd via Make naar Supabase.
-      </p>
-
-      <div className="mt-3 flex items-start gap-2.5 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+    <div className="flex h-full items-center justify-center px-6 text-center">
+      <div>
         <svg
-          className="mt-0.5 h-4 w-4 shrink-0 text-blue-500"
+          className="mx-auto h-12 w-12 text-gray-300"
           fill="none"
           viewBox="0 0 24 24"
           strokeWidth={1.5}
           stroke="currentColor"
+          aria-hidden
         >
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
-            d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"
+            d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75"
           />
         </svg>
-        <p className="text-xs leading-relaxed text-blue-800">
-          <span className="font-semibold">Sprint 1 — preview:</span> deze pagina staat los van de
-          bestaande inbox. Customer-filter is hardcoded op de test-klant; auth & multi-tenant logic volgt
-          in een latere sprint.
+        <h2 className="mt-4 text-base font-semibold text-gray-900">Selecteer een lead</h2>
+        <p className="mt-1 text-sm text-gray-600">
+          Kies links een lead om de thread te lezen.
         </p>
-      </div>
-
-      <div className="mt-6">
-        <LeadTable leads={leads} />
       </div>
     </div>
   )
