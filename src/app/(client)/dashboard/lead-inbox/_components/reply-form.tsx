@@ -8,11 +8,15 @@ export function ReplyForm({
   replyToSubject,
   sendingAccount,
   toEmail,
+  onSent,
+  onCancel,
 }: {
   leadId: string
   replyToSubject: string
   sendingAccount: string
   toEmail: string
+  onSent?: () => void
+  onCancel?: () => void
 }) {
   const [body, setBody] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -37,6 +41,7 @@ export function ReplyForm({
         return
       }
       setBody('')
+      onSent?.()
     })
   }
 
@@ -71,6 +76,17 @@ export function ReplyForm({
         <div className="text-xs">
           {error && <span className="text-rose-700">{error}</span>}
         </div>
+        <div className="flex items-center gap-2">
+          {onCancel && (
+            <button
+              type="button"
+              onClick={onCancel}
+              disabled={pending}
+              className="rounded-md px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+            >
+              Annuleren
+            </button>
+          )}
         <button
           type="submit"
           disabled={pending || !body.trim()}
@@ -100,6 +116,7 @@ export function ReplyForm({
           )}
           {pending ? 'Wordt verzonden…' : 'Verzenden'}
         </button>
+        </div>
       </div>
     </form>
   )

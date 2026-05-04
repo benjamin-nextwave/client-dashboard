@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { ReplyForm } from '../_components/reply-form'
+import { ReplySection } from '../_components/reply-section'
 import { RepliesThread } from '../_components/replies-thread'
 import { HARDCODED_CUSTOMER_ID } from '../_lib/constants'
 import { CLASSIFICATION_BADGE, CLASSIFICATION_LABEL } from '../_lib/labels'
@@ -75,8 +75,7 @@ export default async function LeadDetailPage({
 
       {lastInbound && (
         <section className="mt-6">
-          <h2 className="mb-3 text-sm font-semibold text-gray-900">Antwoorden</h2>
-          <ReplyForm
+          <ReplySection
             leadId={lead.id}
             replyToSubject={lastInbound.subject ?? ''}
             sendingAccount={lead.sending_account}

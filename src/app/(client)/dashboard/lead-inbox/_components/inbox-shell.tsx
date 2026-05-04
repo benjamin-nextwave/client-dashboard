@@ -30,14 +30,14 @@ export function InboxShell({
     // te rekenen.
     <div className="fixed inset-y-0 left-60 right-0 z-10 flex overflow-hidden bg-white">
       {/* Filter sidebar — lg+ alleen */}
-      <aside className="hidden w-56 shrink-0 border-r border-gray-200 bg-gray-50 lg:block">
+      <aside className="hidden w-48 shrink-0 border-r border-gray-200 bg-gray-50 lg:block xl:w-56">
         <FilterSidebar leads={leads} />
       </aside>
 
       {/* List pane */}
       <section
         className={[
-          'flex-col border-r border-gray-200 bg-white md:w-[360px] md:shrink-0',
+          'flex-col border-r border-gray-200 bg-white md:w-[300px] md:shrink-0 xl:w-[360px]',
           hasSelection ? 'hidden md:flex' : 'flex w-full',
         ].join(' ')}
       >
