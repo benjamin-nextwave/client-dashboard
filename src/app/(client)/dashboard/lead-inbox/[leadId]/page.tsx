@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { RepliesThread } from '../_components/replies-thread'
 import { HARDCODED_CUSTOMER_ID } from '../_lib/constants'
+import { CLASSIFICATION_BADGE, CLASSIFICATION_LABEL } from '../_lib/labels'
 import { getLeadById } from '../_lib/queries'
 
 export const metadata: Metadata = { title: 'Lead detail — Lead Inbox' }
@@ -59,7 +60,13 @@ export default async function LeadDetailPage({
           <dt className="text-xs font-semibold uppercase tracking-wider text-gray-500">
             Classificatie
           </dt>
-          <dd className="mt-1 text-sm text-gray-900">{lead.classification}</dd>
+          <dd className="mt-1">
+            <span
+              className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${CLASSIFICATION_BADGE[lead.classification]}`}
+            >
+              {CLASSIFICATION_LABEL[lead.classification]}
+            </span>
+          </dd>
         </div>
         <div>
           <dt className="text-xs font-semibold uppercase tracking-wider text-gray-500">

@@ -1,13 +1,6 @@
 import Link from 'next/link'
-import type { Lead, LeadClassification } from '../_lib/types'
-
-const CLASSIFICATION_BADGE: Record<LeadClassification, string> = {
-  positive: 'bg-green-100 text-green-800',
-  negative: 'bg-red-100 text-red-800',
-  neutral: 'bg-gray-100 text-gray-800',
-  spam: 'bg-orange-100 text-orange-800',
-  unknown: 'bg-yellow-100 text-yellow-800',
-}
+import type { Lead } from '../_lib/types'
+import { CLASSIFICATION_BADGE, CLASSIFICATION_LABEL } from '../_lib/labels'
 
 function formatDateTime(iso: string): string {
   const d = new Date(iso)
@@ -63,7 +56,7 @@ export function LeadTable({ leads }: { leads: Lead[] }) {
                 <span
                   className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${CLASSIFICATION_BADGE[lead.classification]}`}
                 >
-                  {lead.classification}
+                  {CLASSIFICATION_LABEL[lead.classification]}
                 </span>
               </td>
               <td className="px-4 py-3 text-gray-700">{lead.sending_account}</td>

@@ -48,7 +48,7 @@ values (
   'a1f4c2e8-7b3d-4f6a-9d2c-8e1b5a9c3f47',
   'jan.devries@example-bedrijf.nl',
   'Jan de Vries',
-  'positive',
+  'meeting_request',
   'thread-test-0001',
   'b2e5d3f9-8c4e-4a7b-be3d-9f2c6b0d4e58',
   'outreach@nextwave-solutions.nl',
@@ -64,7 +64,7 @@ values (
       'body',              E'Hoi,\n\nDank voor je bericht. Klinkt interessant — kun je volgende week dinsdag rond 14:00 een korte demo inplannen?\n\nGroet,\nJan',
       'received_at',       '2026-05-03T09:14:22Z',
       'ai_interest_value', 3,
-      'classification',    'positive',
+      'classification',    'meeting_request',
       'raw_payload',       jsonb_build_object('source', 'seed', 'note', 'dummy data — sprint 1')
     )
   )
@@ -84,7 +84,7 @@ values (
   'a1f4c2e8-7b3d-4f6a-9d2c-8e1b5a9c3f47',
   'sandra.bakker@klant-twee.nl',
   'Sandra Bakker',
-  'positive',
+  'meeting_request',
   'thread-test-0002',
   'b2e5d3f9-8c4e-4a7b-be3d-9f2c6b0d4e58',
   'outreach@nextwave-solutions.nl',
@@ -100,7 +100,7 @@ values (
       'body',              E'Hi,\n\nInteressant voorstel. Heb je een case study die ik kan zien? Wil het eerst met mijn team afstemmen.\n\nVriendelijke groet,\nSandra Bakker\nMarketing Lead — Klant Twee',
       'received_at',       '2026-05-02T11:02:08Z',
       'ai_interest_value', 2,
-      'classification',    'positive',
+      'classification',    'meeting_request',
       'raw_payload',       jsonb_build_object('source', 'seed', 'note', 'dummy data — sprint 1')
     ),
     jsonb_build_object(
@@ -112,7 +112,7 @@ values (
       'body',              E'Top, ik heb het besproken. We zien graag een korte demo. Heb je donderdag tijd?\n\nGroet,\nSandra',
       'received_at',       '2026-05-04T08:47:31Z',
       'ai_interest_value', 4,
-      'classification',    'positive',
+      'classification',    'meeting_request',
       'raw_payload',       jsonb_build_object('source', 'seed', 'note', 'dummy data — sprint 1, follow-up')
     )
   )

@@ -1,9 +1,11 @@
 export type LeadClassification =
-  | 'positive'
-  | 'negative'
-  | 'neutral'
-  | 'spam'
-  | 'unknown'
+  | 'meeting_request'
+  | 'phone_request'
+  | 'interested'
+  | 'referral'
+  | 'internal_review'
+  | 'not_now_maybe_later'
+  | 'not_interested'
 
 export type LeadReply = {
   instantly_email_id: string
