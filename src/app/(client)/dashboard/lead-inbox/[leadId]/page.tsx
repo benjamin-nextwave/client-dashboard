@@ -42,7 +42,9 @@ export default async function LeadDetailPage({
               <span aria-hidden className="text-gray-300">
                 ·
               </span>
-              <span className="font-mono text-xs text-gray-500">{lead.thread_id}</span>
+              <span className="break-all font-mono text-xs text-gray-500">
+                {lead.thread_id}
+              </span>
             </>
           )}
         </div>

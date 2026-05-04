@@ -62,7 +62,7 @@ export function RepliesThread({ replies }: { replies: LeadReply[] }) {
               className="flex w-full items-start justify-between gap-4 px-5 py-3 text-left hover:bg-gray-50"
               aria-expanded={isOpen}
             >
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-1 overflow-hidden">
                 <p className="truncate text-sm font-semibold text-gray-900">
                   {reply.from_email}
                 </p>
@@ -102,9 +102,11 @@ export function RepliesThread({ replies }: { replies: LeadReply[] }) {
             {isOpen && (
               <div className="border-t border-gray-100 px-5 py-4">
                 {reply.subject && (
-                  <p className="text-sm font-medium text-gray-900">{reply.subject}</p>
+                  <p className="break-words text-sm font-medium text-gray-900">
+                    {reply.subject}
+                  </p>
                 )}
-                <pre className="mt-2 whitespace-pre-wrap font-sans text-sm leading-6 text-gray-800">
+                <pre className="mt-2 whitespace-pre-wrap break-words font-sans text-sm leading-6 text-gray-800">
                   {reply.body}
                 </pre>
               </div>

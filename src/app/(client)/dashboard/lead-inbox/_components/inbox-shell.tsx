@@ -55,7 +55,7 @@ export function InboxShell({
       {/* Detail pane */}
       <section
         className={[
-          'flex-1 flex-col bg-[#fafafa]',
+          'min-w-0 flex-1 flex-col bg-[#fafafa]',
           hasSelection ? 'flex' : 'hidden md:flex',
         ].join(' ')}
       >
@@ -78,7 +78,7 @@ export function InboxShell({
             </Link>
           </div>
         )}
-        <div className="flex-1 overflow-y-auto">{children}</div>
+        <div className="min-w-0 flex-1 overflow-y-auto">{children}</div>
       </section>
     </div>
   )
