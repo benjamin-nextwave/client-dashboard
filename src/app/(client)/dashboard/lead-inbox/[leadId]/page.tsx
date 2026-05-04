@@ -66,15 +66,8 @@ export default async function LeadDetailPage({
         </div>
       </header>
 
-      <section className="mt-5">
-        <h2 className="mb-3 text-sm font-semibold text-gray-900">
-          Thread ({thread.length})
-        </h2>
-        <RepliesThread items={thread} />
-      </section>
-
       {lastInbound && (
-        <section className="mt-6">
+        <section className="mt-5">
           <ReplySection
             leadId={lead.id}
             replyToSubject={lastInbound.subject ?? ''}
@@ -83,6 +76,10 @@ export default async function LeadDetailPage({
           />
         </section>
       )}
+
+      <section className="mt-5">
+        <RepliesThread items={thread} />
+      </section>
     </div>
   )
 }
