@@ -37,7 +37,7 @@ export function InboxShell({
       {/* List pane */}
       <section
         className={[
-          'flex-col border-r border-gray-200 bg-white md:w-[280px] md:shrink-0 xl:w-[330px]',
+          'flex-col border-r border-gray-200 bg-white md:w-[270px] md:shrink-0 xl:w-[315px]',
           hasSelection ? 'hidden md:flex' : 'flex w-full',
         ].join(' ')}
       >
