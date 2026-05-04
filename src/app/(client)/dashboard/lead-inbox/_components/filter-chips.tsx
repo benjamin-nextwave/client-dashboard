@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import type { Lead, LeadClassification } from '../_lib/types'
 import { CLASSIFICATION_LABEL } from '../_lib/labels'
 
+// "not_interested" wordt bewust niet als filter getoond.
 const CATEGORIES: LeadClassification[] = [
   'meeting_request',
   'phone_request',
@@ -12,7 +13,6 @@ const CATEGORIES: LeadClassification[] = [
   'referral',
   'internal_review',
   'not_now_maybe_later',
-  'not_interested',
 ]
 
 export function FilterChips({ leads }: { leads: Lead[] }) {

@@ -24,7 +24,11 @@ export function InboxShell({
     : '/dashboard/lead-inbox'
 
   return (
-    <div className="-mx-6 -my-10 flex h-[calc(100vh-1px)] overflow-hidden border-y border-gray-200 bg-white lg:-mx-10">
+    // Doorbreek de max-w-6xl container van (client)/layout.tsx en vul de hele
+    // ruimte naast de outer SidebarNav (w-60 = 15rem). Position: fixed neemt
+    // de viewport als containing-block, dus we hoeven niet om de mx-auto heen
+    // te rekenen.
+    <div className="fixed inset-y-0 left-60 right-0 z-10 flex overflow-hidden bg-white">
       {/* Filter sidebar — lg+ alleen */}
       <aside className="hidden w-56 shrink-0 border-r border-gray-200 bg-gray-50 lg:block">
         <FilterSidebar leads={leads} />

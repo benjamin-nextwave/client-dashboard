@@ -5,6 +5,8 @@ import { useSearchParams } from 'next/navigation'
 import type { Lead, LeadClassification } from '../_lib/types'
 import { CLASSIFICATION_LABEL } from '../_lib/labels'
 
+// "not_interested" wordt bewust niet als filter getoond (out of scope per prompt).
+// De label/badge blijft wel beschikbaar voor leads die toevallig die waarde hebben.
 const CATEGORIES: LeadClassification[] = [
   'meeting_request',
   'phone_request',
@@ -12,7 +14,6 @@ const CATEGORIES: LeadClassification[] = [
   'referral',
   'internal_review',
   'not_now_maybe_later',
-  'not_interested',
 ]
 
 export function FilterSidebar({ leads }: { leads: Lead[] }) {
