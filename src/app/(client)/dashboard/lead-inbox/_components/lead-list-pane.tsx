@@ -81,7 +81,7 @@ export function LeadListPane({ leads }: { leads: LeadWithStatus[] }) {
             <Link
               href={href}
               className={[
-                'block px-4 py-3 transition-colors',
+                'block px-4 py-4 transition-colors',
                 isSelected
                   ? 'bg-[var(--color-brand)]/10 border-l-2 border-[var(--color-brand)]'
                   : 'border-l-2 border-transparent hover:bg-gray-50',
@@ -95,11 +95,10 @@ export function LeadListPane({ leads }: { leads: LeadWithStatus[] }) {
                   {formatRelative(lead.last_reply_at)}
                 </span>
               </div>
-              <p className="mt-0.5 truncate text-xs text-gray-600">{lead.email}</p>
-              <p className="mt-1 line-clamp-2 text-xs text-gray-600">
+              <p className="mt-1.5 truncate text-xs text-gray-600">
                 {snippetFromLead(lead)}
               </p>
-              <div className="mt-2 flex items-center gap-2">
+              <div className="mt-2.5 flex items-center gap-2">
                 <span
                   className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${CLASSIFICATION_BADGE[lead.classification]}`}
                 >
