@@ -1,7 +1,6 @@
 import { redirect } from 'next/navigation'
 import { getClientBranding } from '@/lib/client/get-client-branding'
 import { SidebarNav } from '@/components/client/sidebar-nav'
-import { ChatWidget } from '@/components/client/chat-widget'
 import { SafariBanner } from '@/components/client/safari-banner'
 import { LanguageSwitcher } from '@/components/client/language-switcher'
 import { I18nProvider } from '@/lib/i18n/client'
@@ -50,7 +49,6 @@ export default async function ClientLayout({
           </div>
         </main>
         <LanguageSwitcher />
-        <ChatWidget />
       </div>
     </I18nProvider>
   )
