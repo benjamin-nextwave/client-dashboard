@@ -15,6 +15,7 @@ export interface Client {
   inbox_url: string | null
   inbox_visible: boolean
   chat_inbox_visible: boolean
+  lead_inbox_visible: boolean
   is_recruitment: boolean
   password: string | null
   created_at: string

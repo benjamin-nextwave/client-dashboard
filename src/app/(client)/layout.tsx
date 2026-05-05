@@ -41,6 +41,7 @@ export default async function ClientLayout({
           signOutAction={signOut}
           inboxUrl={client.inbox_url ?? undefined}
           inboxVisible={client.inbox_visible ?? false}
+          leadInboxVisible={client.lead_inbox_visible ?? false}
         />
         <main className="flex-1 overflow-auto">
           <div className="mx-auto max-w-6xl px-6 py-10 lg:px-10">
