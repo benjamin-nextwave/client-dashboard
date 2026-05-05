@@ -2,7 +2,19 @@ import { streamText, type UIMessage } from 'ai'
 import { anthropic } from '@ai-sdk/anthropic'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { LABEL_META, isLeadLabel } from '@/lib/data/campaign-leads'
+import {
+  LABEL_META,
+  classificationToLabel,
+  isLeadLabel,
+  type LeadLabel,
+} from '@/lib/data/campaign-leads'
+
+type RawReply = {
+  direction?: string
+  subject?: string
+  body?: string
+  received_at?: string
+}
 
 // Simple in-memory rate limiter per (clientId, leadId)
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
@@ -60,22 +72,77 @@ export async function POST(req: Request) {
       })
     }
 
-    // Lead ophalen + eigenaarschap valideren
     const admin = createAdminClient()
-    const { data: lead, error: fetchErr } = await admin
+
+    let label: LeadLabel
+    let sentSubject: string | null = null
+    let sentBody: string | null = null
+    let replySubject: string | null = null
+    let replyBody: string | null = null
+
+    // Probeer eerst campaign_leads (handmatige bron).
+    const { data: manualLead } = await admin
       .from('campaign_leads')
       .select('id, client_id, label, sent_subject, sent_body, reply_subject, reply_body')
       .eq('id', leadId)
-      .single()
+      .maybeSingle()
 
-    if (fetchErr || !lead) return new Response('Lead niet gevonden', { status: 404 })
-    if (lead.client_id !== userClientId) return new Response('Forbidden', { status: 403 })
-    if (!isLeadLabel(lead.label)) return new Response('Onbekend label', { status: 500 })
+    if (manualLead) {
+      if (manualLead.client_id !== userClientId) {
+        return new Response('Forbidden', { status: 403 })
+      }
+      if (!isLeadLabel(manualLead.label)) {
+        return new Response('Onbekend label', { status: 500 })
+      }
+      label = manualLead.label
+      sentSubject = manualLead.sent_subject
+      sentBody = manualLead.sent_body
+      replySubject = manualLead.reply_subject
+      replyBody = manualLead.reply_body
+    } else {
+      // Fallback: lead-inbox bron
+      const { data: leadInbox } = await admin
+        .from('leads')
+        .select('id, customer_id, classification, replies')
+        .eq('id', leadId)
+        .maybeSingle()
 
-    const meta = LABEL_META[lead.label]
+      if (!leadInbox) return new Response('Lead niet gevonden', { status: 404 })
 
-    const sentBlock = `${lead.sent_subject ? `Onderwerp: ${lead.sent_subject}\n` : ''}${lead.sent_body ?? '(geen body opgeslagen)'}`
-    const replyBlock = `${lead.reply_subject ? `Onderwerp: ${lead.reply_subject}\n` : ''}${lead.reply_body ?? '(geen body opgeslagen)'}`
+      // Eigenaarschap: klant moet lead-inbox aan hebben + matchende customer.
+      const { data: clientRow } = await admin
+        .from('clients')
+        .select('lead_inbox_visible, lead_inbox_customer_id')
+        .eq('id', userClientId)
+        .single()
+
+      if (
+        !clientRow?.lead_inbox_visible ||
+        clientRow.lead_inbox_customer_id !== leadInbox.customer_id
+      ) {
+        return new Response('Forbidden', { status: 403 })
+      }
+
+      label = classificationToLabel(leadInbox.classification)
+
+      const replies: RawReply[] = Array.isArray(leadInbox.replies)
+        ? (leadInbox.replies as RawReply[])
+        : []
+      const sortDesc = (a: RawReply, b: RawReply) =>
+        new Date(b.received_at ?? 0).getTime() - new Date(a.received_at ?? 0).getTime()
+      const lastInbound = replies.filter((r) => r.direction !== 'outbound').sort(sortDesc)[0]
+      const lastOutbound = replies.filter((r) => r.direction === 'outbound').sort(sortDesc)[0]
+
+      sentSubject = lastOutbound?.subject ?? null
+      sentBody = lastOutbound?.body ?? null
+      replySubject = lastInbound?.subject ?? null
+      replyBody = lastInbound?.body ?? null
+    }
+
+    const meta = LABEL_META[label]
+
+    const sentBlock = `${sentSubject ? `Onderwerp: ${sentSubject}\n` : ''}${sentBody ?? '(geen body opgeslagen)'}`
+    const replyBlock = `${replySubject ? `Onderwerp: ${replySubject}\n` : ''}${replyBody ?? '(geen body opgeslagen)'}`
 
     const messages = convertMessages(uiMessages)
 
