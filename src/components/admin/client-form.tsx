@@ -41,6 +41,7 @@ export function ClientForm({
       inboxVisible: defaultValues?.inboxVisible ?? false,
       chatInboxVisible: defaultValues?.chatInboxVisible ?? true,
       leadInboxVisible: defaultValues?.leadInboxVisible ?? false,
+      leadInboxCustomerId: defaultValues?.leadInboxCustomerId ?? '',
       instantlyApiKey: defaultValues?.instantlyApiKey ?? '',
     },
   })
@@ -219,6 +220,20 @@ export function ClientForm({
             label="Lead inbox (nieuw) zichtbaar"
             description="Toont de nieuwe Supabase-lead-inbox als extra menu-item naast de bestaande inbox. Standaard uit."
           />
+          <Field
+            label="Lead inbox customer ID"
+            id="leadInboxCustomerId"
+            hint="UUID uit de customers-tabel. Vult automatisch de Lead-pagina vanuit lead-inbox. Leeg laten als je niet aan lead-inbox koppelt."
+            error={errors.leadInboxCustomerId?.message}
+          >
+            <input
+              id="leadInboxCustomerId"
+              type="text"
+              placeholder="00000000-0000-0000-0000-000000000000"
+              {...register('leadInboxCustomerId')}
+              className={inputClass(!!errors.leadInboxCustomerId) + ' font-mono text-xs'}
+            />
+          </Field>
         </div>
       </FormSection>
 

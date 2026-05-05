@@ -34,6 +34,7 @@ export async function createClient(
     inboxVisible: formData.get('inboxVisible') === 'on',
     chatInboxVisible: formData.get('chatInboxVisible') === 'on',
     leadInboxVisible: formData.get('leadInboxVisible') === 'on',
+    leadInboxCustomerId: (formData.get('leadInboxCustomerId') as string) || '',
     instantlyApiKey: (formData.get('instantlyApiKey') as string) || '',
   }
 
@@ -42,7 +43,7 @@ export async function createClient(
     return { error: result.error.errors[0].message }
   }
 
-  const { companyName, email, password, primaryColor, isRecruitment, inboxUrl, inboxVisible, chatInboxVisible, leadInboxVisible, instantlyApiKey } = result.data
+  const { companyName, email, password, primaryColor, isRecruitment, inboxUrl, inboxVisible, chatInboxVisible, leadInboxVisible, leadInboxCustomerId, instantlyApiKey } = result.data
 
   const DEFAULT_MEETING_URL = 'https://bespreking.neetocal.com/benjamin-steinschuld'
   const supabase = createAdminClient()
@@ -59,6 +60,7 @@ export async function createClient(
       inbox_visible: inboxVisible,
       chat_inbox_visible: chatInboxVisible,
       lead_inbox_visible: leadInboxVisible,
+      lead_inbox_customer_id: leadInboxCustomerId || null,
       instantly_api_key: instantlyApiKey || null,
       password,
     })
@@ -133,6 +135,7 @@ export async function updateClient(
     inboxVisible: formData.get('inboxVisible') === 'on',
     chatInboxVisible: formData.get('chatInboxVisible') === 'on',
     leadInboxVisible: formData.get('leadInboxVisible') === 'on',
+    leadInboxCustomerId: (formData.get('leadInboxCustomerId') as string) || '',
     instantlyApiKey: (formData.get('instantlyApiKey') as string) || '',
   }
 
@@ -141,7 +144,7 @@ export async function updateClient(
     return { error: result.error.errors[0].message }
   }
 
-  const { companyName, email, primaryColor, isRecruitment, inboxUrl, inboxVisible, chatInboxVisible, leadInboxVisible, instantlyApiKey } = result.data
+  const { companyName, email, primaryColor, isRecruitment, inboxUrl, inboxVisible, chatInboxVisible, leadInboxVisible, leadInboxCustomerId, instantlyApiKey } = result.data
   const password = result.data.password
 
   const supabase = createAdminClient()
@@ -155,6 +158,7 @@ export async function updateClient(
     inbox_visible: inboxVisible,
     chat_inbox_visible: chatInboxVisible,
     lead_inbox_visible: leadInboxVisible,
+    lead_inbox_customer_id: leadInboxCustomerId || null,
   }
   if (instantlyApiKey) {
     clientUpdate.instantly_api_key = instantlyApiKey

@@ -126,7 +126,7 @@ export function LeadCard({ lead }: { lead: CampaignLead }) {
           )}
 
           <ObjectionSection lead={lead} />
-          <JustificationSection lead={lead} />
+          {lead.source === 'manual' && <JustificationSection lead={lead} />}
         </div>
       )}
     </article>
