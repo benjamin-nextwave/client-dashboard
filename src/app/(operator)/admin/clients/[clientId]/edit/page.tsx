@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { ClientForm } from '@/components/admin/client-form'
 import { updateClient } from '../../actions'
+import { CampaignsSection, type CampaignRow } from './campaigns-section'
 
 export const dynamic = 'force-dynamic'
 
@@ -46,6 +47,16 @@ export default async function EditClientPage({ params }: EditClientPageProps) {
     if (authUser?.user?.email) {
       clientEmail = authUser.user.email
     }
+  }
+
+  let campaigns: CampaignRow[] = []
+  if (client.lead_inbox_customer_id) {
+    const { data: campaignRows } = await supabase
+      .from('campaigns')
+      .select('id, name, instantly_campaign_id, is_active')
+      .eq('customer_id', client.lead_inbox_customer_id)
+      .order('created_at', { ascending: true })
+    campaigns = (campaignRows ?? []) as CampaignRow[]
   }
 
   const boundUpdate = updateClient.bind(null, clientId)
@@ -125,6 +136,16 @@ export default async function EditClientPage({ params }: EditClientPageProps) {
         isEditing={true}
         originalEmail={clientEmail}
       />
+
+      {client.lead_inbox_customer_id && (
+        <div className="mt-8">
+          <CampaignsSection
+            clientId={clientId}
+            customerId={client.lead_inbox_customer_id}
+            campaigns={campaigns}
+          />
+        </div>
+      )}
     </div>
   )
 }
