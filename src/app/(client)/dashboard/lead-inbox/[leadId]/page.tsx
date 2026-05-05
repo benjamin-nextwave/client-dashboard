@@ -1,10 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { getClientBranding } from '@/lib/client/get-client-branding'
-import { LabelsManager } from '../_components/labels-manager'
-import { LeadActions } from '../_components/lead-actions'
-import { NotesSection } from '../_components/notes-section'
-import { ReplySection } from '../_components/reply-section'
+import { LeadWorkspace } from '../_components/lead-workspace'
 import { RepliesThread } from '../_components/replies-thread'
 import { HARDCODED_CUSTOMER_ID } from '../_lib/constants'
 import { CLASSIFICATION_BADGE, CLASSIFICATION_LABEL } from '../_lib/labels'
@@ -67,43 +64,21 @@ export default async function LeadDetailPage({
             </span>
           )}
         </div>
-        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-600">
-          <span>{lead.email}</span>
-          <span aria-hidden className="text-gray-300">
-            ·
-          </span>
-          <span>via {lead.sending_account}</span>
-        </div>
-        <div className="mt-3">
-          <LabelsManager
+        <div className="mt-4">
+          <LeadWorkspace
             leadId={lead.id}
-            assigned={assignedLabels}
-            available={allLabels}
-          />
-        </div>
-        <div className="mt-4 flex flex-wrap justify-end gap-2">
-          <LeadActions leadId={lead.id} isTrashed={isTrashed} />
-        </div>
-      </header>
-
-      <section className="mt-5">
-        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
-          Notities
-        </h2>
-        <NotesSection leadId={lead.id} notes={notes} />
-      </section>
-
-      {!isTrashed && lastInbound && (
-        <section className="mt-5">
-          <ReplySection
-            leadId={lead.id}
-            replyToSubject={lastInbound.subject ?? ''}
+            isTrashed={isTrashed}
+            canReply={!!lastInbound}
+            replyToSubject={lastInbound?.subject ?? ''}
             sendingAccount={lead.sending_account}
             toEmail={lead.email}
             signature={signature}
+            assignedLabels={assignedLabels}
+            availableLabels={allLabels}
+            notes={notes}
           />
-        </section>
-      )}
+        </div>
+      </header>
 
       <section className="mt-5">
         <RepliesThread items={thread} />
