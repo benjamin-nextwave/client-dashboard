@@ -11,6 +11,11 @@ export const clientFormSchema = z.object({
   inboxVisible: z.coerce.boolean().default(false),
   chatInboxVisible: z.coerce.boolean().default(true),
   leadInboxVisible: z.coerce.boolean().default(false),
+  leadInboxCustomerId: z
+    .string()
+    .uuid('Geldig customer-UUID vereist')
+    .optional()
+    .or(z.literal('')),
   instantlyApiKey: z.string().optional().or(z.literal('')),
 })
 

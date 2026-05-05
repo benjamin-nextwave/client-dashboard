@@ -18,11 +18,15 @@ export default async function OperatorCampaignLeadsPage({ params }: Props) {
   const supabase = createAdminClient()
   const { data: client } = await supabase
     .from('clients')
-    .select('id, company_name')
+    .select('id, company_name, lead_inbox_visible, lead_inbox_customer_id')
     .eq('id', clientId)
     .single()
 
   if (!client) notFound()
+
+  // Klanten met lead-inbox aan + customer gekoppeld krijgen automatisch
+  // gegenereerde leads. Operator hoeft (en mag) hier niet handmatig in te voeren.
+  const isAutoSourced = !!(client.lead_inbox_visible && client.lead_inbox_customer_id)
 
   const leads = await getCampaignLeads(clientId)
   const weekGroups = groupLeadsByWeek(leads)
@@ -56,22 +60,26 @@ export default async function OperatorCampaignLeadsPage({ params }: Props) {
             {client.company_name}
           </h1>
           <p className="mt-1 text-sm text-gray-500">
-            Beheer leads die uit de campagne komen. De klant ziet ze read-only op haar dashboard.
+            {isAutoSourced
+              ? 'Leads worden automatisch gevuld vanuit de Lead-inbox van deze klant. Handmatig invoeren is uitgeschakeld.'
+              : 'Beheer leads die uit de campagne komen. De klant ziet ze read-only op haar dashboard.'}
           </p>
         </div>
 
-        <LeadFormDialog
-          clientId={clientId}
-          mode="create"
-          trigger={
-            <span className="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-gray-800">
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-              </svg>
-              Lead toevoegen
-            </span>
-          }
-        />
+        {!isAutoSourced && (
+          <LeadFormDialog
+            clientId={clientId}
+            mode="create"
+            trigger={
+              <span className="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-gray-800">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+                Lead toevoegen
+              </span>
+            }
+          />
+        )}
       </div>
 
       {/* Stats per label */}

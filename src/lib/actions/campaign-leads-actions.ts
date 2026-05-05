@@ -6,7 +6,12 @@ import { generateText } from 'ai'
 import { anthropic } from '@ai-sdk/anthropic'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
-import { LABEL_META, LEAD_LABELS } from '@/lib/data/campaign-leads'
+import {
+  LABEL_META,
+  LEAD_LABELS,
+  classificationToLabel,
+  labelToClassification,
+} from '@/lib/data/campaign-leads'
 
 type ActionResult = { success: true; id?: string } | { error: string }
 
@@ -343,42 +348,98 @@ export async function submitLeadObjection(
 
   const admin = createAdminClient()
 
-  const { data: lead } = await admin
+  // Probeer eerst handmatige campaign_leads (bestaande flow).
+  const { data: manualLead } = await admin
     .from('campaign_leads')
     .select('client_id, label, objection_status')
     .eq('id', parsed.data.leadId)
+    .maybeSingle()
+
+  if (manualLead) {
+    if (manualLead.client_id !== userClientId) return { error: 'Lead niet gevonden.' }
+    if (manualLead.objection_status !== null) {
+      return { error: 'Er is al een bezwaar ingediend voor deze lead.' }
+    }
+    if (parsed.data.proposedLabel === manualLead.label) {
+      return {
+        error:
+          'Het voorgestelde label is gelijk aan het huidige label — kies een ander passend label.',
+      }
+    }
+    const { error } = await admin
+      .from('campaign_leads')
+      .update({
+        objection_text: parsed.data.text,
+        objection_proposed_label: parsed.data.proposedLabel,
+        objection_proposed_label_note: parsed.data.proposedLabelNote,
+        objection_submitted_at: new Date().toISOString(),
+        objection_status: 'pending',
+        objection_response: null,
+        objection_resolved_at: null,
+      })
+      .eq('id', parsed.data.leadId)
+      .eq('client_id', userClientId)
+    if (error) return { error: `Indienen mislukt: ${error.message}` }
+
+    revalidatePath('/dashboard/campagne-leads')
+    revalidatePath('/admin/bezwaren')
+    revalidatePath(`/admin/clients/${userClientId}/campagne-leads`)
+    return { success: true }
+  }
+
+  // Niet gevonden in campaign_leads: probeer lead-inbox.
+  const { data: leadInbox } = await admin
+    .from('leads')
+    .select('id, customer_id, classification')
+    .eq('id', parsed.data.leadId)
+    .maybeSingle()
+
+  if (!leadInbox) return { error: 'Lead niet gevonden.' }
+
+  // Verifieer dat deze klant de lead-inbox aan heeft staan en gekoppeld is
+  // aan dezelfde customer als de lead.
+  const { data: clientRow } = await admin
+    .from('clients')
+    .select('lead_inbox_visible, lead_inbox_customer_id')
+    .eq('id', userClientId)
     .single()
 
-  if (!lead || lead.client_id !== userClientId) return { error: 'Lead niet gevonden.' }
-  if (lead.objection_status !== null) {
-    return { error: 'Er is al een bezwaar ingediend voor deze lead.' }
+  if (
+    !clientRow?.lead_inbox_visible ||
+    clientRow.lead_inbox_customer_id !== leadInbox.customer_id
+  ) {
+    return { error: 'Lead niet gevonden.' }
   }
-  if (parsed.data.proposedLabel === lead.label) {
+
+  if (parsed.data.proposedLabel === classificationToLabel(leadInbox.classification)) {
     return {
       error:
         'Het voorgestelde label is gelijk aan het huidige label — kies een ander passend label.',
     }
   }
 
-  const { error } = await admin
-    .from('campaign_leads')
-    .update({
-      objection_text: parsed.data.text,
-      objection_proposed_label: parsed.data.proposedLabel,
-      objection_proposed_label_note: parsed.data.proposedLabelNote,
-      objection_submitted_at: new Date().toISOString(),
-      objection_status: 'pending',
-      objection_response: null,
-      objection_resolved_at: null,
-    })
-    .eq('id', parsed.data.leadId)
-    .eq('client_id', userClientId)
+  // Bestaande objection? Dan blokkeren — één bezwaar per lead.
+  const { data: existing } = await admin
+    .from('lead_inbox_objections')
+    .select('id')
+    .eq('lead_id', leadInbox.id)
+    .maybeSingle()
+  if (existing) {
+    return { error: 'Er is al een bezwaar ingediend voor deze lead.' }
+  }
 
-  if (error) return { error: `Indienen mislukt: ${error.message}` }
+  const { error: insertError } = await admin.from('lead_inbox_objections').insert({
+    lead_id: leadInbox.id,
+    client_id: userClientId,
+    text: parsed.data.text,
+    proposed_label: labelToClassification(parsed.data.proposedLabel),
+    proposed_label_note: parsed.data.proposedLabelNote,
+    submitted_at: new Date().toISOString(),
+    status: 'pending',
+  })
+  if (insertError) return { error: `Indienen mislukt: ${insertError.message}` }
 
   revalidatePath('/dashboard/campagne-leads')
-  revalidatePath('/admin/bezwaren')
-  revalidatePath(`/admin/clients/${userClientId}/campagne-leads`)
   return { success: true }
 }
 

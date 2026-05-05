@@ -142,47 +142,55 @@ function LeadRow({ clientId, lead }: { clientId: string; lead: CampaignLead }) {
         </div>
       </td>
       <td className="px-4 py-3 align-top text-right">
-        <div className="inline-flex items-center gap-2">
-          <LeadFormDialog
-            clientId={clientId}
-            mode="edit"
-            lead={lead}
-            trigger={
-              <span className="rounded-md px-2 py-1 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700">
-                Bewerken
-              </span>
-            }
-          />
-          {confirming ? (
-            <>
-              <button
-                type="button"
-                onClick={handleDelete}
-                disabled={pending}
-                className="rounded-md bg-red-600 px-2 py-1 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-50"
-              >
-                {pending ? 'Bezig…' : 'Bevestig'}
-              </button>
-              <button
-                type="button"
-                onClick={() => setConfirming(false)}
-                disabled={pending}
-                className="rounded-md px-2 py-1 text-xs font-semibold text-gray-500 hover:bg-gray-100"
-              >
-                Annuleer
-              </button>
-            </>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setConfirming(true)}
-              className="rounded-md px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
-            >
-              Verwijder
-            </button>
-          )}
-        </div>
-        {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+        {lead.source === 'lead_inbox' ? (
+          <span className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-blue-700">
+            Auto
+          </span>
+        ) : (
+          <>
+            <div className="inline-flex items-center gap-2">
+              <LeadFormDialog
+                clientId={clientId}
+                mode="edit"
+                lead={lead}
+                trigger={
+                  <span className="rounded-md px-2 py-1 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700">
+                    Bewerken
+                  </span>
+                }
+              />
+              {confirming ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleDelete}
+                    disabled={pending}
+                    className="rounded-md bg-red-600 px-2 py-1 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                  >
+                    {pending ? 'Bezig…' : 'Bevestig'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirming(false)}
+                    disabled={pending}
+                    className="rounded-md px-2 py-1 text-xs font-semibold text-gray-500 hover:bg-gray-100"
+                  >
+                    Annuleer
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setConfirming(true)}
+                  className="rounded-md px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
+                >
+                  Verwijder
+                </button>
+              )}
+            </div>
+            {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+          </>
+        )}
       </td>
     </tr>
   )
