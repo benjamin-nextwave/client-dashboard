@@ -2,20 +2,23 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { HARDCODED_CUSTOMER_ID } from './constants'
+import { getLeadInboxCustomerId } from './customer'
 import type { Lead } from './types'
 
 export type ActionResult = { ok: true } | { ok: false; error: string }
 export type SendReplyResult = ActionResult
 
-async function assertLeadOwnership(leadId: string): Promise<
-  { ok: true } | { ok: false; error: string }
-> {
+const NO_ACCESS: ActionResult = { ok: false, error: 'Geen toegang tot de lead-inbox.' }
+
+async function assertLeadOwnership(
+  customerId: string,
+  leadId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('leads')
     .select('id')
-    .eq('customer_id', HARDCODED_CUSTOMER_ID)
+    .eq('customer_id', customerId)
     .eq('id', leadId)
     .maybeSingle()
   if (error) return { ok: false, error: error.message }
@@ -35,6 +38,9 @@ export async function sendReply(
   subject: string,
   body: string
 ): Promise<SendReplyResult> {
+  const customerId = await getLeadInboxCustomerId()
+  if (!customerId) return NO_ACCESS
+
   const trimmedSubject = subject.trim()
   if (!trimmedSubject) {
     return { ok: false, error: 'Onderwerp mag niet leeg zijn.' }
@@ -56,7 +62,7 @@ export async function sendReply(
   const { data: leadRow, error: leadError } = await supabase
     .from('leads')
     .select('id, sending_account, replies')
-    .eq('customer_id', HARDCODED_CUSTOMER_ID)
+    .eq('customer_id', customerId)
     .eq('id', leadId)
     .maybeSingle()
 
@@ -112,13 +118,16 @@ export async function sendReply(
 // ─── Custom labels ──────────────────────────────────────────────────────
 
 export async function createLabel(name: string, color: string): Promise<ActionResult> {
+  const customerId = await getLeadInboxCustomerId()
+  if (!customerId) return NO_ACCESS
+
   const trimmed = name.trim()
   if (!trimmed) return { ok: false, error: 'Naam mag niet leeg zijn.' }
   if (!color.trim()) return { ok: false, error: 'Kleur is verplicht.' }
 
   const supabase = await createClient()
   const { error } = await supabase.from('lead_inbox_user_labels').insert({
-    customer_id: HARDCODED_CUSTOMER_ID,
+    customer_id: customerId,
     name: trimmed,
     color,
   })
@@ -133,26 +142,32 @@ export async function createLabel(name: string, color: string): Promise<ActionRe
 }
 
 export async function deleteLabel(labelId: string): Promise<ActionResult> {
+  const customerId = await getLeadInboxCustomerId()
+  if (!customerId) return NO_ACCESS
+
   const supabase = await createClient()
   const { error } = await supabase
     .from('lead_inbox_user_labels')
     .delete()
     .eq('id', labelId)
-    .eq('customer_id', HARDCODED_CUSTOMER_ID)
+    .eq('customer_id', customerId)
   if (error) return { ok: false, error: error.message }
   revalidateLeadInbox()
   return { ok: true }
 }
 
 export async function assignLabel(leadId: string, labelId: string): Promise<ActionResult> {
-  const own = await assertLeadOwnership(leadId)
+  const customerId = await getLeadInboxCustomerId()
+  if (!customerId) return NO_ACCESS
+
+  const own = await assertLeadOwnership(customerId, leadId)
   if (!own.ok) return own
   const supabase = await createClient()
   const { data: label } = await supabase
     .from('lead_inbox_user_labels')
     .select('id')
     .eq('id', labelId)
-    .eq('customer_id', HARDCODED_CUSTOMER_ID)
+    .eq('customer_id', customerId)
     .maybeSingle()
   if (!label) return { ok: false, error: 'Label niet gevonden.' }
 
@@ -168,7 +183,10 @@ export async function unassignLabel(
   leadId: string,
   labelId: string
 ): Promise<ActionResult> {
-  const own = await assertLeadOwnership(leadId)
+  const customerId = await getLeadInboxCustomerId()
+  if (!customerId) return NO_ACCESS
+
+  const own = await assertLeadOwnership(customerId, leadId)
   if (!own.ok) return own
   const supabase = await createClient()
   const { error } = await supabase
@@ -197,7 +215,10 @@ export async function createNote(
   body: string,
   color: string
 ): Promise<ActionResult> {
-  const own = await assertLeadOwnership(leadId)
+  const customerId = await getLeadInboxCustomerId()
+  if (!customerId) return NO_ACCESS
+
+  const own = await assertLeadOwnership(customerId, leadId)
   if (!own.ok) return own
   const trimmed = body.trim()
   if (!trimmed) return { ok: false, error: 'Notitie mag niet leeg zijn.' }
@@ -217,6 +238,9 @@ export async function updateNote(
   body: string,
   color: string
 ): Promise<ActionResult> {
+  const customerId = await getLeadInboxCustomerId()
+  if (!customerId) return NO_ACCESS
+
   const trimmed = body.trim()
   if (!trimmed) return { ok: false, error: 'Notitie mag niet leeg zijn.' }
   const supabase = await createClient()
@@ -226,7 +250,7 @@ export async function updateNote(
     .eq('id', noteId)
     .maybeSingle()
   const note = noteRaw as NoteOwnRow | null
-  if (!note || ownerOf(note) !== HARDCODED_CUSTOMER_ID) {
+  if (!note || ownerOf(note) !== customerId) {
     return { ok: false, error: 'Notitie niet gevonden.' }
   }
   const { error } = await supabase
@@ -239,6 +263,9 @@ export async function updateNote(
 }
 
 export async function deleteNote(noteId: string): Promise<ActionResult> {
+  const customerId = await getLeadInboxCustomerId()
+  if (!customerId) return NO_ACCESS
+
   const supabase = await createClient()
   const { data: noteRaw } = await supabase
     .from('lead_inbox_lead_notes')
@@ -246,7 +273,7 @@ export async function deleteNote(noteId: string): Promise<ActionResult> {
     .eq('id', noteId)
     .maybeSingle()
   const note = noteRaw as NoteOwnRow | null
-  if (!note || ownerOf(note) !== HARDCODED_CUSTOMER_ID) {
+  if (!note || ownerOf(note) !== customerId) {
     return { ok: false, error: 'Notitie niet gevonden.' }
   }
   const { error } = await supabase.from('lead_inbox_lead_notes').delete().eq('id', noteId)
@@ -258,42 +285,51 @@ export async function deleteNote(noteId: string): Promise<ActionResult> {
 // ─── Trash ──────────────────────────────────────────────────────────────
 
 export async function moveLeadToTrash(leadId: string): Promise<ActionResult> {
-  const own = await assertLeadOwnership(leadId)
+  const customerId = await getLeadInboxCustomerId()
+  if (!customerId) return NO_ACCESS
+
+  const own = await assertLeadOwnership(customerId, leadId)
   if (!own.ok) return own
   const supabase = await createClient()
   const { error } = await supabase
     .from('leads')
     .update({ deleted_at: new Date().toISOString() })
     .eq('id', leadId)
-    .eq('customer_id', HARDCODED_CUSTOMER_ID)
+    .eq('customer_id', customerId)
   if (error) return { ok: false, error: error.message }
   revalidateLeadInbox(leadId)
   return { ok: true }
 }
 
 export async function restoreLeadFromTrash(leadId: string): Promise<ActionResult> {
-  const own = await assertLeadOwnership(leadId)
+  const customerId = await getLeadInboxCustomerId()
+  if (!customerId) return NO_ACCESS
+
+  const own = await assertLeadOwnership(customerId, leadId)
   if (!own.ok) return own
   const supabase = await createClient()
   const { error } = await supabase
     .from('leads')
     .update({ deleted_at: null })
     .eq('id', leadId)
-    .eq('customer_id', HARDCODED_CUSTOMER_ID)
+    .eq('customer_id', customerId)
   if (error) return { ok: false, error: error.message }
   revalidateLeadInbox(leadId)
   return { ok: true }
 }
 
 export async function permanentlyDeleteLead(leadId: string): Promise<ActionResult> {
-  const own = await assertLeadOwnership(leadId)
+  const customerId = await getLeadInboxCustomerId()
+  if (!customerId) return NO_ACCESS
+
+  const own = await assertLeadOwnership(customerId, leadId)
   if (!own.ok) return own
   const supabase = await createClient()
   const { error } = await supabase
     .from('leads')
     .delete()
     .eq('id', leadId)
-    .eq('customer_id', HARDCODED_CUSTOMER_ID)
+    .eq('customer_id', customerId)
     .not('deleted_at', 'is', null)
   if (error) return { ok: false, error: error.message }
   revalidateLeadInbox()
