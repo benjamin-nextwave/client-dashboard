@@ -73,16 +73,6 @@ export default async function LeadDetailPage({
             ·
           </span>
           <span>via {lead.sending_account}</span>
-          {lead.thread_id && (
-            <>
-              <span aria-hidden className="text-gray-300">
-                ·
-              </span>
-              <span className="break-all font-mono text-xs text-gray-500">
-                {lead.thread_id}
-              </span>
-            </>
-          )}
         </div>
         <div className="mt-3">
           <LabelsManager
