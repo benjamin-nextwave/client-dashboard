@@ -35,7 +35,26 @@ export type Lead = {
   first_reply_at: string
   last_reply_at: string
   notified_at: string | null
+  deleted_at: string | null
   replies: LeadReply[]
+  created_at: string
+  updated_at: string
+}
+
+export type UserLabel = {
+  id: string
+  customer_id: string
+  name: string
+  color: string
+  created_at: string
+  updated_at: string
+}
+
+export type LeadNote = {
+  id: string
+  lead_id: string
+  body: string
+  color: string
   created_at: string
   updated_at: string
 }
@@ -60,12 +79,14 @@ export type OutboundReply = {
   updated_at: string
 }
 
-// Per-lead afgeleide status, gebruikt voor folder-routing.
+// Per-lead afgeleide status, gebruikt voor folder-routing en lijst-weergave.
 export type LeadWithStatus = Lead & {
   lastInboundAt: string | null
   lastOutboundAt: string | null
-  awaitingOurReply: boolean // true als laatste inbound > laatste outbound (of nooit gereageerd)
-  pendingOutboundCount: number // queued/sending — voor optimistische badge
+  awaitingOurReply: boolean
+  pendingOutboundCount: number
+  labels: UserLabel[]
+  noteCount: number
 }
 
 // Genormaliseerde thread-entry voor weergave (mengt inbound JSONB en outbound table).

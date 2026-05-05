@@ -16,6 +16,7 @@ export const clientFormSchema = z.object({
     .uuid('Geldig customer-UUID vereist')
     .optional()
     .or(z.literal('')),
+  emailSignature: z.string().max(2000).optional().or(z.literal('')),
   instantlyApiKey: z.string().optional().or(z.literal('')),
 })
 

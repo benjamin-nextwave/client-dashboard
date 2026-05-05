@@ -19,9 +19,11 @@ export function InboxShell({
   const selectedSegment = useSelectedLayoutSegment()
   const hasSelection = selectedSegment !== null
 
-  const backHref = params.get('classification')
-    ? `/dashboard/lead-inbox?classification=${params.get('classification')}`
-    : '/dashboard/lead-inbox'
+  const backHref = (() => {
+    if (params.get('view') === 'trash') return '/dashboard/lead-inbox?view=trash'
+    const cls = params.get('classification')
+    return cls ? `/dashboard/lead-inbox?classification=${cls}` : '/dashboard/lead-inbox'
+  })()
 
   return (
     // Doorbreek de max-w-6xl container van (client)/layout.tsx en vul de hele

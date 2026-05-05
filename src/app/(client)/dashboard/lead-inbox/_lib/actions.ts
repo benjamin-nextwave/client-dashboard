@@ -1,10 +1,32 @@
 'use server'
 
+import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { HARDCODED_CUSTOMER_ID } from './constants'
 import type { Lead } from './types'
 
-export type SendReplyResult = { ok: true } | { ok: false; error: string }
+export type ActionResult = { ok: true } | { ok: false; error: string }
+export type SendReplyResult = ActionResult
+
+async function assertLeadOwnership(leadId: string): Promise<
+  { ok: true } | { ok: false; error: string }
+> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('leads')
+    .select('id')
+    .eq('customer_id', HARDCODED_CUSTOMER_ID)
+    .eq('id', leadId)
+    .maybeSingle()
+  if (error) return { ok: false, error: error.message }
+  if (!data) return { ok: false, error: 'Lead niet gevonden.' }
+  return { ok: true }
+}
+
+function revalidateLeadInbox(leadId?: string) {
+  revalidatePath('/dashboard/lead-inbox')
+  if (leadId) revalidatePath(`/dashboard/lead-inbox/${leadId}`)
+}
 
 const WEBHOOK_URL = process.env.MAKE_OUTBOUND_WEBHOOK_URL
 
@@ -84,5 +106,196 @@ export async function sendReply(
     }
   }
 
+  return { ok: true }
+}
+
+// ─── Custom labels ──────────────────────────────────────────────────────
+
+export async function createLabel(name: string, color: string): Promise<ActionResult> {
+  const trimmed = name.trim()
+  if (!trimmed) return { ok: false, error: 'Naam mag niet leeg zijn.' }
+  if (!color.trim()) return { ok: false, error: 'Kleur is verplicht.' }
+
+  const supabase = await createClient()
+  const { error } = await supabase.from('lead_inbox_user_labels').insert({
+    customer_id: HARDCODED_CUSTOMER_ID,
+    name: trimmed,
+    color,
+  })
+  if (error) {
+    if (error.code === '23505') {
+      return { ok: false, error: 'Er bestaat al een label met die naam.' }
+    }
+    return { ok: false, error: error.message }
+  }
+  revalidateLeadInbox()
+  return { ok: true }
+}
+
+export async function deleteLabel(labelId: string): Promise<ActionResult> {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('lead_inbox_user_labels')
+    .delete()
+    .eq('id', labelId)
+    .eq('customer_id', HARDCODED_CUSTOMER_ID)
+  if (error) return { ok: false, error: error.message }
+  revalidateLeadInbox()
+  return { ok: true }
+}
+
+export async function assignLabel(leadId: string, labelId: string): Promise<ActionResult> {
+  const own = await assertLeadOwnership(leadId)
+  if (!own.ok) return own
+  const supabase = await createClient()
+  const { data: label } = await supabase
+    .from('lead_inbox_user_labels')
+    .select('id')
+    .eq('id', labelId)
+    .eq('customer_id', HARDCODED_CUSTOMER_ID)
+    .maybeSingle()
+  if (!label) return { ok: false, error: 'Label niet gevonden.' }
+
+  const { error } = await supabase
+    .from('lead_inbox_lead_label_assignments')
+    .insert({ lead_id: leadId, label_id: labelId })
+  if (error && error.code !== '23505') return { ok: false, error: error.message }
+  revalidateLeadInbox(leadId)
+  return { ok: true }
+}
+
+export async function unassignLabel(
+  leadId: string,
+  labelId: string
+): Promise<ActionResult> {
+  const own = await assertLeadOwnership(leadId)
+  if (!own.ok) return own
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('lead_inbox_lead_label_assignments')
+    .delete()
+    .eq('lead_id', leadId)
+    .eq('label_id', labelId)
+  if (error) return { ok: false, error: error.message }
+  revalidateLeadInbox(leadId)
+  return { ok: true }
+}
+
+// ─── Notes ──────────────────────────────────────────────────────────────
+
+type NoteOwnRow = {
+  lead_id: string
+  leads: { customer_id: string } | { customer_id: string }[]
+}
+
+function ownerOf(n: NoteOwnRow): string | undefined {
+  return Array.isArray(n.leads) ? n.leads[0]?.customer_id : n.leads.customer_id
+}
+
+export async function createNote(
+  leadId: string,
+  body: string,
+  color: string
+): Promise<ActionResult> {
+  const own = await assertLeadOwnership(leadId)
+  if (!own.ok) return own
+  const trimmed = body.trim()
+  if (!trimmed) return { ok: false, error: 'Notitie mag niet leeg zijn.' }
+  if (!color.trim()) return { ok: false, error: 'Kleur is verplicht.' }
+
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('lead_inbox_lead_notes')
+    .insert({ lead_id: leadId, body: trimmed, color })
+  if (error) return { ok: false, error: error.message }
+  revalidateLeadInbox(leadId)
+  return { ok: true }
+}
+
+export async function updateNote(
+  noteId: string,
+  body: string,
+  color: string
+): Promise<ActionResult> {
+  const trimmed = body.trim()
+  if (!trimmed) return { ok: false, error: 'Notitie mag niet leeg zijn.' }
+  const supabase = await createClient()
+  const { data: noteRaw } = await supabase
+    .from('lead_inbox_lead_notes')
+    .select('lead_id, leads!inner(customer_id)')
+    .eq('id', noteId)
+    .maybeSingle()
+  const note = noteRaw as NoteOwnRow | null
+  if (!note || ownerOf(note) !== HARDCODED_CUSTOMER_ID) {
+    return { ok: false, error: 'Notitie niet gevonden.' }
+  }
+  const { error } = await supabase
+    .from('lead_inbox_lead_notes')
+    .update({ body: trimmed, color })
+    .eq('id', noteId)
+  if (error) return { ok: false, error: error.message }
+  revalidateLeadInbox(note.lead_id)
+  return { ok: true }
+}
+
+export async function deleteNote(noteId: string): Promise<ActionResult> {
+  const supabase = await createClient()
+  const { data: noteRaw } = await supabase
+    .from('lead_inbox_lead_notes')
+    .select('lead_id, leads!inner(customer_id)')
+    .eq('id', noteId)
+    .maybeSingle()
+  const note = noteRaw as NoteOwnRow | null
+  if (!note || ownerOf(note) !== HARDCODED_CUSTOMER_ID) {
+    return { ok: false, error: 'Notitie niet gevonden.' }
+  }
+  const { error } = await supabase.from('lead_inbox_lead_notes').delete().eq('id', noteId)
+  if (error) return { ok: false, error: error.message }
+  revalidateLeadInbox(note.lead_id)
+  return { ok: true }
+}
+
+// ─── Trash ──────────────────────────────────────────────────────────────
+
+export async function moveLeadToTrash(leadId: string): Promise<ActionResult> {
+  const own = await assertLeadOwnership(leadId)
+  if (!own.ok) return own
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('leads')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('id', leadId)
+    .eq('customer_id', HARDCODED_CUSTOMER_ID)
+  if (error) return { ok: false, error: error.message }
+  revalidateLeadInbox(leadId)
+  return { ok: true }
+}
+
+export async function restoreLeadFromTrash(leadId: string): Promise<ActionResult> {
+  const own = await assertLeadOwnership(leadId)
+  if (!own.ok) return own
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('leads')
+    .update({ deleted_at: null })
+    .eq('id', leadId)
+    .eq('customer_id', HARDCODED_CUSTOMER_ID)
+  if (error) return { ok: false, error: error.message }
+  revalidateLeadInbox(leadId)
+  return { ok: true }
+}
+
+export async function permanentlyDeleteLead(leadId: string): Promise<ActionResult> {
+  const own = await assertLeadOwnership(leadId)
+  if (!own.ok) return own
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('leads')
+    .delete()
+    .eq('id', leadId)
+    .eq('customer_id', HARDCODED_CUSTOMER_ID)
+    .not('deleted_at', 'is', null)
+  if (error) return { ok: false, error: error.message }
+  revalidateLeadInbox()
   return { ok: true }
 }

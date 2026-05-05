@@ -8,6 +8,7 @@ export function ReplyForm({
   replyToSubject,
   sendingAccount,
   toEmail,
+  signature,
   onSent,
   onCancel,
 }: {
@@ -15,6 +16,7 @@ export function ReplyForm({
   replyToSubject: string
   sendingAccount: string
   toEmail: string
+  signature: string | null
   onSent?: () => void
   onCancel?: () => void
 }) {
@@ -34,6 +36,12 @@ export function ReplyForm({
       if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
     }
   }, [])
+
+  function appendSignature() {
+    if (!signature) return
+    if (body.includes(signature.trim())) return
+    setBody((prev) => (prev.trim() ? `${prev.replace(/\s+$/, '')}\n\n${signature}` : signature))
+  }
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -100,8 +108,21 @@ export function ReplyForm({
         placeholder="Schrijf je antwoord…"
         className="block w-full resize-y border-0 bg-transparent px-5 py-3 text-sm text-gray-900 outline-none placeholder:text-gray-400 disabled:opacity-60"
       />
-      <div className="flex items-center justify-between gap-3 border-t border-gray-100 px-5 py-3">
-        <div className="text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 px-5 py-3">
+        <div className="flex items-center gap-3 text-xs">
+          {signature && (
+            <button
+              type="button"
+              onClick={appendSignature}
+              disabled={pending || success}
+              className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            >
+              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2.4} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              </svg>
+              Handtekening
+            </button>
+          )}
           {error && <span className="text-rose-700">{error}</span>}
           {success && !error && (
             <span className="inline-flex items-center gap-1.5 text-emerald-700">
