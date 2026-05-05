@@ -94,7 +94,9 @@ export function LeadCard({ lead }: { lead: CampaignLead }) {
       {open && (
         <div className="border-t border-gray-100 bg-gray-50/60 px-5 py-4">
           {(hasSent || hasReply) && (
-            <div className="grid gap-4 md:grid-cols-2">
+            <div
+              className={`grid gap-4 ${hasSent && hasReply ? 'md:grid-cols-2' : 'grid-cols-1'}`}
+            >
               {hasSent && (
                 <ThreadBlock
                   title={t('leads.sentSubject')}
