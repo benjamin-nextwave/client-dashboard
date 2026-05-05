@@ -30,7 +30,7 @@ export function InboxShell({
     // ruimte naast de outer SidebarNav (w-60 = 15rem). Position: fixed neemt
     // de viewport als containing-block, dus we hoeven niet om de mx-auto heen
     // te rekenen.
-    <div className="fixed inset-y-0 left-60 right-0 z-10 flex overflow-hidden bg-white">
+    <div className="fixed inset-y-0 left-60 right-0 z-10 flex overflow-hidden bg-white pt-6 lg:pt-8">
       {/* Filter sidebar — lg+ alleen */}
       <aside className="hidden w-48 shrink-0 border-r border-gray-200 bg-gray-50 lg:block xl:w-56">
         <FilterSidebar leads={leads} />
