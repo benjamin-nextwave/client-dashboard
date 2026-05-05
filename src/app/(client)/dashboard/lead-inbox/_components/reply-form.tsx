@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
 import { sendReply } from '../_lib/actions'
 
 export function ReplyForm({
@@ -20,7 +20,15 @@ export function ReplyForm({
 }) {
   const [body, setBody] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
   const [pending, startTransition] = useTransition()
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
+    }
+  }, [])
 
   const subject = replyToSubject.toLowerCase().startsWith('re:')
     ? replyToSubject
@@ -41,7 +49,9 @@ export function ReplyForm({
         return
       }
       setBody('')
-      onSent?.()
+      setSuccess(true)
+      // Sluit de form na 2.5s zodat de gebruiker de bevestiging ziet.
+      closeTimerRef.current = setTimeout(() => onSent?.(), 2500)
     })
   }
 
@@ -67,7 +77,7 @@ export function ReplyForm({
       <textarea
         value={body}
         onChange={(e) => setBody(e.target.value)}
-        disabled={pending}
+        disabled={pending || success}
         rows={6}
         placeholder="Schrijf je antwoord…"
         className="block w-full resize-y border-0 bg-transparent px-5 py-3 text-sm text-gray-900 outline-none placeholder:text-gray-400 disabled:opacity-60"
@@ -75,13 +85,28 @@ export function ReplyForm({
       <div className="flex items-center justify-between gap-3 border-t border-gray-100 px-5 py-3">
         <div className="text-xs">
           {error && <span className="text-rose-700">{error}</span>}
+          {success && !error && (
+            <span className="inline-flex items-center gap-1.5 text-emerald-700">
+              <svg
+                className="h-3.5 w-3.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2.4}
+                stroke="currentColor"
+                aria-hidden
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+              </svg>
+              Reactie verzonden
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {onCancel && (
             <button
               type="button"
               onClick={onCancel}
-              disabled={pending}
+              disabled={pending || success}
               className="rounded-md px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-50"
             >
               Annuleren
@@ -89,7 +114,7 @@ export function ReplyForm({
           )}
         <button
           type="submit"
-          disabled={pending || !body.trim()}
+          disabled={pending || success || !body.trim()}
           className="inline-flex items-center gap-2 rounded-md bg-[var(--color-brand)] px-4 py-2 text-sm font-medium text-white shadow-sm transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {pending && (
