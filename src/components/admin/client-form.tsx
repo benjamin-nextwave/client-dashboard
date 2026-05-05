@@ -40,6 +40,7 @@ export function ClientForm({
       inboxUrl: defaultValues?.inboxUrl ?? '',
       inboxVisible: defaultValues?.inboxVisible ?? false,
       chatInboxVisible: defaultValues?.chatInboxVisible ?? true,
+      leadInboxVisible: defaultValues?.leadInboxVisible ?? false,
       instantlyApiKey: defaultValues?.instantlyApiKey ?? '',
     },
   })
@@ -210,6 +211,13 @@ export function ClientForm({
             defaultChecked={defaultValues?.chatInboxVisible ?? true}
             label="Chat inbox zichtbaar"
             description="Toont de chat-gebaseerde inbox in het klantdashboard."
+          />
+          <Toggle
+            id="leadInboxVisible"
+            name="leadInboxVisible"
+            defaultChecked={defaultValues?.leadInboxVisible ?? false}
+            label="Lead inbox (nieuw) zichtbaar"
+            description="Toont de nieuwe Supabase-lead-inbox als extra menu-item naast de bestaande inbox. Standaard uit."
           />
         </div>
       </FormSection>

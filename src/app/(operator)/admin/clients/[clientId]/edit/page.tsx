@@ -116,6 +116,7 @@ export default async function EditClientPage({ params }: EditClientPageProps) {
           inboxUrl: client.inbox_url ?? '',
           inboxVisible: client.inbox_visible ?? false,
           chatInboxVisible: client.chat_inbox_visible ?? true,
+          leadInboxVisible: client.lead_inbox_visible ?? false,
           instantlyApiKey: client.instantly_api_key ?? '',
         }}
         currentLogoUrl={client.logo_url}
