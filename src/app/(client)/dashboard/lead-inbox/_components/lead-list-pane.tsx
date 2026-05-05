@@ -40,19 +40,26 @@ function snippetFromLead(lead: LeadWithStatus): string {
 export function LeadListPane({ leads }: { leads: LeadWithStatus[] }) {
   const params = useSearchParams()
   const activeFilter = params.get('classification') as LeadClassification | null
+  const isTrash = params.get('view') === 'trash'
   const selectedSegment = useSelectedLayoutSegment()
 
   const filtered = useMemo(() => {
-    const base = activeFilter
-      ? leads.filter(
-          (l) => l.classification === activeFilter && !l.awaitingOurReply
-        )
-      : leads.filter((l) => l.awaitingOurReply)
+    let base: LeadWithStatus[]
+    if (isTrash) {
+      base = leads.filter((l) => !!l.deleted_at)
+    } else {
+      const active = leads.filter((l) => !l.deleted_at)
+      base = activeFilter
+        ? active.filter(
+            (l) => l.classification === activeFilter && !l.awaitingOurReply
+          )
+        : active.filter((l) => l.awaitingOurReply)
+    }
     return [...base].sort(
       (a, b) =>
         new Date(b.last_reply_at).getTime() - new Date(a.last_reply_at).getTime()
     )
-  }, [leads, activeFilter])
+  }, [leads, activeFilter, isTrash])
 
   if (filtered.length === 0) {
     return (
@@ -60,9 +67,11 @@ export function LeadListPane({ leads }: { leads: LeadWithStatus[] }) {
         <div>
           <h3 className="text-base font-semibold text-gray-900">Geen leads</h3>
           <p className="mt-1 text-sm text-gray-600">
-            {activeFilter
-              ? `Geen beantwoorde leads in "${CLASSIFICATION_LABEL[activeFilter]}".`
-              : 'Geen leads die op antwoord wachten. Mooi opgeruimd.'}
+            {isTrash
+              ? 'De prullenbak is leeg.'
+              : activeFilter
+                ? `Geen beantwoorde leads in "${CLASSIFICATION_LABEL[activeFilter]}".`
+                : 'Geen leads die op antwoord wachten. Mooi opgeruimd.'}
           </p>
         </div>
       </div>
@@ -73,9 +82,12 @@ export function LeadListPane({ leads }: { leads: LeadWithStatus[] }) {
     <ul className="flex-1 divide-y divide-gray-100 overflow-y-auto">
       {filtered.map((lead) => {
         const isSelected = selectedSegment === lead.id
-        const href = activeFilter
-          ? `/dashboard/lead-inbox/${lead.id}?classification=${activeFilter}`
-          : `/dashboard/lead-inbox/${lead.id}`
+        const qs = isTrash
+          ? '?view=trash'
+          : activeFilter
+            ? `?classification=${activeFilter}`
+            : ''
+        const href = `/dashboard/lead-inbox/${lead.id}${qs}`
         return (
           <li key={lead.id}>
             <Link
@@ -98,12 +110,52 @@ export function LeadListPane({ leads }: { leads: LeadWithStatus[] }) {
               <p className="mt-1.5 truncate text-xs text-gray-600">
                 {snippetFromLead(lead)}
               </p>
-              <div className="mt-2.5 flex items-center gap-2">
+              <div className="mt-2.5 flex flex-wrap items-center gap-2">
                 <span
                   className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${CLASSIFICATION_BADGE[lead.classification]}`}
                 >
                   {CLASSIFICATION_LABEL[lead.classification]}
                 </span>
+                {lead.labels.slice(0, 3).map((label) => (
+                  <span
+                    key={label.id}
+                    className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-700"
+                  >
+                    <span
+                      className="h-1.5 w-1.5 rounded-full"
+                      style={{ backgroundColor: label.color }}
+                      aria-hidden
+                    />
+                    {label.name}
+                  </span>
+                ))}
+                {lead.labels.length > 3 && (
+                  <span className="text-[10px] text-gray-500">
+                    +{lead.labels.length - 3}
+                  </span>
+                )}
+                {lead.noteCount > 0 && (
+                  <span
+                    className="inline-flex items-center gap-1 text-[10px] text-gray-500"
+                    title={`${lead.noteCount} notitie${lead.noteCount === 1 ? '' : 's'}`}
+                  >
+                    <svg
+                      className="h-3 w-3"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={1.8}
+                      stroke="currentColor"
+                      aria-hidden
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M16.862 4.487l1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
+                      />
+                    </svg>
+                    {lead.noteCount}
+                  </span>
+                )}
                 {lead.pendingOutboundCount > 0 && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-medium text-blue-800">
                     <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-500" />

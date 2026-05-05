@@ -1,9 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import type {
   Lead,
+  LeadNote,
   LeadWithStatus,
   OutboundReply,
   ThreadItem,
+  UserLabel,
 } from './types'
 
 const LEAD_COLUMNS = `
@@ -18,10 +20,14 @@ const LEAD_COLUMNS = `
   first_reply_at,
   last_reply_at,
   notified_at,
+  deleted_at,
   replies,
   created_at,
   updated_at
 `
+
+const LABEL_COLUMNS = `id, customer_id, name, color, created_at, updated_at`
+const NOTE_COLUMNS = `id, lead_id, body, color, created_at, updated_at`
 
 const OUTBOUND_COLUMNS = `
   id,
@@ -88,21 +94,32 @@ function deriveStatus(
   return { lastInboundAt, lastOutboundAt, awaitingOurReply, pendingOutboundCount }
 }
 
+type LabelAssignmentRow = { lead_id: string; label_id: string }
+
 export async function getLeadsWithStatusForCustomer(
   customerId: string
 ): Promise<LeadWithStatus[]> {
   const supabase = await createClient()
-  const [leadsResult, outboundResult] = await Promise.all([
-    supabase
-      .from('leads')
-      .select(LEAD_COLUMNS)
-      .eq('customer_id', customerId)
-      .order('last_reply_at', { ascending: false }),
-    supabase
-      .from('outbound_replies')
-      .select(OUTBOUND_COLUMNS)
-      .eq('customer_id', customerId),
-  ])
+  const [leadsResult, outboundResult, labelsResult, assignmentsResult, notesResult] =
+    await Promise.all([
+      supabase
+        .from('leads')
+        .select(LEAD_COLUMNS)
+        .eq('customer_id', customerId)
+        .order('last_reply_at', { ascending: false }),
+      supabase
+        .from('outbound_replies')
+        .select(OUTBOUND_COLUMNS)
+        .eq('customer_id', customerId),
+      supabase
+        .from('lead_inbox_user_labels')
+        .select(LABEL_COLUMNS)
+        .eq('customer_id', customerId),
+      supabase
+        .from('lead_inbox_lead_label_assignments')
+        .select('lead_id, label_id'),
+      supabase.from('lead_inbox_lead_notes').select('lead_id'),
+    ])
 
   if (leadsResult.error) {
     throw new Error(`getLeadsWithStatusForCustomer leads: ${leadsResult.error.message}`)
@@ -115,12 +132,73 @@ export async function getLeadsWithStatusForCustomer(
 
   const leads = (leadsResult.data ?? []) as unknown as Lead[]
   const outbounds = (outboundResult.data ?? []) as unknown as OutboundReply[]
+  const allLabels = (labelsResult.data ?? []) as unknown as UserLabel[]
+  const labelById = new Map(allLabels.map((l) => [l.id, l]))
+  const assignments = (assignmentsResult.data ?? []) as unknown as LabelAssignmentRow[]
+  const labelsByLead = new Map<string, UserLabel[]>()
+  for (const a of assignments) {
+    const label = labelById.get(a.label_id)
+    if (!label) continue
+    if (!labelsByLead.has(a.lead_id)) labelsByLead.set(a.lead_id, [])
+    labelsByLead.get(a.lead_id)!.push(label)
+  }
+
+  const noteCountByLead = new Map<string, number>()
+  for (const n of (notesResult.data ?? []) as unknown as { lead_id: string }[]) {
+    noteCountByLead.set(n.lead_id, (noteCountByLead.get(n.lead_id) ?? 0) + 1)
+  }
 
   return leads.map((lead) => {
     const leadOutbounds = outbounds.filter((o) => o.lead_id === lead.id)
-    return { ...lead, ...deriveStatus(lead, leadOutbounds) }
+    return {
+      ...lead,
+      ...deriveStatus(lead, leadOutbounds),
+      labels: labelsByLead.get(lead.id) ?? [],
+      noteCount: noteCountByLead.get(lead.id) ?? 0,
+    }
   })
 }
+
+export async function getUserLabelsForCustomer(
+  customerId: string
+): Promise<UserLabel[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('lead_inbox_user_labels')
+    .select(LABEL_COLUMNS)
+    .eq('customer_id', customerId)
+    .order('name', { ascending: true })
+  if (error) throw new Error(`getUserLabelsForCustomer: ${error.message}`)
+  return (data ?? []) as unknown as UserLabel[]
+}
+
+export async function getNotesForLead(leadId: string): Promise<LeadNote[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('lead_inbox_lead_notes')
+    .select(NOTE_COLUMNS)
+    .eq('lead_id', leadId)
+    .order('created_at', { ascending: true })
+  if (error) throw new Error(`getNotesForLead: ${error.message}`)
+  return (data ?? []) as unknown as LeadNote[]
+}
+
+export async function getLabelsForLead(leadId: string): Promise<UserLabel[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('lead_inbox_lead_label_assignments')
+    .select(`label_id, lead_inbox_user_labels(${LABEL_COLUMNS})`)
+    .eq('lead_id', leadId)
+  if (error) throw new Error(`getLabelsForLead: ${error.message}`)
+  type Row = { lead_inbox_user_labels: UserLabel | UserLabel[] | null }
+  return (data ?? [])
+    .flatMap((r: Row) => {
+      const label = r.lead_inbox_user_labels
+      if (!label) return []
+      return Array.isArray(label) ? label : [label]
+    })
+}
+
 
 export async function getLeadById(
   customerId: string,

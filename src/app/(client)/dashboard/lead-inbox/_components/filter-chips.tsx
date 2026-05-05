@@ -5,7 +5,6 @@ import { useSearchParams } from 'next/navigation'
 import type { LeadWithStatus, LeadClassification } from '../_lib/types'
 import { CLASSIFICATION_LABEL } from '../_lib/labels'
 
-// "not_interested" wordt bewust niet als filter getoond.
 const CATEGORIES: LeadClassification[] = [
   'meeting_request',
   'phone_request',
@@ -18,8 +17,11 @@ const CATEGORIES: LeadClassification[] = [
 export function FilterChips({ leads }: { leads: LeadWithStatus[] }) {
   const params = useSearchParams()
   const active = params.get('classification')
+  const isTrash = params.get('view') === 'trash'
 
-  const inboxCount = leads.filter((l) => l.awaitingOurReply).length
+  const activeLeads = leads.filter((l) => !l.deleted_at)
+  const trashedLeads = leads.filter((l) => l.deleted_at)
+  const inboxCount = activeLeads.filter((l) => l.awaitingOurReply).length
 
   function chipClasses(isActive: boolean) {
     return [
@@ -30,16 +32,18 @@ export function FilterChips({ leads }: { leads: LeadWithStatus[] }) {
     ].join(' ')
   }
 
+  const noFilterActive = !active && !isTrash
+
   return (
     <div className="flex gap-2 overflow-x-auto px-4 py-3">
-      <Link href="/dashboard/lead-inbox" className={chipClasses(!active)}>
+      <Link href="/dashboard/lead-inbox" className={chipClasses(noFilterActive)}>
         Alle ({inboxCount})
       </Link>
       {CATEGORIES.map((cat) => {
-        const count = leads.filter(
+        const count = activeLeads.filter(
           (l) => l.classification === cat && !l.awaitingOurReply
         ).length
-        const isActive = active === cat
+        const isActive = active === cat && !isTrash
         return (
           <Link
             key={cat}
@@ -50,6 +54,9 @@ export function FilterChips({ leads }: { leads: LeadWithStatus[] }) {
           </Link>
         )
       })}
+      <Link href="/dashboard/lead-inbox?view=trash" className={chipClasses(isTrash)}>
+        Prullenbak ({trashedLeads.length})
+      </Link>
     </div>
   )
 }

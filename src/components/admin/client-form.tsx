@@ -42,6 +42,7 @@ export function ClientForm({
       chatInboxVisible: defaultValues?.chatInboxVisible ?? true,
       leadInboxVisible: defaultValues?.leadInboxVisible ?? false,
       leadInboxCustomerId: defaultValues?.leadInboxCustomerId ?? '',
+      emailSignature: defaultValues?.emailSignature ?? '',
       instantlyApiKey: defaultValues?.instantlyApiKey ?? '',
     },
   })
@@ -232,6 +233,20 @@ export function ClientForm({
               placeholder="00000000-0000-0000-0000-000000000000"
               {...register('leadInboxCustomerId')}
               className={inputClass(!!errors.leadInboxCustomerId) + ' font-mono text-xs'}
+            />
+          </Field>
+          <Field
+            label="E-mail handtekening"
+            id="emailSignature"
+            hint="Wordt in de Lead-inbox onder een reply geplakt zodra de klant op '+ Handtekening' klikt. Plain text, geen HTML."
+            error={errors.emailSignature?.message}
+          >
+            <textarea
+              id="emailSignature"
+              rows={5}
+              placeholder={'Met vriendelijke groet,\n\n[Naam]\n[Functie] | [Bedrijf]'}
+              {...register('emailSignature')}
+              className={inputClass(!!errors.emailSignature) + ' resize-y font-mono text-xs'}
             />
           </Field>
         </div>

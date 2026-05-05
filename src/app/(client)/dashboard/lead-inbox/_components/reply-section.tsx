@@ -8,11 +8,13 @@ export function ReplySection({
   replyToSubject,
   sendingAccount,
   toEmail,
+  signature,
 }: {
   leadId: string
   replyToSubject: string
   sendingAccount: string
   toEmail: string
+  signature: string | null
 }) {
   const [open, setOpen] = useState(false)
 
@@ -48,6 +50,7 @@ export function ReplySection({
       replyToSubject={replyToSubject}
       sendingAccount={sendingAccount}
       toEmail={toEmail}
+      signature={signature}
       onSent={() => setOpen(false)}
       onCancel={() => setOpen(false)}
     />
