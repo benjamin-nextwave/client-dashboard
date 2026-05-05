@@ -10,8 +10,13 @@ const WEBHOOK_URL = process.env.MAKE_OUTBOUND_WEBHOOK_URL
 
 export async function sendReply(
   leadId: string,
+  subject: string,
   body: string
 ): Promise<SendReplyResult> {
+  const trimmedSubject = subject.trim()
+  if (!trimmedSubject) {
+    return { ok: false, error: 'Onderwerp mag niet leeg zijn.' }
+  }
   const trimmed = body.trim()
   if (!trimmed) return { ok: false, error: 'Bericht mag niet leeg zijn.' }
 
@@ -62,6 +67,7 @@ export async function sendReply(
       body: JSON.stringify({
         instantly_email_id: latestReply.instantly_email_id,
         sending_account: lead.sending_account,
+        subject: trimmedSubject,
         body_text: trimmed,
       }),
     })

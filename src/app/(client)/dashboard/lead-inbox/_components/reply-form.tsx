@@ -18,6 +18,11 @@ export function ReplyForm({
   onSent?: () => void
   onCancel?: () => void
 }) {
+  const initialSubject = replyToSubject.toLowerCase().startsWith('re:')
+    ? replyToSubject
+    : `Re: ${replyToSubject}`
+
+  const [subject, setSubject] = useState(initialSubject)
   const [body, setBody] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -30,20 +35,21 @@ export function ReplyForm({
     }
   }, [])
 
-  const subject = replyToSubject.toLowerCase().startsWith('re:')
-    ? replyToSubject
-    : `Re: ${replyToSubject}`
-
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setError(null)
+    const trimmedSubject = subject.trim()
+    if (!trimmedSubject) {
+      setError('Onderwerp mag niet leeg zijn.')
+      return
+    }
     const trimmed = body.trim()
     if (!trimmed) {
       setError('Bericht mag niet leeg zijn.')
       return
     }
     startTransition(async () => {
-      const result = await sendReply(leadId, trimmed)
+      const result = await sendReply(leadId, trimmedSubject, trimmed)
       if (!result.ok) {
         setError(result.error)
         return
@@ -69,10 +75,22 @@ export function ReplyForm({
             <span className="font-semibold text-gray-700">Aan:</span> {toEmail}
           </span>
         </div>
-        <div className="mt-1 truncate">
-          <span className="font-semibold text-gray-700">Onderwerp:</span>{' '}
-          <span className="text-gray-600">{subject}</span>
-        </div>
+      </div>
+      <div className="flex items-center gap-3 border-b border-gray-100 px-5 py-2">
+        <label
+          htmlFor="reply-subject"
+          className="text-xs font-semibold text-gray-700"
+        >
+          Onderwerp
+        </label>
+        <input
+          id="reply-subject"
+          type="text"
+          value={subject}
+          onChange={(e) => setSubject(e.target.value)}
+          disabled={pending || success}
+          className="flex-1 border-0 bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-400 disabled:opacity-60"
+        />
       </div>
       <textarea
         value={body}
@@ -114,7 +132,7 @@ export function ReplyForm({
           )}
         <button
           type="submit"
-          disabled={pending || success || !body.trim()}
+          disabled={pending || success || !subject.trim() || !body.trim()}
           className="inline-flex items-center gap-2 rounded-md bg-[var(--color-brand)] px-4 py-2 text-sm font-medium text-white shadow-sm transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {pending && (
