@@ -52,23 +52,20 @@ export default async function LeadDetailPage({
   return (
     <div className="px-5 py-5 lg:px-8 lg:py-6">
       <header className="border-b border-gray-200 pb-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-xl font-semibold text-gray-900">
-              {lead.name || lead.email}
-            </h1>
-            <span
-              className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${CLASSIFICATION_BADGE[lead.classification]}`}
-            >
-              {CLASSIFICATION_LABEL[lead.classification]}
+        <div className="flex flex-wrap items-center gap-3 pr-12">
+          <h1 className="text-xl font-semibold text-gray-900">
+            {lead.name || lead.email}
+          </h1>
+          <span
+            className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${CLASSIFICATION_BADGE[lead.classification]}`}
+          >
+            {CLASSIFICATION_LABEL[lead.classification]}
+          </span>
+          {isTrashed && (
+            <span className="inline-flex rounded-full bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700">
+              In prullenbak
             </span>
-            {isTrashed && (
-              <span className="inline-flex rounded-full bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700">
-                In prullenbak
-              </span>
-            )}
-          </div>
-          <LeadActions leadId={lead.id} isTrashed={isTrashed} />
+          )}
         </div>
         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-600">
           <span>{lead.email}</span>
@@ -93,6 +90,9 @@ export default async function LeadDetailPage({
             assigned={assignedLabels}
             available={allLabels}
           />
+        </div>
+        <div className="mt-4 flex flex-wrap justify-end gap-2">
+          <LeadActions leadId={lead.id} isTrashed={isTrashed} />
         </div>
       </header>
 
