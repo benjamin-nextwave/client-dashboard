@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import { getClientBranding } from '@/lib/client/get-client-branding'
 import { LeadWorkspace } from '../_components/lead-workspace'
 import { RepliesThread } from '../_components/replies-thread'
-import { HARDCODED_CUSTOMER_ID } from '../_lib/constants'
+import { requireLeadInboxCustomerId } from '../_lib/customer'
 import { CLASSIFICATION_BADGE, CLASSIFICATION_LABEL } from '../_lib/labels'
 import {
   buildThreadItems,
@@ -23,13 +23,14 @@ export default async function LeadDetailPage({
   params: Promise<{ leadId: string }>
 }) {
   const { leadId } = await params
+  const customerId = await requireLeadInboxCustomerId()
   const [lead, outbounds, notes, assignedLabels, allLabels, branding] =
     await Promise.all([
-      getLeadById(HARDCODED_CUSTOMER_ID, leadId),
-      getOutboundRepliesForLead(HARDCODED_CUSTOMER_ID, leadId),
+      getLeadById(customerId, leadId),
+      getOutboundRepliesForLead(customerId, leadId),
       getNotesForLead(leadId),
       getLabelsForLead(leadId),
-      getUserLabelsForCustomer(HARDCODED_CUSTOMER_ID),
+      getUserLabelsForCustomer(customerId),
       getClientBranding(),
     ])
 
