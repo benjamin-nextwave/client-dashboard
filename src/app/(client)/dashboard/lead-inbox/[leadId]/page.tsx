@@ -50,7 +50,7 @@ export default async function LeadDetailPage({
   const signature = branding?.email_signature ?? null
 
   return (
-    <div className="px-5 py-5 lg:px-8 lg:py-6">
+    <div className="px-5 pb-5 pt-8 lg:px-8 lg:pb-6 lg:pt-10">
       <header className="border-b border-gray-200 pb-4">
         <div className="flex flex-wrap items-center gap-3 pr-12">
           <h1 className="text-xl font-semibold text-gray-900">
