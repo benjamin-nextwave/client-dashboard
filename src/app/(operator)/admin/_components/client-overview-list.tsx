@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import type { ClientListItem } from '@/lib/data/admin-stats'
@@ -22,6 +23,8 @@ function formatDate(dateStr: string): string {
   if (days < 30) return `${Math.floor(days / 7)}w geleden`
   return date.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })
 }
+
+type MenuPosition = { top: number; right: number }
 
 export function ClientOverviewList({ clients }: ClientOverviewListProps) {
   const [search, setSearch] = useState('')
@@ -129,11 +132,32 @@ export function ClientOverviewList({ clients }: ClientOverviewListProps) {
 function ClientCard({ client }: { client: ClientListItem }) {
   const router = useRouter()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [menuPos, setMenuPos] = useState<MenuPosition | null>(null)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [togglingHidden, setTogglingHidden] = useState(false)
+  const menuButtonRef = useRef<HTMLButtonElement | null>(null)
+
+  const openMenu = useCallback(() => {
+    const btn = menuButtonRef.current
+    if (!btn) return
+    const rect = btn.getBoundingClientRect()
+    setMenuPos({ top: rect.bottom + 6, right: window.innerWidth - rect.right })
+    setMenuOpen(true)
+  }, [])
+
+  useEffect(() => {
+    if (!menuOpen) return
+    const onScrollOrResize = () => setMenuOpen(false)
+    window.addEventListener('scroll', onScrollOrResize, true)
+    window.addEventListener('resize', onScrollOrResize)
+    return () => {
+      window.removeEventListener('scroll', onScrollOrResize, true)
+      window.removeEventListener('resize', onScrollOrResize)
+    }
+  }, [menuOpen])
 
   const handleDelete = useCallback(async () => {
     setIsDeleting(true)
@@ -205,8 +229,9 @@ function ClientCard({ client }: { client: ClientListItem }) {
           {/* Menu button (z-10 to sit above the link overlay) */}
           <div className="relative z-10 flex-shrink-0">
             <button
+              ref={menuButtonRef}
               type="button"
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setMenuOpen((v) => !v) }}
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (menuOpen) { setMenuOpen(false) } else { openMenu() } }}
               className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
               aria-label="Meer acties"
             >
@@ -214,13 +239,16 @@ function ClientCard({ client }: { client: ClientListItem }) {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 12.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 18.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5Z" />
               </svg>
             </button>
-            {menuOpen && (
+            {menuOpen && menuPos && typeof window !== 'undefined' && createPortal(
               <>
                 <div
-                  className="fixed inset-0 z-20"
+                  className="fixed inset-0 z-[100]"
                   onClick={(e) => { e.preventDefault(); setMenuOpen(false) }}
                 />
-                <div className="absolute right-0 top-9 z-30 w-52 overflow-hidden rounded-xl border border-gray-100 bg-white shadow-xl ring-1 ring-black/5">
+                <div
+                  className="fixed z-[101] w-52 overflow-hidden rounded-xl border border-gray-100 bg-white shadow-xl ring-1 ring-black/5"
+                  style={{ top: menuPos.top, right: menuPos.right }}
+                >
                   <MenuItem href={`/admin/clients/${client.id}/edit`} label="Bewerken" icon={
                     <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Z" /></svg>
                   } />
@@ -252,7 +280,8 @@ function ClientCard({ client }: { client: ClientListItem }) {
                     Verwijderen
                   </button>
                 </div>
-              </>
+              </>,
+              document.body
             )}
           </div>
         </div>
