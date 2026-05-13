@@ -82,21 +82,13 @@ export function LinkedInFlowChart({ state }: Props) {
         <div className="h-6 w-0.5 rounded-full bg-blue-200" />
       </div>
 
-      {/* Post-accept phase */}
-      <PhaseGroup
-        label="Na acceptatie"
+      {/* Post-accept phase — same vertical layout, but each step has fixed
+          positive/negative dead-end branches like the email flow steps. */}
+      <PostAcceptPhase
         steps={postAccept}
         messages={state.messages}
         onOpen={(s) => setOpenStep(s)}
       />
-
-      {/* End cap */}
-      <div className="flex flex-col items-center pt-2">
-        <div className="h-6 w-0.5 rounded-full bg-blue-200" />
-        <div className="rounded-full bg-gray-100 px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
-          Einde sequence
-        </div>
-      </div>
 
       {openStep && (
         <LinkedInStepModal
@@ -138,6 +130,178 @@ function PhaseGroup({
             )}
           </div>
         ))}
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Renders the four post-accept message steps with fixed dead-end branches
+ * underneath each card: red "Lead afgehaakt" left, green "Positief
+ * gereageerd" right, and a "Geen reactie" continue arrow in the middle
+ * (replaced by an "Einde sequence" pill on the last step). Mirrors the
+ * shape of the email flow's FlowStepBlock branches but in blue, and with
+ * non-interactive (display-only) dead-ends because the LinkedIn labels
+ * are fixed.
+ */
+function PostAcceptPhase({
+  steps,
+  messages,
+  onOpen,
+}: {
+  steps: LinkedInFlowStep[]
+  messages: LinkedInFlowState['messages']
+  onOpen: (step: LinkedInFlowStep) => void
+}) {
+  return (
+    <div className="mt-2">
+      <div className="mb-2 flex justify-center">
+        <span className="inline-flex items-center rounded-full bg-blue-100 px-3 py-0.5 text-[9px] font-bold uppercase tracking-wide text-blue-700">
+          Na acceptatie
+        </span>
+      </div>
+      <div className="space-y-1">
+        {steps.map((step, idx) => {
+          const isLast = idx === steps.length - 1
+          return (
+            <div key={step.key} className="relative">
+              <StepCard step={step} messages={messages} onOpen={() => onOpen(step)} />
+              <LinkedInBranches isLast={isLast} />
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function LinkedInBranches({ isLast }: { isLast: boolean }) {
+  return (
+    <div className="relative mt-2">
+      {/* SVG-takken — blauwgetinte versie van de email-flow branches */}
+      <svg
+        className="pointer-events-none absolute left-1/2 top-0 h-12 w-full -translate-x-1/2"
+        viewBox="0 0 400 48"
+        preserveAspectRatio="none"
+        aria-hidden
+      >
+        <line x1="200" y1="0" x2="200" y2="14" stroke="#bfdbfe" strokeWidth="2" />
+        {/* Links: dropoff */}
+        <path
+          d="M 200 14 Q 200 24 100 24 Q 60 24 60 38"
+          fill="none"
+          stroke="#fda4af"
+          strokeWidth="2"
+          strokeLinecap="round"
+        />
+        {/* Rechts: success */}
+        <path
+          d="M 200 14 Q 200 24 300 24 Q 340 24 340 38"
+          fill="none"
+          stroke="#86efac"
+          strokeWidth="2"
+          strokeLinecap="round"
+        />
+        {!isLast && (
+          <line
+            x1="200"
+            y1="14"
+            x2="200"
+            y2="48"
+            stroke="#93c5fd"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+        )}
+      </svg>
+
+      <div className="relative grid grid-cols-3 gap-2 pt-12 sm:gap-4">
+        <div className="flex justify-start">
+          <LinkedInDeadEnd kind="dropoff" align="left" />
+        </div>
+
+        <div className="flex flex-col items-center justify-start">
+          {isLast ? (
+            <div className="rounded-full bg-gray-100 px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+              Einde sequence
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-1.5">
+              <div className="rounded-full bg-blue-50 px-2.5 py-0.5 text-[10px] font-semibold text-blue-700 ring-1 ring-blue-200">
+                Geen reactie
+              </div>
+              <svg
+                className="h-5 w-5 text-blue-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2.5}
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 13.5 12 21m0 0-7.5-7.5M12 21V3" />
+              </svg>
+            </div>
+          )}
+        </div>
+
+        <div className="flex justify-end">
+          <LinkedInDeadEnd kind="success" align="right" />
+        </div>
+      </div>
+
+      {/* Connector naar volgende stap */}
+      {!isLast && (
+        <div className="flex justify-center pt-3 pb-2">
+          <div className="h-8 w-0.5 rounded-full bg-blue-200" />
+        </div>
+      )}
+    </div>
+  )
+}
+
+function LinkedInDeadEnd({
+  kind,
+  align,
+}: {
+  kind: 'success' | 'dropoff'
+  align: 'left' | 'right'
+}) {
+  const meta =
+    kind === 'success'
+      ? {
+          label: 'Positief gereageerd',
+          tag: 'bg-emerald-100 text-emerald-700',
+          softBg: 'bg-emerald-50',
+          softBorder: 'border-emerald-200',
+          softText: 'text-emerald-700',
+          symbol: '✓',
+        }
+      : {
+          label: 'Lead afgehaakt',
+          tag: 'bg-rose-100 text-rose-700',
+          softBg: 'bg-rose-50',
+          softBorder: 'border-rose-200',
+          softText: 'text-rose-700',
+          symbol: '×',
+        }
+
+  return (
+    <div
+      className={`relative w-full max-w-[170px] overflow-hidden rounded-xl border ${meta.softBorder} ${meta.softBg} px-3 py-2.5 text-${align} shadow-sm`}
+    >
+      <div className={`mb-1 flex items-center gap-1.5 ${align === 'right' ? 'justify-end' : ''}`}>
+        <span
+          className={`inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md ${meta.tag} text-[10px] font-bold`}
+        >
+          {meta.symbol}
+        </span>
+        <div className={`text-[9px] font-bold uppercase tracking-wide ${meta.softText}`}>
+          Dead-end
+        </div>
+      </div>
+      <div className="text-[12px] font-bold leading-tight text-gray-900">{meta.label}</div>
+      <div className={`mt-1.5 inline-flex items-center gap-1 rounded-full bg-white/70 px-1.5 py-0.5 text-[9px] font-semibold text-gray-600 ring-1 ring-gray-200`}>
+        <span className={`h-1 w-1 rounded-full ${kind === 'success' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+        Lead uit sequence
       </div>
     </div>
   )
