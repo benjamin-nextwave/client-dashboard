@@ -1,4 +1,5 @@
 import { getPublishedFlowsByClient } from '@/lib/data/campaign-flow'
+import { getLinkedInFlowState } from '@/lib/data/linkedin-flow'
 import { getTranslator } from '@/lib/i18n/server'
 import { CampaignFlowsViewer } from './campaign-flows-viewer'
 
@@ -7,7 +8,10 @@ interface Props {
 }
 
 export async function CampaignFlowSection({ clientId }: Props) {
-  const flows = await getPublishedFlowsByClient(clientId)
+  const [flows, linkedInFlow] = await Promise.all([
+    getPublishedFlowsByClient(clientId),
+    getLinkedInFlowState(clientId),
+  ])
   const t = await getTranslator()
 
   // Alleen flows tonen die ook minimaal 1 stap hebben
@@ -34,7 +38,7 @@ export async function CampaignFlowSection({ clientId }: Props) {
         </p>
       </div>
 
-      <CampaignFlowsViewer flows={visibleFlows} />
+      <CampaignFlowsViewer flows={visibleFlows} linkedInFlow={linkedInFlow} />
     </section>
   )
 }
