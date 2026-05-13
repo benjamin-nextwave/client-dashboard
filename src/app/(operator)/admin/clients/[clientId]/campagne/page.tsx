@@ -7,9 +7,11 @@ import {
   getLatestMailVariantFeedback,
   getAllMailVariantFeedback,
 } from '@/lib/data/campaign'
+import { getLinkedInFlowState } from '@/lib/data/linkedin-flow'
 import { CampaignControls } from './_components/campaign-controls'
 import { ProposalEditor } from './_components/proposal-editor'
 import { MailVariantsEditor } from './_components/mail-variants-editor'
+import { LinkedInFlowEditor } from './_components/linkedin-flow-editor'
 import { PdfUpload } from './_components/pdf-upload'
 
 export const dynamic = 'force-dynamic'
@@ -30,14 +32,16 @@ export default async function OperatorCampaignPage({ params }: Props) {
 
   if (!client) notFound()
 
-  const [state, variants, feedbackByVariant, allFeedbackByVariant] = await Promise.all([
-    getCampaignState(clientId),
-    getMailVariants(clientId),
-    getLatestMailVariantFeedback(clientId),
-    getAllMailVariantFeedback(clientId),
-  ])
+  const [state, variants, feedbackByVariant, allFeedbackByVariant, linkedInFlow] =
+    await Promise.all([
+      getCampaignState(clientId),
+      getMailVariants(clientId),
+      getLatestMailVariantFeedback(clientId),
+      getAllMailVariantFeedback(clientId),
+      getLinkedInFlowState(clientId),
+    ])
 
-  if (!state) notFound()
+  if (!state || !linkedInFlow) notFound()
 
   return (
     <div className="mx-auto max-w-5xl space-y-8">
@@ -77,6 +81,7 @@ export default async function OperatorCampaignPage({ params }: Props) {
         feedbackByVariant={feedbackByVariant}
         allFeedbackByVariant={allFeedbackByVariant}
       />
+      <LinkedInFlowEditor clientId={clientId} state={linkedInFlow} />
     </div>
   )
 }

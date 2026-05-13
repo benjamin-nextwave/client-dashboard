@@ -8,9 +8,11 @@ import {
   deriveTasks,
   deriveVariantStatus,
 } from '@/lib/data/campaign'
+import { getLinkedInFlowState } from '@/lib/data/linkedin-flow'
 import { StatusTracker } from './_components/status-tracker'
 import { CampaignBody } from './_components/campaign-body'
 import { MailVariantsApprovalBlock } from './_components/mail-variants-approval-block'
+import { LinkedInFlowBlock } from './_components/linkedin-flow-block'
 import { ProposalApprovalBlock } from './_components/proposal-approval-block'
 import { DncBlock } from './_components/dnc-block'
 import { ArchiveSection } from './_components/archive-section'
@@ -40,12 +42,14 @@ export default async function MijnCampagnePage() {
     redirect('/dashboard')
   }
 
-  const [state, allVariants, feedbackByVariant, allFeedbackByVariant] = await Promise.all([
-    getCampaignState(profile.client_id),
-    getMailVariants(profile.client_id),
-    getLatestMailVariantFeedback(profile.client_id),
-    getAllMailVariantFeedback(profile.client_id),
-  ])
+  const [state, allVariants, feedbackByVariant, allFeedbackByVariant, linkedInFlow] =
+    await Promise.all([
+      getCampaignState(profile.client_id),
+      getMailVariants(profile.client_id),
+      getLatestMailVariantFeedback(profile.client_id),
+      getAllMailVariantFeedback(profile.client_id),
+      getLinkedInFlowState(profile.client_id),
+    ])
 
   if (!state) redirect('/dashboard')
 
@@ -166,6 +170,9 @@ export default async function MijnCampagnePage() {
         variants={variants}
         allFeedbackByVariant={allFeedbackByVariant}
       />
+
+      {/* ─── LinkedIn flow (optioneel, na de mailflow) ─── */}
+      {linkedInFlow && <LinkedInFlowBlock state={linkedInFlow} />}
 
       {/* ─── Archive zone ─── */}
       <ArchiveSection

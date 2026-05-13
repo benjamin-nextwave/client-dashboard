@@ -3,6 +3,11 @@
 import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { uploadCampaignVariantsPdf, deleteCampaignVariantsPdf } from '@/lib/supabase/storage'
+import {
+  linkedInColumnForStep,
+  type LinkedInEditableStepKey,
+  type LinkedInMessages,
+} from '@/lib/data/linkedin-flow'
 
 const WEBHOOK_DRAFTS_READY = 'https://hook.eu2.make.com/02qcuro6xst3wtzcatla7i3frn9ssyod'
 const WEBHOOK_VARIANTS_MAIL_CLIENT = 'https://hook.eu2.make.com/o6zor5msxznwn2gw5tvjygp1b2ems1n1'
@@ -443,6 +448,72 @@ export async function removeVariantsPdfAction(clientId: string): Promise<{ error
     .update({
       campaign_variants_pdf_url: null,
       campaign_variants_pdf_uploaded_at: null,
+    })
+    .eq('id', clientId)
+
+  if (error) return { error: error.message }
+
+  for (const p of adminPaths(clientId)) revalidatePath(p)
+  return {}
+}
+
+// --- LinkedIn flow ---
+
+/**
+ * Toggle whether the LinkedIn flow is part of the campaign for this client.
+ * Disabling does not delete stored messages — it only hides the block from
+ * the client and excludes it from approval/automation flows.
+ */
+export async function setLinkedInFlowEnabled(
+  clientId: string,
+  enabled: boolean
+): Promise<{ error?: string }> {
+  const supabase = createAdminClient()
+  const { error } = await supabase
+    .from('clients')
+    .update({ linkedin_flow_enabled: enabled })
+    .eq('id', clientId)
+
+  if (error) return { error: error.message }
+  for (const p of adminPaths(clientId)) revalidatePath(p)
+  return {}
+}
+
+export async function updateLinkedInMessages(
+  clientId: string,
+  messages: Partial<LinkedInMessages>
+): Promise<{ error?: string }> {
+  const supabase = createAdminClient()
+  const patch: Record<string, unknown> = {}
+  for (const key of Object.keys(messages) as LinkedInEditableStepKey[]) {
+    const value = messages[key]
+    if (typeof value !== 'string') continue
+    patch[linkedInColumnForStep(key)] = value
+  }
+
+  if (Object.keys(patch).length === 0) return {}
+
+  const { error } = await supabase.from('clients').update(patch).eq('id', clientId)
+  if (error) return { error: error.message }
+
+  for (const p of adminPaths(clientId)) revalidatePath(p)
+  return {}
+}
+
+/**
+ * Publishes the current LinkedIn messages to the client. Bumps
+ * `linkedin_flow_published_at` (and auto-enables the flow if needed) so the
+ * client's read-only block shows up with a fresh approval request.
+ */
+export async function publishLinkedInFlow(clientId: string): Promise<{ error?: string }> {
+  const supabase = createAdminClient()
+  const now = new Date().toISOString()
+
+  const { error } = await supabase
+    .from('clients')
+    .update({
+      linkedin_flow_enabled: true,
+      linkedin_flow_published_at: now,
     })
     .eq('id', clientId)
 

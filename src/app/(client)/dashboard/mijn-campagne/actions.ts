@@ -14,6 +14,7 @@ import { getLocaleForWebhook } from '@/lib/i18n/server'
 const WEBHOOK_CAMPAIGN_READY = 'https://hook.eu2.make.com/nx6392ay1en939gg5dyh718o7jcwi1wy'
 const WEBHOOK_FORM_SUBMITTED = 'https://hook.eu2.make.com/3ygu3f88qqlmle9y7vkp0ilkl83kgipg'
 const WEBHOOK_VARIANTS_ACKNOWLEDGED = 'https://hook.eu2.make.com/mt2w44repj3g4vz2689e5pbpis9qhovb'
+const WEBHOOK_LINKEDIN_APPROVED = WEBHOOK_VARIANTS_ACKNOWLEDGED
 
 type MailVariantFeedbackItemInput = {
   selectionText: string
@@ -792,6 +793,85 @@ export async function approvePreview(): Promise<{ error?: string }> {
     .eq('id', clientId)
 
   if (error) return { error: error.message }
+
+  revalidatePath('/dashboard/mijn-campagne')
+  return {}
+}
+
+/**
+ * Client approves the published LinkedIn flow. One-shot global approval —
+ * mirrors `approveVariants` for the email flow but with a single timestamp.
+ * Bumping the timestamp closes the "needs approval" state in the read-only
+ * block; later operator edits + re-publish will reopen it.
+ */
+export async function approveLinkedInFlow(): Promise<{ error?: string }> {
+  const clientId = await getClientIdForCurrentUser()
+  if (!clientId) return { error: 'Niet geautoriseerd' }
+
+  const admin = createAdminClient()
+
+  const { data: client } = await admin
+    .from('clients')
+    .select(
+      'id, company_name, notification_email, linkedin_flow_enabled, linkedin_flow_published_at, linkedin_message_day_plus_1, linkedin_message_day_plus_4, linkedin_message_day_plus_9, linkedin_message_day_plus_14'
+    )
+    .eq('id', clientId)
+    .single()
+
+  if (!client) return { error: 'Klant niet gevonden' }
+  if (!client.linkedin_flow_enabled || !client.linkedin_flow_published_at) {
+    return { error: 'LinkedIn-flow is nog niet gepubliceerd' }
+  }
+
+  const approvedAt = new Date().toISOString()
+
+  const { error } = await admin
+    .from('clients')
+    .update({ linkedin_flow_approved_at: approvedAt })
+    .eq('id', clientId)
+
+  if (error) return { error: error.message }
+
+  // Best-effort webhook; not fatal if Make is down.
+  try {
+    const { data: profile } = await admin
+      .from('profiles')
+      .select('id')
+      .eq('client_id', clientId)
+      .eq('user_role', 'client')
+      .single()
+
+    let loginEmail: string | null = null
+    if (profile) {
+      const { data: authUser } = await admin.auth.admin.getUserById(profile.id)
+      if (authUser?.user?.email) loginEmail = authUser.user.email
+    }
+
+    const localeInfo = await getLocaleForWebhook()
+
+    await fetch(WEBHOOK_LINKEDIN_APPROVED, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        event: 'linkedin_flow_approved',
+        client_id: client.id,
+        client_name: client.company_name,
+        client_email: loginEmail,
+        notification_email: client.notification_email ?? null,
+        ...localeInfo,
+        approved_at: approvedAt,
+        published_at: client.linkedin_flow_published_at,
+        messages: {
+          day_plus_1: client.linkedin_message_day_plus_1 ?? '',
+          day_plus_4: client.linkedin_message_day_plus_4 ?? '',
+          day_plus_9: client.linkedin_message_day_plus_9 ?? '',
+          day_plus_14: client.linkedin_message_day_plus_14 ?? '',
+        },
+      }),
+    })
+  } catch (err) {
+    console.error('[linkedin flow approved webhook] failed:', err)
+  }
 
   revalidatePath('/dashboard/mijn-campagne')
   return {}
