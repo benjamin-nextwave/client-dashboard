@@ -2,7 +2,9 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCampaignFlowsByClient } from '@/lib/data/campaign-flow'
+import { getLinkedInFlowState } from '@/lib/data/linkedin-flow'
 import { FlowsManager } from './_components/flows-manager'
+import { LinkedInFlowEditor } from '../campagne/_components/linkedin-flow-editor'
 
 export const dynamic = 'force-dynamic'
 
@@ -24,7 +26,11 @@ export default async function OperatorCampaignFlowPage({ params, searchParams }:
 
   if (!client) notFound()
 
-  const flows = await getCampaignFlowsByClient(clientId)
+  const [flows, linkedInFlow] = await Promise.all([
+    getCampaignFlowsByClient(clientId),
+    getLinkedInFlowState(clientId),
+  ])
+  if (!linkedInFlow) notFound()
 
   // Bepaal welke flow standaard geselecteerd is. Volgorde:
   // 1. ?flow=<id> uit URL als die geldig is
@@ -70,6 +76,10 @@ export default async function OperatorCampaignFlowPage({ params, searchParams }:
       </div>
 
       <FlowsManager clientId={clientId} flows={flows} selectedFlowId={selectedFlowId} />
+
+      {/* LinkedIn-flow staat los van de mail-flows: één per klant, verschijnt
+          als blauwe extensie onder iedere mail-flow in het klantdashboard. */}
+      <LinkedInFlowEditor clientId={clientId} state={linkedInFlow} />
     </div>
   )
 }

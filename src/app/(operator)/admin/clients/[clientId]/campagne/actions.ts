@@ -15,6 +15,7 @@ const WEBHOOK_VARIANTS_MAIL_CLIENT = 'https://hook.eu2.make.com/o6zor5msxznwn2gw
 function adminPaths(clientId: string) {
   return [
     `/admin/clients/${clientId}/campagne`,
+    `/admin/clients/${clientId}/campagne-flow`,
     `/dashboard/mijn-campagne`,
   ]
 }
