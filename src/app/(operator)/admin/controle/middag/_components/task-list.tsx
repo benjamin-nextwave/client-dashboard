@@ -230,6 +230,26 @@ function TaskRow({
         >
           {task.description}
         </div>
+        {task.campaignNames.length > 0 && (
+          <div className="mt-1.5 flex flex-wrap items-center gap-1">
+            {task.campaignNames.map((name, idx) => (
+              <span
+                key={idx}
+                className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-semibold ${
+                  task.isCompleted
+                    ? 'bg-gray-100 text-gray-400'
+                    : 'bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100'
+                }`}
+              >
+                <svg className="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6Z" />
+                </svg>
+                {name}
+              </span>
+            ))}
+          </div>
+        )}
         <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-gray-400">
           <span>Aangemaakt {formatDate(task.createdAt)} om {formatTime(task.createdAt)}</span>
           {task.isCompleted && task.completedAt && (

@@ -19,12 +19,17 @@ export type CheckAnswersPayload =
   | { type: 'onboarding'; questions: CheckAnswerEntry[] }
   | { type: 'live'; numCampaigns: number; campaigns: CheckCampaignBlock[] }
 
+export interface SubmitCheckTask {
+  description: string
+  campaignNames: string[]
+}
+
 export interface SubmitCheckInput {
   clientId: string
   checkType: 'onboarding' | 'live'
   numCampaigns: number | null
   answers: CheckAnswersPayload
-  tasks: string[]
+  tasks: SubmitCheckTask[]
 }
 
 /**
@@ -55,12 +60,16 @@ export async function submitCheck(input: SubmitCheckInput): Promise<{ error?: st
   }
 
   const taskRows = input.tasks
-    .map((t) => t.trim())
-    .filter((t) => t.length > 0)
-    .map((description) => ({
+    .map((t) => ({
+      description: t.description.trim(),
+      campaignNames: t.campaignNames.map((n) => n.trim()).filter((n) => n.length > 0),
+    }))
+    .filter((t) => t.description.length > 0)
+    .map((t) => ({
       check_id: check.id,
       client_id: input.clientId,
-      description,
+      description: t.description,
+      campaign_names: t.campaignNames,
     }))
 
   if (taskRows.length > 0) {

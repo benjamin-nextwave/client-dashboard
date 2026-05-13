@@ -25,20 +25,39 @@ interface CheckSessionProps {
 
 // Per-client local form state. For onboarding, `answers` is keyed by question id.
 // For live clients we hold a map per campaign index ("0", "1", ...).
+interface TaskDraft {
+  description: string
+  // Campaign indices the task applies to (live checks only).
+  campaignIndices: number[]
+}
+
 interface ClientFormState {
   // null until the operator picks which checklist to run.
   checkType: 'onboarding' | 'live' | null
   // null until the live operator picks the number of campaigns.
   numCampaigns: number | null
+  // Name per campaign index (live only). Length === numCampaigns when set.
+  campaignNames: string[]
   // For onboarding: { [questionId]: string }
   // For live: { [campaignIndex_questionId]: string } — flat for simpler updates.
   answers: Record<string, string>
-  tasks: string[]
+  tasks: TaskDraft[]
   submitted: boolean
 }
 
+function emptyTask(): TaskDraft {
+  return { description: '', campaignIndices: [] }
+}
+
 function emptyState(): ClientFormState {
-  return { checkType: null, numCampaigns: null, answers: {}, tasks: [''], submitted: false }
+  return {
+    checkType: null,
+    numCampaigns: null,
+    campaignNames: [],
+    answers: {},
+    tasks: [emptyTask()],
+    submitted: false,
+  }
 }
 
 export function CheckSession({ clients }: CheckSessionProps) {
@@ -67,10 +86,24 @@ export function CheckSession({ clients }: CheckSessionProps) {
     }))
   }
 
-  const setTask = (i: number, value: string) => {
+  const setTaskDescription = (i: number, value: string) => {
     setStates((prev) => {
       const tasks = [...prev[current.id].tasks]
-      tasks[i] = value
+      tasks[i] = { ...tasks[i], description: value }
+      return { ...prev, [current.id]: { ...prev[current.id], tasks } }
+    })
+  }
+
+  const toggleTaskCampaign = (i: number, campaignIndex: number) => {
+    setStates((prev) => {
+      const tasks = [...prev[current.id].tasks]
+      const has = tasks[i].campaignIndices.includes(campaignIndex)
+      tasks[i] = {
+        ...tasks[i],
+        campaignIndices: has
+          ? tasks[i].campaignIndices.filter((c) => c !== campaignIndex)
+          : [...tasks[i].campaignIndices, campaignIndex].sort((a, b) => a - b),
+      }
       return { ...prev, [current.id]: { ...prev[current.id], tasks } }
     })
   }
@@ -78,7 +111,7 @@ export function CheckSession({ clients }: CheckSessionProps) {
   const addTask = () => {
     setStates((prev) => ({
       ...prev,
-      [current.id]: { ...prev[current.id], tasks: [...prev[current.id].tasks, ''] },
+      [current.id]: { ...prev[current.id], tasks: [...prev[current.id].tasks, emptyTask()] },
     }))
   }
 
@@ -87,7 +120,32 @@ export function CheckSession({ clients }: CheckSessionProps) {
       const tasks = prev[current.id].tasks.filter((_, idx) => idx !== i)
       return {
         ...prev,
-        [current.id]: { ...prev[current.id], tasks: tasks.length === 0 ? [''] : tasks },
+        [current.id]: { ...prev[current.id], tasks: tasks.length === 0 ? [emptyTask()] : tasks },
+      }
+    })
+  }
+
+  const setCampaignName = (i: number, value: string) => {
+    setStates((prev) => {
+      const names = [...prev[current.id].campaignNames]
+      names[i] = value
+      return { ...prev, [current.id]: { ...prev[current.id], campaignNames: names } }
+    })
+  }
+
+  const setNumCampaigns = (n: number) => {
+    setStates((prev) => {
+      const s = prev[current.id]
+      // Preserve names that still fit; truncate or pad with empty strings.
+      const names = Array.from({ length: n }, (_, i) => s.campaignNames[i] ?? '')
+      // Drop campaign indices on existing tasks that point beyond the new range.
+      const tasks = s.tasks.map((t) => ({
+        ...t,
+        campaignIndices: t.campaignIndices.filter((idx) => idx < n),
+      }))
+      return {
+        ...prev,
+        [current.id]: { ...s, numCampaigns: n, campaignNames: names, answers: {}, tasks },
       }
     })
   }
@@ -98,7 +156,9 @@ export function CheckSession({ clients }: CheckSessionProps) {
       return ONBOARDING_QUESTIONS.every((q) => (state.answers[q.id] ?? '').trim().length > 0)
     }
     if (state.numCampaigns === null || state.numCampaigns < 1) return false
+    // Every campaign needs a name so it can be referenced from tasks.
     for (let i = 0; i < state.numCampaigns; i++) {
+      if ((state.campaignNames[i] ?? '').trim().length === 0) return false
       for (const q of LIVE_QUESTIONS) {
         const key = `${i}_${q.id}`
         if ((state.answers[key] ?? '').trim().length === 0) return false
@@ -133,13 +193,25 @@ export function CheckSession({ clients }: CheckSessionProps) {
           })) satisfies CheckCampaignBlock[],
         }
 
+    // Convert the live form's campaignIndices to names for persistence.
+    // Onboarding tasks have no campaigns attached — always an empty array.
+    const submitTasks = state.tasks.map((t) => ({
+      description: t.description,
+      campaignNames:
+        state.checkType === 'live'
+          ? t.campaignIndices
+              .map((i) => (state.campaignNames[i] ?? '').trim())
+              .filter((n) => n.length > 0)
+          : [],
+    }))
+
     startTransition(async () => {
       const result = await submitCheck({
         clientId: current.id,
         checkType: state.checkType!,
         numCampaigns: state.checkType === 'onboarding' ? null : state.numCampaigns,
         answers: payload,
-        tasks: state.tasks,
+        tasks: submitTasks,
       })
 
       if (result.error) {
@@ -191,7 +263,9 @@ export function CheckSession({ clients }: CheckSessionProps) {
           onSwitchType={() => updateState(current.id, {
             checkType: null,
             numCampaigns: null,
+            campaignNames: [],
             answers: {},
+            tasks: [emptyTask()],
           })}
         />
 
@@ -213,15 +287,19 @@ export function CheckSession({ clients }: CheckSessionProps) {
               ) : (
                 <LiveForm
                   numCampaigns={state.numCampaigns}
+                  campaignNames={state.campaignNames}
                   answers={state.answers}
-                  onSetNumCampaigns={(n) => updateState(current.id, { numCampaigns: n, answers: {} })}
+                  onSetNumCampaigns={setNumCampaigns}
+                  onSetCampaignName={setCampaignName}
                   onChange={setAnswer}
                 />
               )}
 
               <TasksBlock
                 tasks={state.tasks}
-                onChange={setTask}
+                campaignNames={state.checkType === 'live' ? state.campaignNames : []}
+                onChangeDescription={setTaskDescription}
+                onToggleCampaign={toggleTaskCampaign}
                 onAdd={addTask}
                 onRemove={removeTask}
               />
@@ -486,13 +564,17 @@ function OnboardingForm({
 
 function LiveForm({
   numCampaigns,
+  campaignNames,
   answers,
   onSetNumCampaigns,
+  onSetCampaignName,
   onChange,
 }: {
   numCampaigns: number | null
+  campaignNames: string[]
   answers: Record<string, string>
   onSetNumCampaigns: (n: number) => void
+  onSetCampaignName: (i: number, value: string) => void
   onChange: (key: string, value: string) => void
 }) {
   return (
@@ -501,30 +583,76 @@ function LiveForm({
 
       {numCampaigns !== null && numCampaigns > 0 && (
         <div className="space-y-6">
-          {Array.from({ length: numCampaigns }, (_, i) => (
-            <div key={i} className="space-y-3">
-              <SectionHeader
-                title={`Campagne ${i + 1}`}
-                subtitle="Beantwoord alle vragen voor deze campagne."
-              />
-              <div className="space-y-3">
-                {LIVE_QUESTIONS.map((q, idx) => {
-                  const key = `${i}_${q.id}`
-                  return (
-                    <QuestionField
-                      key={key}
-                      number={idx + 1}
-                      label={q.label}
-                      value={answers[key] ?? ''}
-                      onChange={(v) => onChange(key, v)}
-                    />
-                  )
-                })}
+          {Array.from({ length: numCampaigns }, (_, i) => {
+            const name = campaignNames[i] ?? ''
+            const namedTitle = name.trim().length > 0 ? name : `Campagne ${i + 1}`
+            return (
+              <div key={i} className="space-y-3">
+                <CampaignNameHeader
+                  index={i}
+                  value={name}
+                  onChange={(v) => onSetCampaignName(i, v)}
+                />
+                <div className="space-y-3">
+                  {LIVE_QUESTIONS.map((q, idx) => {
+                    const key = `${i}_${q.id}`
+                    return (
+                      <QuestionField
+                        key={key}
+                        number={idx + 1}
+                        label={q.label}
+                        value={answers[key] ?? ''}
+                        onChange={(v) => onChange(key, v)}
+                      />
+                    )
+                  })}
+                </div>
+                {/* Spacer note so the operator always sees which campaign these answers belong to */}
+                <div className="text-[11px] text-gray-400">
+                  Bovenstaande antwoorden horen bij <span className="font-semibold text-gray-600">{namedTitle}</span>.
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
+    </div>
+  )
+}
+
+function CampaignNameHeader({
+  index,
+  value,
+  onChange,
+}: {
+  index: number
+  value: string
+  onChange: (v: string) => void
+}) {
+  const filled = value.trim().length > 0
+  return (
+    <div className={`rounded-xl border bg-white p-4 shadow-sm transition-colors ${filled ? 'border-indigo-200' : 'border-amber-200'}`}>
+      <div className="flex items-center gap-3">
+        <div
+          className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-xs font-bold transition-colors ${
+            filled ? 'bg-gradient-to-br from-indigo-600 to-violet-600 text-white' : 'bg-amber-100 text-amber-700'
+          }`}
+        >
+          #{index + 1}
+        </div>
+        <div className="min-w-0 flex-1">
+          <label className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+            Naam van campagne {index + 1}
+          </label>
+          <input
+            type="text"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="Bijv. Recruiters Q2 of Eigenaren Logistiek"
+            className="mt-1 w-full rounded-md border-0 bg-transparent px-0 py-1 text-sm font-semibold text-gray-900 placeholder:font-normal placeholder:text-gray-400 focus:outline-none focus:ring-0"
+          />
+        </div>
+      </div>
     </div>
   )
 }
@@ -632,15 +760,20 @@ function QuestionField({
 
 function TasksBlock({
   tasks,
-  onChange,
+  campaignNames,
+  onChangeDescription,
+  onToggleCampaign,
   onAdd,
   onRemove,
 }: {
-  tasks: string[]
-  onChange: (i: number, v: string) => void
+  tasks: TaskDraft[]
+  campaignNames: string[]
+  onChangeDescription: (i: number, v: string) => void
+  onToggleCampaign: (i: number, campaignIndex: number) => void
   onAdd: () => void
   onRemove: (i: number) => void
 }) {
+  const hasCampaigns = campaignNames.length > 0
   return (
     <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50/60 to-orange-50/40 p-5 shadow-sm">
       <div className="flex items-center gap-2">
@@ -652,34 +785,47 @@ function TasksBlock({
         <div>
           <h3 className="text-sm font-semibold text-gray-900">Taken voor vanmiddag</h3>
           <p className="text-xs text-gray-600">
-            Voeg taken toe op basis van wat je hierboven hebt ingevuld. Lege regels worden niet opgeslagen.
+            {hasCampaigns
+              ? 'Voeg taken toe en koppel ze aan een of meerdere campagnes. Lege regels worden niet opgeslagen.'
+              : 'Voeg taken toe op basis van wat je hierboven hebt ingevuld. Lege regels worden niet opgeslagen.'}
           </p>
         </div>
       </div>
 
-      <div className="mt-4 space-y-2">
+      <div className="mt-4 space-y-3">
         {tasks.map((task, i) => (
-          <div key={i} className="flex items-start gap-2">
-            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-white text-xs font-semibold text-gray-500 shadow-sm ring-1 ring-amber-100">
-              {i + 1}
+          <div key={i} className="rounded-xl border border-amber-200 bg-white/80 p-3 shadow-sm">
+            <div className="flex items-start gap-2">
+              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-amber-50 text-xs font-semibold text-amber-700 ring-1 ring-amber-100">
+                {i + 1}
+              </div>
+              <textarea
+                value={task.description}
+                onChange={(e) => onChangeDescription(i, e.target.value)}
+                rows={1}
+                className="flex-1 resize-y rounded-lg border border-transparent bg-transparent px-2 py-1.5 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-orange-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-100"
+                placeholder="Beschrijf de taak..."
+              />
+              {tasks.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => onRemove(i)}
+                  aria-label="Taak verwijderen"
+                  className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79" />
+                  </svg>
+                </button>
+              )}
             </div>
-            <textarea
-              value={task}
-              onChange={(e) => onChange(i, e.target.value)}
-              rows={1}
-              className="flex-1 resize-y rounded-lg border border-amber-200 bg-white/80 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-orange-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-orange-100"
-              placeholder="Beschrijf de taak..."
-            />
-            {tasks.length > 1 && (
-              <button
-                type="button"
-                onClick={() => onRemove(i)}
-                className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
-              >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79" />
-                </svg>
-              </button>
+
+            {hasCampaigns && (
+              <TaskCampaignSelector
+                campaignNames={campaignNames}
+                selectedIndices={task.campaignIndices}
+                onToggle={(idx) => onToggleCampaign(i, idx)}
+              />
             )}
           </div>
         ))}
@@ -695,6 +841,48 @@ function TasksBlock({
         </svg>
         Nog een taak
       </button>
+    </div>
+  )
+}
+
+function TaskCampaignSelector({
+  campaignNames,
+  selectedIndices,
+  onToggle,
+}: {
+  campaignNames: string[]
+  selectedIndices: number[]
+  onToggle: (campaignIndex: number) => void
+}) {
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-1.5 pl-11">
+      <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Voor:</span>
+      {campaignNames.map((name, idx) => {
+        const selected = selectedIndices.includes(idx)
+        const display = name.trim().length > 0 ? name : `Campagne ${idx + 1}`
+        return (
+          <button
+            key={idx}
+            type="button"
+            onClick={() => onToggle(idx)}
+            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-all ${
+              selected
+                ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-500/30'
+                : 'border border-gray-200 bg-white text-gray-600 hover:border-indigo-300 hover:text-indigo-700'
+            }`}
+          >
+            {selected && (
+              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+              </svg>
+            )}
+            {display}
+          </button>
+        )
+      })}
+      {selectedIndices.length === 0 && (
+        <span className="text-[10px] italic text-gray-400">geen campagne gekoppeld</span>
+      )}
     </div>
   )
 }

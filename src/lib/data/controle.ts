@@ -53,6 +53,7 @@ export interface ControleTaskRow {
   clientId: string
   companyName: string
   description: string
+  campaignNames: string[]
   isCompleted: boolean
   completedAt: string | null
   createdAt: string
@@ -73,7 +74,7 @@ export async function getTodayTasks(includeAllOpen = false): Promise<ControleTas
 
   let query = supabase
     .from('operator_check_tasks')
-    .select('id, client_id, description, is_completed, completed_at, created_at')
+    .select('id, client_id, description, campaign_names, is_completed, completed_at, created_at')
     .order('created_at', { ascending: false })
 
   if (includeAllOpen) {
@@ -99,6 +100,7 @@ export async function getTodayTasks(includeAllOpen = false): Promise<ControleTas
     clientId: t.client_id,
     companyName: nameById.get(t.client_id) ?? 'Onbekende klant',
     description: t.description,
+    campaignNames: t.campaign_names ?? [],
     isCompleted: t.is_completed,
     completedAt: t.completed_at,
     createdAt: t.created_at,
