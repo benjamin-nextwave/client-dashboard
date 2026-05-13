@@ -26,6 +26,8 @@ interface CheckSessionProps {
 // Per-client local form state. For onboarding, `answers` is keyed by question id.
 // For live clients we hold a map per campaign index ("0", "1", ...).
 interface ClientFormState {
+  // null until the operator picks which checklist to run.
+  checkType: 'onboarding' | 'live' | null
   // null until the live operator picks the number of campaigns.
   numCampaigns: number | null
   // For onboarding: { [questionId]: string }
@@ -36,7 +38,7 @@ interface ClientFormState {
 }
 
 function emptyState(): ClientFormState {
-  return { numCampaigns: null, answers: {}, tasks: [''], submitted: false }
+  return { checkType: null, numCampaigns: null, answers: {}, tasks: [''], submitted: false }
 }
 
 export function CheckSession({ clients }: CheckSessionProps) {
@@ -91,8 +93,8 @@ export function CheckSession({ clients }: CheckSessionProps) {
   }
 
   const allAnswered = useMemo(() => {
-    if (!state) return false
-    if (current.isOnboarding) {
+    if (!state || state.checkType === null) return false
+    if (state.checkType === 'onboarding') {
       return ONBOARDING_QUESTIONS.every((q) => (state.answers[q.id] ?? '').trim().length > 0)
     }
     if (state.numCampaigns === null || state.numCampaigns < 1) return false
@@ -103,13 +105,13 @@ export function CheckSession({ clients }: CheckSessionProps) {
       }
     }
     return true
-  }, [state, current.isOnboarding])
+  }, [state])
 
   const handleNext = () => {
-    if (!allAnswered) return
+    if (!allAnswered || state.checkType === null) return
     setSubmitError(null)
 
-    const payload: CheckAnswersPayload = current.isOnboarding
+    const payload: CheckAnswersPayload = state.checkType === 'onboarding'
       ? {
           type: 'onboarding',
           questions: ONBOARDING_QUESTIONS.map<CheckAnswerEntry>((q) => ({
@@ -134,8 +136,8 @@ export function CheckSession({ clients }: CheckSessionProps) {
     startTransition(async () => {
       const result = await submitCheck({
         clientId: current.id,
-        checkType: current.isOnboarding ? 'onboarding' : 'live',
-        numCampaigns: current.isOnboarding ? null : state.numCampaigns,
+        checkType: state.checkType!,
+        numCampaigns: state.checkType === 'onboarding' ? null : state.numCampaigns,
         answers: payload,
         tasks: state.tasks,
       })
@@ -183,71 +185,87 @@ export function CheckSession({ clients }: CheckSessionProps) {
 
       <main className="mx-auto max-w-4xl px-6 py-10">
         {/* Client header */}
-        <ClientHeader client={current} />
+        <ClientHeader
+          client={current}
+          chosenType={state.checkType}
+          onSwitchType={() => updateState(current.id, {
+            checkType: null,
+            numCampaigns: null,
+            answers: {},
+          })}
+        />
 
-        {/* Form body */}
-        <div className="mt-8 space-y-6">
-          {current.isOnboarding ? (
-            <OnboardingForm
-              answers={state.answers}
-              onChange={setAnswer}
-            />
-          ) : (
-            <LiveForm
-              numCampaigns={state.numCampaigns}
-              answers={state.answers}
-              onSetNumCampaigns={(n) => updateState(current.id, { numCampaigns: n, answers: {} })}
-              onChange={setAnswer}
-            />
-          )}
-
-          {/* Tasks block — only when relevant inputs exist (always present, but
-              dimmed visually until something is filled). */}
-          <TasksBlock
-            tasks={state.tasks}
-            onChange={setTask}
-            onAdd={addTask}
-            onRemove={removeTask}
+        {state.checkType === null ? (
+          /* Type picker — shown before the questionnaire starts. */
+          <CheckTypePicker
+            suggestedType={current.isOnboarding ? 'onboarding' : 'live'}
+            onPick={(t) => updateState(current.id, { checkType: t })}
           />
-        </div>
+        ) : (
+          <>
+            {/* Form body */}
+            <div className="mt-8 space-y-6">
+              {state.checkType === 'onboarding' ? (
+                <OnboardingForm
+                  answers={state.answers}
+                  onChange={setAnswer}
+                />
+              ) : (
+                <LiveForm
+                  numCampaigns={state.numCampaigns}
+                  answers={state.answers}
+                  onSetNumCampaigns={(n) => updateState(current.id, { numCampaigns: n, answers: {} })}
+                  onChange={setAnswer}
+                />
+              )}
 
-        {submitError && (
-          <div className="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {submitError}
-          </div>
-        )}
+              <TasksBlock
+                tasks={state.tasks}
+                onChange={setTask}
+                onAdd={addTask}
+                onRemove={removeTask}
+              />
+            </div>
 
-        {/* Footer action */}
-        <div className="mt-10 flex flex-wrap items-center justify-between gap-4 border-t border-gray-200 pt-6">
-          <div className="text-xs text-gray-500">
-            {allAnswered ? (
-              <span className="inline-flex items-center gap-1.5 text-emerald-600">
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                </svg>
-                Alle vragen zijn beantwoord
-              </span>
-            ) : (
-              <span>Beantwoord alle vragen om door te gaan</span>
+            {submitError && (
+              <div className="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {submitError}
+              </div>
             )}
-          </div>
 
-          <button
-            type="button"
-            onClick={handleNext}
-            disabled={!allAnswered || isSubmitting}
-            className="group inline-flex items-center gap-2 rounded-xl bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-600/30 transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-violet-600/40 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0"
-          >
-            {isSubmitting
-              ? 'Bezig met opslaan...'
-              : activeIndex < clients.length - 1
-                ? 'Nieuwe klant'
-                : 'Controle afronden'}
-            <svg className="h-4 w-4 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-            </svg>
-          </button>
-        </div>
+            {/* Footer action */}
+            <div className="mt-10 flex flex-wrap items-center justify-between gap-4 border-t border-gray-200 pt-6">
+              <div className="text-xs text-gray-500">
+                {allAnswered ? (
+                  <span className="inline-flex items-center gap-1.5 text-emerald-600">
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                    </svg>
+                    Alle vragen zijn beantwoord
+                  </span>
+                ) : (
+                  <span>Beantwoord alle vragen om door te gaan</span>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={handleNext}
+                disabled={!allAnswered || isSubmitting}
+                className="group inline-flex items-center gap-2 rounded-xl bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-600/30 transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-violet-600/40 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0"
+              >
+                {isSubmitting
+                  ? 'Bezig met opslaan...'
+                  : activeIndex < clients.length - 1
+                    ? 'Nieuwe klant'
+                    : 'Controle afronden'}
+                <svg className="h-4 w-4 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                </svg>
+              </button>
+            </div>
+          </>
+        )}
       </main>
     </div>
   )
@@ -279,7 +297,15 @@ function ProgressIndicator({
   )
 }
 
-function ClientHeader({ client }: { client: SessionClient }) {
+function ClientHeader({
+  client,
+  chosenType,
+  onSwitchType,
+}: {
+  client: SessionClient
+  chosenType: 'onboarding' | 'live' | null
+  onSwitchType: () => void
+}) {
   const accent = client.primaryColor ?? '#6366f1'
   const initials = client.companyName
     .split(/\s+/)
@@ -305,11 +331,131 @@ function ClientHeader({ client }: { client: SessionClient }) {
         <h1 className="truncate text-2xl font-semibold tracking-tight text-gray-900">
           {client.companyName}
         </h1>
-        <div className="mt-1 inline-flex items-center gap-1.5 rounded-md bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-700">
-          {client.isOnboarding ? 'Onboarding controle' : 'Live controle'}
+        <div className="mt-1.5 flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-md bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-700">
+            <span className="text-gray-400">Status:</span>
+            {client.isOnboarding ? 'Onboarding' : 'Live'}
+          </span>
+          {chosenType !== null && (
+            <>
+              <span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-semibold ${
+                chosenType === 'onboarding'
+                  ? 'bg-amber-100 text-amber-700'
+                  : 'bg-indigo-100 text-indigo-700'
+              }`}>
+                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                </svg>
+                {chosenType === 'onboarding' ? 'Onboarding controle' : 'Live controle'}
+              </span>
+              <button
+                type="button"
+                onClick={onSwitchType}
+                className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-500 underline-offset-2 transition-colors hover:text-indigo-600 hover:underline"
+              >
+                Wisselen
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>
+  )
+}
+
+function CheckTypePicker({
+  suggestedType,
+  onPick,
+}: {
+  suggestedType: 'onboarding' | 'live'
+  onPick: (t: 'onboarding' | 'live') => void
+}) {
+  return (
+    <div className="mt-8">
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+        Welke controle wil je doorlopen?
+      </h2>
+      <p className="mt-1 text-xs text-gray-400">
+        De suggestie is gebaseerd op de huidige status van de klant, maar je kunt zelf kiezen.
+      </p>
+
+      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+        <PickerCard
+          onClick={() => onPick('onboarding')}
+          isSuggested={suggestedType === 'onboarding'}
+          gradient="from-amber-500 to-orange-500"
+          icon={
+            <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+            </svg>
+          }
+          title="Onboarding controle"
+          description="9 vragen over mailboxen, Instantly, n8n/Supabase setup, mailopzetjes, clay scenario."
+        />
+        <PickerCard
+          onClick={() => onPick('live')}
+          isSuggested={suggestedType === 'live'}
+          gradient="from-indigo-600 to-violet-600"
+          icon={
+            <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
+            </svg>
+          }
+          title="Live controle"
+          description="13 vragen per campagne over reply rates, leads, mailboxen, schema en variabelen."
+        />
+      </div>
+    </div>
+  )
+}
+
+function PickerCard({
+  onClick,
+  isSuggested,
+  gradient,
+  icon,
+  title,
+  description,
+}: {
+  onClick: () => void
+  isSuggested: boolean
+  gradient: string
+  icon: React.ReactNode
+  title: string
+  description: string
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group relative isolate overflow-hidden rounded-2xl border border-gray-200 bg-white p-6 text-left shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-indigo-300 hover:shadow-xl hover:shadow-indigo-500/10"
+    >
+      <div className={`pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-gradient-to-br ${gradient} opacity-0 blur-3xl transition-opacity duration-500 group-hover:opacity-20`} />
+
+      <div className="relative flex items-start justify-between gap-3">
+        <div className={`flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br ${gradient} text-white shadow-lg transition-transform group-hover:scale-110`}>
+          {icon}
+        </div>
+        {isSuggested && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700 ring-1 ring-emerald-200">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.6)]" />
+            Aanbevolen
+          </span>
+        )}
+      </div>
+
+      <h3 className="relative mt-4 text-lg font-semibold tracking-tight text-gray-900">
+        {title}
+      </h3>
+      <p className="relative mt-1.5 text-sm text-gray-600">{description}</p>
+
+      <div className="relative mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-gray-500 transition-all group-hover:translate-x-0.5 group-hover:text-indigo-600">
+        Kies deze controle
+        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+        </svg>
+      </div>
+    </button>
   )
 }
 
