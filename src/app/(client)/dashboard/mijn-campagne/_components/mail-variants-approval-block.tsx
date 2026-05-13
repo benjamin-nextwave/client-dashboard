@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import type { MailVariant } from '@/lib/data/campaign'
+import type { MailVariant, MailVariantFeedbackSubmission } from '@/lib/data/campaign'
+import { deriveVariantStatus } from '@/lib/data/campaign'
 import { MailVariantsModal } from './mail-variants-modal'
 import { acknowledgeMailVariants } from '../actions'
 import { useT } from '@/lib/i18n/client'
@@ -13,6 +14,7 @@ interface Props {
   pdfUploadedAt: string | null
   lastAcknowledgedAt: string | null
   isPostOnboarding: boolean
+  feedbackByVariant: Record<string, MailVariantFeedbackSubmission>
 }
 
 export function MailVariantsApprovalBlock({
@@ -21,6 +23,7 @@ export function MailVariantsApprovalBlock({
   pdfUploadedAt,
   lastAcknowledgedAt,
   isPostOnboarding,
+  feedbackByVariant,
 }: Props) {
   const t = useT()
   const router = useRouter()
@@ -34,15 +37,22 @@ export function MailVariantsApprovalBlock({
 
   if (!hasVariants && !hasPdf) return null
 
-  const variantTimes = variants.map((v) => new Date(v.updatedAt).getTime())
   const pdfTime = pdfUploadedAt ? new Date(pdfUploadedAt).getTime() : 0
-  const latestUpdate = Math.max(0, ...variantTimes, pdfTime)
   const ackTime = lastAcknowledgedAt ? new Date(lastAcknowledgedAt).getTime() : 0
-  const neverAcknowledged = !lastAcknowledgedAt
-  const updatedSinceAck = latestUpdate > 0 && latestUpdate > ackTime
-  const needsApproval = neverAcknowledged || updatedSinceAck
+
+  // With per-variant decisions, the text-variant round is "needed" while at
+  // least one variant has status 'open' on the current version. The PDF
+  // still leans on the legacy global ack timestamp.
+  const openVariants = variants.filter((v) => deriveVariantStatus(v) === 'open')
+  const variantsNeed = hasVariants && openVariants.length > 0
+  const pdfNeeds = hasPdf && pdfTime > ackTime
+  const needsApproval = variantsNeed || pdfNeeds
 
   if (!needsApproval) return null
+
+  // When a text-variant round is still open, the approval flow is handled
+  // entirely inside the modal — no global "Goedkeuren" button on this card.
+  const showGlobalApproveButton = !variantsNeed && pdfNeeds
 
   const handleApprove = () => {
     setError(null)
@@ -116,40 +126,49 @@ export function MailVariantsApprovalBlock({
                 <button
                   type="button"
                   onClick={() => setOpen(true)}
-                  className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:border-indigo-200 hover:text-indigo-600"
+                  className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-indigo-500/30 transition-colors hover:bg-indigo-700"
                 >
-                  Voorstel bekijken ({variants.length})
+                  Mailvarianten beoordelen ({openVariants.length} open)
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                  </svg>
                 </button>
               )}
-              <button
-                type="button"
-                onClick={handleApprove}
-                disabled={pending}
-                className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-base font-bold text-white shadow-lg shadow-emerald-500/40 transition-all hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
-              >
-                {pending ? (
-                  <>
-                    <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.25" strokeWidth="4" />
-                      <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-                    </svg>
-                    {t('campaign.proposalSending')}
-                  </>
-                ) : (
-                  <>
-                    {t('campaign.variantsApprove')}
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                    </svg>
-                  </>
-                )}
-              </button>
+              {showGlobalApproveButton && (
+                <button
+                  type="button"
+                  onClick={handleApprove}
+                  disabled={pending}
+                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-base font-bold text-white shadow-lg shadow-emerald-500/40 transition-all hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+                >
+                  {pending ? (
+                    <>
+                      <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.25" strokeWidth="4" />
+                        <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+                      </svg>
+                      {t('campaign.proposalSending')}
+                    </>
+                  ) : (
+                    <>
+                      {t('campaign.variantsApprove')}
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                      </svg>
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           </div>
         </section>
 
         {open && hasVariants && (
-          <MailVariantsModal variants={variants} onClose={() => setOpen(false)} />
+          <MailVariantsModal
+            variants={variants}
+            feedbackByVariant={feedbackByVariant}
+            onClose={() => setOpen(false)}
+          />
         )}
       </>
     )
@@ -203,9 +222,12 @@ export function MailVariantsApprovalBlock({
                 <button
                   type="button"
                   onClick={() => setOpen(true)}
-                  className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:border-indigo-200 hover:text-indigo-600"
+                  className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-indigo-500/30 transition-colors hover:bg-indigo-700"
                 >
-                  Mailvarianten bekijken ({variants.length})
+                  Mailvarianten beoordelen ({openVariants.length} open)
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                  </svg>
                 </button>
               )}
               {hasPdf && (
@@ -221,36 +243,42 @@ export function MailVariantsApprovalBlock({
                   </svg>
                 </a>
               )}
-              <button
-                type="button"
-                onClick={handleApprove}
-                disabled={pending}
-                className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-base font-bold text-white shadow-lg shadow-emerald-500/40 transition-all hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
-              >
-                {pending ? (
-                  <>
-                    <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.25" strokeWidth="4" />
-                      <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-                    </svg>
-                    {t('campaign.proposalSending')}
-                  </>
-                ) : (
-                  <>
-                    {t('campaign.variantsApprove')}
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                    </svg>
-                  </>
-                )}
-              </button>
+              {showGlobalApproveButton && (
+                <button
+                  type="button"
+                  onClick={handleApprove}
+                  disabled={pending}
+                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-base font-bold text-white shadow-lg shadow-emerald-500/40 transition-all hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+                >
+                  {pending ? (
+                    <>
+                      <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.25" strokeWidth="4" />
+                        <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+                      </svg>
+                      {t('campaign.proposalSending')}
+                    </>
+                  ) : (
+                    <>
+                      {t('campaign.variantsApprove')}
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                      </svg>
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           </div>
         </div>
       </section>
 
       {open && hasVariants && (
-        <MailVariantsModal variants={variants} onClose={() => setOpen(false)} />
+        <MailVariantsModal
+          variants={variants}
+          feedbackByVariant={feedbackByVariant}
+          onClose={() => setOpen(false)}
+        />
       )}
     </>
   )

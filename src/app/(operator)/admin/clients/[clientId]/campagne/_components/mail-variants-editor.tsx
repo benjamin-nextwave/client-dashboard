@@ -2,7 +2,12 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import type { MailVariant } from '@/lib/data/campaign'
+import type {
+  MailVariant,
+  MailVariantFeedbackSubmission,
+  MailVariantFeedbackActionType,
+} from '@/lib/data/campaign'
+import { deriveVariantStatus } from '@/lib/data/campaign'
 import {
   addMailVariant,
   updateMailVariant,
@@ -11,11 +16,36 @@ import {
   requestVariantsApproval,
   mailClientAboutVariants,
 } from '../actions'
+import { MailVariantTimeline } from '@/app/(client)/dashboard/mijn-campagne/_components/mail-variant-timeline'
 
 interface Props {
   clientId: string
   variants: MailVariant[]
   variantsApprovalRequestedAt: string | null
+  feedbackByVariant: Record<string, MailVariantFeedbackSubmission>
+  allFeedbackByVariant: Record<string, MailVariantFeedbackSubmission[]>
+}
+
+const ACTION_LABELS: Record<MailVariantFeedbackActionType, string> = {
+  replace_with: 'Vervangen door',
+  remove: 'Verwijderen',
+  other: 'Overige feedback',
+}
+
+const ACTION_COLORS: Record<MailVariantFeedbackActionType, string> = {
+  replace_with: 'bg-indigo-100 text-indigo-800 ring-indigo-200',
+  remove: 'bg-red-100 text-red-800 ring-red-200',
+  other: 'bg-amber-100 text-amber-800 ring-amber-200',
+}
+
+function formatTimestamp(iso: string): string {
+  return new Date(iso).toLocaleString('nl-NL', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 
 const MAILS: Array<{ number: 1 | 2 | 3; title: string; description: string }> = [
@@ -24,7 +54,13 @@ const MAILS: Array<{ number: 1 | 2 | 3; title: string; description: string }> = 
   { number: 3, title: 'Mail 3', description: 'Laatste poging' },
 ]
 
-export function MailVariantsEditor({ clientId, variants, variantsApprovalRequestedAt }: Props) {
+export function MailVariantsEditor({
+  clientId,
+  variants,
+  variantsApprovalRequestedAt,
+  feedbackByVariant,
+  allFeedbackByVariant,
+}: Props) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -185,6 +221,8 @@ export function MailVariantsEditor({ clientId, variants, variantsApprovalRequest
                       expanded={expandedId === variant.id}
                       onToggle={() => setExpandedId(expandedId === variant.id ? null : variant.id)}
                       disabled={pending}
+                      feedback={feedbackByVariant[variant.id] ?? null}
+                      allSubmissions={allFeedbackByVariant[variant.id] ?? []}
                     />
                   ))}
                 </div>
@@ -203,13 +241,26 @@ function VariantCard({
   expanded,
   onToggle,
   disabled,
+  feedback,
+  allSubmissions,
 }: {
   variant: MailVariant
   clientId: string
   expanded: boolean
   onToggle: () => void
   disabled?: boolean
+  feedback: MailVariantFeedbackSubmission | null
+  allSubmissions: MailVariantFeedbackSubmission[]
 }) {
+  const status = deriveVariantStatus(variant)
+  // Feedback is only relevant when the current variant version still matches
+  // the version the feedback was submitted against (i.e. operator hasn't
+  // edited yet since the client submitted). After an edit, the feedback
+  // remains in the DB for history but the badge clears so the editor isn't
+  // distracted by stale notes.
+  const feedbackIsCurrent =
+    feedback &&
+    new Date(feedback.variantVersion).getTime() >= new Date(variant.updatedAt).getTime()
   const router = useRouter()
   const [saving, startSave] = useTransition()
   const [label, setLabel] = useState(variant.variantLabel)
@@ -252,6 +303,7 @@ function VariantCard({
   }
 
   const [togglingPublish, startTogglePublish] = useTransition()
+  const [timelineOpen, setTimelineOpen] = useState(false)
 
   const handleTogglePublish = () => {
     startTogglePublish(async () => {
@@ -288,7 +340,7 @@ function VariantCard({
             {variant.variantLabel.charAt(0).toUpperCase()}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <div className="truncate text-sm font-semibold text-gray-900">{label}</div>
               {variant.isPublished ? (
                 <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-700">
@@ -299,6 +351,18 @@ function VariantCard({
                 <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-gray-500">
                   <span className="h-1 w-1 rounded-full bg-gray-400" />
                   Verborgen
+                </span>
+              )}
+              {status === 'approved' && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-700">
+                  <span className="h-1 w-1 rounded-full bg-emerald-500" />
+                  Goedgekeurd door klant
+                </span>
+              )}
+              {feedbackIsCurrent && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-700">
+                  <span className="h-1 w-1 rounded-full bg-amber-500" />
+                  Feedback ontvangen
                 </span>
               )}
               {isDirty && (
@@ -318,6 +382,28 @@ function VariantCard({
 
       {expanded && (
         <div className="space-y-3 border-t border-gray-100 bg-gray-50/30 p-4">
+          {/* Timeline trigger — opens an overlay with all client events */}
+          <div className="flex items-center justify-between gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2">
+            <div className="text-[11px] text-gray-600">
+              Bekijk de tijdlijn van deze variant — alle goedkeuringen en feedbackrondes van de
+              klant.
+            </div>
+            <button
+              type="button"
+              onClick={() => setTimelineOpen(true)}
+              className="inline-flex flex-shrink-0 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm hover:border-indigo-200 hover:text-indigo-700"
+            >
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+              </svg>
+              Tijdlijn ({allSubmissions.length + (variant.clientApprovedAt ? 1 : 0) + 1})
+            </button>
+          </div>
+
+          {feedbackIsCurrent && feedback && (
+            <FeedbackPanel feedback={feedback} body={variant.body} />
+          )}
+
           {/* Publish toggle — prominent, at the top of the expanded card */}
           <button
             type="button"
@@ -461,6 +547,15 @@ function VariantCard({
           </div>
         </div>
       )}
+
+      {timelineOpen && (
+        <MailVariantTimeline
+          variant={variant}
+          submissions={allSubmissions}
+          headerLabel={`Mail ${variant.mailNumber} · ${variant.variantLabel}`}
+          onClose={() => setTimelineOpen(false)}
+        />
+      )}
     </div>
   )
 }
@@ -473,5 +568,95 @@ function FieldLabel({ text, children }: { text: string; children: React.ReactNod
       </label>
       {children}
     </div>
+  )
+}
+
+/**
+ * Renders the client's latest feedback for a variant: general feedback (if
+ * any), plus each passage-level item with the originally-selected text
+ * shown highlighted inside a read-only snapshot of the body. The snapshot
+ * uses the body as it currently stands — offsets still match because this
+ * panel only renders when feedback.variantVersion >= variant.updated_at.
+ */
+function FeedbackPanel({
+  feedback,
+  body,
+}: {
+  feedback: MailVariantFeedbackSubmission
+  body: string
+}) {
+  return (
+    <section className="rounded-xl border-2 border-amber-200 bg-amber-50/40 p-4">
+      <div className="flex items-center gap-2">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500 text-white">
+          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 20.25c4.97 0 9-3.694 9-8.25s-4.03-8.25-9-8.25S3 7.444 3 12c0 2.104.859 4.023 2.273 5.48.432.447.74 1.04.586 1.641a4.483 4.483 0 0 1-.923 1.785A5.969 5.969 0 0 0 6 21c1.282 0 2.47-.402 3.445-1.087.81.22 1.668.337 2.555.337Z" />
+          </svg>
+        </div>
+        <div>
+          <div className="text-sm font-bold text-amber-900">Klantfeedback ontvangen</div>
+          <div className="text-[11px] text-amber-800">
+            Ingediend op {formatTimestamp(feedback.submittedAt)}
+          </div>
+        </div>
+      </div>
+
+      {feedback.generalFeedback && (
+        <div className="mt-3 rounded-lg border border-amber-200 bg-white px-3 py-2">
+          <div className="text-[10px] font-bold uppercase tracking-wide text-amber-700">
+            Algemene feedback
+          </div>
+          <p className="mt-1 whitespace-pre-wrap text-xs text-gray-800">
+            {feedback.generalFeedback}
+          </p>
+        </div>
+      )}
+
+      {feedback.items.length > 0 && (
+        <div className="mt-3 space-y-2">
+          {feedback.items.map((item) => {
+            // Read-only highlight: render body in three segments around the
+            // item's offsets. The snapshot was validated at submit time.
+            const before = body.slice(0, item.selectionStart)
+            const selected = body.slice(item.selectionStart, item.selectionEnd)
+            const after = body.slice(item.selectionEnd)
+            return (
+              <div
+                key={item.id}
+                className="rounded-lg border border-amber-200 bg-white px-3 py-2.5"
+              >
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`inline-flex rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ring-1 ${ACTION_COLORS[item.actionType]}`}
+                  >
+                    {ACTION_LABELS[item.actionType]}
+                  </span>
+                </div>
+                <pre className="mt-2 whitespace-pre-wrap rounded-md bg-gray-50 px-2 py-1.5 font-sans text-[11px] leading-relaxed text-gray-700 ring-1 ring-gray-200">
+                  {before}
+                  <mark className="rounded bg-yellow-200 px-0.5 text-yellow-900">{selected}</mark>
+                  {after}
+                </pre>
+                {item.feedbackText && (
+                  <div className="mt-2 rounded-md border border-gray-200 bg-gray-50/50 px-2 py-1.5">
+                    <div className="text-[10px] font-bold uppercase tracking-wide text-gray-500">
+                      Feedback van klant
+                    </div>
+                    <p className="mt-0.5 whitespace-pre-wrap text-xs text-gray-800">
+                      {item.feedbackText}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      <p className="mt-3 text-[11px] italic text-amber-800">
+        Wijzig de variant hieronder om de feedback te verwerken. Zodra je opslaat, verdwijnt deze
+        notitie automatisch en kan de klant de nieuwe versie goedkeuren of nieuwe feedback geven.
+      </p>
+    </section>
   )
 }

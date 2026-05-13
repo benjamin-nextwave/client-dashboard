@@ -54,7 +54,127 @@ export interface MailVariant {
   explanation: string
   position: number
   isPublished: boolean
+  createdAt: string
   updatedAt: string
+  clientApprovedAt: string | null
+  clientApprovedVersion: string | null
+  clientFeedbackSubmittedAt: string | null
+  clientFeedbackSubmittedVersion: string | null
+}
+
+export type MailVariantStatus = 'open' | 'approved' | 'feedback_pending'
+
+export function deriveVariantStatus(variant: MailVariant): MailVariantStatus {
+  const updatedAt = new Date(variant.updatedAt).getTime()
+  const approvedAt = variant.clientApprovedVersion
+    ? new Date(variant.clientApprovedVersion).getTime()
+    : 0
+  const feedbackAt = variant.clientFeedbackSubmittedVersion
+    ? new Date(variant.clientFeedbackSubmittedVersion).getTime()
+    : 0
+
+  if (approvedAt >= updatedAt && variant.clientApprovedAt) return 'approved'
+  if (feedbackAt >= updatedAt && variant.clientFeedbackSubmittedAt) return 'feedback_pending'
+  return 'open'
+}
+
+export type MailVariantFeedbackActionType = 'replace_with' | 'remove' | 'other'
+
+export interface MailVariantFeedbackItem {
+  id: string
+  submissionId: string
+  selectionText: string
+  selectionStart: number
+  selectionEnd: number
+  actionType: MailVariantFeedbackActionType
+  feedbackText: string | null
+  position: number
+}
+
+export interface MailVariantFeedbackSubmission {
+  id: string
+  mailVariantId: string
+  clientId: string
+  generalFeedback: string | null
+  variantVersion: string
+  submittedAt: string
+  items: MailVariantFeedbackItem[]
+  // Snapshot of the variant as it was at the moment of feedback. Null on
+  // rows submitted before the snapshot migration where we couldn't safely
+  // backfill (i.e. the operator had already changed the variant since).
+  variantSubjectSnapshot: string | null
+  variantBodySnapshot: string | null
+  variantExampleBodySnapshot: string | null
+  variantLabelSnapshot: string | null
+  variantExplanationSnapshot: string | null
+}
+
+export type MailVariantTimelineEvent =
+  | { kind: 'created'; at: string }
+  | { kind: 'approved'; at: string }
+  | { kind: 'feedback'; at: string; submission: MailVariantFeedbackSubmission }
+
+/**
+ * Builds a descending-by-time event list for a single variant:
+ *   - feedback submissions (newest first)
+ *   - approval (if approved at any point)
+ *   - creation (always last in the list)
+ */
+export function buildMailVariantTimeline(
+  variant: MailVariant,
+  submissions: MailVariantFeedbackSubmission[]
+): MailVariantTimelineEvent[] {
+  const events: MailVariantTimelineEvent[] = []
+  for (const s of submissions) {
+    events.push({ kind: 'feedback', at: s.submittedAt, submission: s })
+  }
+  if (variant.clientApprovedAt) {
+    events.push({ kind: 'approved', at: variant.clientApprovedAt })
+  }
+  events.push({ kind: 'created', at: variant.createdAt })
+  return events.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
+}
+
+export interface MailVariantsTimelineEntry {
+  variant: MailVariant
+  event: MailVariantTimelineEvent
+}
+
+/**
+ * Flat, time-sorted timeline across every variant for a client. Used by the
+ * "Tijdlijn mailvarianten" section on the campaign page so the client/operator
+ * sees one chronological feed instead of one timeline per variant.
+ */
+export function buildAllMailVariantsTimeline(
+  variants: MailVariant[],
+  submissionsByVariant: Record<string, MailVariantFeedbackSubmission[]>
+): MailVariantsTimelineEntry[] {
+  const entries: MailVariantsTimelineEntry[] = []
+  for (const v of variants) {
+    for (const e of buildMailVariantTimeline(v, submissionsByVariant[v.id] ?? [])) {
+      entries.push({ variant: v, event: e })
+    }
+  }
+  return entries.sort(
+    (a, b) => new Date(b.event.at).getTime() - new Date(a.event.at).getTime()
+  )
+}
+
+/**
+ * Derives a stable "Mail X" or "Mail X, variant Y" label for a variant
+ * inside a given list — used in the combined timeline so each event shows
+ * which variant it belongs to.
+ */
+export function deriveVariantHeaderLabel(
+  variant: MailVariant,
+  allVariants: MailVariant[]
+): string {
+  const inSameMail = allVariants.filter((v) => v.mailNumber === variant.mailNumber)
+  if (inSameMail.length <= 1) return `Mail ${variant.mailNumber}`
+  // Order by position to match the wizard's variant numbering
+  const sorted = [...inSameMail].sort((a, b) => a.position - b.position)
+  const idx = sorted.findIndex((v) => v.id === variant.id) + 1
+  return `Mail ${variant.mailNumber}, variant ${idx}`
 }
 
 function mapCampaignRow(row: Record<string, unknown>, submissionCount: number): CampaignState {
@@ -160,8 +280,143 @@ export async function getMailVariants(clientId: string): Promise<MailVariant[]> 
     explanation: row.explanation,
     position: row.position,
     isPublished: Boolean(row.is_published),
+    createdAt: row.created_at,
     updatedAt: row.updated_at,
+    clientApprovedAt: row.client_approved_at ?? null,
+    clientApprovedVersion: row.client_approved_version ?? null,
+    clientFeedbackSubmittedAt: row.client_feedback_submitted_at ?? null,
+    clientFeedbackSubmittedVersion: row.client_feedback_submitted_version ?? null,
   }))
+}
+
+/**
+ * Returns the latest feedback submission per mail variant for a client,
+ * including its items. Used by both the client (read its own feedback in
+ * read-only mode after submission) and the operator (inline feedback view
+ * in the campagne editor).
+ */
+export async function getLatestMailVariantFeedback(
+  clientId: string
+): Promise<Record<string, MailVariantFeedbackSubmission>> {
+  const supabase = createAdminClient()
+  const { data: submissions, error } = await supabase
+    .from('mail_variant_feedback_submissions')
+    .select(SUBMISSION_SELECT)
+    .eq('client_id', clientId)
+    .order('submitted_at', { ascending: false })
+
+  if (error || !submissions || submissions.length === 0) return {}
+
+  const latestByVariant = new Map<string, (typeof submissions)[number]>()
+  for (const s of submissions) {
+    if (!latestByVariant.has(s.mail_variant_id)) latestByVariant.set(s.mail_variant_id, s)
+  }
+
+  const submissionIds = Array.from(latestByVariant.values()).map((s) => s.id)
+  const itemsBySubmission = await fetchItemsBySubmission(submissionIds)
+
+  const result: Record<string, MailVariantFeedbackSubmission> = {}
+  for (const [variantId, s] of latestByVariant) {
+    result[variantId] = mapSubmissionRow(s, itemsBySubmission.get(s.id) ?? [])
+  }
+  return result
+}
+
+/**
+ * Returns every feedback submission per variant (newest first), including
+ * items + body snapshots. Used by the timeline view.
+ */
+export async function getAllMailVariantFeedback(
+  clientId: string
+): Promise<Record<string, MailVariantFeedbackSubmission[]>> {
+  const supabase = createAdminClient()
+  const { data: submissions, error } = await supabase
+    .from('mail_variant_feedback_submissions')
+    .select(SUBMISSION_SELECT)
+    .eq('client_id', clientId)
+    .order('submitted_at', { ascending: false })
+
+  if (error || !submissions || submissions.length === 0) return {}
+
+  const submissionIds = submissions.map((s) => s.id)
+  const itemsBySubmission = await fetchItemsBySubmission(submissionIds)
+
+  const result: Record<string, MailVariantFeedbackSubmission[]> = {}
+  for (const s of submissions) {
+    const list = result[s.mail_variant_id] ?? []
+    list.push(mapSubmissionRow(s, itemsBySubmission.get(s.id) ?? []))
+    result[s.mail_variant_id] = list
+  }
+  return result
+}
+
+const SUBMISSION_SELECT =
+  'id, mail_variant_id, client_id, general_feedback, variant_version, submitted_at, variant_subject_snapshot, variant_body_snapshot, variant_example_body_snapshot, variant_label_snapshot, variant_explanation_snapshot'
+
+type SubmissionRow = {
+  id: string
+  mail_variant_id: string
+  client_id: string
+  general_feedback: string | null
+  variant_version: string
+  submitted_at: string
+  variant_subject_snapshot: string | null
+  variant_body_snapshot: string | null
+  variant_example_body_snapshot: string | null
+  variant_label_snapshot: string | null
+  variant_explanation_snapshot: string | null
+}
+
+function mapSubmissionRow(
+  s: SubmissionRow,
+  items: MailVariantFeedbackItem[]
+): MailVariantFeedbackSubmission {
+  return {
+    id: s.id,
+    mailVariantId: s.mail_variant_id,
+    clientId: s.client_id,
+    generalFeedback: s.general_feedback ?? null,
+    variantVersion: s.variant_version,
+    submittedAt: s.submitted_at,
+    items,
+    variantSubjectSnapshot: s.variant_subject_snapshot ?? null,
+    variantBodySnapshot: s.variant_body_snapshot ?? null,
+    variantExampleBodySnapshot: s.variant_example_body_snapshot ?? null,
+    variantLabelSnapshot: s.variant_label_snapshot ?? null,
+    variantExplanationSnapshot: s.variant_explanation_snapshot ?? null,
+  }
+}
+
+async function fetchItemsBySubmission(
+  submissionIds: string[]
+): Promise<Map<string, MailVariantFeedbackItem[]>> {
+  const map = new Map<string, MailVariantFeedbackItem[]>()
+  if (submissionIds.length === 0) return map
+
+  const supabase = createAdminClient()
+  const { data: items } = await supabase
+    .from('mail_variant_feedback_items')
+    .select(
+      'id, submission_id, selection_text, selection_start, selection_end, action_type, feedback_text, position'
+    )
+    .in('submission_id', submissionIds)
+    .order('position', { ascending: true })
+
+  for (const it of items ?? []) {
+    const list = map.get(it.submission_id) ?? []
+    list.push({
+      id: it.id,
+      submissionId: it.submission_id,
+      selectionText: it.selection_text,
+      selectionStart: it.selection_start,
+      selectionEnd: it.selection_end,
+      actionType: it.action_type as MailVariantFeedbackActionType,
+      feedbackText: it.feedback_text ?? null,
+      position: it.position,
+    })
+    map.set(it.submission_id, list)
+  }
+  return map
 }
 
 /**

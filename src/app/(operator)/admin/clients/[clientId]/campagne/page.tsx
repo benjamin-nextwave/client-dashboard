@@ -1,7 +1,12 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getCampaignState, getMailVariants } from '@/lib/data/campaign'
+import {
+  getCampaignState,
+  getMailVariants,
+  getLatestMailVariantFeedback,
+  getAllMailVariantFeedback,
+} from '@/lib/data/campaign'
 import { CampaignControls } from './_components/campaign-controls'
 import { ProposalEditor } from './_components/proposal-editor'
 import { MailVariantsEditor } from './_components/mail-variants-editor'
@@ -25,9 +30,11 @@ export default async function OperatorCampaignPage({ params }: Props) {
 
   if (!client) notFound()
 
-  const [state, variants] = await Promise.all([
+  const [state, variants, feedbackByVariant, allFeedbackByVariant] = await Promise.all([
     getCampaignState(clientId),
     getMailVariants(clientId),
+    getLatestMailVariantFeedback(clientId),
+    getAllMailVariantFeedback(clientId),
   ])
 
   if (!state) notFound()
@@ -67,6 +74,8 @@ export default async function OperatorCampaignPage({ params }: Props) {
         clientId={clientId}
         variants={variants}
         variantsApprovalRequestedAt={state.variantsApprovalRequestedAt}
+        feedbackByVariant={feedbackByVariant}
+        allFeedbackByVariant={allFeedbackByVariant}
       />
     </div>
   )
