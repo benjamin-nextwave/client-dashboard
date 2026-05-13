@@ -59,17 +59,10 @@ export function ContactsImport({ clientId, existingColumns: initialColumns }: Co
         setParsedHeaders(headers)
         setParsedRows(rows)
 
-        // Auto-map: try to match CSV headers to existing columns by name
+        // Default all columns to "skip"; user must explicitly opt-in per column
         const actions: Record<string, ColumnAction> = {}
         for (const header of headers) {
-          const match = existingColumns.find(
-            (col) => col.name.toLowerCase() === header.toLowerCase()
-          )
-          if (match) {
-            actions[header] = { action: 'existing', columnId: match.id }
-          } else {
-            actions[header] = { action: 'new', name: header }
-          }
+          actions[header] = { action: 'skip' }
         }
         setColumnActions(actions)
       },
