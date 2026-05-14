@@ -57,30 +57,30 @@ export async function GoLiveBlock({ clientId }: Props) {
         : `${Math.abs(days)} dagen geleden`
 
   return (
-    <section className="relative mb-8 overflow-hidden rounded-3xl border border-indigo-200 bg-gradient-to-br from-indigo-50 via-white to-violet-50 p-8 shadow-md">
-      <div className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-gradient-to-br from-indigo-300/40 to-transparent blur-3xl" />
-      <div className="pointer-events-none absolute -left-20 -bottom-20 h-56 w-56 rounded-full bg-gradient-to-br from-violet-300/30 to-transparent blur-3xl" />
+    <section className="relative mb-6 overflow-hidden rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 via-white to-violet-50 p-5 shadow-sm">
+      <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-gradient-to-br from-indigo-300/40 to-transparent blur-3xl" />
+      <div className="pointer-events-none absolute -left-16 -bottom-16 h-40 w-40 rounded-full bg-gradient-to-br from-violet-300/30 to-transparent blur-3xl" />
 
-      <div className="relative flex flex-wrap items-start justify-between gap-6">
+      <div className="relative flex flex-wrap items-center justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <div className="inline-flex items-center gap-1.5 rounded-full bg-indigo-100 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-indigo-700">
-            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-indigo-100 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-indigo-700">
+            <svg className="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 0 1-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 0 0 6.16-12.12A14.98 14.98 0 0 0 9.631 8.41m5.96 5.96a14.926 14.926 0 0 1-5.841 2.58m-.119-8.54a6 6 0 0 0-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 0 0-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 0 1-2.448-2.448 14.9 14.9 0 0 1 .06-.312m-2.24 2.39a4.493 4.493 0 0 0-1.757 4.306 4.493 4.493 0 0 0 4.306-1.758M16.5 9a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" />
             </svg>
             Datum van livegang
           </div>
-          <h2 className="mt-4 text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl">
+          <h2 className="mt-2 text-xl font-bold tracking-tight text-gray-900 sm:text-2xl">
             {formatDate(goLiveDate)}
           </h2>
           {goLiveNote && (
-            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-gray-600">
+            <p className="mt-1.5 max-w-2xl text-xs leading-relaxed text-gray-600">
               {goLiveNote}
             </p>
           )}
         </div>
 
         <div
-          className={`relative flex flex-col items-center justify-center rounded-2xl px-5 py-4 text-center shadow-sm ${
+          className={`relative flex flex-col items-center justify-center rounded-xl px-4 py-2.5 text-center shadow-sm ${
             isToday
               ? 'bg-emerald-500 text-white shadow-emerald-500/30'
               : inPast
@@ -88,10 +88,10 @@ export async function GoLiveBlock({ clientId }: Props) {
                 : 'bg-white text-indigo-700 ring-1 ring-indigo-200'
           }`}
         >
-          <div className="text-3xl font-bold tracking-tight">
+          <div className="text-2xl font-bold tracking-tight leading-none">
             {isToday ? '🚀' : inPast ? '✓' : days}
           </div>
-          <div className="mt-0.5 text-[10px] font-bold uppercase tracking-wide">
+          <div className="mt-1 text-[9px] font-bold uppercase tracking-wide">
             {countdownLabel}
           </div>
         </div>
