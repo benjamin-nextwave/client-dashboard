@@ -799,51 +799,58 @@ export async function approvePreview(): Promise<{ error?: string }> {
 }
 
 /**
- * Client approves the published LinkedIn flow. One-shot global approval —
- * mirrors `approveVariants` for the email flow but with a single timestamp.
- * Bumping the timestamp closes the "needs approval" state in the read-only
- * block; later operator edits + re-publish will reopen it.
+ * Client approves the published LinkedIn flow for a single mail campaign.
+ * Since 2026-05-14 the LinkedIn flow lives on the `campaign_flows` row, so
+ * the action takes the flow id and verifies ownership server-side.
  */
-export async function approveLinkedInFlow(): Promise<{ error?: string }> {
+export async function approveLinkedInFlow(flowId: string): Promise<{ error?: string }> {
   const clientId = await getClientIdForCurrentUser()
   if (!clientId) return { error: 'Niet geautoriseerd' }
 
   const admin = createAdminClient()
 
-  const { data: client } = await admin
-    .from('clients')
+  const { data: flow } = await admin
+    .from('campaign_flows')
     .select(
-      'id, company_name, notification_email, linkedin_flow_enabled, linkedin_flow_published_at, linkedin_message_day_plus_1, linkedin_message_day_plus_4, linkedin_message_day_plus_9, linkedin_message_day_plus_14'
+      'id, client_id, name, linkedin_flow_enabled, linkedin_flow_published_at, linkedin_message_day_plus_1, linkedin_message_day_plus_4, linkedin_message_day_plus_9, linkedin_message_day_plus_14'
     )
-    .eq('id', clientId)
+    .eq('id', flowId)
     .single()
 
-  if (!client) return { error: 'Klant niet gevonden' }
-  if (!client.linkedin_flow_enabled || !client.linkedin_flow_published_at) {
+  if (!flow) return { error: 'Campagne niet gevonden' }
+  if (flow.client_id !== clientId) return { error: 'Niet geautoriseerd' }
+  if (!flow.linkedin_flow_enabled || !flow.linkedin_flow_published_at) {
     return { error: 'LinkedIn-flow is nog niet gepubliceerd' }
   }
 
   const approvedAt = new Date().toISOString()
 
   const { error } = await admin
-    .from('clients')
+    .from('campaign_flows')
     .update({ linkedin_flow_approved_at: approvedAt })
-    .eq('id', clientId)
+    .eq('id', flowId)
 
   if (error) return { error: error.message }
 
   // Best-effort webhook; not fatal if Make is down.
   try {
-    const { data: profile } = await admin
-      .from('profiles')
-      .select('id')
-      .eq('client_id', clientId)
-      .eq('user_role', 'client')
-      .single()
+    const [clientRes, profileRes] = await Promise.all([
+      admin
+        .from('clients')
+        .select('id, company_name, notification_email')
+        .eq('id', clientId)
+        .single(),
+      admin
+        .from('profiles')
+        .select('id')
+        .eq('client_id', clientId)
+        .eq('user_role', 'client')
+        .single(),
+    ])
 
     let loginEmail: string | null = null
-    if (profile) {
-      const { data: authUser } = await admin.auth.admin.getUserById(profile.id)
+    if (profileRes.data) {
+      const { data: authUser } = await admin.auth.admin.getUserById(profileRes.data.id)
       if (authUser?.user?.email) loginEmail = authUser.user.email
     }
 
@@ -854,18 +861,20 @@ export async function approveLinkedInFlow(): Promise<{ error?: string }> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         event: 'linkedin_flow_approved',
-        client_id: client.id,
-        client_name: client.company_name,
+        client_id: clientId,
+        client_name: clientRes.data?.company_name ?? null,
         client_email: loginEmail,
-        notification_email: client.notification_email ?? null,
+        notification_email: clientRes.data?.notification_email ?? null,
         ...localeInfo,
+        flow_id: flow.id,
+        flow_name: flow.name,
         approved_at: approvedAt,
-        published_at: client.linkedin_flow_published_at,
+        published_at: flow.linkedin_flow_published_at,
         messages: {
-          day_plus_1: client.linkedin_message_day_plus_1 ?? '',
-          day_plus_4: client.linkedin_message_day_plus_4 ?? '',
-          day_plus_9: client.linkedin_message_day_plus_9 ?? '',
-          day_plus_14: client.linkedin_message_day_plus_14 ?? '',
+          day_plus_1: flow.linkedin_message_day_plus_1 ?? '',
+          day_plus_4: flow.linkedin_message_day_plus_4 ?? '',
+          day_plus_9: flow.linkedin_message_day_plus_9 ?? '',
+          day_plus_14: flow.linkedin_message_day_plus_14 ?? '',
         },
       }),
     })

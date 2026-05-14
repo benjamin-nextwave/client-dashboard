@@ -8,10 +8,10 @@ import { LinkedInFlowChart } from './linkedin-flowchart'
 
 interface Props {
   flows: CampaignFlow[]
-  linkedInFlow: LinkedInFlowState | null
+  linkedInByFlow: Record<string, LinkedInFlowState>
 }
 
-export function CampaignFlowsViewer({ flows, linkedInFlow }: Props) {
+export function CampaignFlowsViewer({ flows, linkedInByFlow }: Props) {
   const [activeId, setActiveId] = useState(flows[0]?.id ?? null)
   const activeFlow = flows.find((f) => f.id === activeId) ?? flows[0]
 
@@ -50,12 +50,13 @@ export function CampaignFlowsViewer({ flows, linkedInFlow }: Props) {
 
       <div className="mx-auto max-w-2xl">
         {activeFlow.steps.map((step, idx) => {
-          // When the LinkedIn flow is published as an extension of the email
-          // sequence, the last mail step should keep its "geen reactie"
-          // continue arrow (instead of the "Einde campagne" pill) so the
-          // path flows naturally into the LinkedIn chart below.
+          // When this active flow has a published LinkedIn extension, the
+          // last mail step should keep its "geen reactie" continue arrow
+          // (instead of the "Einde campagne" pill) so the path flows
+          // naturally into the LinkedIn chart below.
+          const activeLinkedIn = linkedInByFlow[activeFlow.id]
           const linkedInExtends =
-            !!linkedInFlow && linkedInFlow.enabled && !!linkedInFlow.publishedAt
+            !!activeLinkedIn && activeLinkedIn.enabled && !!activeLinkedIn.publishedAt
           const isLast =
             idx === activeFlow.steps.length - 1 && !linkedInExtends
           return (
@@ -69,7 +70,9 @@ export function CampaignFlowsViewer({ flows, linkedInFlow }: Props) {
         })}
       </div>
 
-      {linkedInFlow && <LinkedInFlowChart state={linkedInFlow} />}
+      {linkedInByFlow[activeFlow.id] && (
+        <LinkedInFlowChart state={linkedInByFlow[activeFlow.id]} />
+      )}
     </div>
   )
 }

@@ -15,7 +15,8 @@ import {
 } from '../actions'
 
 interface Props {
-  clientId: string
+  /** The campaign_flows row id this LinkedIn flow lives on. */
+  flowId: string
   state: LinkedInFlowState
 }
 
@@ -29,7 +30,7 @@ function formatTimestamp(iso: string): string {
   })
 }
 
-export function LinkedInFlowEditor({ clientId, state }: Props) {
+export function LinkedInFlowEditor({ flowId, state }: Props) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -52,7 +53,7 @@ export function LinkedInFlowEditor({ clientId, state }: Props) {
   const handleToggleEnabled = () => {
     setError(null)
     startTransition(async () => {
-      const result = await setLinkedInFlowEnabled(clientId, !state.enabled)
+      const result = await setLinkedInFlowEnabled(flowId, !state.enabled)
       if (result.error) setError(result.error)
       else router.refresh()
     })
@@ -62,7 +63,7 @@ export function LinkedInFlowEditor({ clientId, state }: Props) {
     setError(null)
     setSavingStep(key)
     startTransition(async () => {
-      const result = await updateLinkedInMessages(clientId, { [key]: messages[key] })
+      const result = await updateLinkedInMessages(flowId, { [key]: messages[key] })
       setSavingStep(null)
       if (result.error) {
         setError(result.error)
@@ -82,14 +83,14 @@ export function LinkedInFlowEditor({ clientId, state }: Props) {
       if (hasDirty) {
         const patch: Partial<Record<LinkedInEditableStepKey, string>> = {}
         for (const k of dirtyKeys) patch[k] = messages[k]
-        const saveResult = await updateLinkedInMessages(clientId, patch)
+        const saveResult = await updateLinkedInMessages(flowId, patch)
         if (saveResult.error) {
           setError(saveResult.error)
           return
         }
       }
 
-      const result = await publishLinkedInFlow(clientId)
+      const result = await publishLinkedInFlow(flowId)
       if (result.error) {
         setError(result.error)
       } else {

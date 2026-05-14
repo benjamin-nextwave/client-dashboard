@@ -459,29 +459,46 @@ export async function removeVariantsPdfAction(clientId: string): Promise<{ error
 }
 
 // --- LinkedIn flow ---
+//
+// LinkedIn data lives on the `campaign_flows` row (per mail-flow) since
+// 2026-05-14. All LinkedIn actions therefore take a flowId; the client_id
+// is fetched server-side to compute revalidation paths.
+
+async function clientIdForFlow(flowId: string): Promise<string | null> {
+  const supabase = createAdminClient()
+  const { data, error } = await supabase
+    .from('campaign_flows')
+    .select('client_id')
+    .eq('id', flowId)
+    .single()
+  if (error || !data) return null
+  return data.client_id as string
+}
 
 /**
- * Toggle whether the LinkedIn flow is part of the campaign for this client.
- * Disabling does not delete stored messages — it only hides the block from
- * the client and excludes it from approval/automation flows.
+ * Toggle whether this LinkedIn-flow is part of its campaign. Disabling
+ * does not delete stored messages — it only hides the block from the
+ * client and excludes it from approval/automation flows.
  */
 export async function setLinkedInFlowEnabled(
-  clientId: string,
+  flowId: string,
   enabled: boolean
 ): Promise<{ error?: string }> {
   const supabase = createAdminClient()
   const { error } = await supabase
-    .from('clients')
+    .from('campaign_flows')
     .update({ linkedin_flow_enabled: enabled })
-    .eq('id', clientId)
+    .eq('id', flowId)
 
   if (error) return { error: error.message }
-  for (const p of adminPaths(clientId)) revalidatePath(p)
+
+  const clientId = await clientIdForFlow(flowId)
+  if (clientId) for (const p of adminPaths(clientId)) revalidatePath(p)
   return {}
 }
 
 export async function updateLinkedInMessages(
-  clientId: string,
+  flowId: string,
   messages: Partial<LinkedInMessages>
 ): Promise<{ error?: string }> {
   const supabase = createAdminClient()
@@ -494,10 +511,11 @@ export async function updateLinkedInMessages(
 
   if (Object.keys(patch).length === 0) return {}
 
-  const { error } = await supabase.from('clients').update(patch).eq('id', clientId)
+  const { error } = await supabase.from('campaign_flows').update(patch).eq('id', flowId)
   if (error) return { error: error.message }
 
-  for (const p of adminPaths(clientId)) revalidatePath(p)
+  const clientId = await clientIdForFlow(flowId)
+  if (clientId) for (const p of adminPaths(clientId)) revalidatePath(p)
   return {}
 }
 
@@ -506,20 +524,21 @@ export async function updateLinkedInMessages(
  * `linkedin_flow_published_at` (and auto-enables the flow if needed) so the
  * client's read-only block shows up with a fresh approval request.
  */
-export async function publishLinkedInFlow(clientId: string): Promise<{ error?: string }> {
+export async function publishLinkedInFlow(flowId: string): Promise<{ error?: string }> {
   const supabase = createAdminClient()
   const now = new Date().toISOString()
 
   const { error } = await supabase
-    .from('clients')
+    .from('campaign_flows')
     .update({
       linkedin_flow_enabled: true,
       linkedin_flow_published_at: now,
     })
-    .eq('id', clientId)
+    .eq('id', flowId)
 
   if (error) return { error: error.message }
 
-  for (const p of adminPaths(clientId)) revalidatePath(p)
+  const clientId = await clientIdForFlow(flowId)
+  if (clientId) for (const p of adminPaths(clientId)) revalidatePath(p)
   return {}
 }

@@ -40,7 +40,7 @@ export function LinkedInFlowBlock({ state }: Props) {
   const handleApprove = () => {
     setError(null)
     startTransition(async () => {
-      const result = await approveLinkedInFlow()
+      const result = await approveLinkedInFlow(state.flowId)
       if (result.error) setError(result.error)
       else router.refresh()
     })

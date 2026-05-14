@@ -1,5 +1,5 @@
 import { getPublishedFlowsByClient } from '@/lib/data/campaign-flow'
-import { getLinkedInFlowState } from '@/lib/data/linkedin-flow'
+import { getLinkedInFlowsByClient } from '@/lib/data/linkedin-flow'
 import { getTranslator } from '@/lib/i18n/server'
 import { CampaignFlowsViewer } from './campaign-flows-viewer'
 
@@ -8,9 +8,9 @@ interface Props {
 }
 
 export async function CampaignFlowSection({ clientId }: Props) {
-  const [flows, linkedInFlow] = await Promise.all([
+  const [flows, linkedInByFlow] = await Promise.all([
     getPublishedFlowsByClient(clientId),
-    getLinkedInFlowState(clientId),
+    getLinkedInFlowsByClient(clientId),
   ])
   const t = await getTranslator()
 
@@ -38,7 +38,7 @@ export async function CampaignFlowSection({ clientId }: Props) {
         </p>
       </div>
 
-      <CampaignFlowsViewer flows={visibleFlows} linkedInFlow={linkedInFlow} />
+      <CampaignFlowsViewer flows={visibleFlows} linkedInByFlow={linkedInByFlow} />
     </section>
   )
 }

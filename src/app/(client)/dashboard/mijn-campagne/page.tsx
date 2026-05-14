@@ -8,7 +8,7 @@ import {
   deriveTasks,
   deriveVariantStatus,
 } from '@/lib/data/campaign'
-import { getLinkedInFlowState } from '@/lib/data/linkedin-flow'
+import { getLinkedInFlowsByClient } from '@/lib/data/linkedin-flow'
 import { StatusTracker } from './_components/status-tracker'
 import { CampaignBody } from './_components/campaign-body'
 import { MailVariantsApprovalBlock } from './_components/mail-variants-approval-block'
@@ -42,13 +42,13 @@ export default async function MijnCampagnePage() {
     redirect('/dashboard')
   }
 
-  const [state, allVariants, feedbackByVariant, allFeedbackByVariant, linkedInFlow] =
+  const [state, allVariants, feedbackByVariant, allFeedbackByVariant, linkedInByFlow] =
     await Promise.all([
       getCampaignState(profile.client_id),
       getMailVariants(profile.client_id),
       getLatestMailVariantFeedback(profile.client_id),
       getAllMailVariantFeedback(profile.client_id),
-      getLinkedInFlowState(profile.client_id),
+      getLinkedInFlowsByClient(profile.client_id),
     ])
 
   if (!state) redirect('/dashboard')
@@ -172,7 +172,9 @@ export default async function MijnCampagnePage() {
       />
 
       {/* ─── LinkedIn flow (optioneel, na de mailflow) ─── */}
-      {linkedInFlow && <LinkedInFlowBlock state={linkedInFlow} />}
+      {Object.values(linkedInByFlow).map((s) => (
+        <LinkedInFlowBlock key={s.flowId} state={s} />
+      ))}
 
       {/* ─── Archive zone ─── */}
       <ArchiveSection

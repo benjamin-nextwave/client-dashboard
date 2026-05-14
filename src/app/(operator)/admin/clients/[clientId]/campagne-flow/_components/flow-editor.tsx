@@ -3,14 +3,17 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import type { CampaignFlow } from '@/lib/data/campaign-flow'
+import type { LinkedInFlowState } from '@/lib/data/linkedin-flow'
 import { addStep, setFlowPublished } from '../actions'
 import { StepEditor } from './step-editor'
+import { LinkedInFlowEditor } from '../../campagne/_components/linkedin-flow-editor'
 
 interface Props {
   initialFlow: CampaignFlow
+  linkedInState: LinkedInFlowState | null
 }
 
-export function FlowEditor({ initialFlow }: Props) {
+export function FlowEditor({ initialFlow, linkedInState }: Props) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -149,6 +152,12 @@ export function FlowEditor({ initialFlow }: Props) {
         </svg>
         Stap toevoegen
       </button>
+
+      {/* LinkedIn flow — per campagne, verschijnt als blauwe extensie onder
+          deze mail-flow in het klantendashboard. */}
+      {linkedInState && (
+        <LinkedInFlowEditor flowId={initialFlow.id} state={linkedInState} />
+      )}
     </div>
   )
 }
