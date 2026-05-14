@@ -1,11 +1,11 @@
 import Link from 'next/link'
-import { getTodayTasks } from '@/lib/data/controle'
+import { getAllTasks } from '@/lib/data/controle'
 import { TaskList } from './_components/task-list'
 
 export const dynamic = 'force-dynamic'
 
 export default async function MiddagPage() {
-  const tasks = await getTodayTasks()
+  const tasks = await getAllTasks()
 
   const openCount = tasks.filter((t) => !t.isCompleted).length
   const completedCount = tasks.filter((t) => t.isCompleted).length
@@ -26,7 +26,8 @@ export default async function MiddagPage() {
           Takenlijst — Middag
         </h1>
         <p className="mt-1 text-sm text-gray-500">
-          Taken die je vanochtend tijdens de controle hebt aangemaakt.
+          Alle taken die je tijdens controlerondes hebt aangemaakt. Taken
+          blijven hier staan tot je ze handmatig afvinkt of verwijdert.
         </p>
       </div>
 

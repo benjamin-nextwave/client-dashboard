@@ -60,30 +60,22 @@ export interface ControleTaskRow {
 }
 
 /**
- * All tasks created today (server timezone). Used by the middag page.
- * If `includeAllOpen` is true, includes earlier-day open tasks too — useful
- * when the operator returns the next morning and still has yesterday's
- * unfinished items.
+ * All operator check tasks for the middag-takenlijst, newest first.
+ *
+ * Deliberately no date filter: tasks never disappear automatically. They
+ * stay visible (open and completed) until the operator explicitly checks
+ * them off and/or deletes them. The previous "today only" behaviour caused
+ * yesterday's afternoon tasks to silently drop off the page after midnight
+ * and is no longer applied.
  */
-export async function getTodayTasks(includeAllOpen = false): Promise<ControleTaskRow[]> {
+export async function getAllTasks(): Promise<ControleTaskRow[]> {
   const supabase = createAdminClient()
 
-  // Start of "today" in the server's local time.
-  const startOfToday = new Date()
-  startOfToday.setHours(0, 0, 0, 0)
-
-  let query = supabase
+  const { data: tasks, error } = await supabase
     .from('operator_check_tasks')
     .select('id, client_id, description, campaign_names, is_completed, completed_at, created_at')
     .order('created_at', { ascending: false })
 
-  if (includeAllOpen) {
-    query = query.or(`created_at.gte.${startOfToday.toISOString()},is_completed.eq.false`)
-  } else {
-    query = query.gte('created_at', startOfToday.toISOString())
-  }
-
-  const { data: tasks, error } = await query
   if (error || !tasks || tasks.length === 0) return []
 
   const clientIds = Array.from(new Set(tasks.map((t) => t.client_id)))

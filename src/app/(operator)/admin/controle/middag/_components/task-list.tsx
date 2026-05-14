@@ -123,14 +123,14 @@ export function TaskList({ tasks }: TaskListProps) {
           </div>
           <p className="mt-4 text-sm font-semibold text-gray-900">
             {tasks.length === 0
-              ? 'Nog geen taken voor vandaag'
+              ? 'Nog geen taken'
               : filter === 'done'
                 ? 'Nog niets afgerond'
                 : 'Geen taken gevonden'}
           </p>
           <p className="mt-1 max-w-sm text-xs text-gray-500">
             {tasks.length === 0
-              ? 'Doorloop eerst de ochtendcontrole — taken die je daar aanmaakt verschijnen hier vanzelf.'
+              ? 'Doorloop een ochtendcontrole — taken die je daar aanmaakt verschijnen hier en blijven staan tot je ze afvinkt of verwijdert.'
               : 'Pas je filter of zoekterm aan om meer taken te zien.'}
           </p>
         </div>
