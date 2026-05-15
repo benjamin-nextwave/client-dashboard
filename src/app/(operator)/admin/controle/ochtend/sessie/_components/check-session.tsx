@@ -9,7 +9,13 @@ import {
   type CheckAnswerEntry,
   type CheckCampaignBlock,
 } from '../../../actions'
-import { ONBOARDING_QUESTIONS, LIVE_QUESTIONS } from '../../../_lib/questions'
+import {
+  ONBOARDING_QUESTIONS,
+  LIVE_QUESTIONS,
+  SKIPPED_ANSWER,
+  type CheckQuestion,
+  type QuestionType,
+} from '../../../_lib/questions'
 
 interface SessionClient {
   id: string
@@ -58,6 +64,12 @@ function emptyState(): ClientFormState {
     tasks: [emptyTask()],
     submitted: false,
   }
+}
+
+function isAnswered(value: string | undefined): boolean {
+  if (value === undefined) return false
+  if (value === SKIPPED_ANSWER) return true
+  return value.trim().length > 0
 }
 
 export function CheckSession({ clients }: CheckSessionProps) {
@@ -153,7 +165,7 @@ export function CheckSession({ clients }: CheckSessionProps) {
   const allAnswered = useMemo(() => {
     if (!state || state.checkType === null) return false
     if (state.checkType === 'onboarding') {
-      return ONBOARDING_QUESTIONS.every((q) => (state.answers[q.id] ?? '').trim().length > 0)
+      return ONBOARDING_QUESTIONS.every((q) => isAnswered(state.answers[q.id]))
     }
     if (state.numCampaigns === null || state.numCampaigns < 1) return false
     // Every campaign needs a name so it can be referenced from tasks.
@@ -161,7 +173,7 @@ export function CheckSession({ clients }: CheckSessionProps) {
       if ((state.campaignNames[i] ?? '').trim().length === 0) return false
       for (const q of LIVE_QUESTIONS) {
         const key = `${i}_${q.id}`
-        if ((state.answers[key] ?? '').trim().length === 0) return false
+        if (!isAnswered(state.answers[key])) return false
       }
     }
     return true
@@ -468,7 +480,7 @@ function CheckTypePicker({
             </svg>
           }
           title="Onboarding controle"
-          description="9 vragen over mailboxen, Instantly, n8n/Supabase setup, mailopzetjes, clay scenario."
+          description={`${ONBOARDING_QUESTIONS.length} vragen over mailboxen, Instantly, n8n/Supabase, mailopzetjes en clay scenario.`}
         />
         <PickerCard
           onClick={() => onPick('live')}
@@ -480,7 +492,7 @@ function CheckTypePicker({
             </svg>
           }
           title="Live controle"
-          description="13 vragen per campagne over reply rates, leads, mailboxen, schema en variabelen."
+          description={`${LIVE_QUESTIONS.length} vragen per campagne over volumes, reply rates, schema en variabelen.`}
         />
       </div>
     </div>
@@ -552,7 +564,7 @@ function OnboardingForm({
           <QuestionField
             key={q.id}
             number={idx + 1}
-            label={q.label}
+            question={q}
             value={answers[q.id] ?? ''}
             onChange={(v) => onChange(q.id, v)}
           />
@@ -600,7 +612,7 @@ function LiveForm({
                       <QuestionField
                         key={key}
                         number={idx + 1}
-                        label={q.label}
+                        question={q}
                         value={answers[key] ?? ''}
                         onChange={(v) => onChange(key, v)}
                       />
@@ -713,29 +725,42 @@ function SectionHeader({ title, subtitle }: { title: string; subtitle: string })
 
 function QuestionField({
   number,
-  label,
+  question,
   value,
   onChange,
 }: {
   number: number
-  label: string
+  question: CheckQuestion
   value: string
   onChange: (v: string) => void
 }) {
-  const filled = value.trim().length > 0
+  const type: QuestionType = question.type ?? 'text'
+  const skipped = value === SKIPPED_ANSWER
+  const filled = isAnswered(value)
+
+  const borderClass = skipped
+    ? 'border-gray-300 bg-gray-50/60'
+    : filled
+      ? 'border-emerald-200'
+      : 'border-gray-200'
+
+  const numberBadgeClass = skipped
+    ? 'bg-gray-300 text-white'
+    : filled
+      ? 'bg-emerald-500 text-white'
+      : 'bg-gray-100 text-gray-500'
+
   return (
-    <div
-      className={`rounded-xl border bg-white p-4 shadow-sm transition-colors ${
-        filled ? 'border-emerald-200' : 'border-gray-200'
-      }`}
-    >
+    <div className={`rounded-xl border bg-white p-4 shadow-sm transition-colors ${borderClass}`}>
       <div className="flex items-start gap-3">
         <div
-          className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-[11px] font-bold transition-colors ${
-            filled ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-500'
-          }`}
+          className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-[11px] font-bold transition-colors ${numberBadgeClass}`}
         >
-          {filled ? (
+          {skipped ? (
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+            </svg>
+          ) : filled ? (
             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
             </svg>
@@ -744,16 +769,162 @@ function QuestionField({
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <label className="text-sm font-semibold text-gray-900">{label}</label>
-          <textarea
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            rows={2}
-            className="mt-2 w-full resize-y rounded-lg border border-gray-200 bg-gray-50/40 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-indigo-100"
-            placeholder="Typ je antwoord..."
-          />
+          <div className="flex items-start justify-between gap-3">
+            <label className={`text-sm font-semibold ${skipped ? 'text-gray-500 line-through' : 'text-gray-900'}`}>
+              {question.label}
+            </label>
+            <button
+              type="button"
+              onClick={() => onChange(skipped ? '' : SKIPPED_ANSWER)}
+              className={`inline-flex flex-shrink-0 items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-semibold transition-colors ${
+                skipped
+                  ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  : 'text-gray-400 hover:bg-gray-100 hover:text-gray-700'
+              }`}
+              title={skipped ? 'Skip ongedaan maken' : 'Sla deze vraag over'}
+            >
+              {skipped ? (
+                <>
+                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" />
+                  </svg>
+                  Overgeslagen
+                </>
+              ) : (
+                <>
+                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 12h13.5m-7.5-7.5L16.5 12 9 19.5" />
+                  </svg>
+                  Sla vraag over
+                </>
+              )}
+            </button>
+          </div>
+
+          {!skipped && (
+            <div className="mt-2">
+              {type === 'text' && (
+                <textarea
+                  value={value}
+                  onChange={(e) => onChange(e.target.value)}
+                  rows={2}
+                  className="w-full resize-y rounded-lg border border-gray-200 bg-gray-50/40 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-indigo-100"
+                  placeholder="Typ je antwoord..."
+                />
+              )}
+              {type === 'date' && (
+                <input
+                  type="date"
+                  value={value}
+                  onChange={(e) => onChange(e.target.value)}
+                  className="w-full rounded-lg border border-gray-200 bg-gray-50/40 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-indigo-100"
+                />
+              )}
+              {type === 'checkbox' && (
+                <CheckboxOnlyInput value={value} onChange={onChange} />
+              )}
+              {type === 'checkbox_cross' && (
+                <CheckboxCrossInput value={value} onChange={onChange} />
+              )}
+            </div>
+          )}
         </div>
       </div>
+    </div>
+  )
+}
+
+function CheckboxOnlyInput({
+  value,
+  onChange,
+}: {
+  value: string
+  onChange: (v: string) => void
+}) {
+  const checked = value === 'Ja'
+  return (
+    <div className="flex items-center gap-2">
+      <button
+        type="button"
+        onClick={() => onChange(checked ? '' : 'Ja')}
+        className={`inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold transition-all ${
+          checked
+            ? 'border-emerald-500 bg-emerald-500 text-white shadow-sm shadow-emerald-500/30'
+            : 'border-gray-200 bg-white text-gray-700 hover:border-emerald-300 hover:bg-emerald-50'
+        }`}
+      >
+        <span
+          className={`flex h-5 w-5 items-center justify-center rounded-md border-2 transition-all ${
+            checked ? 'border-white bg-white text-emerald-600' : 'border-gray-300 bg-white'
+          }`}
+        >
+          {checked && (
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+            </svg>
+          )}
+        </span>
+        {checked ? 'Ja, in orde' : 'Aanvinken als in orde'}
+      </button>
+    </div>
+  )
+}
+
+function CheckboxCrossInput({
+  value,
+  onChange,
+}: {
+  value: string
+  onChange: (v: string) => void
+}) {
+  const isYes = value === 'Ja'
+  const isNo = value === 'Nee'
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <button
+        type="button"
+        onClick={() => onChange(isYes ? '' : 'Ja')}
+        className={`inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold transition-all ${
+          isYes
+            ? 'border-emerald-500 bg-emerald-500 text-white shadow-sm shadow-emerald-500/30'
+            : 'border-gray-200 bg-white text-gray-700 hover:border-emerald-300 hover:bg-emerald-50'
+        }`}
+      >
+        <span
+          className={`flex h-5 w-5 items-center justify-center rounded-md border-2 transition-all ${
+            isYes ? 'border-white bg-white text-emerald-600' : 'border-gray-300 bg-white'
+          }`}
+        >
+          {isYes && (
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+            </svg>
+          )}
+        </span>
+        Ja
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange(isNo ? '' : 'Nee')}
+        className={`inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold transition-all ${
+          isNo
+            ? 'border-rose-500 bg-rose-500 text-white shadow-sm shadow-rose-500/30'
+            : 'border-gray-200 bg-white text-gray-700 hover:border-rose-300 hover:bg-rose-50'
+        }`}
+      >
+        <span
+          className={`flex h-5 w-5 items-center justify-center rounded-md border-2 transition-all ${
+            isNo ? 'border-white bg-white text-rose-600' : 'border-gray-300 bg-white'
+          }`}
+        >
+          {isNo && (
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+            </svg>
+          )}
+        </span>
+        Nee
+      </button>
     </div>
   )
 }

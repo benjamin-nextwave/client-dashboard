@@ -4,19 +4,31 @@ import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import type { ControleClientListItem } from '@/lib/data/controle'
 
-function formatLastChecked(dateStr: string | null): { text: string; tone: 'never' | 'old' | 'recent' } {
-  if (!dateStr) return { text: 'Nog nooit gecheckt', tone: 'never' }
+// Tone-systeem voor de kaarten op /admin/controle/ochtend.
+//   today     vandaag (0d)            → groen
+//   yesterday gisteren (1d)           → geel
+//   recent-red eergisteren (2d)       → rood (zonder alarm)
+//   alarm     3+ dagen of nooit       → rood met knipperend alarm-icoontje
+//
+// Het diff-getal wordt in lokale dagen vergeleken, niet in absolute uren, zodat
+// een controle van vannacht 23:50 niet als "1 dag geleden" geldt.
+function daysAgoLocal(date: Date): number {
+  const now = new Date()
+  const a = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+  const b = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()
+  return Math.round((a - b) / 86_400_000)
+}
+
+type CardTone = 'today' | 'yesterday' | 'recent-red' | 'alarm'
+
+function formatLastChecked(dateStr: string | null): { text: string; tone: CardTone } {
+  if (!dateStr) return { text: 'Nog nooit gecheckt', tone: 'alarm' }
   const date = new Date(dateStr)
-  const diffDays = Math.floor((Date.now() - date.getTime()) / 86_400_000)
-  if (diffDays === 0) return { text: 'Vandaag gecheckt', tone: 'recent' }
-  if (diffDays === 1) return { text: 'Gisteren gecheckt', tone: 'recent' }
-  if (diffDays < 7) return { text: `${diffDays}d geleden`, tone: 'recent' }
-  if (diffDays < 14) return { text: `${diffDays}d geleden`, tone: 'old' }
-  if (diffDays < 30) return { text: `${Math.floor(diffDays / 7)}w geleden`, tone: 'old' }
-  return {
-    text: date.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' }),
-    tone: 'old',
-  }
+  const diffDays = daysAgoLocal(date)
+  if (diffDays <= 0) return { text: 'Vandaag gecheckt', tone: 'today' }
+  if (diffDays === 1) return { text: 'Gisteren gecheckt', tone: 'yesterday' }
+  if (diffDays === 2) return { text: 'Eergisteren gecheckt', tone: 'recent-red' }
+  return { text: `${diffDays}d geleden gecheckt`, tone: 'alarm' }
 }
 
 interface ClientSelectionListProps {
@@ -130,11 +142,23 @@ function ClientSelectionCard({
     .join('')
     .toUpperCase()
 
-  const toneClasses = {
-    never: 'bg-rose-100 text-rose-700',
-    old: 'bg-amber-100 text-amber-700',
-    recent: 'bg-emerald-100 text-emerald-700',
+  const toneBadgeClass = {
+    today: 'bg-emerald-100 text-emerald-700',
+    yesterday: 'bg-amber-100 text-amber-800',
+    'recent-red': 'bg-rose-100 text-rose-700',
+    alarm: 'bg-rose-600 text-white',
   }[last.tone]
+
+  // Achtergrond + linker accentbalk verschillen per tone — alleen alarm
+  // krijgt een extra pulserende ring zodat hij echt opvalt.
+  const cardToneClass = checked
+    ? 'border-indigo-500 ring-2 ring-indigo-500/30 shadow-indigo-500/10'
+    : {
+        today: 'border-emerald-200 bg-emerald-50/40 hover:border-emerald-300',
+        yesterday: 'border-amber-200 bg-amber-50/40 hover:border-amber-300',
+        'recent-red': 'border-rose-200 bg-rose-50/40 hover:border-rose-300',
+        alarm: 'border-rose-400 bg-rose-50/70 ring-2 ring-rose-300 hover:border-rose-500',
+      }[last.tone]
 
   const statusBadge = (() => {
     if (client.status === 'onboarding') {
@@ -155,12 +179,15 @@ function ClientSelectionCard({
     <button
       type="button"
       onClick={onToggle}
-      className={`group relative isolate overflow-hidden rounded-2xl border bg-white text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${
-        checked
-          ? 'border-indigo-500 ring-2 ring-indigo-500/30 shadow-indigo-500/10'
-          : 'border-gray-200 hover:border-gray-300'
-      }`}
+      className={`group relative isolate overflow-hidden rounded-2xl border text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${cardToneClass}`}
     >
+      {last.tone === 'alarm' && (
+        <div className="pointer-events-none absolute -left-1 -top-1 z-10 flex h-7 w-7 animate-pulse items-center justify-center rounded-full bg-rose-600 text-white shadow-lg shadow-rose-500/50 ring-2 ring-white">
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
+          </svg>
+        </div>
+      )}
       <div
         className="absolute inset-x-0 top-0 h-1 opacity-70"
         style={{ background: `linear-gradient(90deg, ${accent}, ${accent}55 60%, transparent)` }}
@@ -202,7 +229,7 @@ function ClientSelectionCard({
 
         {/* Last checked badge */}
         <div className="mt-3 inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] font-semibold">
-          <span className={`inline-flex items-center gap-1 rounded ${toneClasses} px-2 py-0.5`}>
+          <span className={`inline-flex items-center gap-1 rounded ${toneBadgeClass} px-2 py-0.5`}>
             <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
             </svg>

@@ -2,8 +2,8 @@
 
 import { useState, useTransition, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import type { ControleTaskRow } from '@/lib/data/controle'
-import { toggleTaskCompleted, deleteTask } from '../../actions'
+import type { ControleTaskRow, ManualTaskClientOption } from '@/lib/data/controle'
+import { toggleTaskCompleted, deleteTask, addManualTask } from '../../actions'
 
 function formatTime(iso: string): string {
   const d = new Date(iso)
@@ -17,14 +17,16 @@ function formatDate(iso: string): string {
 
 interface TaskListProps {
   tasks: ControleTaskRow[]
+  clientOptions: ManualTaskClientOption[]
 }
 
-export function TaskList({ tasks }: TaskListProps) {
+export function TaskList({ tasks, clientOptions }: TaskListProps) {
   const router = useRouter()
   const [filter, setFilter] = useState<'all' | 'open' | 'done'>('open')
   const [search, setSearch] = useState('')
   const [, startTransition] = useTransition()
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set())
+  const [addOpen, setAddOpen] = useState(false)
 
   const filtered = useMemo(() => {
     let result = tasks
@@ -98,19 +100,31 @@ export function TaskList({ tasks }: TaskListProps) {
           />
         </div>
 
-        <div className="inline-flex rounded-xl border border-gray-200 bg-gray-50 p-1">
-          {(['open', 'done', 'all'] as const).map((f) => (
-            <button
-              key={f}
-              type="button"
-              onClick={() => setFilter(f)}
-              className={`rounded-lg px-3 py-2 text-xs font-semibold transition-all ${
-                filter === f ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'
-              }`}
-            >
-              {f === 'open' ? 'Te doen' : f === 'done' ? 'Afgerond' : 'Alles'}
-            </button>
-          ))}
+        <div className="flex items-center gap-2">
+          <div className="inline-flex rounded-xl border border-gray-200 bg-gray-50 p-1">
+            {(['open', 'done', 'all'] as const).map((f) => (
+              <button
+                key={f}
+                type="button"
+                onClick={() => setFilter(f)}
+                className={`rounded-lg px-3 py-2 text-xs font-semibold transition-all ${
+                  filter === f ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'
+                }`}
+              >
+                {f === 'open' ? 'Te doen' : f === 'done' ? 'Afgerond' : 'Alles'}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => setAddOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 px-3.5 py-2.5 text-xs font-semibold text-white shadow-sm shadow-orange-500/30 transition-all hover:-translate-y-0.5 hover:shadow-md hover:shadow-orange-500/40"
+          >
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            Taak toevoegen
+          </button>
         </div>
       </div>
 
@@ -148,6 +162,253 @@ export function TaskList({ tasks }: TaskListProps) {
           ))}
         </div>
       )}
+
+      {addOpen && (
+        <AddTaskModal
+          clientOptions={clientOptions}
+          onClose={() => setAddOpen(false)}
+          onAdded={() => {
+            setAddOpen(false)
+            router.refresh()
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+function AddTaskModal({
+  clientOptions,
+  onClose,
+  onAdded,
+}: {
+  clientOptions: ManualTaskClientOption[]
+  onClose: () => void
+  onAdded: () => void
+}) {
+  const [clientId, setClientId] = useState<string>('')
+  const [clientSearch, setClientSearch] = useState('')
+  const [campaignMode, setCampaignMode] = useState<'existing' | 'new'>('existing')
+  const [existingCampaign, setExistingCampaign] = useState<string>('')
+  const [newCampaign, setNewCampaign] = useState('')
+  const [description, setDescription] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [isSubmitting, startTransition] = useTransition()
+
+  const filteredClients = useMemo(() => {
+    const q = clientSearch.trim().toLowerCase()
+    if (!q) return clientOptions
+    return clientOptions.filter((c) => c.companyName.toLowerCase().includes(q))
+  }, [clientOptions, clientSearch])
+
+  const chosenClient = clientOptions.find((c) => c.id === clientId) ?? null
+  const availableCampaigns = chosenClient?.campaignNames ?? []
+
+  // Zodra de operator een klant zonder bekende campagnes kiest, schakelen we
+  // direct naar 'new' zodat hij niet vastloopt op een lege dropdown.
+  const effectiveMode: 'existing' | 'new' =
+    availableCampaigns.length === 0 ? 'new' : campaignMode
+
+  const handleSelectClient = (id: string) => {
+    setClientId(id)
+    setExistingCampaign('')
+    setNewCampaign('')
+    const opt = clientOptions.find((c) => c.id === id)
+    setCampaignMode(opt && opt.campaignNames.length > 0 ? 'existing' : 'new')
+  }
+
+  const canSubmit =
+    clientId.length > 0 &&
+    description.trim().length > 0 &&
+    (effectiveMode === 'new' ? newCampaign.trim().length >= 0 : true)
+
+  const handleSubmit = () => {
+    if (!canSubmit) return
+    setError(null)
+    const campaignName =
+      effectiveMode === 'existing'
+        ? existingCampaign.trim() || null
+        : newCampaign.trim() || null
+
+    startTransition(async () => {
+      const result = await addManualTask({
+        clientId,
+        campaignName,
+        description: description.trim(),
+      })
+      if (result.error) {
+        setError(result.error)
+        return
+      }
+      onAdded()
+    })
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">Taak toevoegen</h3>
+            <p className="text-xs text-gray-500">
+              Kies een klant, koppel aan een campagne en beschrijf de taak.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="space-y-5">
+          {/* Stap 1: klant kiezen */}
+          <div>
+            <label className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+              1. Klant
+            </label>
+            <div className="mt-2">
+              <input
+                type="text"
+                value={clientSearch}
+                onChange={(e) => setClientSearch(e.target.value)}
+                placeholder="Zoek een klant..."
+                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-indigo-400 focus:outline-none focus:ring-4 focus:ring-indigo-100"
+              />
+              <div className="mt-2 max-h-40 overflow-y-auto rounded-lg border border-gray-200 bg-gray-50/50">
+                {filteredClients.length === 0 ? (
+                  <div className="px-3 py-2 text-xs text-gray-400">Geen klanten.</div>
+                ) : (
+                  <ul>
+                    {filteredClients.map((c) => (
+                      <li key={c.id}>
+                        <button
+                          type="button"
+                          onClick={() => handleSelectClient(c.id)}
+                          className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm transition-colors ${
+                            clientId === c.id
+                              ? 'bg-indigo-50 font-semibold text-indigo-700'
+                              : 'text-gray-700 hover:bg-white'
+                          }`}
+                        >
+                          <span className="truncate">{c.companyName}</span>
+                          {clientId === c.id && (
+                            <svg className="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                            </svg>
+                          )}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Stap 2: campagne kiezen */}
+          <div>
+            <label className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+              2. Campagne {chosenClient ? `(${chosenClient.companyName})` : ''}
+            </label>
+            {!chosenClient ? (
+              <div className="mt-2 rounded-lg border border-dashed border-gray-200 px-3 py-3 text-xs text-gray-400">
+                Kies eerst een klant.
+              </div>
+            ) : (
+              <div className="mt-2 space-y-2">
+                {availableCampaigns.length > 0 && (
+                  <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1">
+                    {(['existing', 'new'] as const).map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setCampaignMode(m)}
+                        className={`rounded-md px-3 py-1.5 text-[11px] font-semibold transition-all ${
+                          effectiveMode === m
+                            ? 'bg-white text-gray-900 shadow-sm'
+                            : 'text-gray-500 hover:text-gray-900'
+                        }`}
+                      >
+                        {m === 'existing' ? 'Bestaande' : 'Nieuwe'}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {effectiveMode === 'existing' && availableCampaigns.length > 0 ? (
+                  <select
+                    value={existingCampaign}
+                    onChange={(e) => setExistingCampaign(e.target.value)}
+                    className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 transition-all focus:border-indigo-400 focus:outline-none focus:ring-4 focus:ring-indigo-100"
+                  >
+                    <option value="">— Kies een campagne —</option>
+                    {availableCampaigns.map((name) => (
+                      <option key={name} value={name}>{name}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    value={newCampaign}
+                    onChange={(e) => setNewCampaign(e.target.value)}
+                    placeholder="Typ een nieuwe campagnenaam (optioneel)"
+                    className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-indigo-400 focus:outline-none focus:ring-4 focus:ring-indigo-100"
+                  />
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Stap 3: omschrijving */}
+          <div>
+            <label className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+              3. Taak
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+              placeholder="Beschrijf wat er moet gebeuren..."
+              className="mt-2 w-full resize-y rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-indigo-400 focus:outline-none focus:ring-4 focus:ring-indigo-100"
+            />
+          </div>
+
+          {error && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+              {error}
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-gray-100 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-4 py-2 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50"
+            >
+              Annuleren
+            </button>
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={!canSubmit || isSubmitting}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 px-4 py-2 text-xs font-semibold text-white shadow-sm shadow-orange-500/30 transition-all hover:-translate-y-0.5 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0"
+            >
+              {isSubmitting ? 'Bezig met opslaan...' : 'Taak opslaan'}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

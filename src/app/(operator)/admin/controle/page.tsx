@@ -34,6 +34,32 @@ export default function ControlePage() {
           title="Dagelijkse controle"
           description="Selecteer klanten en doorloop per klant een volledige campagnecontrole."
         />
+        <SmallButton
+          href="/admin/controle/geschiedenis"
+          gradient="from-sky-500 via-cyan-500 to-teal-500"
+          shadowColor="shadow-cyan-500/30"
+          ringColor="hover:shadow-cyan-500/40"
+          icon={
+            <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+            </svg>
+          }
+          title="Controle geschiedenis"
+          description="Bekijk per klant de controles en antwoorden van de afgelopen 5 dagen."
+        />
+        <SmallButton
+          href="/admin/controle/excludeer"
+          gradient="from-slate-600 via-gray-700 to-zinc-800"
+          shadowColor="shadow-gray-700/30"
+          ringColor="hover:shadow-gray-700/40"
+          icon={
+            <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636" />
+            </svg>
+          }
+          title="Geëxcludeerde bedrijven"
+          description="Beheer welke bedrijven niet in de dagelijkse controle verschijnen."
+        />
       </div>
     </div>
   )
@@ -87,6 +113,50 @@ function BigButton({
             <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
           </svg>
         </div>
+      </div>
+    </Link>
+  )
+}
+
+function SmallButton({
+  href,
+  gradient,
+  shadowColor,
+  ringColor,
+  icon,
+  title,
+  description,
+}: {
+  href: string
+  gradient: string
+  shadowColor: string
+  ringColor: string
+  icon: React.ReactNode
+  title: string
+  description: string
+}) {
+  return (
+    <Link
+      href={href}
+      className={`group relative isolate overflow-hidden rounded-3xl bg-gradient-to-br ${gradient} p-6 text-white shadow-xl ${shadowColor} transition-all duration-300 hover:-translate-y-1 ${ringColor} flex flex-col justify-between min-h-[180px]`}
+    >
+      <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/15 blur-2xl transition-opacity group-hover:opacity-50" />
+
+      <div className="relative flex items-start gap-4">
+        <div className="rounded-xl bg-white/15 p-3 backdrop-blur transition-transform group-hover:scale-110">
+          {icon}
+        </div>
+        <div className="min-w-0 flex-1">
+          <h2 className="text-xl font-bold tracking-tight md:text-2xl">{title}</h2>
+          <p className="mt-1 text-sm opacity-90">{description}</p>
+        </div>
+      </div>
+
+      <div className="relative mt-4 inline-flex items-center gap-2 text-xs font-semibold opacity-90 transition-all group-hover:translate-x-1 group-hover:opacity-100">
+        Openen
+        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+        </svg>
       </div>
     </Link>
   )

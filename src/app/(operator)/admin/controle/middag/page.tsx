@@ -1,11 +1,14 @@
 import Link from 'next/link'
-import { getAllTasks } from '@/lib/data/controle'
+import { getAllTasks, getManualTaskClientOptions } from '@/lib/data/controle'
 import { TaskList } from './_components/task-list'
 
 export const dynamic = 'force-dynamic'
 
 export default async function MiddagPage() {
-  const tasks = await getAllTasks()
+  const [tasks, clientOptions] = await Promise.all([
+    getAllTasks(),
+    getManualTaskClientOptions(),
+  ])
 
   const openCount = tasks.filter((t) => !t.isCompleted).length
   const completedCount = tasks.filter((t) => t.isCompleted).length
@@ -37,7 +40,7 @@ export default async function MiddagPage() {
         <SummaryChip label="Totaal" value={tasks.length} tone="total" />
       </div>
 
-      <TaskList tasks={tasks} />
+      <TaskList tasks={tasks} clientOptions={clientOptions} />
     </div>
   )
 }

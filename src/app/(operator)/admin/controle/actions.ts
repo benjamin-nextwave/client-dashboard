@@ -108,3 +108,55 @@ export async function deleteTask(taskId: string): Promise<{ error?: string }> {
   revalidatePath('/admin/controle/middag')
   return {}
 }
+
+/**
+ * Toggle whether a client is excluded from the dagelijkse controle list.
+ * Excluded clients still exist (unlike is_hidden) and remain reachable
+ * via the exclusion page so the operator can opt them back in.
+ */
+export async function setClientExcluded(
+  clientId: string,
+  excluded: boolean
+): Promise<{ error?: string }> {
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from('clients')
+    .update({ is_excluded_from_check: excluded })
+    .eq('id', clientId)
+
+  if (error) return { error: error.message }
+  revalidatePath('/admin/controle/ochtend')
+  revalidatePath('/admin/controle/excludeer')
+  return {}
+}
+
+export interface AddManualTaskInput {
+  clientId: string
+  campaignName: string | null
+  description: string
+}
+
+/**
+ * Manually add a task from the Middag-takenlijst page. No check_id is
+ * attached because there is no controle-sessie behind the task.
+ */
+export async function addManualTask(input: AddManualTaskInput): Promise<{ error?: string }> {
+  const description = input.description.trim()
+  if (description.length === 0) return { error: 'Beschrijf eerst de taak.' }
+
+  const campaignNames = input.campaignName && input.campaignName.trim().length > 0
+    ? [input.campaignName.trim()]
+    : []
+
+  const admin = createAdminClient()
+  const { error } = await admin.from('operator_check_tasks').insert({
+    check_id: null,
+    client_id: input.clientId,
+    description,
+    campaign_names: campaignNames,
+  })
+
+  if (error) return { error: error.message }
+  revalidatePath('/admin/controle/middag')
+  return {}
+}
