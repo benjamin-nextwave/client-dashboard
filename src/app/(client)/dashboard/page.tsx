@@ -10,6 +10,7 @@ import { RefreshButton } from './_components/refresh-button'
 import { NewsOverlay, type NewsOverlayItem } from './_components/news-overlay'
 import { NewsMegaphoneButton } from './_components/news-megaphone-button'
 import type { NewsSidebarItem } from './_components/news-sidebar'
+import { GoLiveBlock } from './_components/go-live-block'
 
 export const metadata: Metadata = { title: 'Overzicht' }
 export const dynamic = 'force-dynamic'
@@ -197,6 +198,7 @@ export default async function OverzichtPage({
           <RefreshButton />
         </div>
       </div>
+      <GoLiveBlock clientId={client.id} />
       <OverzichtDashboard
         emailsSent={stats.emailsSent}
         uniqueReplies={stats.uniqueReplies}

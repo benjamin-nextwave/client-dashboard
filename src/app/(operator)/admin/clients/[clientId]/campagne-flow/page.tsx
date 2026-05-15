@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCampaignFlowsByClient } from '@/lib/data/campaign-flow'
+import { getLinkedInFlowsByClient } from '@/lib/data/linkedin-flow'
 import { FlowsManager } from './_components/flows-manager'
 
 export const dynamic = 'force-dynamic'
@@ -24,7 +25,10 @@ export default async function OperatorCampaignFlowPage({ params, searchParams }:
 
   if (!client) notFound()
 
-  const flows = await getCampaignFlowsByClient(clientId)
+  const [flows, linkedInByFlow] = await Promise.all([
+    getCampaignFlowsByClient(clientId),
+    getLinkedInFlowsByClient(clientId),
+  ])
 
   // Bepaal welke flow standaard geselecteerd is. Volgorde:
   // 1. ?flow=<id> uit URL als die geldig is
@@ -69,7 +73,12 @@ export default async function OperatorCampaignFlowPage({ params, searchParams }:
         </div>
       </div>
 
-      <FlowsManager clientId={clientId} flows={flows} selectedFlowId={selectedFlowId} />
+      <FlowsManager
+        clientId={clientId}
+        flows={flows}
+        selectedFlowId={selectedFlowId}
+        linkedInByFlow={linkedInByFlow}
+      />
     </div>
   )
 }

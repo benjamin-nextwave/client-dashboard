@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { ClientForm } from '@/components/admin/client-form'
 import { updateClient } from '../../actions'
 import { CampaignsSection, type CampaignRow } from './campaigns-section'
+import { GoLiveSection } from './go-live-section'
 
 export const dynamic = 'force-dynamic'
 
@@ -135,6 +136,12 @@ export default async function EditClientPage({ params }: EditClientPageProps) {
         currentLogoUrl={client.logo_url}
         isEditing={true}
         originalEmail={clientEmail}
+      />
+
+      <GoLiveSection
+        clientId={clientId}
+        initialDate={client.go_live_date ?? null}
+        initialNote={client.go_live_note ?? null}
       />
 
       {client.lead_inbox_customer_id && (

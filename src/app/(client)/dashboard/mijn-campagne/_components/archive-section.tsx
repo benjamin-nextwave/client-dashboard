@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import type { MailVariant } from '@/lib/data/campaign'
+import type { MailVariant, MailVariantFeedbackSubmission } from '@/lib/data/campaign'
 import { MailVariantsModal } from './mail-variants-modal'
 import { useT } from '@/lib/i18n/client'
 
@@ -13,6 +13,7 @@ interface Props {
   variantsAcknowledged: boolean
   proposalTitle: string | null
   proposalAcknowledged: boolean
+  feedbackByVariant: Record<string, MailVariantFeedbackSubmission>
 }
 
 /**
@@ -22,7 +23,15 @@ interface Props {
  * only appear here AFTER the client has acknowledged them — before that
  * they're shown in the prominent approval block higher on the page.
  */
-export function ArchiveSection({ formSubmissionCount, variantsPdfUrl, mailVariants, variantsAcknowledged, proposalTitle, proposalAcknowledged }: Props) {
+export function ArchiveSection({
+  formSubmissionCount,
+  variantsPdfUrl,
+  mailVariants,
+  variantsAcknowledged,
+  proposalTitle,
+  proposalAcknowledged,
+  feedbackByVariant,
+}: Props) {
   const t = useT()
   const [modalOpen, setModalOpen] = useState(false)
 
@@ -103,7 +112,11 @@ export function ArchiveSection({ formSubmissionCount, variantsPdfUrl, mailVarian
       </section>
 
       {modalOpen && (
-        <MailVariantsModal variants={mailVariants} onClose={() => setModalOpen(false)} />
+        <MailVariantsModal
+          variants={mailVariants}
+          feedbackByVariant={feedbackByVariant}
+          onClose={() => setModalOpen(false)}
+        />
       )}
     </>
   )

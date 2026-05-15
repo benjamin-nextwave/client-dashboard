@@ -20,6 +20,7 @@ export function OperatorHeader({ signOutAction }: OperatorHeaderProps) {
   // /admin/news/new and /admin/news/[id]/edit also light up the active state.
   const NAV = [
     { href: '/admin', label: 'Klanten', match: (p: string) => p === '/admin' || p.startsWith('/admin/clients') },
+    { href: '/admin/controle', label: 'Controle', match: (p: string) => p.startsWith('/admin/controle') },
     { href: '/admin/overzicht', label: 'Overzicht', match: (p: string) => p.startsWith('/admin/overzicht') },
     { href: '/admin/news', label: t('operator.nav.news'), match: (p: string) => p.startsWith('/admin/news') },
     { href: '/admin/errors', label: 'Fouten', match: (p: string) => p.startsWith('/admin/errors') },

@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import type { CampaignFlow } from '@/lib/data/campaign-flow'
+import type { LinkedInFlowState } from '@/lib/data/linkedin-flow'
 import { createFlow, deleteFlow, updateFlowName } from '../actions'
 import { FlowEditor } from './flow-editor'
 
@@ -10,9 +11,10 @@ interface Props {
   clientId: string
   flows: CampaignFlow[]
   selectedFlowId: string | null
+  linkedInByFlow: Record<string, LinkedInFlowState>
 }
 
-export function FlowsManager({ clientId, flows, selectedFlowId }: Props) {
+export function FlowsManager({ clientId, flows, selectedFlowId, linkedInByFlow }: Props) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -192,6 +194,7 @@ export function FlowsManager({ clientId, flows, selectedFlowId }: Props) {
         <FlowEditor
           key={selectedFlow.id}
           initialFlow={selectedFlow}
+          linkedInState={linkedInByFlow[selectedFlow.id] ?? null}
         />
       )}
     </div>

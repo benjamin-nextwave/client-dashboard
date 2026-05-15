@@ -2,13 +2,14 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import type { MailVariant } from '@/lib/data/campaign'
+import type { MailVariant, MailVariantFeedbackSubmission } from '@/lib/data/campaign'
 import { MailVariantsModal } from './mail-variants-modal'
 import { acknowledgeMailVariants } from '../actions'
 
 interface Props {
   variants: MailVariant[]
   lastAcknowledgedAt: string | null
+  feedbackByVariant?: Record<string, MailVariantFeedbackSubmission>
 }
 
 function formatDate(iso: string): string {
@@ -21,7 +22,7 @@ function formatDate(iso: string): string {
   })
 }
 
-export function MailVariantsBlock({ variants, lastAcknowledgedAt }: Props) {
+export function MailVariantsBlock({ variants, lastAcknowledgedAt, feedbackByVariant }: Props) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [pending, startTransition] = useTransition()
@@ -143,7 +144,13 @@ export function MailVariantsBlock({ variants, lastAcknowledgedAt }: Props) {
         </div>
       </section>
 
-      {open && <MailVariantsModal variants={variants} onClose={() => setOpen(false)} />}
+      {open && (
+        <MailVariantsModal
+          variants={variants}
+          feedbackByVariant={feedbackByVariant ?? {}}
+          onClose={() => setOpen(false)}
+        />
+      )}
     </>
   )
 }

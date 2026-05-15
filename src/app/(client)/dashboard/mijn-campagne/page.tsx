@@ -1,14 +1,24 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getCampaignState, getMailVariants, deriveTasks } from '@/lib/data/campaign'
+import {
+  getCampaignState,
+  getMailVariants,
+  getLatestMailVariantFeedback,
+  getAllMailVariantFeedback,
+  deriveTasks,
+  deriveVariantStatus,
+} from '@/lib/data/campaign'
+import { getLinkedInFlowsByClient } from '@/lib/data/linkedin-flow'
 import { StatusTracker } from './_components/status-tracker'
 import { CampaignBody } from './_components/campaign-body'
 import { MailVariantsApprovalBlock } from './_components/mail-variants-approval-block'
+import { LinkedInFlowBlock } from './_components/linkedin-flow-block'
 import { ProposalApprovalBlock } from './_components/proposal-approval-block'
 import { DncBlock } from './_components/dnc-block'
 import { ArchiveSection } from './_components/archive-section'
 import { ContactBlock } from './_components/contact-block'
 import { CampaignFlowSection } from './_components/campaign-flow-section'
+import { MailVariantsTimelineSection } from './_components/mail-variants-timeline-section'
 import { getTranslator } from '@/lib/i18n/server'
 
 export const dynamic = 'force-dynamic'
@@ -32,15 +42,23 @@ export default async function MijnCampagnePage() {
     redirect('/dashboard')
   }
 
-  const [state, allVariants] = await Promise.all([
-    getCampaignState(profile.client_id),
-    getMailVariants(profile.client_id),
-  ])
+  const [state, allVariants, feedbackByVariant, allFeedbackByVariant, linkedInByFlow] =
+    await Promise.all([
+      getCampaignState(profile.client_id),
+      getMailVariants(profile.client_id),
+      getLatestMailVariantFeedback(profile.client_id),
+      getAllMailVariantFeedback(profile.client_id),
+      getLinkedInFlowsByClient(profile.client_id),
+    ])
 
   if (!state) redirect('/dashboard')
 
   // Clients only see variants that are explicitly published by the operator
   const variants = allVariants.filter((v) => v.isPublished)
+  // Round is complete when every published variant is approved-or-feedback
+  // at its current version (no 'open' variants remain).
+  const variantsRoundComplete =
+    variants.length > 0 && variants.every((v) => deriveVariantStatus(v) !== 'open')
 
   const t = await getTranslator()
   const tasks = deriveTasks(state)
@@ -56,17 +74,18 @@ export default async function MijnCampagnePage() {
 
   // Do the published variants / PDF need (re-)approval? Computed once so
   // both the approval block and the archive section can use the same answer.
-  const variantTimes = variants.map((v) => new Date(v.updatedAt).getTime())
+  // For text variants the per-variant status is the source of truth (the
+  // round is "open" as long as at least one variant has status 'open').
+  // The PDF still uses the legacy ack timestamp.
   const pdfTime = state.variantsPdfUploadedAt
     ? new Date(state.variantsPdfUploadedAt).getTime()
     : 0
-  const latestVariantUpdate = Math.max(0, ...variantTimes, pdfTime)
   const ackTime = state.mailVariantsLastAcknowledgedAt
     ? new Date(state.mailVariantsLastAcknowledgedAt).getTime()
     : 0
+  const pdfNeedsApproval = !!state.variantsPdfUrl && pdfTime > ackTime
   const variantsNeedApproval =
-    (variants.length > 0 || !!state.variantsPdfUrl) &&
-    (!state.mailVariantsLastAcknowledgedAt || latestVariantUpdate > ackTime)
+    (variants.length > 0 && !variantsRoundComplete) || pdfNeedsApproval
 
   // Campaign proposal approval check
   const hasProposal = !!state.proposalTitle && !!state.proposalPublishedAt
@@ -112,6 +131,7 @@ export default async function MijnCampagnePage() {
             pdfUploadedAt={state.variantsPdfUploadedAt}
             lastAcknowledgedAt={state.mailVariantsLastAcknowledgedAt}
             isPostOnboarding={onboardingDone}
+            feedbackByVariant={feedbackByVariant}
           />
         </>
       ) : (
@@ -134,6 +154,7 @@ export default async function MijnCampagnePage() {
             pdfUploadedAt={state.variantsPdfUploadedAt}
             lastAcknowledgedAt={state.mailVariantsLastAcknowledgedAt}
             isPostOnboarding={onboardingDone}
+            feedbackByVariant={feedbackByVariant}
           />
 
           <CampaignBody state={state} />
@@ -144,6 +165,17 @@ export default async function MijnCampagnePage() {
 
       <ContactBlock isOnboardingComplete={onboardingDone} />
 
+      {/* ─── Mailvarianten tijdlijn ─── */}
+      <MailVariantsTimelineSection
+        variants={variants}
+        allFeedbackByVariant={allFeedbackByVariant}
+      />
+
+      {/* ─── LinkedIn flow (optioneel, na de mailflow) ─── */}
+      {Object.values(linkedInByFlow).map((s) => (
+        <LinkedInFlowBlock key={s.flowId} state={s} />
+      ))}
+
       {/* ─── Archive zone ─── */}
       <ArchiveSection
         formSubmissionCount={state.formSubmissionCount}
@@ -152,6 +184,7 @@ export default async function MijnCampagnePage() {
         variantsAcknowledged={!variantsNeedApproval && !!state.mailVariantsLastAcknowledgedAt}
         proposalTitle={state.proposalTitle}
         proposalAcknowledged={!proposalNeedsApproval && !!state.proposalAcknowledgedAt}
+        feedbackByVariant={feedbackByVariant}
       />
 
       {/* ─── Campaign flow visualisatie ─── */}

@@ -268,3 +268,46 @@ export async function deleteClient(clientId: string): Promise<{ error?: string }
   revalidatePath('/admin')
   return {}
 }
+
+/**
+ * Set or clear the go-live date and optional explanation for a client.
+ *
+ * Whenever the date itself changes (including being cleared), the
+ * `go_live_webhook_fired_at` timestamp is reset so the morning-of webhook
+ * can fire fresh for the new date. Editing just the note doesn't trigger
+ * a reset.
+ */
+export async function updateGoLiveInfo(
+  clientId: string,
+  input: { goLiveDate: string | null; goLiveNote: string | null }
+): Promise<{ error?: string }> {
+  const supabase = createAdminClient()
+
+  const newDate = input.goLiveDate?.trim() || null
+  const newNote = input.goLiveNote?.trim() || null
+
+  const { data: existing, error: fetchErr } = await supabase
+    .from('clients')
+    .select('go_live_date')
+    .eq('id', clientId)
+    .single()
+
+  if (fetchErr || !existing) {
+    return { error: `Klant niet gevonden: ${fetchErr?.message ?? ''}` }
+  }
+
+  const patch: Record<string, unknown> = {
+    go_live_date: newDate,
+    go_live_note: newNote,
+  }
+  if (existing.go_live_date !== newDate) {
+    patch.go_live_webhook_fired_at = null
+  }
+
+  const { error } = await supabase.from('clients').update(patch).eq('id', clientId)
+  if (error) return { error: error.message }
+
+  revalidatePath(`/admin/clients/${clientId}/edit`)
+  revalidatePath('/dashboard')
+  return {}
+}

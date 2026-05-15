@@ -2,13 +2,16 @@
 
 import { useState } from 'react'
 import type { CampaignFlow } from '@/lib/data/campaign-flow'
+import type { LinkedInFlowState } from '@/lib/data/linkedin-flow'
 import { FlowStepBlock } from './flow-step-block'
+import { LinkedInFlowChart } from './linkedin-flowchart'
 
 interface Props {
   flows: CampaignFlow[]
+  linkedInByFlow: Record<string, LinkedInFlowState>
 }
 
-export function CampaignFlowsViewer({ flows }: Props) {
+export function CampaignFlowsViewer({ flows, linkedInByFlow }: Props) {
   const [activeId, setActiveId] = useState(flows[0]?.id ?? null)
   const activeFlow = flows.find((f) => f.id === activeId) ?? flows[0]
 
@@ -46,15 +49,30 @@ export function CampaignFlowsViewer({ flows }: Props) {
       )}
 
       <div className="mx-auto max-w-2xl">
-        {activeFlow.steps.map((step, idx) => (
-          <FlowStepBlock
-            key={`${activeFlow.id}-${step.id}`}
-            step={step}
-            stepLabel={`Mail ${step.stepNumber}`}
-            isLast={idx === activeFlow.steps.length - 1}
-          />
-        ))}
+        {activeFlow.steps.map((step, idx) => {
+          // When this active flow has a published LinkedIn extension, the
+          // last mail step should keep its "geen reactie" continue arrow
+          // (instead of the "Einde campagne" pill) so the path flows
+          // naturally into the LinkedIn chart below.
+          const activeLinkedIn = linkedInByFlow[activeFlow.id]
+          const linkedInExtends =
+            !!activeLinkedIn && activeLinkedIn.enabled && !!activeLinkedIn.publishedAt
+          const isLast =
+            idx === activeFlow.steps.length - 1 && !linkedInExtends
+          return (
+            <FlowStepBlock
+              key={`${activeFlow.id}-${step.id}`}
+              step={step}
+              stepLabel={`Mail ${step.stepNumber}`}
+              isLast={isLast}
+            />
+          )
+        })}
       </div>
+
+      {linkedInByFlow[activeFlow.id] && (
+        <LinkedInFlowChart state={linkedInByFlow[activeFlow.id]} />
+      )}
     </div>
   )
 }
