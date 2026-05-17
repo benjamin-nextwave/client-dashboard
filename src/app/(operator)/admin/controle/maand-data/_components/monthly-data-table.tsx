@@ -12,7 +12,8 @@ interface Row {
 }
 
 interface RowDraft {
-  contactsToApproach: string
+  /** Aantal mailboxen — input. Contacts-to-approach wordt afgeleid. */
+  inboxes: string
   startDate: string
   endDate: string
   contractBasis: string
@@ -32,6 +33,15 @@ const MONTHS_NL = [
   'januari', 'februari', 'maart', 'april', 'mei', 'juni',
   'juli', 'augustus', 'september', 'oktober', 'november', 'december',
 ]
+
+/** Live-derived contacten te benaderen voor het inbox-input-veld. */
+function derivedContacts(inboxesStr: string): number | null {
+  const trimmed = inboxesStr.trim()
+  if (trimmed.length === 0) return null
+  const n = Number(trimmed)
+  if (!Number.isFinite(n) || n < 0) return null
+  return Math.floor(n) * 8
+}
 
 export function MonthlyDataTable({ rows, year, month }: MonthlyDataTableProps) {
   const router = useRouter()
@@ -67,12 +77,12 @@ export function MonthlyDataTable({ rows, year, month }: MonthlyDataTableProps) {
     }))
 
     startTransition(async () => {
-      const contacts = draft.contactsToApproach.trim()
-      const contactsNum = contacts.length === 0 ? null : Number(contacts)
-      if (contacts.length > 0 && (!Number.isFinite(contactsNum) || contactsNum! < 0)) {
+      const inboxesTrim = draft.inboxes.trim()
+      const inboxesNum = inboxesTrim.length === 0 ? null : Number(inboxesTrim)
+      if (inboxesTrim.length > 0 && (!Number.isFinite(inboxesNum) || inboxesNum! < 0 || !Number.isInteger(inboxesNum!))) {
         setDrafts((prev) => ({
           ...prev,
-          [clientId]: { ...prev[clientId], saving: false, error: 'Geef een geldig aantal contacten.' },
+          [clientId]: { ...prev[clientId], saving: false, error: 'Geef een geheel aantal mailboxen op.' },
         }))
         return
       }
@@ -81,7 +91,7 @@ export function MonthlyDataTable({ rows, year, month }: MonthlyDataTableProps) {
         clientId,
         year,
         month,
-        contactsToApproach: contactsNum,
+        inboxes: inboxesNum,
         startDate: draft.startDate || null,
         endDate: draft.endDate || null,
         contractBasis: draft.contractBasis.trim() || null,
@@ -172,7 +182,13 @@ export function MonthlyDataTable({ rows, year, month }: MonthlyDataTableProps) {
             <tr>
               <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500">Klant</th>
               <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                Hoeveel mailboxen hebben ze
+              </th>
+              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500">
                 Contacten te benaderen
+                <span className="ml-1 text-[10px] font-normal normal-case tracking-normal text-gray-400">
+                  (× 8)
+                </span>
               </th>
               <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500">Startdatum</th>
               <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500">Einddatum</th>
@@ -183,7 +199,7 @@ export function MonthlyDataTable({ rows, year, month }: MonthlyDataTableProps) {
           <tbody className="divide-y divide-gray-100">
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-12 text-center text-sm text-gray-400">
+                <td colSpan={7} className="px-4 py-12 text-center text-sm text-gray-400">
                   Geen klanten gevonden.
                 </td>
               </tr>
@@ -218,6 +234,7 @@ function MonthlyDataRow({
 }) {
   if (!draft) return null
   const accent = row.client.primaryColor ?? '#6366f1'
+  const derived = derivedContacts(draft.inboxes)
 
   return (
     <tr className="hover:bg-gray-50/40">
@@ -235,11 +252,24 @@ function MonthlyDataRow({
         <input
           type="number"
           inputMode="numeric"
-          value={draft.contactsToApproach}
-          onChange={(e) => onChange({ contactsToApproach: e.target.value })}
-          placeholder="bv. 480"
-          className="w-32 rounded-md border border-gray-200 bg-white px-2 py-1.5 text-sm text-gray-900 transition-all focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+          step={1}
+          min={0}
+          value={draft.inboxes}
+          onChange={(e) => onChange({ inboxes: e.target.value })}
+          placeholder="bv. 6"
+          className="w-24 rounded-md border border-gray-200 bg-white px-2 py-1.5 text-sm text-gray-900 transition-all focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
         />
+      </td>
+      <td className="px-4 py-3">
+        <span
+          className={`inline-flex items-center rounded-md px-2 py-1 text-sm font-semibold ${
+            derived === null
+              ? 'bg-gray-50 text-gray-400'
+              : 'bg-violet-50 text-violet-700 ring-1 ring-violet-100'
+          }`}
+        >
+          {derived === null ? '—' : derived}
+        </span>
       </td>
       <td className="px-4 py-3">
         <input
@@ -294,10 +324,18 @@ function MonthlyDataRow({
 }
 
 function toDraft(data: ClientMonthlyData | null): RowDraft {
+  // Voor bestaande rijen: prefereer 'inboxes'. Valt die om wat voor reden
+  // weg, dan herleiden we uit contacts_to_approach (gelijk aan de migratie
+  // backfill — voor data van vóór deze release).
+  const inboxes =
+    data?.inboxes !== null && data?.inboxes !== undefined
+      ? data.inboxes
+      : data?.contactsToApproach !== null && data?.contactsToApproach !== undefined
+        ? Math.floor(data.contactsToApproach / 8)
+        : null
+
   return {
-    contactsToApproach: data?.contactsToApproach !== null && data?.contactsToApproach !== undefined
-      ? String(data.contactsToApproach)
-      : '',
+    inboxes: inboxes !== null ? String(inboxes) : '',
     startDate: data?.startDate ?? '',
     endDate: data?.endDate ?? '',
     contractBasis: data?.contractBasis ?? '',

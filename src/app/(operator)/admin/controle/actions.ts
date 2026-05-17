@@ -186,7 +186,9 @@ export interface UpsertClientMonthlyDataInput {
   clientId: string
   year: number
   month: number
-  contactsToApproach: number | null
+  /** Aantal mailboxen — input van de operator. contacts_to_approach
+   *  wordt afgeleid als inboxes * 8. */
+  inboxes: number | null
   startDate: string | null
   endDate: string | null
   contractBasis: string | null
@@ -195,6 +197,10 @@ export interface UpsertClientMonthlyDataInput {
 /**
  * Insert-or-update voor één (client_id, year, month). Lege waarden worden
  * als NULL bewaard zodat een gedeeltelijke invul-staat mogelijk is.
+ *
+ * contacts_to_approach wordt server-side berekend (inboxes * 8) zodat de
+ * vragenlijst en threshold-vergelijkingen het direct kunnen gebruiken
+ * zonder client-side maths.
  */
 export async function upsertClientMonthlyData(
   input: UpsertClientMonthlyDataInput
@@ -207,6 +213,10 @@ export async function upsertClientMonthlyData(
     return { error: 'Ongeldige maand' }
   }
 
+  const inboxes = input.inboxes
+  const contactsToApproach =
+    inboxes !== null && inboxes >= 0 ? inboxes * 8 : null
+
   const admin = createAdminClient()
   const { error } = await admin
     .from('operator_client_monthly_data')
@@ -215,7 +225,8 @@ export async function upsertClientMonthlyData(
         client_id: input.clientId,
         year: input.year,
         month: input.month,
-        contacts_to_approach: input.contactsToApproach,
+        inboxes,
+        contacts_to_approach: contactsToApproach,
         start_date: input.startDate,
         end_date: input.endDate,
         contract_basis: input.contractBasis,

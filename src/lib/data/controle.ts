@@ -372,6 +372,11 @@ export interface ClientMonthlyData {
   clientId: string
   year: number
   month: number
+  /** Aantal mailboxen voor deze klant deze maand — ingevoerd door operator. */
+  inboxes: number | null
+  /** Afgeleid: inboxes × 8. Wordt door upsertClientMonthlyData berekend
+   *  en bewaard zodat de check-vragenlijst hier rechtstreeks tegen kan
+   *  vergelijken zonder client-side maths. */
   contactsToApproach: number | null
   startDate: string | null
   endDate: string | null
@@ -391,7 +396,7 @@ export async function getClientMonthlyData(
   const supabase = createAdminClient()
   const { data, error } = await supabase
     .from('operator_client_monthly_data')
-    .select('id, client_id, year, month, contacts_to_approach, start_date, end_date, contract_basis')
+    .select('id, client_id, year, month, inboxes, contacts_to_approach, start_date, end_date, contract_basis')
     .eq('client_id', clientId)
     .eq('year', year)
     .eq('month', month)
@@ -403,6 +408,7 @@ export async function getClientMonthlyData(
     clientId: data.client_id,
     year: data.year,
     month: data.month,
+    inboxes: data.inboxes,
     contactsToApproach: data.contacts_to_approach,
     startDate: data.start_date,
     endDate: data.end_date,
@@ -435,7 +441,7 @@ export async function getMonthlyDataForAllClients(
     getClientList(),
     supabase
       .from('operator_client_monthly_data')
-      .select('id, client_id, year, month, contacts_to_approach, start_date, end_date, contract_basis')
+      .select('id, client_id, year, month, inboxes, contacts_to_approach, start_date, end_date, contract_basis')
       .eq('year', year)
       .eq('month', month),
   ])
@@ -447,6 +453,7 @@ export async function getMonthlyDataForAllClients(
       clientId: row.client_id,
       year: row.year,
       month: row.month,
+      inboxes: row.inboxes,
       contactsToApproach: row.contacts_to_approach,
       startDate: row.start_date,
       endDate: row.end_date,
