@@ -1,6 +1,8 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getClientList, type ClientListItem } from './admin-stats'
 
+export type ControlePersona = 'benjamin' | 'merlijn'
+
 export interface ControleClientListItem extends ClientListItem {
   lastCheckedAt: string | null
 }
@@ -70,6 +72,7 @@ export interface ControleTaskRow {
   isCompleted: boolean
   completedAt: string | null
   createdAt: string
+  assignee: ControlePersona | null
 }
 
 /**
@@ -81,13 +84,19 @@ export interface ControleTaskRow {
  * yesterday's afternoon tasks to silently drop off the page after midnight
  * and is no longer applied.
  */
-export async function getAllTasks(): Promise<ControleTaskRow[]> {
+export async function getAllTasks(
+  persona?: ControlePersona
+): Promise<ControleTaskRow[]> {
   const supabase = createAdminClient()
 
-  const { data: tasks, error } = await supabase
+  let query = supabase
     .from('operator_check_tasks')
-    .select('id, client_id, description, campaign_names, is_completed, completed_at, created_at')
+    .select('id, client_id, description, campaign_names, is_completed, completed_at, created_at, assignee')
     .order('created_at', { ascending: false })
+
+  if (persona) query = query.eq('assignee', persona)
+
+  const { data: tasks, error } = await query
 
   if (error || !tasks || tasks.length === 0) return []
 
@@ -109,6 +118,7 @@ export async function getAllTasks(): Promise<ControleTaskRow[]> {
     isCompleted: t.is_completed,
     completedAt: t.completed_at,
     createdAt: t.created_at,
+    assignee: (t.assignee ?? null) as ControlePersona | null,
   }))
 }
 
@@ -337,4 +347,101 @@ export async function getManualTaskClientOptions(): Promise<ManualTaskClientOpti
       logoUrl: c.logoUrl,
       campaignNames: Array.from(campaignsByClient.get(c.id) ?? []).sort(),
     }))
+}
+
+// ---------------------------------------------------------------------------
+// Maandelijkse statische klantdata
+// ---------------------------------------------------------------------------
+
+export interface ClientMonthlyData {
+  id: string
+  clientId: string
+  year: number
+  month: number
+  contactsToApproach: number | null
+  startDate: string | null
+  endDate: string | null
+  contractBasis: string | null
+}
+
+/**
+ * Eén regel (year, month) voor de gegeven klant. Geeft null terug als de
+ * operator voor die maand nog niets heeft ingevuld — de check-sessie moet
+ * daarop kunnen anticiperen (geen template-substitutie + threshold uit).
+ */
+export async function getClientMonthlyData(
+  clientId: string,
+  year: number,
+  month: number
+): Promise<ClientMonthlyData | null> {
+  const supabase = createAdminClient()
+  const { data, error } = await supabase
+    .from('operator_client_monthly_data')
+    .select('id, client_id, year, month, contacts_to_approach, start_date, end_date, contract_basis')
+    .eq('client_id', clientId)
+    .eq('year', year)
+    .eq('month', month)
+    .maybeSingle()
+
+  if (error || !data) return null
+  return {
+    id: data.id,
+    clientId: data.client_id,
+    year: data.year,
+    month: data.month,
+    contactsToApproach: data.contacts_to_approach,
+    startDate: data.start_date,
+    endDate: data.end_date,
+    contractBasis: data.contract_basis,
+  }
+}
+
+export interface ClientMonthlyDataWithMeta extends ClientMonthlyData {
+  companyName: string
+  primaryColor: string | null
+  logoUrl: string | null
+}
+
+/**
+ * Overzicht van alle klanten voor de gegeven maand, met de eventueel
+ * eerder ingevulde maanddata (null als nog niet ingevuld).
+ *
+ * Gebruikt door /admin/controle/maand-data om per maand één rij per klant
+ * te tonen, ongeacht of er al gegevens zijn.
+ */
+export async function getMonthlyDataForAllClients(
+  year: number,
+  month: number
+): Promise<Array<{
+  client: ClientListItem
+  data: ClientMonthlyData | null
+}>> {
+  const supabase = createAdminClient()
+  const [clients, { data: rows }] = await Promise.all([
+    getClientList(),
+    supabase
+      .from('operator_client_monthly_data')
+      .select('id, client_id, year, month, contacts_to_approach, start_date, end_date, contract_basis')
+      .eq('year', year)
+      .eq('month', month),
+  ])
+
+  const byClient = new Map<string, ClientMonthlyData>()
+  for (const row of rows ?? []) {
+    byClient.set(row.client_id, {
+      id: row.id,
+      clientId: row.client_id,
+      year: row.year,
+      month: row.month,
+      contactsToApproach: row.contacts_to_approach,
+      startDate: row.start_date,
+      endDate: row.end_date,
+      contractBasis: row.contract_basis,
+    })
+  }
+
+  return clients
+    .filter((c) => !c.isHidden)
+    .sort((a, b) => a.companyName.localeCompare(b.companyName))
+    .map((c) => ({ client: c, data: byClient.get(c.id) ?? null }))
 }

@@ -33,9 +33,11 @@ function formatLastChecked(dateStr: string | null): { text: string; tone: CardTo
 
 interface ClientSelectionListProps {
   clients: ControleClientListItem[]
+  /** Persona-segment in de URL — bepaalt waar 'Begin de controle' heen springt. */
+  persona: 'benjamin' | 'merlijn'
 }
 
-export function ClientSelectionList({ clients }: ClientSelectionListProps) {
+export function ClientSelectionList({ clients, persona }: ClientSelectionListProps) {
   const router = useRouter()
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [search, setSearch] = useState('')
@@ -61,7 +63,7 @@ export function ClientSelectionList({ clients }: ClientSelectionListProps) {
   const startCheck = () => {
     if (selected.size === 0) return
     const ids = Array.from(selected).join(',')
-    router.push(`/admin/controle/ochtend/sessie?ids=${ids}`)
+    router.push(`/admin/controle/ochtend/${persona}/sessie?ids=${ids}`)
   }
 
   return (

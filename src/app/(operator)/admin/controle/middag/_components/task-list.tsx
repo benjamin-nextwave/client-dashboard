@@ -18,9 +18,11 @@ function formatDate(iso: string): string {
 interface TaskListProps {
   tasks: ControleTaskRow[]
   clientOptions: ManualTaskClientOption[]
+  /** Persona-context — wordt meegegeven aan de AddManualTaskModal. */
+  persona: 'benjamin' | 'merlijn'
 }
 
-export function TaskList({ tasks, clientOptions }: TaskListProps) {
+export function TaskList({ tasks, clientOptions, persona }: TaskListProps) {
   const router = useRouter()
   const [filter, setFilter] = useState<'all' | 'open' | 'done'>('open')
   const [search, setSearch] = useState('')
@@ -166,6 +168,7 @@ export function TaskList({ tasks, clientOptions }: TaskListProps) {
       {addOpen && (
         <AddTaskModal
           clientOptions={clientOptions}
+          persona={persona}
           onClose={() => setAddOpen(false)}
           onAdded={() => {
             setAddOpen(false)
@@ -179,10 +182,12 @@ export function TaskList({ tasks, clientOptions }: TaskListProps) {
 
 function AddTaskModal({
   clientOptions,
+  persona,
   onClose,
   onAdded,
 }: {
   clientOptions: ManualTaskClientOption[]
+  persona: 'benjamin' | 'merlijn'
   onClose: () => void
   onAdded: () => void
 }) {
@@ -235,6 +240,7 @@ function AddTaskModal({
         clientId,
         campaignName,
         description: description.trim(),
+        assignee: persona,
       })
       if (result.error) {
         setError(result.error)

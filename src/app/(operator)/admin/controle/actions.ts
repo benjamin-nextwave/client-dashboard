@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
+import type { ControlePersona } from '@/lib/data/controle'
 
 export interface CheckAnswerEntry {
   id: string
@@ -22,6 +23,7 @@ export type CheckAnswersPayload =
 export interface SubmitCheckTask {
   description: string
   campaignNames: string[]
+  assignee: ControlePersona
 }
 
 export interface SubmitCheckInput {
@@ -30,6 +32,8 @@ export interface SubmitCheckInput {
   numCampaigns: number | null
   answers: CheckAnswersPayload
   tasks: SubmitCheckTask[]
+  /** Persona die de sessie uitvoert. */
+  persona: ControlePersona
 }
 
 /**
@@ -51,6 +55,7 @@ export async function submitCheck(input: SubmitCheckInput): Promise<{ error?: st
       num_campaigns: input.numCampaigns,
       answers: input.answers,
       created_by: userId,
+      assignee: input.persona,
     })
     .select('id')
     .single()
@@ -63,6 +68,7 @@ export async function submitCheck(input: SubmitCheckInput): Promise<{ error?: st
     .map((t) => ({
       description: t.description.trim(),
       campaignNames: t.campaignNames.map((n) => n.trim()).filter((n) => n.length > 0),
+      assignee: t.assignee,
     }))
     .filter((t) => t.description.length > 0)
     .map((t) => ({
@@ -70,6 +76,7 @@ export async function submitCheck(input: SubmitCheckInput): Promise<{ error?: st
       client_id: input.clientId,
       description: t.description,
       campaign_names: t.campaignNames,
+      assignee: t.assignee,
     }))
 
   if (taskRows.length > 0) {
@@ -80,6 +87,8 @@ export async function submitCheck(input: SubmitCheckInput): Promise<{ error?: st
   revalidatePath('/admin/controle')
   revalidatePath('/admin/controle/ochtend')
   revalidatePath('/admin/controle/middag')
+  revalidatePath('/admin/controle/middag/benjamin')
+  revalidatePath('/admin/controle/middag/merlijn')
   return {}
 }
 
@@ -98,6 +107,8 @@ export async function toggleTaskCompleted(
 
   if (error) return { error: error.message }
   revalidatePath('/admin/controle/middag')
+  revalidatePath('/admin/controle/middag/benjamin')
+  revalidatePath('/admin/controle/middag/merlijn')
   return {}
 }
 
@@ -106,6 +117,8 @@ export async function deleteTask(taskId: string): Promise<{ error?: string }> {
   const { error } = await admin.from('operator_check_tasks').delete().eq('id', taskId)
   if (error) return { error: error.message }
   revalidatePath('/admin/controle/middag')
+  revalidatePath('/admin/controle/middag/benjamin')
+  revalidatePath('/admin/controle/middag/merlijn')
   return {}
 }
 
@@ -134,6 +147,7 @@ export interface AddManualTaskInput {
   clientId: string
   campaignName: string | null
   description: string
+  assignee: ControlePersona
 }
 
 /**
@@ -154,9 +168,64 @@ export async function addManualTask(input: AddManualTaskInput): Promise<{ error?
     client_id: input.clientId,
     description,
     campaign_names: campaignNames,
+    assignee: input.assignee,
   })
 
   if (error) return { error: error.message }
   revalidatePath('/admin/controle/middag')
+  revalidatePath('/admin/controle/middag/benjamin')
+  revalidatePath('/admin/controle/middag/merlijn')
+  return {}
+}
+
+// ---------------------------------------------------------------------------
+// Maandelijkse statische klantdata
+// ---------------------------------------------------------------------------
+
+export interface UpsertClientMonthlyDataInput {
+  clientId: string
+  year: number
+  month: number
+  contactsToApproach: number | null
+  startDate: string | null
+  endDate: string | null
+  contractBasis: string | null
+}
+
+/**
+ * Insert-or-update voor één (client_id, year, month). Lege waarden worden
+ * als NULL bewaard zodat een gedeeltelijke invul-staat mogelijk is.
+ */
+export async function upsertClientMonthlyData(
+  input: UpsertClientMonthlyDataInput
+): Promise<{ error?: string }> {
+  const userClient = await createClient()
+  const { data: userResult } = await userClient.auth.getUser()
+  const userId = userResult.user?.id ?? null
+
+  if (input.month < 1 || input.month > 12) {
+    return { error: 'Ongeldige maand' }
+  }
+
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from('operator_client_monthly_data')
+    .upsert(
+      {
+        client_id: input.clientId,
+        year: input.year,
+        month: input.month,
+        contacts_to_approach: input.contactsToApproach,
+        start_date: input.startDate,
+        end_date: input.endDate,
+        contract_basis: input.contractBasis,
+        created_by: userId,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'client_id,year,month' }
+    )
+
+  if (error) return { error: error.message }
+  revalidatePath('/admin/controle/maand-data')
   return {}
 }
