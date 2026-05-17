@@ -62,7 +62,10 @@ function emptyTask(persona: Persona): TaskDraft {
 
 function emptyState(persona: Persona): ClientFormState {
   return {
-    checkType: null,
+    // Benjamin doet alleen live-controles — onboarding is Merlijn's
+    // verantwoordelijkheid. Daarom de keuze al voorgeselecteerd zodat
+    // Benjamin de type-picker overslaat.
+    checkType: persona === 'benjamin' ? 'live' : null,
     numCampaigns: null,
     campaignNames: [],
     answers: {},
@@ -364,7 +367,8 @@ export function CheckSession({ clients, persona }: CheckSessionProps) {
         <ClientHeader
           client={current}
           chosenType={state.checkType}
-          onSwitchType={() => updateState(current.id, {
+          // Benjamin heeft geen onboarding-keuze meer, dus geen 'Wisselen'-knop.
+          onSwitchType={persona === 'benjamin' ? null : () => updateState(current.id, {
             checkType: null,
             numCampaigns: null,
             campaignNames: [],
@@ -515,7 +519,9 @@ function ClientHeader({
 }: {
   client: SessionClient
   chosenType: 'onboarding' | 'live' | null
-  onSwitchType: () => void
+  // null betekent: wisselen niet toegestaan (bv. Benjamin heeft geen
+  // onboarding-keuze, dus geen knop tonen).
+  onSwitchType: (() => void) | null
 }) {
   const accent = client.primaryColor ?? '#6366f1'
   const initials = client.companyName
@@ -564,13 +570,15 @@ function ClientHeader({
                 </svg>
                 {chosenType === 'onboarding' ? 'Onboarding controle' : 'Live controle'}
               </span>
-              <button
-                type="button"
-                onClick={onSwitchType}
-                className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-500 underline-offset-2 transition-colors hover:text-indigo-600 hover:underline"
-              >
-                Wisselen
-              </button>
+              {onSwitchType && (
+                <button
+                  type="button"
+                  onClick={onSwitchType}
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-500 underline-offset-2 transition-colors hover:text-indigo-600 hover:underline"
+                >
+                  Wisselen
+                </button>
+              )}
             </>
           )}
         </div>
