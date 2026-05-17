@@ -1060,7 +1060,7 @@ function SuggestionCallout({
             <div className="text-[12px] font-semibold text-amber-900">
               Taak toevoegen voor {isB ? 'Benjamin' : 'Merlijn'}?
             </div>
-            <div className="text-[12px] text-amber-800">{suggestion}</div>
+            <div className="whitespace-pre-wrap text-[12px] text-amber-800">{suggestion}</div>
           </div>
         </div>
         <div className="flex flex-shrink-0 items-center gap-1.5">

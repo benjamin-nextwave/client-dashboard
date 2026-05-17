@@ -103,18 +103,20 @@ export const ONBOARDING_QUESTIONS_MERLIJN: CheckQuestion[] = [
   {
     id: 'mailboxen_aangeschaft',
     label: 'Zijn de mailboxen aangeschaft?',
-    type: 'checkbox',
+    type: 'checkbox_cross',
     contextInfo: TAM_MAILBOXEN_CONTEXT,
-    suggestOnUnchecked: {
+    suggestOnNo: {
       assignTo: 'merlijn',
-      suggestion: 'Mailboxen aanschaffen volgens TAM-verdeling',
+      suggestion: `Mailboxen aanschaffen volgens TAM-verdeling:
+
+${TAM_MAILBOXEN_CONTEXT}`,
     },
   },
   {
     id: 'mailboxen_warmup',
     label: 'Staan de mailboxen in de warmup?',
-    type: 'checkbox',
-    suggestOnUnchecked: {
+    type: 'checkbox_cross',
+    suggestOnNo: {
       assignTo: 'merlijn',
       suggestion: 'Mailboxen in warmup zetten',
     },
@@ -122,8 +124,8 @@ export const ONBOARDING_QUESTIONS_MERLIJN: CheckQuestion[] = [
   {
     id: 'mailboxen_slow_ramp',
     label: 'Zijn de mailboxen goed ingesteld ivm slow ramp, response rate etc?',
-    type: 'checkbox',
-    suggestOnUnchecked: {
+    type: 'checkbox_cross',
+    suggestOnNo: {
       assignTo: 'merlijn',
       suggestion: 'Mailboxen herinstellen voor slow ramp en response rate',
     },
@@ -131,23 +133,29 @@ export const ONBOARDING_QUESTIONS_MERLIJN: CheckQuestion[] = [
   {
     id: 'instantly_instellingen',
     label: 'Is de campagne al gemaakt en zijn de Instantly-instellingen correct ivm tijdzone, sending limit etc?',
-    type: 'checkbox',
+    type: 'checkbox_cross',
+    suggestOnNo: {
+      assignTo: 'merlijn',
+      suggestion: 'Campagne aanmaken en Instantly-instellingen corrigeren (tijdzone, sending limit, etc.)',
+    },
   },
   {
     id: 'n8n_supabase_toegevoegd',
     label: 'Is de klant toegevoegd aan de n8n sheet, en de Supabase table?',
-    type: 'checkbox',
+    type: 'checkbox_cross',
     contextInfo: SUPABASE_N8N_CONTEXT,
-    suggestOnUnchecked: {
+    suggestOnNo: {
       assignTo: 'merlijn',
-      suggestion: 'Klant toevoegen aan n8n-sheet en Supabase + dashboard inrichten',
+      suggestion: `Klant toevoegen aan n8n-sheet en Supabase:
+
+${SUPABASE_N8N_CONTEXT}`,
     },
   },
   {
     id: 'mailopzetjes_ingediend',
     label: 'Zijn de mailopzetjes gemaakt en ingediend? (controleer of de PDF is geüpload)',
-    type: 'checkbox',
-    suggestOnUnchecked: {
+    type: 'checkbox_cross',
+    suggestOnNo: {
       assignTo: 'benjamin',
       suggestion: 'Mailopzetjes maken en PDF uploaden',
     },
@@ -155,18 +163,20 @@ export const ONBOARDING_QUESTIONS_MERLIJN: CheckQuestion[] = [
   {
     id: 'voorvertoning_ingevuld',
     label: 'Is de voorvertoning ingevuld?',
-    type: 'checkbox',
+    type: 'checkbox_cross',
     contextInfo: VOORVERTONING_CONTEXT,
-    suggestOnUnchecked: {
+    suggestOnNo: {
       assignTo: 'merlijn',
-      suggestion: 'Voorvertoning invullen (check invulformulier + realistische verdeling via Claude)',
+      suggestion: `Voorvertoning invullen.
+
+${VOORVERTONING_CONTEXT}`,
     },
   },
   {
     id: 'clay_scenario_gemaakt',
     label: 'Is het clay scenario gemaakt?',
-    type: 'checkbox',
-    suggestOnUnchecked: {
+    type: 'checkbox_cross',
+    suggestOnNo: {
       assignTo: 'benjamin',
       suggestion: 'Clay-scenario maken',
     },
@@ -175,6 +185,10 @@ export const ONBOARDING_QUESTIONS_MERLIJN: CheckQuestion[] = [
     id: 'klant_mailen',
     label: 'Is het handig om de klant even kort te mailen?',
     type: 'checkbox_cross',
+    suggestOnYes: {
+      assignTo: 'merlijn',
+      suggestion: 'Klant kort mailen',
+    },
   },
 ]
 

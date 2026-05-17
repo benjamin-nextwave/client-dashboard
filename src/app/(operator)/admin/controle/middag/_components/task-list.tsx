@@ -491,7 +491,7 @@ function TaskRow({
 
       <div className="min-w-0 flex-1">
         <div
-          className={`text-sm transition-colors ${
+          className={`whitespace-pre-wrap text-sm transition-colors ${
             task.isCompleted ? 'text-gray-400 line-through' : 'text-gray-900'
           }`}
         >
