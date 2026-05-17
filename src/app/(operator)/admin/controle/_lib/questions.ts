@@ -45,14 +45,17 @@ export interface QuestionThreshold {
 }
 
 /**
- * Wanneer 'Nee' op een checkbox_cross direct een taaksuggestie moet
- * opleveren. Volgens de spec gelden er meerdere onboardingvragen waar
- * een 'Nee'-antwoord automatisch om een Merlijn-taak vraagt.
+ * Voorgestelde taak die verschijnt op basis van een antwoord op een vraag.
+ * Wordt gebruikt voor zowel 'Nee'-antwoorden (iets is fout/ontbreekt) als
+ * 'Ja'-antwoorden (er moet nog iets gedaan worden).
  */
-export interface SuggestOnNo {
+export interface TaskSuggestion {
   assignTo: Persona
   suggestion: string
 }
+
+/** @deprecated bewaar voor backwards-compatibility met eerdere imports. */
+export type SuggestOnNo = TaskSuggestion
 
 export interface CheckQuestion {
   id: string
@@ -62,9 +65,13 @@ export interface CheckQuestion {
   /** Aanvullende context (uitklapbaar onder de vraag). */
   contextInfo?: string
   /** Bij 'Nee'-antwoord op een checkbox_cross-vraag: voorgestelde taak. */
-  suggestOnNo?: SuggestOnNo
+  suggestOnNo?: TaskSuggestion
+  /** Bij 'Ja'-antwoord op een checkbox_cross-vraag: voorgestelde taak.
+   *  Handig voor vragen die direct een actie beschrijven (bv. "Update mail
+   *  sturen naar de klant" → ja = doen). */
+  suggestOnYes?: TaskSuggestion
   /** Bij een leeg checkbox-antwoord (niet aangevinkt): voorgestelde taak. */
-  suggestOnUnchecked?: SuggestOnNo
+  suggestOnUnchecked?: TaskSuggestion
 }
 
 // ---------------------------------------------------------------------------
@@ -243,8 +250,12 @@ export const LIVE_QUESTIONS_MERLIJN: CheckQuestion[] = [
   },
   {
     id: 'update_mail_naar_klant_merlijn',
-    label: 'Update mail sturen naar de klant',
-    type: 'text',
+    label: 'Moet er een update mail naar de klant gestuurd worden?',
+    type: 'checkbox_cross',
+    suggestOnYes: {
+      assignTo: 'merlijn',
+      suggestion: 'Update mail sturen naar de klant',
+    },
   },
   {
     id: 'csv_in_contactenlijst',
@@ -295,8 +306,12 @@ export const LIVE_QUESTIONS_BENJAMIN: CheckQuestion[] = [
   },
   {
     id: 'update_mail_naar_klant_benjamin',
-    label: 'Update mail sturen naar de klant',
-    type: 'text',
+    label: 'Moet er een update mail naar de klant gestuurd worden?',
+    type: 'checkbox_cross',
+    suggestOnYes: {
+      assignTo: 'benjamin',
+      suggestion: 'Update mail sturen naar de klant',
+    },
   },
 ]
 

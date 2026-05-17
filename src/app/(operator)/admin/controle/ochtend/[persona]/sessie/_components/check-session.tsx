@@ -856,6 +856,10 @@ function computeSuggestionForOnboarding(
     return { text: q.suggestOnNo.suggestion, assignTo: q.suggestOnNo.assignTo }
   }
 
+  if (type === 'checkbox_cross' && q.suggestOnYes && value === 'Ja') {
+    return { text: q.suggestOnYes.suggestion, assignTo: q.suggestOnYes.assignTo }
+  }
+
   return null
 }
 
@@ -871,6 +875,10 @@ function computeSuggestionForLive(
 
   if (type === 'checkbox_cross' && q.suggestOnNo && value === 'Nee') {
     return { text: q.suggestOnNo.suggestion, assignTo: q.suggestOnNo.assignTo }
+  }
+
+  if (type === 'checkbox_cross' && q.suggestOnYes && value === 'Ja') {
+    return { text: q.suggestOnYes.suggestion, assignTo: q.suggestOnYes.assignTo }
   }
 
   if (type === 'number' && q.threshold) {
