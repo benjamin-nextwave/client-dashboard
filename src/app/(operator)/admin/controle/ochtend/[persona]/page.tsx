@@ -18,7 +18,7 @@ export default async function OchtendPersonaPage({ params }: PageProps) {
   const { persona } = await params
   if (persona !== 'benjamin' && persona !== 'merlijn') notFound()
 
-  const clients = await getClientsWithLastCheck()
+  const clients = await getClientsWithLastCheck(persona)
   const label = PERSONA_LABEL[persona]
 
   return (

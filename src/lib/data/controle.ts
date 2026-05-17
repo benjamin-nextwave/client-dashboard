@@ -14,11 +14,19 @@ export interface ControleClientListItem extends ClientListItem {
  *
  * Excluded clients (is_excluded_from_check) are filtered out — they only
  * show up on /admin/controle/excludeer.
+ *
+ * Wanneer `persona` is meegegeven, telt alléén de meest recente controle
+ * met `assignee = persona` mee. Historische controles van vóór de persona-
+ * splitsing (`assignee IS NULL`) tellen dan voor géén van beide personen —
+ * dat is opzet: Benjamin en Merlijn doen hun controle onafhankelijk en
+ * mogen elkaars werk niet als 'al gedaan' zien.
  */
-export async function getClientsWithLastCheck(): Promise<ControleClientListItem[]> {
+export async function getClientsWithLastCheck(
+  persona?: ControlePersona
+): Promise<ControleClientListItem[]> {
   const [clients, lastCheckMap, excludedIds] = await Promise.all([
     getClientList(),
-    fetchLastCheckMap(),
+    fetchLastCheckMap(persona),
     fetchExcludedClientIds(),
   ])
 
@@ -37,12 +45,18 @@ export async function getClientsWithLastCheck(): Promise<ControleClientListItem[
     })
 }
 
-async function fetchLastCheckMap(): Promise<Map<string, string>> {
+async function fetchLastCheckMap(
+  persona?: ControlePersona
+): Promise<Map<string, string>> {
   const supabase = createAdminClient()
-  const { data, error } = await supabase
+  let query = supabase
     .from('operator_client_checks')
     .select('client_id, created_at')
     .order('created_at', { ascending: false })
+
+  if (persona) query = query.eq('assignee', persona)
+
+  const { data, error } = await query
 
   if (error || !data) return new Map()
 
