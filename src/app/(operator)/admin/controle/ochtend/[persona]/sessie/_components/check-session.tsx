@@ -8,14 +8,17 @@ import {
   type CheckAnswersPayload,
   type CheckAnswerEntry,
   type CheckCampaignBlock,
-} from '../../../actions'
+  type SubmitCheckTask,
+} from '../../../../actions'
 import {
-  ONBOARDING_QUESTIONS,
-  LIVE_QUESTIONS,
+  liveQuestionsFor,
+  onboardingQuestionsFor,
   SKIPPED_ANSWER,
   type CheckQuestion,
   type QuestionType,
-} from '../../../_lib/questions'
+  type QuestionThreshold,
+  type Persona,
+} from '../../../../_lib/questions'
 
 interface SessionClient {
   id: string
@@ -23,45 +26,48 @@ interface SessionClient {
   primaryColor: string | null
   logoUrl: string | null
   isOnboarding: boolean
+  /** Statisch maandcijfer 'contacten te benaderen', voor {{aantal}}-template. */
+  monthlyContacts: number | null
 }
 
 interface CheckSessionProps {
   clients: SessionClient[]
+  persona: Persona
 }
 
-// Per-client local form state. For onboarding, `answers` is keyed by question id.
-// For live clients we hold a map per campaign index ("0", "1", ...).
 interface TaskDraft {
   description: string
-  // Campaign indices the task applies to (live checks only).
   campaignIndices: number[]
+  assignee: Persona
+  /** Niet-leeg betekent: deze taak is via een threshold-suggestie aangemaakt
+   *  vanaf de vraag met deze key. Voorkomt dubbele toevoeging bij dezelfde vraag. */
+  sourceKey: string | null
 }
 
 interface ClientFormState {
-  // null until the operator picks which checklist to run.
   checkType: 'onboarding' | 'live' | null
-  // null until the live operator picks the number of campaigns.
   numCampaigns: number | null
-  // Name per campaign index (live only). Length === numCampaigns when set.
   campaignNames: string[]
-  // For onboarding: { [questionId]: string }
-  // For live: { [campaignIndex_questionId]: string } — flat for simpler updates.
   answers: Record<string, string>
   tasks: TaskDraft[]
+  /** Set met `key`s die de operator al expliciet heeft afgewezen
+   *  ("Niet nodig") — zodat de suggestie niet steeds terugkomt. */
+  dismissedSuggestions: Set<string>
   submitted: boolean
 }
 
-function emptyTask(): TaskDraft {
-  return { description: '', campaignIndices: [] }
+function emptyTask(persona: Persona): TaskDraft {
+  return { description: '', campaignIndices: [], assignee: persona, sourceKey: null }
 }
 
-function emptyState(): ClientFormState {
+function emptyState(persona: Persona): ClientFormState {
   return {
     checkType: null,
     numCampaigns: null,
     campaignNames: [],
     answers: {},
-    tasks: [emptyTask()],
+    tasks: [emptyTask(persona)],
+    dismissedSuggestions: new Set(),
     submitted: false,
   }
 }
@@ -72,17 +78,50 @@ function isAnswered(value: string | undefined): boolean {
   return value.trim().length > 0
 }
 
-export function CheckSession({ clients }: CheckSessionProps) {
+function parseNumber(value: string | undefined): number | null {
+  if (value === undefined || value === SKIPPED_ANSWER) return null
+  const trimmed = value.trim()
+  if (trimmed.length === 0) return null
+  const n = Number(trimmed.replace(',', '.'))
+  return Number.isFinite(n) ? n : null
+}
+
+function compare(answer: number, op: QuestionThreshold['op'], target: number): boolean {
+  switch (op) {
+    case 'lt':
+      return answer < target
+    case 'lte':
+      return answer <= target
+    case 'gt':
+      return answer > target
+    case 'gte':
+      return answer >= target
+  }
+}
+
+function fillTemplate(label: string, monthlyContacts: number | null): string {
+  if (!label.includes('{{aantal}}')) return label
+  const replacement = monthlyContacts === null ? '…' : String(monthlyContacts)
+  return label.replace(/\{\{aantal\}\}/g, replacement)
+}
+
+export function CheckSession({ clients, persona }: CheckSessionProps) {
   const router = useRouter()
   const [activeIndex, setActiveIndex] = useState(0)
   const [states, setStates] = useState<Record<string, ClientFormState>>(
-    () => Object.fromEntries(clients.map((c) => [c.id, emptyState()]))
+    () => Object.fromEntries(clients.map((c) => [c.id, emptyState(persona)]))
   )
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [isSubmitting, startTransition] = useTransition()
 
   const current = clients[activeIndex]
   const state = states[current.id]
+
+  const onboardingQuestions = useMemo(
+    () => onboardingQuestionsFor(persona),
+    [persona]
+  )
+  const liveQuestions = useMemo(() => liveQuestionsFor(persona), [persona])
 
   const updateState = (clientId: string, patch: Partial<ClientFormState>) => {
     setStates((prev) => ({ ...prev, [clientId]: { ...prev[clientId], ...patch } }))
@@ -106,6 +145,14 @@ export function CheckSession({ clients }: CheckSessionProps) {
     })
   }
 
+  const setTaskAssignee = (i: number, assignee: Persona) => {
+    setStates((prev) => {
+      const tasks = [...prev[current.id].tasks]
+      tasks[i] = { ...tasks[i], assignee }
+      return { ...prev, [current.id]: { ...prev[current.id], tasks } }
+    })
+  }
+
   const toggleTaskCampaign = (i: number, campaignIndex: number) => {
     setStates((prev) => {
       const tasks = [...prev[current.id].tasks]
@@ -123,7 +170,10 @@ export function CheckSession({ clients }: CheckSessionProps) {
   const addTask = () => {
     setStates((prev) => ({
       ...prev,
-      [current.id]: { ...prev[current.id], tasks: [...prev[current.id].tasks, emptyTask()] },
+      [current.id]: {
+        ...prev[current.id],
+        tasks: [...prev[current.id].tasks, emptyTask(persona)],
+      },
     }))
   }
 
@@ -132,8 +182,50 @@ export function CheckSession({ clients }: CheckSessionProps) {
       const tasks = prev[current.id].tasks.filter((_, idx) => idx !== i)
       return {
         ...prev,
-        [current.id]: { ...prev[current.id], tasks: tasks.length === 0 ? [emptyTask()] : tasks },
+        [current.id]: {
+          ...prev[current.id],
+          tasks: tasks.length === 0 ? [emptyTask(persona)] : tasks,
+        },
       }
+    })
+  }
+
+  /**
+   * Aangeroepen vanuit een suggestie-callout. Voegt een vooringevulde taak
+   * onderaan toe (bij live checks gekoppeld aan de campagne waarop de
+   * suggestie betrekking had).
+   */
+  const acceptSuggestion = (sourceKey: string, suggestion: string, assignTo: Persona, campaignIndex: number | null) => {
+    setStates((prev) => {
+      const s = prev[current.id]
+      // Idempotent: als deze suggestie al een taak heeft opgeleverd, niet opnieuw.
+      if (s.tasks.some((t) => t.sourceKey === sourceKey)) return prev
+
+      const newTask: TaskDraft = {
+        description: suggestion,
+        campaignIndices: campaignIndex !== null ? [campaignIndex] : [],
+        assignee: assignTo,
+        sourceKey,
+      }
+      // Lege bouwsteen (als die nog standaard staat) hergebruiken;
+      // anders gewoon achteraan plakken.
+      const isEmptyTrailing =
+        s.tasks.length > 0 &&
+        s.tasks[s.tasks.length - 1].description.trim().length === 0 &&
+        s.tasks[s.tasks.length - 1].sourceKey === null
+      const nextTasks = isEmptyTrailing
+        ? [...s.tasks.slice(0, -1), newTask, emptyTask(persona)]
+        : [...s.tasks, newTask]
+      return { ...prev, [current.id]: { ...s, tasks: nextTasks } }
+    })
+  }
+
+  const dismissSuggestion = (sourceKey: string) => {
+    setStates((prev) => {
+      const s = prev[current.id]
+      const next = new Set(s.dismissedSuggestions)
+      next.add(sourceKey)
+      return { ...prev, [current.id]: { ...s, dismissedSuggestions: next } }
     })
   }
 
@@ -148,9 +240,7 @@ export function CheckSession({ clients }: CheckSessionProps) {
   const setNumCampaigns = (n: number) => {
     setStates((prev) => {
       const s = prev[current.id]
-      // Preserve names that still fit; truncate or pad with empty strings.
       const names = Array.from({ length: n }, (_, i) => s.campaignNames[i] ?? '')
-      // Drop campaign indices on existing tasks that point beyond the new range.
       const tasks = s.tasks.map((t) => ({
         ...t,
         campaignIndices: t.campaignIndices.filter((idx) => idx < n),
@@ -165,28 +255,29 @@ export function CheckSession({ clients }: CheckSessionProps) {
   const allAnswered = useMemo(() => {
     if (!state || state.checkType === null) return false
     if (state.checkType === 'onboarding') {
-      return ONBOARDING_QUESTIONS.every((q) => isAnswered(state.answers[q.id]))
+      return onboardingQuestions.every((q) => isAnswered(state.answers[q.id]))
     }
     if (state.numCampaigns === null || state.numCampaigns < 1) return false
-    // Every campaign needs a name so it can be referenced from tasks.
     for (let i = 0; i < state.numCampaigns; i++) {
       if ((state.campaignNames[i] ?? '').trim().length === 0) return false
-      for (const q of LIVE_QUESTIONS) {
+      for (const q of liveQuestions) {
         const key = `${i}_${q.id}`
         if (!isAnswered(state.answers[key])) return false
       }
     }
     return true
-  }, [state])
+  }, [state, onboardingQuestions, liveQuestions])
 
   const handleNext = () => {
     if (!allAnswered || state.checkType === null) return
     setSubmitError(null)
 
+    const questionList = state.checkType === 'onboarding' ? onboardingQuestions : liveQuestions
+
     const payload: CheckAnswersPayload = state.checkType === 'onboarding'
       ? {
           type: 'onboarding',
-          questions: ONBOARDING_QUESTIONS.map<CheckAnswerEntry>((q) => ({
+          questions: questionList.map<CheckAnswerEntry>((q) => ({
             id: q.id,
             label: q.label,
             answer: state.answers[q.id] ?? '',
@@ -197,17 +288,15 @@ export function CheckSession({ clients }: CheckSessionProps) {
           numCampaigns: state.numCampaigns!,
           campaigns: Array.from({ length: state.numCampaigns! }, (_, i) => ({
             index: i,
-            questions: LIVE_QUESTIONS.map<CheckAnswerEntry>((q) => ({
+            questions: questionList.map<CheckAnswerEntry>((q) => ({
               id: q.id,
-              label: q.label,
+              label: fillTemplate(q.label, current.monthlyContacts),
               answer: state.answers[`${i}_${q.id}`] ?? '',
             })),
           })) satisfies CheckCampaignBlock[],
         }
 
-    // Convert the live form's campaignIndices to names for persistence.
-    // Onboarding tasks have no campaigns attached — always an empty array.
-    const submitTasks = state.tasks.map((t) => ({
+    const submitTasks: SubmitCheckTask[] = state.tasks.map((t) => ({
       description: t.description,
       campaignNames:
         state.checkType === 'live'
@@ -215,6 +304,7 @@ export function CheckSession({ clients }: CheckSessionProps) {
               .map((i) => (state.campaignNames[i] ?? '').trim())
               .filter((n) => n.length > 0)
           : [],
+      assignee: t.assignee,
     }))
 
     startTransition(async () => {
@@ -224,6 +314,7 @@ export function CheckSession({ clients }: CheckSessionProps) {
         numCampaigns: state.checkType === 'onboarding' ? null : state.numCampaigns,
         answers: payload,
         tasks: submitTasks,
+        persona,
       })
 
       if (result.error) {
@@ -246,11 +337,10 @@ export function CheckSession({ clients }: CheckSessionProps) {
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
-      {/* Top bar */}
       <header className="sticky top-0 z-10 border-b border-gray-200/80 bg-white/90 backdrop-blur-xl">
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-4 px-6 py-4">
           <Link
-            href="/admin/controle/ochtend"
+            href={`/admin/controle/ochtend/${persona}`}
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-500 transition-colors hover:text-gray-900"
           >
             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
@@ -259,16 +349,18 @@ export function CheckSession({ clients }: CheckSessionProps) {
             Stoppen
           </Link>
 
-          <ProgressIndicator
-            current={activeIndex + 1}
-            total={clients.length}
-            accent={accent}
-          />
+          <div className="flex items-center gap-3">
+            <PersonaBadge persona={persona} />
+            <ProgressIndicator
+              current={activeIndex + 1}
+              total={clients.length}
+              accent={accent}
+            />
+          </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-4xl px-6 py-10">
-        {/* Client header */}
         <ClientHeader
           client={current}
           chosenType={state.checkType}
@@ -277,33 +369,46 @@ export function CheckSession({ clients }: CheckSessionProps) {
             numCampaigns: null,
             campaignNames: [],
             answers: {},
-            tasks: [emptyTask()],
+            tasks: [emptyTask(persona)],
+            dismissedSuggestions: new Set(),
           })}
         />
 
         {state.checkType === null ? (
-          /* Type picker — shown before the questionnaire starts. */
           <CheckTypePicker
             suggestedType={current.isOnboarding ? 'onboarding' : 'live'}
+            onboardingCount={onboardingQuestions.length}
+            liveCount={liveQuestions.length}
             onPick={(t) => updateState(current.id, { checkType: t })}
           />
         ) : (
           <>
-            {/* Form body */}
             <div className="mt-8 space-y-6">
               {state.checkType === 'onboarding' ? (
                 <OnboardingForm
+                  questions={onboardingQuestions}
                   answers={state.answers}
+                  tasks={state.tasks}
+                  dismissed={state.dismissedSuggestions}
+                  monthlyContacts={current.monthlyContacts}
                   onChange={setAnswer}
+                  onAcceptSuggestion={acceptSuggestion}
+                  onDismissSuggestion={dismissSuggestion}
                 />
               ) : (
                 <LiveForm
+                  questions={liveQuestions}
                   numCampaigns={state.numCampaigns}
                   campaignNames={state.campaignNames}
                   answers={state.answers}
+                  tasks={state.tasks}
+                  dismissed={state.dismissedSuggestions}
+                  monthlyContacts={current.monthlyContacts}
                   onSetNumCampaigns={setNumCampaigns}
                   onSetCampaignName={setCampaignName}
                   onChange={setAnswer}
+                  onAcceptSuggestion={acceptSuggestion}
+                  onDismissSuggestion={dismissSuggestion}
                 />
               )}
 
@@ -311,6 +416,7 @@ export function CheckSession({ clients }: CheckSessionProps) {
                 tasks={state.tasks}
                 campaignNames={state.checkType === 'live' ? state.campaignNames : []}
                 onChangeDescription={setTaskDescription}
+                onChangeAssignee={setTaskAssignee}
                 onToggleCampaign={toggleTaskCampaign}
                 onAdd={addTask}
                 onRemove={removeTask}
@@ -323,7 +429,6 @@ export function CheckSession({ clients }: CheckSessionProps) {
               </div>
             )}
 
-            {/* Footer action */}
             <div className="mt-10 flex flex-wrap items-center justify-between gap-4 border-t border-gray-200 pt-6">
               <div className="text-xs text-gray-500">
                 {allAnswered ? (
@@ -358,6 +463,22 @@ export function CheckSession({ clients }: CheckSessionProps) {
         )}
       </main>
     </div>
+  )
+}
+
+function PersonaBadge({ persona }: { persona: Persona }) {
+  const isB = persona === 'benjamin'
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold ${
+        isB
+          ? 'bg-gradient-to-r from-indigo-100 to-violet-100 text-indigo-700 ring-1 ring-indigo-200'
+          : 'bg-gradient-to-r from-amber-100 to-orange-100 text-amber-700 ring-1 ring-amber-200'
+      }`}
+    >
+      <span className={`h-1.5 w-1.5 rounded-full ${isB ? 'bg-indigo-500' : 'bg-amber-500'}`} />
+      {isB ? 'Benjamin' : 'Merlijn'}
+    </span>
   )
 }
 
@@ -426,6 +547,11 @@ function ClientHeader({
             <span className="text-gray-400">Status:</span>
             {client.isOnboarding ? 'Onboarding' : 'Live'}
           </span>
+          {client.monthlyContacts !== null && (
+            <span className="inline-flex items-center gap-1.5 rounded-md bg-violet-50 px-2 py-0.5 text-[11px] font-semibold text-violet-700 ring-1 ring-violet-100">
+              Doel deze maand: {client.monthlyContacts} contacten
+            </span>
+          )}
           {chosenType !== null && (
             <>
               <span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-semibold ${
@@ -455,9 +581,13 @@ function ClientHeader({
 
 function CheckTypePicker({
   suggestedType,
+  onboardingCount,
+  liveCount,
   onPick,
 }: {
   suggestedType: 'onboarding' | 'live'
+  onboardingCount: number
+  liveCount: number
   onPick: (t: 'onboarding' | 'live') => void
 }) {
   return (
@@ -480,7 +610,7 @@ function CheckTypePicker({
             </svg>
           }
           title="Onboarding controle"
-          description={`${ONBOARDING_QUESTIONS.length} vragen over mailboxen, Instantly, n8n/Supabase, mailopzetjes en clay scenario.`}
+          description={`${onboardingCount} vragen over mailboxen, Instantly, n8n/Supabase, mailopzetjes en clay scenario.`}
         />
         <PickerCard
           onClick={() => onPick('live')}
@@ -492,7 +622,7 @@ function CheckTypePicker({
             </svg>
           }
           title="Live controle"
-          description={`${LIVE_QUESTIONS.length} vragen per campagne over volumes, reply rates, schema en variabelen.`}
+          description={`${liveCount} vragen per campagne over volumes, reply rates, schema en variabelen.`}
         />
       </div>
     </div>
@@ -549,45 +679,97 @@ function PickerCard({
   )
 }
 
+// ---------------------------------------------------------------------------
+// Onboarding form
+// ---------------------------------------------------------------------------
+
 function OnboardingForm({
+  questions,
   answers,
+  tasks,
+  dismissed,
+  monthlyContacts,
   onChange,
+  onAcceptSuggestion,
+  onDismissSuggestion,
 }: {
+  questions: CheckQuestion[]
   answers: Record<string, string>
+  tasks: TaskDraft[]
+  dismissed: Set<string>
+  monthlyContacts: number | null
   onChange: (key: string, value: string) => void
+  onAcceptSuggestion: (sourceKey: string, suggestion: string, assignTo: Persona, campaignIndex: number | null) => void
+  onDismissSuggestion: (sourceKey: string) => void
 }) {
   return (
     <div className="space-y-4">
       <SectionHeader title="Onboarding checklist" subtitle="Beantwoord elke vraag om door te kunnen." />
       <div className="space-y-3">
-        {ONBOARDING_QUESTIONS.map((q, idx) => (
-          <QuestionField
-            key={q.id}
-            number={idx + 1}
-            question={q}
-            value={answers[q.id] ?? ''}
-            onChange={(v) => onChange(q.id, v)}
-          />
-        ))}
+        {questions.map((q, idx) => {
+          const value = answers[q.id] ?? ''
+          const sourceKey = `onboarding_${q.id}`
+          const alreadyTaskedFor = tasks.some((t) => t.sourceKey === sourceKey)
+          const isDismissed = dismissed.has(sourceKey)
+          const suggestion = computeSuggestionForOnboarding(q, value)
+          return (
+            <div key={q.id} className="space-y-2">
+              <QuestionField
+                number={idx + 1}
+                question={q}
+                value={value}
+                monthlyContacts={monthlyContacts}
+                onChange={(v) => onChange(q.id, v)}
+              />
+              {q.contextInfo && (
+                <ContextInfoBox text={q.contextInfo} />
+              )}
+              {suggestion && !alreadyTaskedFor && !isDismissed && (
+                <SuggestionCallout
+                  suggestion={suggestion.text}
+                  assignTo={suggestion.assignTo}
+                  onAccept={() => onAcceptSuggestion(sourceKey, suggestion.text, suggestion.assignTo, null)}
+                  onDismiss={() => onDismissSuggestion(sourceKey)}
+                />
+              )}
+            </div>
+          )
+        })}
       </div>
     </div>
   )
 }
 
+// ---------------------------------------------------------------------------
+// Live form
+// ---------------------------------------------------------------------------
+
 function LiveForm({
+  questions,
   numCampaigns,
   campaignNames,
   answers,
+  tasks,
+  dismissed,
+  monthlyContacts,
   onSetNumCampaigns,
   onSetCampaignName,
   onChange,
+  onAcceptSuggestion,
+  onDismissSuggestion,
 }: {
+  questions: CheckQuestion[]
   numCampaigns: number | null
   campaignNames: string[]
   answers: Record<string, string>
+  tasks: TaskDraft[]
+  dismissed: Set<string>
+  monthlyContacts: number | null
   onSetNumCampaigns: (n: number) => void
   onSetCampaignName: (i: number, value: string) => void
   onChange: (key: string, value: string) => void
+  onAcceptSuggestion: (sourceKey: string, suggestion: string, assignTo: Persona, campaignIndex: number | null) => void
+  onDismissSuggestion: (sourceKey: string) => void
 }) {
   return (
     <div className="space-y-4">
@@ -606,20 +788,34 @@ function LiveForm({
                   onChange={(v) => onSetCampaignName(i, v)}
                 />
                 <div className="space-y-3">
-                  {LIVE_QUESTIONS.map((q, idx) => {
+                  {questions.map((q, idx) => {
                     const key = `${i}_${q.id}`
+                    const value = answers[key] ?? ''
+                    const sourceKey = `live_${i}_${q.id}`
+                    const alreadyTaskedFor = tasks.some((t) => t.sourceKey === sourceKey)
+                    const isDismissed = dismissed.has(sourceKey)
+                    const suggestion = computeSuggestionForLive(q, value, answers, i, monthlyContacts)
                     return (
-                      <QuestionField
-                        key={key}
-                        number={idx + 1}
-                        question={q}
-                        value={answers[key] ?? ''}
-                        onChange={(v) => onChange(key, v)}
-                      />
+                      <div key={key} className="space-y-2">
+                        <QuestionField
+                          number={idx + 1}
+                          question={q}
+                          value={value}
+                          monthlyContacts={monthlyContacts}
+                          onChange={(v) => onChange(key, v)}
+                        />
+                        {suggestion && !alreadyTaskedFor && !isDismissed && (
+                          <SuggestionCallout
+                            suggestion={suggestion.text}
+                            assignTo={suggestion.assignTo}
+                            onAccept={() => onAcceptSuggestion(sourceKey, suggestion.text, suggestion.assignTo, i)}
+                            onDismiss={() => onDismissSuggestion(sourceKey)}
+                          />
+                        )}
+                      </div>
                     )
                   })}
                 </div>
-                {/* Spacer note so the operator always sees which campaign these answers belong to */}
                 <div className="text-[11px] text-gray-400">
                   Bovenstaande antwoorden horen bij <span className="font-semibold text-gray-600">{namedTitle}</span>.
                 </div>
@@ -631,6 +827,82 @@ function LiveForm({
     </div>
   )
 }
+
+// ---------------------------------------------------------------------------
+// Suggestion logic
+// ---------------------------------------------------------------------------
+
+function computeSuggestionForOnboarding(
+  q: CheckQuestion,
+  value: string
+): { text: string; assignTo: Persona } | null {
+  if (value === SKIPPED_ANSWER) return null
+  const type: QuestionType = q.type ?? 'text'
+
+  if (type === 'checkbox' && q.suggestOnUnchecked) {
+    // Onbeantwoorde checkbox triggert pas een suggestie als de gebruiker
+    // de vraag bewust niet aanvinkt (impliciet: laat hem open). Om niet
+    // op te dringen tonen we de suggestie hier alleen als ALS er al andere
+    // antwoorden zijn ingevuld én deze leeg blijft is dat lastig betrouwbaar
+    // te detecteren — we tonen daarom de suggestie nooit voor lege check-
+    // boxen, alleen voor expliciete 'Nee'-antwoorden. Toch laten we de
+    // suggestOnUnchecked-hint in de UI verschijnen zodra deze vraag NIET
+    // aangevinkt is én een ander antwoord op de pagina al ingevuld is —
+    // maar dat is buiten scope; voor nu houden we het op niets.
+    return null
+  }
+
+  if (type === 'checkbox_cross' && q.suggestOnNo && value === 'Nee') {
+    return { text: q.suggestOnNo.suggestion, assignTo: q.suggestOnNo.assignTo }
+  }
+
+  return null
+}
+
+function computeSuggestionForLive(
+  q: CheckQuestion,
+  value: string,
+  allAnswers: Record<string, string>,
+  campaignIndex: number,
+  monthlyContacts: number | null
+): { text: string; assignTo: Persona } | null {
+  if (value === SKIPPED_ANSWER) return null
+  const type: QuestionType = q.type ?? 'text'
+
+  if (type === 'checkbox_cross' && q.suggestOnNo && value === 'Nee') {
+    return { text: q.suggestOnNo.suggestion, assignTo: q.suggestOnNo.assignTo }
+  }
+
+  if (type === 'number' && q.threshold) {
+    const answer = parseNumber(value)
+    if (answer === null) return null
+
+    const target = q.threshold.compareTo === 'monthlyContacts'
+      ? monthlyContacts
+      : (q.threshold.value ?? null)
+    if (target === null) return null
+
+    // Optionele extra voorwaarde (bv. alleen suggestie als er al >= 500
+    // contacten benaderd zijn).
+    if (q.threshold.condition) {
+      const condKey = `${campaignIndex}_${q.threshold.condition.questionId}`
+      const condValue = parseNumber(allAnswers[condKey])
+      if (condValue === null) return null
+      if (!compare(condValue, q.threshold.condition.op, q.threshold.condition.value)) {
+        return null
+      }
+    }
+
+    if (!compare(answer, q.threshold.op, target)) return null
+    return { text: q.threshold.suggestion, assignTo: q.threshold.assignTo }
+  }
+
+  return null
+}
+
+// ---------------------------------------------------------------------------
+// UI atoms
+// ---------------------------------------------------------------------------
 
 function CampaignNameHeader({
   index,
@@ -723,20 +995,111 @@ function SectionHeader({ title, subtitle }: { title: string; subtitle: string })
   )
 }
 
+function ContextInfoBox({ text }: { text: string }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="ml-10 rounded-lg border border-blue-100 bg-blue-50/60">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-[11px] font-semibold text-blue-700 hover:bg-blue-100/40"
+      >
+        <span className="inline-flex items-center gap-1.5">
+          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+          </svg>
+          {open ? 'Verberg context' : 'Toon context bij deze vraag'}
+        </span>
+        <svg
+          className={`h-3.5 w-3.5 transition-transform ${open ? 'rotate-180' : ''}`}
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={2}
+          stroke="currentColor"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+        </svg>
+      </button>
+      {open && (
+        <div className="border-t border-blue-100 px-3 py-2 text-[12px] leading-relaxed text-blue-900 whitespace-pre-line">
+          {text}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function SuggestionCallout({
+  suggestion,
+  assignTo,
+  onAccept,
+  onDismiss,
+}: {
+  suggestion: string
+  assignTo: Persona
+  onAccept: () => void
+  onDismiss: () => void
+}) {
+  const isB = assignTo === 'benjamin'
+  return (
+    <div className="ml-10 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="flex min-w-0 items-start gap-2">
+          <svg className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+          </svg>
+          <div className="min-w-0">
+            <div className="text-[12px] font-semibold text-amber-900">
+              Taak toevoegen voor {isB ? 'Benjamin' : 'Merlijn'}?
+            </div>
+            <div className="text-[12px] text-amber-800">{suggestion}</div>
+          </div>
+        </div>
+        <div className="flex flex-shrink-0 items-center gap-1.5">
+          <button
+            type="button"
+            onClick={onDismiss}
+            className="rounded-md px-2 py-1 text-[11px] font-semibold text-amber-700 hover:bg-amber-100"
+          >
+            Niet nodig
+          </button>
+          <button
+            type="button"
+            onClick={onAccept}
+            className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm ${
+              isB
+                ? 'bg-indigo-600 hover:bg-indigo-700'
+                : 'bg-amber-600 hover:bg-amber-700'
+            }`}
+          >
+            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            Taak aanmaken
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function QuestionField({
   number,
   question,
   value,
+  monthlyContacts,
   onChange,
 }: {
   number: number
   question: CheckQuestion
   value: string
+  monthlyContacts: number | null
   onChange: (v: string) => void
 }) {
   const type: QuestionType = question.type ?? 'text'
   const skipped = value === SKIPPED_ANSWER
   const filled = isAnswered(value)
+  const label = fillTemplate(question.label, monthlyContacts)
 
   const borderClass = skipped
     ? 'border-gray-300 bg-gray-50/60'
@@ -771,7 +1134,7 @@ function QuestionField({
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-3">
             <label className={`text-sm font-semibold ${skipped ? 'text-gray-500 line-through' : 'text-gray-900'}`}>
-              {question.label}
+              {label}
             </label>
             <button
               type="button"
@@ -810,6 +1173,16 @@ function QuestionField({
                   rows={2}
                   className="w-full resize-y rounded-lg border border-gray-200 bg-gray-50/40 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-indigo-100"
                   placeholder="Typ je antwoord..."
+                />
+              )}
+              {type === 'number' && (
+                <input
+                  type="number"
+                  value={value}
+                  onChange={(e) => onChange(e.target.value)}
+                  inputMode="decimal"
+                  className="w-full rounded-lg border border-gray-200 bg-gray-50/40 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-indigo-100"
+                  placeholder="Bijv. 250"
                 />
               )}
               {type === 'date' && (
@@ -933,6 +1306,7 @@ function TasksBlock({
   tasks,
   campaignNames,
   onChangeDescription,
+  onChangeAssignee,
   onToggleCampaign,
   onAdd,
   onRemove,
@@ -940,6 +1314,7 @@ function TasksBlock({
   tasks: TaskDraft[]
   campaignNames: string[]
   onChangeDescription: (i: number, v: string) => void
+  onChangeAssignee: (i: number, assignee: Persona) => void
   onToggleCampaign: (i: number, campaignIndex: number) => void
   onAdd: () => void
   onRemove: (i: number) => void
@@ -956,9 +1331,7 @@ function TasksBlock({
         <div>
           <h3 className="text-sm font-semibold text-gray-900">Taken voor vanmiddag</h3>
           <p className="text-xs text-gray-600">
-            {hasCampaigns
-              ? 'Voeg taken toe en koppel ze aan een of meerdere campagnes. Lege regels worden niet opgeslagen.'
-              : 'Voeg taken toe op basis van wat je hierboven hebt ingevuld. Lege regels worden niet opgeslagen.'}
+            Voeg taken toe en kies per taak voor wie hij is. Lege regels worden niet opgeslagen.
           </p>
         </div>
       </div>
@@ -991,13 +1364,20 @@ function TasksBlock({
               )}
             </div>
 
-            {hasCampaigns && (
-              <TaskCampaignSelector
-                campaignNames={campaignNames}
-                selectedIndices={task.campaignIndices}
-                onToggle={(idx) => onToggleCampaign(i, idx)}
+            <div className="mt-2 flex flex-wrap items-center gap-2 pl-11">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Voor:</span>
+              <AssigneeToggle
+                value={task.assignee}
+                onChange={(p) => onChangeAssignee(i, p)}
               />
-            )}
+              {hasCampaigns && (
+                <TaskCampaignSelector
+                  campaignNames={campaignNames}
+                  selectedIndices={task.campaignIndices}
+                  onToggle={(idx) => onToggleCampaign(i, idx)}
+                />
+              )}
+            </div>
           </div>
         ))}
       </div>
@@ -1016,6 +1396,41 @@ function TasksBlock({
   )
 }
 
+function AssigneeToggle({
+  value,
+  onChange,
+}: {
+  value: Persona
+  onChange: (p: Persona) => void
+}) {
+  return (
+    <div className="inline-flex overflow-hidden rounded-full border border-gray-200 bg-white text-[11px] font-semibold">
+      <button
+        type="button"
+        onClick={() => onChange('benjamin')}
+        className={`px-2.5 py-1 transition-colors ${
+          value === 'benjamin'
+            ? 'bg-indigo-600 text-white'
+            : 'text-gray-600 hover:bg-indigo-50'
+        }`}
+      >
+        Benjamin
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange('merlijn')}
+        className={`px-2.5 py-1 transition-colors ${
+          value === 'merlijn'
+            ? 'bg-amber-600 text-white'
+            : 'text-gray-600 hover:bg-amber-50'
+        }`}
+      >
+        Merlijn
+      </button>
+    </div>
+  )
+}
+
 function TaskCampaignSelector({
   campaignNames,
   selectedIndices,
@@ -1026,8 +1441,8 @@ function TaskCampaignSelector({
   onToggle: (campaignIndex: number) => void
 }) {
   return (
-    <div className="mt-2 flex flex-wrap items-center gap-1.5 pl-11">
-      <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Voor:</span>
+    <>
+      <span className="ml-2 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Campagne:</span>
       {campaignNames.map((name, idx) => {
         const selected = selectedIndices.includes(idx)
         const display = name.trim().length > 0 ? name : `Campagne ${idx + 1}`
@@ -1054,6 +1469,6 @@ function TaskCampaignSelector({
       {selectedIndices.length === 0 && (
         <span className="text-[10px] italic text-gray-400">geen campagne gekoppeld</span>
       )}
-    </div>
+    </>
   )
 }
