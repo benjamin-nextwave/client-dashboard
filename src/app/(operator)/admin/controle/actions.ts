@@ -182,24 +182,34 @@ export async function addManualTask(input: AddManualTaskInput): Promise<{ error?
 // Maandelijkse statische klantdata
 // ---------------------------------------------------------------------------
 
+export interface UpsertMonthlyPauseInput {
+  id: string
+  days: number
+  note: string | null
+  addedAt: string
+}
+
 export interface UpsertClientMonthlyDataInput {
   clientId: string
   year: number
   month: number
   /** Aantal mailboxen — input van de operator. contacts_to_approach
-   *  wordt afgeleid als inboxes * 8. */
+   *  wordt afgeleid als inboxes * 8 * 5. */
   inboxes: number | null
   startDate: string | null
+  /** Oorspronkelijke geplande einddatum — pauses worden los bewaard
+   *  en de effectieve einddatum wordt in de UI berekend. */
   endDate: string | null
   contractBasis: string | null
+  pauses: UpsertMonthlyPauseInput[]
 }
 
 /**
  * Insert-or-update voor één (client_id, year, month). Lege waarden worden
  * als NULL bewaard zodat een gedeeltelijke invul-staat mogelijk is.
  *
- * contacts_to_approach wordt server-side berekend (inboxes * 8) zodat de
- * vragenlijst en threshold-vergelijkingen het direct kunnen gebruiken
+ * contacts_to_approach wordt server-side berekend (inboxes * 8 * 5) zodat
+ * de vragenlijst en threshold-vergelijkingen het direct kunnen gebruiken
  * zonder client-side maths.
  */
 export async function upsertClientMonthlyData(
@@ -215,7 +225,21 @@ export async function upsertClientMonthlyData(
 
   const inboxes = input.inboxes
   const contactsToApproach =
-    inboxes !== null && inboxes >= 0 ? inboxes * 8 : null
+    inboxes !== null && inboxes >= 0 ? inboxes * 8 * 5 : null
+
+  const sanitizedPauses = (input.pauses ?? [])
+    .map((p) => {
+      const days = Number.isFinite(p.days) ? Math.floor(p.days) : NaN
+      if (!Number.isFinite(days) || days <= 0) return null
+      const id = typeof p.id === 'string' && p.id.length > 0 ? p.id : null
+      if (!id) return null
+      const note = typeof p.note === 'string' && p.note.trim().length > 0 ? p.note.trim() : null
+      const addedAt = typeof p.addedAt === 'string' && p.addedAt.length > 0
+        ? p.addedAt
+        : new Date().toISOString()
+      return { id, days, note, added_at: addedAt }
+    })
+    .filter((p): p is { id: string; days: number; note: string | null; added_at: string } => p !== null)
 
   const admin = createAdminClient()
   const { error } = await admin
@@ -230,6 +254,7 @@ export async function upsertClientMonthlyData(
         start_date: input.startDate,
         end_date: input.endDate,
         contract_basis: input.contractBasis,
+        pauses: sanitizedPauses,
         created_by: userId,
         updated_at: new Date().toISOString(),
       },

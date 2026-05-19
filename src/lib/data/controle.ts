@@ -367,6 +367,15 @@ export async function getManualTaskClientOptions(): Promise<ManualTaskClientOpti
 // Maandelijkse statische klantdata
 // ---------------------------------------------------------------------------
 
+/** Eén pauze binnen een (klant, maand). Dagen schuiven de effectieve
+ *  einddatum op zonder de oorspronkelijke geplande einddatum te overschrijven. */
+export interface MonthlyPause {
+  id: string
+  days: number
+  note: string | null
+  addedAt: string
+}
+
 export interface ClientMonthlyData {
   id: string
   clientId: string
@@ -374,13 +383,35 @@ export interface ClientMonthlyData {
   month: number
   /** Aantal mailboxen voor deze klant deze maand — ingevoerd door operator. */
   inboxes: number | null
-  /** Afgeleid: inboxes × 8. Wordt door upsertClientMonthlyData berekend
+  /** Afgeleid: inboxes × 8 × 5. Wordt door upsertClientMonthlyData berekend
    *  en bewaard zodat de check-vragenlijst hier rechtstreeks tegen kan
    *  vergelijken zonder client-side maths. */
   contactsToApproach: number | null
   startDate: string | null
+  /** Oorspronkelijke geplande einddatum. De effectieve einddatum wordt
+   *  client-side afgeleid door de som van pauses[].days erbij op te tellen. */
   endDate: string | null
   contractBasis: string | null
+  pauses: MonthlyPause[]
+}
+
+function parsePauses(raw: unknown): MonthlyPause[] {
+  if (!Array.isArray(raw)) return []
+  const result: MonthlyPause[] = []
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue
+    const obj = item as Record<string, unknown>
+    const id = typeof obj.id === 'string' ? obj.id : null
+    const days = typeof obj.days === 'number' && Number.isFinite(obj.days) ? Math.floor(obj.days) : null
+    if (!id || days === null || days < 0) continue
+    result.push({
+      id,
+      days,
+      note: typeof obj.note === 'string' && obj.note.trim().length > 0 ? obj.note : null,
+      addedAt: typeof obj.added_at === 'string' ? obj.added_at : typeof obj.addedAt === 'string' ? obj.addedAt : '',
+    })
+  }
+  return result
 }
 
 /**
@@ -396,7 +427,7 @@ export async function getClientMonthlyData(
   const supabase = createAdminClient()
   const { data, error } = await supabase
     .from('operator_client_monthly_data')
-    .select('id, client_id, year, month, inboxes, contacts_to_approach, start_date, end_date, contract_basis')
+    .select('id, client_id, year, month, inboxes, contacts_to_approach, start_date, end_date, contract_basis, pauses')
     .eq('client_id', clientId)
     .eq('year', year)
     .eq('month', month)
@@ -413,6 +444,7 @@ export async function getClientMonthlyData(
     startDate: data.start_date,
     endDate: data.end_date,
     contractBasis: data.contract_basis,
+    pauses: parsePauses(data.pauses),
   }
 }
 
@@ -441,7 +473,7 @@ export async function getMonthlyDataForAllClients(
     getClientList(),
     supabase
       .from('operator_client_monthly_data')
-      .select('id, client_id, year, month, inboxes, contacts_to_approach, start_date, end_date, contract_basis')
+      .select('id, client_id, year, month, inboxes, contacts_to_approach, start_date, end_date, contract_basis, pauses')
       .eq('year', year)
       .eq('month', month),
   ])
@@ -458,6 +490,7 @@ export async function getMonthlyDataForAllClients(
       startDate: row.start_date,
       endDate: row.end_date,
       contractBasis: row.contract_basis,
+      pauses: parsePauses(row.pauses),
     })
   }
 

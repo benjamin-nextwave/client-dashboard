@@ -46,7 +46,7 @@ export default async function MaandDataPage({ searchParams }: PageProps) {
         <p className="mt-1 text-sm text-gray-500">
           Vul per klant per maand de vaste velden in die elke dagelijkse controle hergebruikt.
           Bij <span className="font-semibold text-gray-700">mailboxen</span> vul je het aantal in;
-          contacten te benaderen wordt automatisch <span className="font-semibold text-gray-700">mailboxen × 8</span>.
+          contacten te benaderen wordt automatisch <span className="font-semibold text-gray-700">mailboxen × 8 × 5</span>.
         </p>
       </div>
 

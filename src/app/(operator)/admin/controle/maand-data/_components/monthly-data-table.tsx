@@ -1,14 +1,21 @@
 'use client'
 
-import { useMemo, useState, useTransition } from 'react'
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import type { ClientListItem } from '@/lib/data/admin-stats'
-import type { ClientMonthlyData } from '@/lib/data/controle'
+import type { ClientMonthlyData, MonthlyPause } from '@/lib/data/controle'
 import { upsertClientMonthlyData } from '../../actions'
 
 interface Row {
   client: ClientListItem
   data: ClientMonthlyData | null
+}
+
+interface DraftPause {
+  id: string
+  days: number
+  note: string
+  addedAt: string
 }
 
 interface RowDraft {
@@ -17,6 +24,7 @@ interface RowDraft {
   startDate: string
   endDate: string
   contractBasis: string
+  pauses: DraftPause[]
   dirty: boolean
   saving: boolean
   savedAt: number | null
@@ -34,13 +42,47 @@ const MONTHS_NL = [
   'juli', 'augustus', 'september', 'oktober', 'november', 'december',
 ]
 
-/** Live-derived contacten te benaderen voor het inbox-input-veld. */
+/** Live-derived contacten te benaderen voor het inbox-input-veld.
+ *  Formule: mailboxen × 8 × 5. */
 function derivedContacts(inboxesStr: string): number | null {
   const trimmed = inboxesStr.trim()
   if (trimmed.length === 0) return null
   const n = Number(trimmed)
   if (!Number.isFinite(n) || n < 0) return null
-  return Math.floor(n) * 8
+  return Math.floor(n) * 8 * 5
+}
+
+function totalPauseDays(pauses: DraftPause[]): number {
+  let sum = 0
+  for (const p of pauses) {
+    if (Number.isFinite(p.days) && p.days > 0) sum += Math.floor(p.days)
+  }
+  return sum
+}
+
+function addDays(isoDate: string, days: number): string {
+  const d = new Date(isoDate + 'T00:00:00Z')
+  if (Number.isNaN(d.getTime())) return isoDate
+  d.setUTCDate(d.getUTCDate() + days)
+  return d.toISOString().slice(0, 10)
+}
+
+function formatDateNL(isoDate: string): string {
+  const d = new Date(isoDate + 'T00:00:00Z')
+  if (Number.isNaN(d.getTime())) return isoDate
+  return d.toLocaleDateString('nl-NL', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  })
+}
+
+function newPauseId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
 }
 
 export function MonthlyDataTable({ rows, year, month }: MonthlyDataTableProps) {
@@ -87,6 +129,15 @@ export function MonthlyDataTable({ rows, year, month }: MonthlyDataTableProps) {
         return
       }
 
+      const pausesPayload = draft.pauses
+        .filter((p) => Number.isFinite(p.days) && p.days > 0)
+        .map((p) => ({
+          id: p.id,
+          days: Math.floor(p.days),
+          note: p.note.trim().length > 0 ? p.note.trim() : null,
+          addedAt: p.addedAt,
+        }))
+
       const result = await upsertClientMonthlyData({
         clientId,
         year,
@@ -95,6 +146,7 @@ export function MonthlyDataTable({ rows, year, month }: MonthlyDataTableProps) {
         startDate: draft.startDate || null,
         endDate: draft.endDate || null,
         contractBasis: draft.contractBasis.trim() || null,
+        pauses: pausesPayload,
       })
 
       if (result.error) {
@@ -176,7 +228,7 @@ export function MonthlyDataTable({ rows, year, month }: MonthlyDataTableProps) {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+      <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
         <table className="min-w-full divide-y divide-gray-100">
           <thead className="bg-gray-50">
             <tr>
@@ -187,7 +239,7 @@ export function MonthlyDataTable({ rows, year, month }: MonthlyDataTableProps) {
               <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500">
                 Contacten te benaderen
                 <span className="ml-1 text-[10px] font-normal normal-case tracking-normal text-gray-400">
-                  (× 8)
+                  (× 8 × 5)
                 </span>
               </th>
               <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500">Startdatum</th>
@@ -280,11 +332,11 @@ function MonthlyDataRow({
         />
       </td>
       <td className="px-4 py-3">
-        <input
-          type="date"
-          value={draft.endDate}
-          onChange={(e) => onChange({ endDate: e.target.value })}
-          className="rounded-md border border-gray-200 bg-white px-2 py-1.5 text-sm text-gray-900 transition-all focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+        <EndDateCell
+          endDate={draft.endDate}
+          pauses={draft.pauses}
+          onChangeEndDate={(value) => onChange({ endDate: value })}
+          onChangePauses={(pauses) => onChange({ pauses })}
         />
       </td>
       <td className="px-4 py-3">
@@ -339,9 +391,170 @@ function toDraft(data: ClientMonthlyData | null): RowDraft {
     startDate: data?.startDate ?? '',
     endDate: data?.endDate ?? '',
     contractBasis: data?.contractBasis ?? '',
+    pauses: (data?.pauses ?? []).map(toDraftPause),
     dirty: false,
     saving: false,
     savedAt: null,
     error: null,
   }
+}
+
+function toDraftPause(p: MonthlyPause): DraftPause {
+  return {
+    id: p.id,
+    days: p.days,
+    note: p.note ?? '',
+    addedAt: p.addedAt,
+  }
+}
+
+interface EndDateCellProps {
+  endDate: string
+  pauses: DraftPause[]
+  onChangeEndDate: (value: string) => void
+  onChangePauses: (pauses: DraftPause[]) => void
+}
+
+function EndDateCell({ endDate, pauses, onChangeEndDate, onChangePauses }: EndDateCellProps) {
+  const [open, setOpen] = useState(false)
+  const wrapperRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    function handleClickOutside(e: MouseEvent) {
+      if (!wrapperRef.current) return
+      if (wrapperRef.current.contains(e.target as Node)) return
+      setOpen(false)
+    }
+    function handleEscape(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    window.addEventListener('mousedown', handleClickOutside)
+    window.addEventListener('keydown', handleEscape)
+    return () => {
+      window.removeEventListener('mousedown', handleClickOutside)
+      window.removeEventListener('keydown', handleEscape)
+    }
+  }, [open])
+
+  const totalDays = totalPauseDays(pauses)
+  const effectiveEnd = endDate && totalDays > 0 ? addDays(endDate, totalDays) : null
+
+  const addPause = () => {
+    onChangePauses([
+      ...pauses,
+      { id: newPauseId(), days: 1, note: '', addedAt: new Date().toISOString() },
+    ])
+  }
+
+  const updatePause = (id: string, patch: Partial<Pick<DraftPause, 'days' | 'note'>>) => {
+    onChangePauses(pauses.map((p) => (p.id === id ? { ...p, ...patch } : p)))
+  }
+
+  const removePause = (id: string) => {
+    onChangePauses(pauses.filter((p) => p.id !== id))
+  }
+
+  return (
+    <div ref={wrapperRef} className="relative">
+      <input
+        type="date"
+        value={endDate}
+        onChange={(e) => onChangeEndDate(e.target.value)}
+        className="rounded-md border border-gray-200 bg-white px-2 py-1.5 text-sm text-gray-900 transition-all focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+      />
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className={`mt-1 inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold transition-colors ${
+          pauses.length > 0
+            ? 'border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100'
+            : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
+        }`}
+      >
+        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25v13.5m-7.5-13.5v13.5" />
+        </svg>
+        {pauses.length === 0
+          ? 'Pauze toevoegen'
+          : `Pauzes (${pauses.length}) · +${totalDays}d`}
+      </button>
+      {effectiveEnd && (
+        <div className="mt-1 text-[10px] font-medium text-violet-700">
+          Effectief: {formatDateNL(effectiveEnd)}
+        </div>
+      )}
+      {open && (
+        <div className="absolute left-0 top-full z-20 mt-1 w-72 rounded-lg border border-gray-200 bg-white p-3 shadow-lg">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+              Pauzes
+            </span>
+            <button
+              type="button"
+              onClick={addPause}
+              className="inline-flex items-center gap-1 rounded-md bg-indigo-600 px-2 py-1 text-[11px] font-semibold text-white hover:bg-indigo-700"
+            >
+              + Pauze
+            </button>
+          </div>
+          {pauses.length === 0 ? (
+            <p className="mt-2 text-[11px] text-gray-400">
+              Geen pauzes ingevoerd. Voeg er een toe om de einddatum op te schuiven.
+            </p>
+          ) : (
+            <ul className="mt-2 space-y-2">
+              {pauses.map((p) => (
+                <li key={p.id} className="rounded-md border border-gray-100 bg-gray-50/60 p-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min={1}
+                      step={1}
+                      value={Number.isFinite(p.days) ? p.days : ''}
+                      onChange={(e) => {
+                        const v = e.target.value
+                        const n = v === '' ? NaN : Number(v)
+                        updatePause(p.id, { days: Number.isFinite(n) ? n : NaN })
+                      }}
+                      className="w-16 rounded-md border border-gray-200 bg-white px-2 py-1 text-sm text-gray-900 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                    />
+                    <span className="text-[11px] text-gray-500">dagen</span>
+                    <button
+                      type="button"
+                      onClick={() => removePause(p.id)}
+                      aria-label="Pauze verwijderen"
+                      className="ml-auto inline-flex h-6 w-6 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-rose-50 hover:text-rose-600"
+                    >
+                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    value={p.note}
+                    onChange={(e) => updatePause(p.id, { note: e.target.value })}
+                    placeholder="Notitie (optioneel)"
+                    className="mt-1.5 w-full rounded-md border border-gray-200 bg-white px-2 py-1 text-[12px] text-gray-900 placeholder:text-gray-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
+          {endDate && totalDays > 0 && (
+            <div className="mt-3 rounded-md bg-violet-50 px-2 py-1.5 text-[11px] text-violet-700 ring-1 ring-violet-100">
+              <span className="font-semibold">Effectieve einddatum:</span>{' '}
+              {formatDateNL(addDays(endDate, totalDays))}{' '}
+              <span className="text-violet-500">(+{totalDays}d)</span>
+            </div>
+          )}
+          <p className="mt-2 text-[10px] text-gray-400">
+            Wijzigingen worden pas opgeslagen na klikken op &quot;Opslaan&quot;.
+          </p>
+        </div>
+      )}
+    </div>
+  )
 }
