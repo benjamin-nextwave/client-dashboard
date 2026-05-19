@@ -100,8 +100,3 @@ export async function scheduleCalendarTask(
   return {}
 }
 
-// ---------------------------------------------------------------------------
-// Re-export voor convenience binnen kalender-UI
-// ---------------------------------------------------------------------------
-
-export { toggleTaskCompleted, deleteTask } from '../actions'

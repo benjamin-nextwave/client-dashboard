@@ -3,7 +3,8 @@
 import { useEffect, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import type { CalendarItem } from '@/lib/data/controle-kalender'
-import { toggleTaskCompleted, deleteTask, deleteCalendarNote } from '../actions'
+import { toggleTaskCompleted, deleteTask } from '../../actions'
+import { deleteCalendarNote } from '../actions'
 
 interface DayDetailModalProps {
   open: boolean
