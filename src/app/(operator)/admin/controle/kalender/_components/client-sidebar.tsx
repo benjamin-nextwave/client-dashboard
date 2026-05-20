@@ -19,22 +19,22 @@ export function ClientSidebar({ clients, selectedClientId, onSelect }: ClientSid
   }, [clients, search])
 
   return (
-    <div className="rounded-3xl bg-gradient-to-br from-sky-50 via-cyan-50 to-violet-50 p-1 shadow-sm ring-1 ring-sky-100">
+    <div className="rounded-3xl bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-50 p-1 shadow-sm ring-1 ring-blue-100">
       <div className="flex h-full flex-col rounded-[1.4rem] bg-white p-3">
         <button
           type="button"
           onClick={() => onSelect(null)}
           className={`group flex items-center gap-2 rounded-2xl px-3 py-2.5 text-left text-sm font-bold transition-all ${
             selectedClientId === null
-              ? 'bg-gradient-to-r from-fuchsia-500 to-pink-500 text-white shadow-md'
-              : 'bg-fuchsia-50 text-fuchsia-700 hover:bg-fuchsia-100'
+              ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-md'
+              : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
           }`}
         >
           <span
             className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
               selectedClientId === null
                 ? 'bg-white/25 text-white'
-                : 'bg-white text-fuchsia-600'
+                : 'bg-white text-blue-600'
             }`}
           >
             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
@@ -60,7 +60,7 @@ export function ClientSidebar({ clients, selectedClientId, onSelect }: ClientSid
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Zoek klant..."
-              className="w-full rounded-xl border border-gray-200 bg-white py-1.5 pl-8 pr-2 text-xs text-gray-900 placeholder:text-gray-400 transition-all focus:border-fuchsia-400 focus:outline-none focus:ring-2 focus:ring-fuchsia-100"
+              className="w-full rounded-xl border border-gray-200 bg-white py-1.5 pl-8 pr-2 text-xs text-gray-900 placeholder:text-gray-400 transition-all focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
             />
           </div>
         </div>
@@ -73,7 +73,7 @@ export function ClientSidebar({ clients, selectedClientId, onSelect }: ClientSid
           ) : (
             filtered.map((client) => {
               const selected = client.id === selectedClientId
-              const color = client.primaryColor ?? '#a855f7'
+              const color = client.primaryColor ?? '#3b82f6'
               return (
                 <button
                   key={client.id}
@@ -81,7 +81,7 @@ export function ClientSidebar({ clients, selectedClientId, onSelect }: ClientSid
                   onClick={() => onSelect(client.id)}
                   className={`flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left text-sm transition-all ${
                     selected
-                      ? 'bg-fuchsia-50 font-bold text-fuchsia-800 ring-2 ring-fuchsia-200'
+                      ? 'bg-blue-50 font-bold text-blue-800 ring-2 ring-blue-200'
                       : 'text-gray-700 hover:bg-gray-50'
                   }`}
                 >

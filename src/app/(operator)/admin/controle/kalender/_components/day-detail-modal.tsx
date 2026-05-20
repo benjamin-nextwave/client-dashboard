@@ -65,7 +65,7 @@ export function DayDetailModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 p-4 backdrop-blur-sm">
       <div className="w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-2xl">
-        <div className="bg-gradient-to-br from-pink-500 via-fuchsia-500 to-violet-600 px-6 py-4 text-white">
+        <div className="bg-gradient-to-br from-sky-400 via-blue-500 to-indigo-600 px-6 py-4 text-white">
           <div className="flex items-start justify-between">
             <div>
               <div className="text-xs font-semibold uppercase tracking-wider opacity-80">
@@ -124,7 +124,7 @@ export function DayDetailModal({
           <button
             type="button"
             onClick={() => onPlan(date)}
-            className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-pink-500 to-fuchsia-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition-all hover:scale-105"
+            className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-sky-500 to-blue-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition-all hover:scale-105"
           >
             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -180,7 +180,7 @@ function ItemCard({
             <div className="mt-1.5 inline-flex items-center gap-1.5 text-[11px] font-medium text-gray-500">
               <span
                 className="inline-block h-2 w-2 rounded-full"
-                style={{ background: item.clientColor ?? '#a855f7' }}
+                style={{ background: item.clientColor ?? '#3b82f6' }}
               />
               {item.clientName}
             </div>

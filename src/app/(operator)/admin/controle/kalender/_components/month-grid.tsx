@@ -43,7 +43,7 @@ export function MonthGrid({ year, month, items, liveWindow, onClickDay }: MonthG
 
   return (
     <div className="mt-4">
-      <div className="grid grid-cols-7 gap-1 px-1 pb-2 text-center text-[10px] font-bold uppercase tracking-wider text-fuchsia-700/70">
+      <div className="grid grid-cols-7 gap-1 px-1 pb-2 text-center text-[10px] font-bold uppercase tracking-wider text-blue-700/70">
         {WEEKDAYS_NL.map((d) => (
           <div key={d}>{d}</div>
         ))}
@@ -68,7 +68,7 @@ export function MonthGrid({ year, month, items, liveWindow, onClickDay }: MonthG
                   : 'bg-gray-50/80 hover:bg-gray-100'
               } ${
                 isToday
-                  ? 'border-fuchsia-400 ring-2 ring-fuchsia-200'
+                  ? 'border-blue-400 ring-2 ring-blue-200'
                   : 'border-gray-100'
               }`}
             >
@@ -76,7 +76,7 @@ export function MonthGrid({ year, month, items, liveWindow, onClickDay }: MonthG
                 <span
                   className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
                     isToday
-                      ? 'bg-fuchsia-500 text-white'
+                      ? 'bg-blue-500 text-white'
                       : inLive
                         ? 'text-gray-700'
                         : 'text-gray-400'

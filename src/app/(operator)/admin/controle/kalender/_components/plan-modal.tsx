@@ -93,7 +93,7 @@ export function PlanModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 p-4 backdrop-blur-sm">
       <div className="w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl">
-        <div className="bg-gradient-to-br from-pink-500 via-fuchsia-500 to-violet-600 px-6 py-4 text-white">
+        <div className="bg-gradient-to-br from-sky-400 via-blue-500 to-indigo-600 px-6 py-4 text-white">
           <div className="flex items-start justify-between">
             <div>
               <div className="text-xs font-semibold uppercase tracking-wider opacity-80">Nieuw inplannen</div>
@@ -142,7 +142,7 @@ export function PlanModal({
             <select
               value={clientId}
               onChange={(e) => setClientId(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-fuchsia-400 focus:outline-none focus:ring-2 focus:ring-fuchsia-100"
+              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
             >
               {clients.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -157,7 +157,7 @@ export function PlanModal({
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-fuchsia-400 focus:outline-none focus:ring-2 focus:ring-fuchsia-100"
+              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
             />
           </Field>
 
@@ -167,7 +167,7 @@ export function PlanModal({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder={kind === 'task' ? 'bv. DNC-lijst aanvullen' : 'bv. Kick-off call'}
-              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-fuchsia-400 focus:outline-none focus:ring-2 focus:ring-fuchsia-100"
+              className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
             />
           </Field>
 
@@ -181,7 +181,7 @@ export function PlanModal({
                     onClick={() => setAssignee(p)}
                     className={`rounded-lg px-3 py-1.5 text-xs font-bold capitalize transition-all ${
                       assignee === p
-                        ? 'bg-white text-fuchsia-600 shadow-sm'
+                        ? 'bg-white text-blue-600 shadow-sm'
                         : 'text-gray-500 hover:text-gray-800'
                     }`}
                   >
@@ -197,7 +197,7 @@ export function PlanModal({
                 onChange={(e) => setDescription(e.target.value)}
                 rows={3}
                 placeholder="Vrije tekst..."
-                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-fuchsia-400 focus:outline-none focus:ring-2 focus:ring-fuchsia-100"
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
               />
             </Field>
           )}
@@ -221,7 +221,7 @@ export function PlanModal({
             type="button"
             onClick={submit}
             disabled={pending}
-            className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-pink-500 to-fuchsia-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition-all hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-sky-500 to-blue-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition-all hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {pending ? 'Bezig...' : 'Inplannen'}
           </button>

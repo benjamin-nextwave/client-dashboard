@@ -79,7 +79,7 @@ export function CalendarView({
         onSelect={onSelectClient}
       />
 
-      <div className="rounded-3xl bg-gradient-to-br from-pink-50 via-fuchsia-50 to-violet-50 p-1 shadow-sm ring-1 ring-fuchsia-100">
+      <div className="rounded-3xl bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-50 p-1 shadow-sm ring-1 ring-blue-100">
         <div className="rounded-[1.4rem] bg-white p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
@@ -87,7 +87,7 @@ export function CalendarView({
                 type="button"
                 onClick={() => goToMonth(-1)}
                 aria-label="Vorige maand"
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-fuchsia-50 text-fuchsia-700 transition-all hover:bg-fuchsia-100"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 text-blue-700 transition-all hover:bg-blue-100"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
@@ -95,13 +95,13 @@ export function CalendarView({
               </button>
               <div className="text-lg font-bold capitalize tracking-tight text-gray-900">
                 {MONTHS_NL[month - 1]}{' '}
-                <span className="text-fuchsia-600">{year}</span>
+                <span className="text-blue-600">{year}</span>
               </div>
               <button
                 type="button"
                 onClick={() => goToMonth(1)}
                 aria-label="Volgende maand"
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-fuchsia-50 text-fuchsia-700 transition-all hover:bg-fuchsia-100"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-blue-50 text-blue-700 transition-all hover:bg-blue-100"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
@@ -114,12 +114,12 @@ export function CalendarView({
                 <div className="inline-flex items-center gap-2 rounded-full bg-gray-50 px-3 py-1.5 text-sm font-semibold text-gray-700">
                   <span
                     className="inline-block h-2.5 w-2.5 rounded-full"
-                    style={{ background: selectedClient.primaryColor ?? '#a855f7' }}
+                    style={{ background: selectedClient.primaryColor ?? '#3b82f6' }}
                   />
                   {selectedClient.companyName}
                 </div>
               ) : (
-                <div className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-pink-100 to-violet-100 px-3 py-1.5 text-sm font-semibold text-fuchsia-800">
+                <div className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-sky-100 to-indigo-100 px-3 py-1.5 text-sm font-semibold text-blue-800">
                   <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" />
                   </svg>
@@ -129,7 +129,7 @@ export function CalendarView({
               <button
                 type="button"
                 onClick={() => openPlanForDate(null)}
-                className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-pink-500 to-fuchsia-600 px-4 py-2 text-sm font-bold text-white shadow-md transition-all hover:scale-105 hover:shadow-lg"
+                className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-sky-500 to-blue-600 px-4 py-2 text-sm font-bold text-white shadow-md transition-all hover:scale-105 hover:shadow-lg"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
