@@ -15,6 +15,29 @@ function formatDate(iso: string): string {
   return d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
+function formatPlanDate(iso: string): string {
+  const d = new Date(iso)
+  return d.toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'long' })
+}
+
+function todayIsoLocal(): string {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+function isFutureTask(iso: string): boolean {
+  // Vergelijk op datum (lokale tz, YYYY-MM-DD). Taken die voor vandaag of
+  // eerder zijn ingepland tellen niet als 'toekomst'.
+  const taskDate = new Date(iso)
+  const y = taskDate.getFullYear()
+  const m = String(taskDate.getMonth() + 1).padStart(2, '0')
+  const d = String(taskDate.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}` > todayIsoLocal()
+}
+
 interface TaskListProps {
   tasks: ControleTaskRow[]
   clientOptions: ManualTaskClientOption[]
@@ -26,14 +49,21 @@ export function TaskList({ tasks, clientOptions, persona }: TaskListProps) {
   const router = useRouter()
   const [filter, setFilter] = useState<'all' | 'open' | 'done'>('open')
   const [search, setSearch] = useState('')
+  const [hideFuture, setHideFuture] = useState(true)
   const [, startTransition] = useTransition()
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set())
   const [addOpen, setAddOpen] = useState(false)
+
+  const hiddenFutureCount = useMemo(
+    () => tasks.filter((t) => !t.isCompleted && isFutureTask(t.createdAt)).length,
+    [tasks]
+  )
 
   const filtered = useMemo(() => {
     let result = tasks
     if (filter === 'open') result = result.filter((t) => !t.isCompleted)
     if (filter === 'done') result = result.filter((t) => t.isCompleted)
+    if (hideFuture) result = result.filter((t) => !isFutureTask(t.createdAt))
     if (search.trim()) {
       const q = search.toLowerCase()
       result = result.filter(
@@ -41,7 +71,7 @@ export function TaskList({ tasks, clientOptions, persona }: TaskListProps) {
       )
     }
     return result
-  }, [tasks, filter, search])
+  }, [tasks, filter, search, hideFuture])
 
   // Group filtered tasks by company.
   const grouped = useMemo(() => {
@@ -102,7 +132,39 @@ export function TaskList({ tasks, clientOptions, persona }: TaskListProps) {
           />
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setHideFuture((v) => !v)}
+            aria-pressed={hideFuture}
+            className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition-all ${
+              hideFuture
+                ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/30 hover:bg-blue-700'
+                : 'border border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+            }`}
+            title={
+              hideFuture
+                ? 'Toekomstige (ingeplande) taken worden verborgen. Klik om ze ook te tonen.'
+                : 'Alle taken zichtbaar — klik om toekomstige te verbergen.'
+            }
+          >
+            {hideFuture ? (
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+              </svg>
+            ) : (
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <rect x="4" y="4" width="16" height="16" rx="3" />
+              </svg>
+            )}
+            Enkel taken voor nu
+            {hideFuture && hiddenFutureCount > 0 && (
+              <span className="ml-0.5 rounded-md bg-white/25 px-1.5 py-0.5 text-[10px] font-bold">
+                {hiddenFutureCount} verborgen
+              </span>
+            )}
+          </button>
+
           <div className="inline-flex rounded-xl border border-gray-200 bg-gray-50 p-1">
             {(['open', 'done', 'all'] as const).map((f) => (
               <button
@@ -490,6 +552,14 @@ function TaskRow({
       </button>
 
       <div className="min-w-0 flex-1">
+        {isFutureTask(task.createdAt) && !task.isCompleted && (
+          <div className="mb-1.5 inline-flex items-center gap-1.5 rounded-lg bg-blue-100 px-2.5 py-1 text-[11px] font-bold text-blue-800 ring-1 ring-blue-200">
+            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
+            </svg>
+            Plan: {formatPlanDate(task.createdAt)}
+          </div>
+        )}
         <div
           className={`whitespace-pre-wrap text-sm transition-colors ${
             task.isCompleted ? 'text-gray-400 line-through' : 'text-gray-900'
@@ -518,10 +588,12 @@ function TaskRow({
           </div>
         )}
         <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-gray-400">
-          <span>Aangemaakt {formatDate(task.createdAt)} om {formatTime(task.createdAt)}</span>
+          {!isFutureTask(task.createdAt) && (
+            <span>Aangemaakt {formatDate(task.createdAt)} om {formatTime(task.createdAt)}</span>
+          )}
           {task.isCompleted && task.completedAt && (
             <>
-              <span className="text-gray-300">•</span>
+              {!isFutureTask(task.createdAt) && <span className="text-gray-300">•</span>}
               <span className="text-emerald-600">Afgerond {formatTime(task.completedAt)}</span>
             </>
           )}
