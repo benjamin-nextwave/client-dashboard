@@ -111,7 +111,6 @@ export default async function EditClientPage({ params }: EditClientPageProps) {
           <QuickLink href={`/admin/clients/${clientId}/campagne-flow`} label="Campagne-flow" />
           <QuickLink href={`/admin/clients/${clientId}/campagne-leads`} label="Campagne leads" />
           <QuickLink href={`/admin/clients/${clientId}/contacten`} label="Contacten" />
-          <QuickLink href={`/admin/clients/${clientId}/csv`} label="CSV" />
           <QuickLink href={`/admin/clients/${clientId}/onboarding`} label="Onboarding" />
           <QuickLink href={`/admin/clients/${clientId}/voorvertoning`} label="Voorvertoning" />
         </div>
