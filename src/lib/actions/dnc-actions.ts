@@ -15,6 +15,8 @@ export type DncEntry = {
   id: string
   entry_type: 'email' | 'domain'
   value: string
+  approved: boolean
+  approved_at: string | null
   created_at: string
 }
 
@@ -180,7 +182,7 @@ export async function getDncEntries(): Promise<DncEntry[]> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('dnc_entries')
-    .select('id, entry_type, value, created_at')
+    .select('id, entry_type, value, approved, approved_at, created_at')
     .order('created_at', { ascending: false })
 
   if (error) {

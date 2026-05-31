@@ -71,6 +71,9 @@ export function DncList({ entries }: { entries: DncEntry[] }) {
                 {t('common.view')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                {t('dnc.statusColumn')}
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                 {t('sent.columnDate')}
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
@@ -86,6 +89,23 @@ export function DncList({ entries }: { entries: DncEntry[] }) {
                 </td>
                 <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
                   {entry.value}
+                </td>
+                <td className="whitespace-nowrap px-6 py-4 text-sm">
+                  {entry.approved ? (
+                    <span className="inline-flex items-center gap-1 rounded-md border border-green-200 bg-green-50 px-2 py-0.5 text-xs font-semibold text-green-700">
+                      <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                      </svg>
+                      {t('dnc.statusApproved')}
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-700">
+                      <svg className="h-3 w-3 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <circle cx="12" cy="12" r="9" strokeWidth={3} strokeLinecap="round" strokeDasharray="40 60" />
+                      </svg>
+                      {t('dnc.statusPending')}
+                    </span>
+                  )}
                 </td>
                 <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
                   {new Date(entry.created_at).toLocaleDateString('nl-NL')}

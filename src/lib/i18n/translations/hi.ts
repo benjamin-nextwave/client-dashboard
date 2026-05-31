@@ -405,6 +405,9 @@ export const hi: Translations = {
     typeEmail: 'ईमेल',
     typeDomain: 'डोमेन',
     removeButton: 'हटाएं',
+    statusColumn: 'स्थिति',
+    statusPending: 'प्रसंस्करण में',
+    statusApproved: 'लागू किया गया',
   },
 
   sent: {

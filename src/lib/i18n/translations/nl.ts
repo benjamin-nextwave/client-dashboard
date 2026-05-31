@@ -368,6 +368,9 @@ export interface Translations {
     typeEmail: string
     typeDomain: string
     removeButton: string
+    statusColumn: string
+    statusPending: string
+    statusApproved: string
   }
   sent: {
     title: string
@@ -950,6 +953,9 @@ export const nl: Translations = {
     typeEmail: 'E-mail',
     typeDomain: 'Domein',
     removeButton: 'Verwijderen',
+    statusColumn: 'Status',
+    statusPending: 'In verwerking',
+    statusApproved: 'Doorgevoerd',
   },
 
   sent: {

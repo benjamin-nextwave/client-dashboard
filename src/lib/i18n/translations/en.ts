@@ -406,6 +406,9 @@ export const en: Translations = {
     typeEmail: 'Email',
     typeDomain: 'Domain',
     removeButton: 'Remove',
+    statusColumn: 'Status',
+    statusPending: 'Processing',
+    statusApproved: 'Applied',
   },
 
   sent: {
