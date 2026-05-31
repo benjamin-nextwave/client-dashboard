@@ -27,14 +27,56 @@ async function getOpenObjectionCounts(): Promise<{
   }
 }
 
+interface PendingDncPerClient {
+  clientId: string
+  companyName: string
+  emails: number
+  domains: number
+}
+
+async function getPendingDncByClient(): Promise<PendingDncPerClient[]> {
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from('dnc_entries')
+    .select('client_id, entry_type, clients!inner(company_name)')
+    .eq('approved', false)
+
+  if (error || !Array.isArray(data)) return []
+
+  const tally = new Map<string, PendingDncPerClient>()
+  for (const row of data as Array<{
+    client_id: string
+    entry_type: string
+    clients: { company_name: string } | { company_name: string }[]
+  }>) {
+    const clientRel = Array.isArray(row.clients) ? row.clients[0] : row.clients
+    const companyName = clientRel?.company_name ?? ''
+    const existing = tally.get(row.client_id) ?? {
+      clientId: row.client_id,
+      companyName,
+      emails: 0,
+      domains: 0,
+    }
+    if (row.entry_type === 'email') existing.emails += 1
+    else if (row.entry_type === 'domain') existing.domains += 1
+    tally.set(row.client_id, existing)
+  }
+
+  return Array.from(tally.values()).sort(
+    (a, b) => b.emails + b.domains - (a.emails + a.domains)
+  )
+}
+
 export default async function AdminPage() {
-  const [clients, events, objectionCounts] = await Promise.all([
+  const [clients, events, objectionCounts, pendingDnc] = await Promise.all([
     getClientList(),
     getActivityTimeline(),
     getOpenObjectionCounts(),
+    getPendingDncByClient(),
   ])
 
   const totalOpenObjections = objectionCounts.campaignLeads + objectionCounts.inboxLeads
+  const totalPendingDnc = pendingDnc.reduce((sum, c) => sum + c.emails + c.domains, 0)
 
   const activeCount = clients.filter((c) => c.status === 'active').length
   const onboardingCount = clients.filter((c) => c.status === 'onboarding').length
@@ -83,6 +125,56 @@ export default async function AdminPage() {
           </div>
         </div>
       </section>
+
+      {/* Pending DNC notification */}
+      {pendingDnc.length > 0 && (
+        <section className="overflow-hidden rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 to-sky-50 shadow-sm">
+          <div className="flex items-center gap-3 border-b border-blue-100/80 px-6 py-3.5">
+            <div className="relative flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-blue-500 text-white shadow-lg shadow-blue-500/30">
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636" />
+              </svg>
+              <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-gray-900 px-1 text-[10px] font-bold text-white shadow">
+                {totalPendingDnc}
+              </span>
+            </div>
+            <div>
+              <div className="text-sm font-semibold text-gray-900">
+                {totalPendingDnc} openstaande DNC-{totalPendingDnc === 1 ? 'vermelding' : 'vermeldingen'}
+              </div>
+              <div className="text-xs text-gray-600">
+                {pendingDnc.length} {pendingDnc.length === 1 ? 'klant heeft' : 'klanten hebben'} adressen of domeinen ingediend die nog moeten worden doorgevoerd.
+              </div>
+            </div>
+          </div>
+          <ul className="divide-y divide-blue-100/70">
+            {pendingDnc.map((c) => {
+              const parts: string[] = []
+              if (c.emails > 0) parts.push(`${c.emails} ${c.emails === 1 ? 'mailadres' : 'mailadressen'}`)
+              if (c.domains > 0) parts.push(`${c.domains} ${c.domains === 1 ? 'domein' : 'domeinen'}`)
+              return (
+                <li key={c.clientId}>
+                  <Link
+                    href={`/admin/clients/${c.clientId}/dnc`}
+                    className="group flex items-center justify-between gap-3 px-6 py-3 transition-colors hover:bg-blue-100/40"
+                  >
+                    <div className="text-sm text-gray-800">
+                      <span className="font-semibold">{c.companyName || 'Onbekende klant'}</span>{' '}
+                      heeft <span className="font-semibold text-blue-700">{parts.join(' en ')}</span> toegevoegd aan de DNC.
+                    </div>
+                    <div className="inline-flex items-center gap-1 text-xs font-semibold text-blue-700 transition-transform group-hover:translate-x-0.5">
+                      Doorvoeren
+                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                      </svg>
+                    </div>
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
+        </section>
+      )}
 
       {/* Pending objections notification */}
       {totalOpenObjections > 0 && (
