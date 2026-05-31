@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { ClientKnowledgeButton } from './_components/client-knowledge-button'
 import { ClientOverviewBubbles } from './_components/client-overview-bubbles'
 import { ClientSummaryCard } from './_components/client-summary-card'
 import { OverviewQuickLinks } from './_components/overview-quick-links'
@@ -90,6 +91,9 @@ export default async function ClientOverviewPage({ params }: PageProps) {
   const startDateMaand = (c.start_date_maand as string | null) ?? null
   const endDateMaand = (c.end_date_maand as string | null) ?? null
   const companySummary = (c.company_summary as string | null) ?? null
+  const companyKnowledge = (c.company_knowledge as string | null) ?? null
+  const companyKnowledgeChecklist = (c.company_knowledge_checklist as unknown) ?? {}
+  const companyKnowledgeComplete = Boolean(c.company_knowledge_complete)
 
   const initials = companyName
     .split(/\s+/)
@@ -166,6 +170,14 @@ export default async function ClientOverviewPage({ params }: PageProps) {
           isUrgent: u.is_urgent,
           createdAt: u.created_at,
         }))}
+      />
+
+      {/* Leer het bedrijf kennen — brede knop rood/groen */}
+      <ClientKnowledgeButton
+        clientId={clientId}
+        initialText={companyKnowledge}
+        initialChecklist={companyKnowledgeChecklist}
+        initialComplete={companyKnowledgeComplete}
       />
     </div>
   )

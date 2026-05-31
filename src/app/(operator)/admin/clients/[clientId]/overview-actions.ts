@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { normalizeCompanyKnowledgeChecklist } from './_components/company-knowledge-shared'
 
 type ActionResult = { error?: string }
 
@@ -90,6 +91,29 @@ export async function updateClientCompanySummary(
   const { error } = await supabase
     .from('clients')
     .update({ company_summary: trimmed.length > 0 ? trimmed : null })
+    .eq('id', clientId)
+  if (error) return { error: error.message }
+  revalidatePath(`/admin/clients/${clientId}`)
+  return {}
+}
+
+export async function updateClientCompanyKnowledge(
+  clientId: string,
+  input: {
+    text: string
+    checklist: unknown
+    complete: boolean
+  }
+): Promise<ActionResult> {
+  const supabase = createAdminClient()
+  const trimmed = input.text.trim()
+  const { error } = await supabase
+    .from('clients')
+    .update({
+      company_knowledge: trimmed.length > 0 ? trimmed : null,
+      company_knowledge_checklist: normalizeCompanyKnowledgeChecklist(input.checklist),
+      company_knowledge_complete: input.complete,
+    })
     .eq('id', clientId)
   if (error) return { error: error.message }
   revalidatePath(`/admin/clients/${clientId}`)
