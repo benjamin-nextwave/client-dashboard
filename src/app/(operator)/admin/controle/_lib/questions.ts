@@ -263,6 +263,11 @@ export const LIVE_QUESTIONS_MERLIJN: CheckQuestion[] = [
     },
   },
   {
+    id: 'bedrijfsnaam_afzender_spelling',
+    label: 'Kloppen de bedrijfsnaam en afzender naam volledig, zitten er spelfouten in?',
+    type: 'checkbox',
+  },
+  {
     id: 'update_mail_naar_klant_merlijn',
     label: 'Moet er een update mail naar de klant gestuurd worden?',
     type: 'checkbox_cross',
