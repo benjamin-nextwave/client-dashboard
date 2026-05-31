@@ -60,6 +60,51 @@ export function OperatorHeader({ signOutAction }: OperatorHeaderProps) {
 
         {/* Actions */}
         <div className="flex items-center gap-2">
+          <Link
+            href="/admin/rad"
+            aria-label="Rad van fortuin"
+            title="Rad van fortuin — kies willekeurig een klant"
+            className="group relative inline-flex h-9 w-9 items-center justify-center rounded-full border border-amber-200 bg-gradient-to-br from-amber-50 via-rose-50 to-fuchsia-50 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+          >
+            <span className="pointer-events-none absolute inset-0 rounded-full ring-2 ring-amber-200/50 ring-offset-1 ring-offset-white" />
+            {/* Spinning wheel */}
+            <svg
+              className="h-5 w-5 animate-[wheelspin_4s_linear_infinite] text-fuchsia-600"
+              viewBox="0 0 24 24"
+              fill="none"
+            >
+              {/* Outer ring */}
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5" />
+              {/* Pie slices */}
+              <path d="M12 2 L12 22" stroke="currentColor" strokeWidth="1" />
+              <path d="M2 12 L22 12" stroke="currentColor" strokeWidth="1" />
+              <path d="M4.93 4.93 L19.07 19.07" stroke="currentColor" strokeWidth="1" />
+              <path d="M4.93 19.07 L19.07 4.93" stroke="currentColor" strokeWidth="1" />
+              <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+            </svg>
+            {/* Twinkling lamps around the wheel */}
+            {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => {
+              const angle = (i * 360) / 8
+              const radius = 16
+              const x = 18 + Math.cos((angle - 90) * (Math.PI / 180)) * radius
+              const y = 18 + Math.sin((angle - 90) * (Math.PI / 180)) * radius
+              const colors = ['bg-amber-400', 'bg-rose-400', 'bg-fuchsia-500', 'bg-sky-400']
+              const color = colors[i % colors.length]
+              return (
+                <span
+                  key={i}
+                  className={`pointer-events-none absolute h-1 w-1 rounded-full ${color}`}
+                  style={{
+                    left: `${x}px`,
+                    top: `${y}px`,
+                    transform: 'translate(-50%, -50%)',
+                    animation: `lamp-twinkle 1.4s ease-in-out ${i * 0.175}s infinite`,
+                    boxShadow: '0 0 6px currentColor',
+                  }}
+                />
+              )
+            })}
+          </Link>
           <form action={signOutAction}>
             <button
               type="submit"
