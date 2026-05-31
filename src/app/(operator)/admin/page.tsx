@@ -3,6 +3,11 @@ import { getClientList } from '@/lib/data/admin-stats'
 import { getActivityTimeline } from '@/lib/data/activity-timeline'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { ClientOverviewList } from './_components/client-overview-list'
+import {
+  PendingApprovalsBanner,
+  type PendingApprovalClient,
+  type PendingApprovalItem,
+} from './_components/pending-approvals-banner'
 
 export const dynamic = 'force-dynamic'
 
@@ -67,12 +72,155 @@ async function getPendingDncByClient(): Promise<PendingDncPerClient[]> {
   )
 }
 
+async function getPendingApprovalsByClient(): Promise<PendingApprovalClient[]> {
+  const admin = createAdminClient()
+
+  const [clientsResult, variantsResult, onboardingResult] = await Promise.all([
+    admin
+      .from('clients')
+      .select(
+        'id, company_name, is_hidden, campaign_preview_approval_requested_at, campaign_preview_approved_at, campaign_variants_pdf_uploaded_at, mail_variants_last_acknowledged_at'
+      ),
+    admin
+      .from('mail_variants')
+      .select('id, client_id, updated_at, client_approved_at, client_approved_version'),
+    admin
+      .from('onboarding_steps')
+      .select('id, client_id, created_at')
+      .eq('assigned_to', 'client')
+      .eq('is_completed', false),
+  ])
+
+  const allClients = (clientsResult.data ?? []) as Array<{
+    id: string
+    company_name: string
+    is_hidden: boolean | null
+    campaign_preview_approval_requested_at: string | null
+    campaign_preview_approved_at: string | null
+    campaign_variants_pdf_uploaded_at: string | null
+    mail_variants_last_acknowledged_at: string | null
+  }>
+  const variants = (variantsResult.data ?? []) as Array<{
+    id: string
+    client_id: string
+    updated_at: string
+    client_approved_at: string | null
+    client_approved_version: string | null
+  }>
+  const onboardingSteps = (onboardingResult.data ?? []) as Array<{
+    id: string
+    client_id: string
+    created_at: string
+  }>
+
+  const entryByClient = new Map<
+    string,
+    { companyName: string; approvals: PendingApprovalItem[] }
+  >()
+
+  for (const c of allClients) {
+    if (c.is_hidden) continue
+    const entry = { companyName: c.company_name ?? '', approvals: [] as PendingApprovalItem[] }
+
+    if (c.campaign_preview_approval_requested_at && !c.campaign_preview_approved_at) {
+      entry.approvals.push({
+        type: 'voorvertoning',
+        label: 'Voorvertoning',
+        since: c.campaign_preview_approval_requested_at,
+      })
+    }
+
+    if (c.campaign_variants_pdf_uploaded_at) {
+      const ackAt = c.mail_variants_last_acknowledged_at
+      if (
+        !ackAt ||
+        new Date(c.campaign_variants_pdf_uploaded_at).getTime() > new Date(ackAt).getTime()
+      ) {
+        entry.approvals.push({
+          type: 'mailvarianten_pdf',
+          label: 'Mailvarianten (PDF)',
+          since: c.campaign_variants_pdf_uploaded_at,
+        })
+      }
+    }
+
+    entryByClient.set(c.id, entry)
+  }
+
+  // Aggregate mailvarianten tekst per client
+  const variantTally = new Map<string, { count: number; since: string }>()
+  for (const v of variants) {
+    const approved =
+      v.client_approved_at &&
+      v.client_approved_version &&
+      new Date(v.updated_at).getTime() <= new Date(v.client_approved_version).getTime()
+    if (approved) continue
+    const cur = variantTally.get(v.client_id)
+    if (!cur) {
+      variantTally.set(v.client_id, { count: 1, since: v.updated_at })
+    } else {
+      cur.count += 1
+      if (new Date(v.updated_at).getTime() < new Date(cur.since).getTime()) {
+        cur.since = v.updated_at
+      }
+    }
+  }
+  for (const [clientId, info] of variantTally) {
+    const entry = entryByClient.get(clientId)
+    if (!entry) continue
+    entry.approvals.push({
+      type: 'mailvarianten_tekst',
+      label: 'Mailvarianten (tekst)',
+      since: info.since,
+      count: info.count,
+    })
+  }
+
+  // Aggregate onboarding-steps per client
+  const onboardingTally = new Map<string, { count: number; since: string }>()
+  for (const o of onboardingSteps) {
+    const cur = onboardingTally.get(o.client_id)
+    if (!cur) {
+      onboardingTally.set(o.client_id, { count: 1, since: o.created_at })
+    } else {
+      cur.count += 1
+      if (new Date(o.created_at).getTime() < new Date(cur.since).getTime()) {
+        cur.since = o.created_at
+      }
+    }
+  }
+  for (const [clientId, info] of onboardingTally) {
+    const entry = entryByClient.get(clientId)
+    if (!entry) continue
+    entry.approvals.push({
+      type: 'onboarding',
+      label: 'Onboarding-stappen',
+      since: info.since,
+      count: info.count,
+    })
+  }
+
+  return Array.from(entryByClient.entries())
+    .filter(([, e]) => e.approvals.length > 0)
+    .map(([clientId, e]) => ({
+      clientId,
+      companyName: e.companyName,
+      approvals: e.approvals,
+    }))
+    .sort((a, b) => {
+      const oldestA = Math.min(...a.approvals.map((x) => new Date(x.since).getTime()))
+      const oldestB = Math.min(...b.approvals.map((x) => new Date(x.since).getTime()))
+      return oldestA - oldestB
+    })
+}
+
 export default async function AdminPage() {
-  const [clients, events, objectionCounts, pendingDnc] = await Promise.all([
+  const [clients, events, objectionCounts, pendingDnc, pendingApprovals] = await Promise.all([
     getClientList(),
     getActivityTimeline(),
     getOpenObjectionCounts(),
     getPendingDncByClient(),
+    getPendingApprovalsByClient(),
   ])
 
   const totalOpenObjections = objectionCounts.campaignLeads + objectionCounts.inboxLeads
@@ -125,6 +273,9 @@ export default async function AdminPage() {
           </div>
         </div>
       </section>
+
+      {/* Pending approvals notification */}
+      <PendingApprovalsBanner clients={pendingApprovals} />
 
       {/* Pending DNC notification */}
       {pendingDnc.length > 0 && (
