@@ -25,6 +25,25 @@ export async function toggleDncApproval(
   return {}
 }
 
+export async function approveAllDncEntries(
+  clientId: string
+): Promise<ActionResult & { updated?: number }> {
+  const supabase = createAdminClient()
+  const { data, error } = await supabase
+    .from('dnc_entries')
+    .update({
+      approved: true,
+      approved_at: new Date().toISOString(),
+    })
+    .eq('client_id', clientId)
+    .eq('approved', false)
+    .select('id')
+  if (error) return { error: error.message }
+  revalidatePath(`/admin/clients/${clientId}/dnc`)
+  revalidatePath(`/dashboard/dnc`)
+  return { updated: data?.length ?? 0 }
+}
+
 export async function deleteDncEntryAdmin(
   clientId: string,
   entryId: string

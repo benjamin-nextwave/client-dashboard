@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { toggleDncApproval, deleteDncEntryAdmin } from '../actions'
+import { toggleDncApproval, deleteDncEntryAdmin, approveAllDncEntries } from '../actions'
 
 interface Entry {
   id: string
@@ -37,6 +37,25 @@ export function DncEntriesTable({ clientId, entries }: Props) {
 
   const exportHref = `/api/admin/clients/${clientId}/dnc/export`
 
+  const pendingCount = entries.filter((e) => !e.approved).length
+
+  const handleApproveAll = () => {
+    if (pendingCount === 0) return
+    if (
+      !confirm(
+        `Weet je zeker dat je alle ${pendingCount} openstaande vermelding(en) als doorgevoerd wilt markeren?`
+      )
+    ) {
+      return
+    }
+    setActing('__all__')
+    startTransition(async () => {
+      await approveAllDncEntries(clientId)
+      router.refresh()
+      setActing(null)
+    })
+  }
+
   const filtered = entries.filter((e) => {
     if (filter !== 'all' && e.entryType !== filter) return false
     if (query.trim().length === 0) return true
@@ -69,6 +88,19 @@ export function DncEntriesTable({ clientId, entries }: Props) {
           <h2 className="text-sm font-semibold text-gray-900">Ingediende adressen en domeinen</h2>
           <p className="text-xs text-gray-500">Vink aan om te markeren als doorgevoerd — de klant ziet dit dan in zijn DNC-lijst.</p>
         </div>
+        <button
+          type="button"
+          onClick={handleApproveAll}
+          disabled={pendingCount === 0 || (acting === '__all__' && pending)}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+          </svg>
+          {acting === '__all__' && pending
+            ? 'Bezig…'
+            : `Alles als doorgevoerd noteren${pendingCount > 0 ? ` (${pendingCount})` : ''}`}
+        </button>
         <a
           href={exportHref}
           className="inline-flex items-center gap-1.5 rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-gray-800"
