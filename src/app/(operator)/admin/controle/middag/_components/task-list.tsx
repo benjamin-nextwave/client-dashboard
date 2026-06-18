@@ -4,7 +4,6 @@ import { useState, useTransition, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import type { ControleTaskRow, ManualTaskClientOption } from '@/lib/data/controle'
 import { toggleTaskCompleted, deleteTask, addManualTask } from '../../actions'
-import { useTasksRealtime } from '@/hooks/use-tasks-realtime'
 
 function formatTime(iso: string): string {
   const d = new Date(iso)
@@ -48,9 +47,6 @@ interface TaskListProps {
 
 export function TaskList({ tasks, clientOptions, persona }: TaskListProps) {
   const router = useRouter()
-  // Live updates: een goedkeuring/wijziging vanuit een extern project of de
-  // andere persona verschijnt hier direct, zonder handmatige refresh.
-  useTasksRealtime(persona)
   const [filter, setFilter] = useState<'all' | 'open' | 'done'>('open')
   const [search, setSearch] = useState('')
   const [hideFuture, setHideFuture] = useState(true)
