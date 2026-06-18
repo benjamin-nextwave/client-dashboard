@@ -1,13 +1,13 @@
 import { notFound, redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getClientMonthlyData } from '@/lib/data/controle'
+import { getClientMonthlyData, type ControleShift } from '@/lib/data/controle'
 import { CheckSession } from './_components/check-session'
 
 export const dynamic = 'force-dynamic'
 
 interface PageProps {
   params: Promise<{ persona: string }>
-  searchParams: Promise<{ ids?: string }>
+  searchParams: Promise<{ ids?: string; shift?: string }>
 }
 
 interface SessionClient {
@@ -65,12 +65,23 @@ async function loadSelectedClients(idsParam: string): Promise<SessionClient[]> {
 }
 
 export default async function OchtendSessiePage({ params, searchParams }: PageProps) {
-  const [{ persona }, { ids }] = await Promise.all([params, searchParams])
+  const [{ persona }, { ids, shift: shiftParam }] = await Promise.all([params, searchParams])
   if (persona !== 'benjamin' && persona !== 'merlijn') notFound()
   if (!ids) redirect(`/admin/controle/ochtend/${persona}`)
+
+  const shift: ControleShift | null =
+    persona === 'benjamin' && (shiftParam === 'ochtend' || shiftParam === 'avond')
+      ? shiftParam
+      : null
+
+  // Benjamin moet altijd een ronde hebben gekozen; zonder shift terug naar
+  // de ronde-keuze.
+  if (persona === 'benjamin' && shift === null) {
+    redirect('/admin/controle/ochtend/benjamin')
+  }
 
   const clients = await loadSelectedClients(ids)
   if (clients.length === 0) notFound()
 
-  return <CheckSession clients={clients} persona={persona} />
+  return <CheckSession clients={clients} persona={persona} shift={shift} />
 }

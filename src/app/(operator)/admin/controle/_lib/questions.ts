@@ -14,6 +14,8 @@
 
 export type QuestionType = 'text' | 'number' | 'checkbox' | 'checkbox_cross' | 'date'
 export type Persona = 'benjamin' | 'merlijn'
+/** Benjamin doet twee controles per dag; Merlijn heeft geen shift (null). */
+export type Shift = 'ochtend' | 'avond'
 
 /**
  * Threshold-config: zodra het antwoord op de vraag aan de drempel voldoet,
@@ -297,39 +299,98 @@ export const LIVE_QUESTIONS_MERLIJN: CheckQuestion[] = [
 ]
 
 // ---------------------------------------------------------------------------
-// LIVE — Benjamin (strategische controle)
+// LIVE — Benjamin OCHTEND (dagelijkse ochtendcontrole, per campagne)
 // ---------------------------------------------------------------------------
-export const LIVE_QUESTIONS_BENJAMIN: CheckQuestion[] = [
+export const LIVE_QUESTIONS_BENJAMIN_OCHTEND: CheckQuestion[] = [
   {
-    id: 'campagne_op_schema',
-    label: 'Loopt de campagne op schema?',
+    id: 'genoeg_contacten',
+    label: 'Heeft de campagne genoeg contacten? (gebaseerd op de statische maanddata)',
     type: 'checkbox_cross',
+    contextInfo: 'Het doel deze maand staat bovenaan bij de klant ("Doel deze maand: X contacten"). Vergelijk dat met het aantal contacten in de campagne.',
     suggestOnNo: {
       assignTo: 'benjamin',
-      suggestion: 'Campagne loopt niet op schema — analyseren en bijsturen',
+      suggestion: 'Campagne heeft te weinig contacten voor de maanddata — contactenlijst aanvullen',
     },
   },
   {
-    id: 'aanpassingen_targets',
-    label: 'Welke aanpassingen kan ik maken om de campagne de targets te laten hitten?',
+    id: 'variabelen_goed_ingevuld',
+    label: 'Worden de variabelen echt goed ingevuld of zitten er veel fouten tussen?',
+    type: 'checkbox_cross',
+    contextInfo: 'Ja = variabelen worden netjes ingevuld. Nee = er zitten te veel fouten in.',
+    suggestOnNo: {
+      assignTo: 'benjamin',
+      suggestion: 'Variabelen worden niet goed ingevuld — fouten nalopen en corrigeren',
+    },
+  },
+  {
+    id: 'inbox_placement_test',
+    label: 'Inbox placement test uitgevoerd — is de gezondheid van de mailadressen goed?',
+    type: 'checkbox_cross',
+    contextInfo: 'Voer de inbox placement test uit om te checken of de mailadressen gezond zijn. Ja = test gedaan én gezond.',
+    suggestOnNo: {
+      assignTo: 'benjamin',
+      suggestion: 'Inbox placement test uitvoeren / gezondheid van de mailadressen herstellen',
+    },
+  },
+  {
+    id: 'inboxen_max_volume',
+    label: 'Zitten de inboxen op max sending volume?',
+    type: 'checkbox_cross',
+    suggestOnNo: {
+      assignTo: 'benjamin',
+      suggestion: 'Inboxen zitten niet op max sending volume — checken en bijstellen',
+    },
+  },
+  {
+    id: 'bedrijfsnaam_afzender_spelling',
+    label: 'Kloppen de bedrijfsnaam en afzender naam volledig, zitten er spelfouten in?',
+    type: 'checkbox',
+  },
+]
+
+// ---------------------------------------------------------------------------
+// LIVE — Benjamin AVOND (dagelijkse avondcontrole, per campagne)
+// ---------------------------------------------------------------------------
+export const LIVE_QUESTIONS_BENJAMIN_AVOND: CheckQuestion[] = [
+  {
+    id: 'leads_vandaag',
+    label: 'Hoeveel leads heeft de campagne vandaag behaald? (doel: 2)',
+    type: 'number',
+    threshold: {
+      op: 'lt',
+      value: 2,
+      assignTo: 'benjamin',
+      suggestion: 'Minder dan 2 leads vandaag — campagne analyseren en bijsturen',
+    },
+  },
+  {
+    id: 'reacties_vandaag',
+    label: 'Hoeveel reacties zijn er vandaag binnengekomen? (doel: 24)',
+    type: 'number',
+    threshold: {
+      op: 'lt',
+      value: 24,
+      assignTo: 'benjamin',
+      suggestion: 'Minder dan 24 reacties vandaag — aanpak en aanbod analyseren',
+    },
+  },
+  {
+    id: 'meest_voorkomende_weerleggingen',
+    label: 'Wat waren de meest voorkomende weerleggingen?',
     type: 'text',
   },
   {
-    id: 'variabelen_kloppen',
-    label: 'Kloppen de variabelen van de gebruikte mailvarianten?',
+    id: 'campagne_verbeteren',
+    label: 'Zouden we de campagne kunnen verbeteren voor meer leads en reacties? Mogelijk in een opvolgmail 1 van de weerleggingen kantelen?',
+    type: 'text',
+  },
+  {
+    id: 'genoeg_contacten_morgen',
+    label: 'Heeft de campagne genoeg contacten voor morgen?',
     type: 'checkbox_cross',
     suggestOnNo: {
       assignTo: 'benjamin',
-      suggestion: 'Variabelen van mailvarianten corrigeren',
-    },
-  },
-  {
-    id: 'update_mail_naar_klant_benjamin',
-    label: 'Moet er een update mail naar de klant gestuurd worden?',
-    type: 'checkbox_cross',
-    suggestOnYes: {
-      assignTo: 'benjamin',
-      suggestion: 'Update mail sturen naar de klant',
+      suggestion: 'Niet genoeg contacten voor morgen — contactenlijst aanvullen',
     },
   },
 ]
@@ -343,10 +404,15 @@ export const ONBOARDING_QUESTIONS = ONBOARDING_QUESTIONS_MERLIJN
 export const LIVE_QUESTIONS = LIVE_QUESTIONS_MERLIJN
 
 /**
- * Helper: kies de juiste live-vragenlijst per persona.
+ * Helper: kies de juiste live-vragenlijst.
+ *
+ * Benjamin heeft per shift een eigen lijst (ochtend/avond). Merlijn heeft
+ * geen shift en krijgt altijd haar operationele lijst. Een ontbrekende shift
+ * voor Benjamin valt terug op de ochtendlijst (defensief; mag niet voorkomen).
  */
-export function liveQuestionsFor(persona: Persona): CheckQuestion[] {
-  return persona === 'benjamin' ? LIVE_QUESTIONS_BENJAMIN : LIVE_QUESTIONS_MERLIJN
+export function liveQuestionsFor(persona: Persona, shift?: Shift): CheckQuestion[] {
+  if (persona !== 'benjamin') return LIVE_QUESTIONS_MERLIJN
+  return shift === 'avond' ? LIVE_QUESTIONS_BENJAMIN_AVOND : LIVE_QUESTIONS_BENJAMIN_OCHTEND
 }
 
 /**

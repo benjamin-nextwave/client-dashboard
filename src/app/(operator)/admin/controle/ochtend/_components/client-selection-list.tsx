@@ -35,9 +35,11 @@ interface ClientSelectionListProps {
   clients: ControleClientListItem[]
   /** Persona-segment in de URL — bepaalt waar 'Begin de controle' heen springt. */
   persona: 'benjamin' | 'merlijn'
+  /** Gekozen ronde (alleen Benjamin) — wordt meegegeven aan de sessie. */
+  shift?: 'ochtend' | 'avond' | null
 }
 
-export function ClientSelectionList({ clients, persona }: ClientSelectionListProps) {
+export function ClientSelectionList({ clients, persona, shift }: ClientSelectionListProps) {
   const router = useRouter()
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [search, setSearch] = useState('')
@@ -63,7 +65,8 @@ export function ClientSelectionList({ clients, persona }: ClientSelectionListPro
   const startCheck = () => {
     if (selected.size === 0) return
     const ids = Array.from(selected).join(',')
-    router.push(`/admin/controle/ochtend/${persona}/sessie?ids=${ids}`)
+    const shiftParam = shift ? `&shift=${shift}` : ''
+    router.push(`/admin/controle/ochtend/${persona}/sessie?ids=${ids}${shiftParam}`)
   }
 
   return (

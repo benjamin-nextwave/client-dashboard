@@ -18,6 +18,7 @@ import {
   type QuestionType,
   type QuestionThreshold,
   type Persona,
+  type Shift,
 } from '../../../../_lib/questions'
 
 interface SessionClient {
@@ -33,6 +34,8 @@ interface SessionClient {
 interface CheckSessionProps {
   clients: SessionClient[]
   persona: Persona
+  /** Gekozen ronde (alleen Benjamin: ochtend/avond). Merlijn: null. */
+  shift: Shift | null
 }
 
 interface TaskDraft {
@@ -108,8 +111,13 @@ function fillTemplate(label: string, monthlyContacts: number | null): string {
   return label.replace(/\{\{aantal\}\}/g, replacement)
 }
 
-export function CheckSession({ clients, persona }: CheckSessionProps) {
+export function CheckSession({ clients, persona, shift }: CheckSessionProps) {
   const router = useRouter()
+  // Terug-link houdt de gekozen ronde vast zodat Benjamin in de juiste
+  // klantselectie terugkomt.
+  const backHref = shift
+    ? `/admin/controle/ochtend/${persona}?shift=${shift}`
+    : `/admin/controle/ochtend/${persona}`
   const [activeIndex, setActiveIndex] = useState(0)
   const [states, setStates] = useState<Record<string, ClientFormState>>(
     () => Object.fromEntries(clients.map((c) => [c.id, emptyState(persona)]))
@@ -124,7 +132,10 @@ export function CheckSession({ clients, persona }: CheckSessionProps) {
     () => onboardingQuestionsFor(persona),
     [persona]
   )
-  const liveQuestions = useMemo(() => liveQuestionsFor(persona), [persona])
+  const liveQuestions = useMemo(
+    () => liveQuestionsFor(persona, shift ?? undefined),
+    [persona, shift]
+  )
 
   const updateState = (clientId: string, patch: Partial<ClientFormState>) => {
     setStates((prev) => ({ ...prev, [clientId]: { ...prev[clientId], ...patch } }))
@@ -318,6 +329,7 @@ export function CheckSession({ clients, persona }: CheckSessionProps) {
         answers: payload,
         tasks: submitTasks,
         persona,
+        shift,
       })
 
       if (result.error) {
@@ -343,7 +355,7 @@ export function CheckSession({ clients, persona }: CheckSessionProps) {
       <header className="sticky top-0 z-10 border-b border-gray-200/80 bg-white/90 backdrop-blur-xl">
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-4 px-6 py-4">
           <Link
-            href={`/admin/controle/ochtend/${persona}`}
+            href={backHref}
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-500 transition-colors hover:text-gray-900"
           >
             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
@@ -353,7 +365,7 @@ export function CheckSession({ clients, persona }: CheckSessionProps) {
           </Link>
 
           <div className="flex items-center gap-3">
-            <PersonaBadge persona={persona} />
+            <PersonaBadge persona={persona} shift={shift} />
             <ProgressIndicator
               current={activeIndex + 1}
               total={clients.length}
@@ -470,7 +482,7 @@ export function CheckSession({ clients, persona }: CheckSessionProps) {
   )
 }
 
-function PersonaBadge({ persona }: { persona: Persona }) {
+function PersonaBadge({ persona, shift }: { persona: Persona; shift: Shift | null }) {
   const isB = persona === 'benjamin'
   return (
     <span
@@ -482,6 +494,11 @@ function PersonaBadge({ persona }: { persona: Persona }) {
     >
       <span className={`h-1.5 w-1.5 rounded-full ${isB ? 'bg-indigo-500' : 'bg-amber-500'}`} />
       {isB ? 'Benjamin' : 'Merlijn'}
+      {shift && (
+        <span className="ml-1 rounded-full bg-white/70 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide">
+          {shift === 'ochtend' ? 'Ochtend' : 'Avond'}
+        </span>
+      )}
     </span>
   )
 }

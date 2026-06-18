@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
-import type { ControlePersona } from '@/lib/data/controle'
+import type { ControlePersona, ControleShift } from '@/lib/data/controle'
 
 export interface CheckAnswerEntry {
   id: string
@@ -34,6 +34,8 @@ export interface SubmitCheckInput {
   tasks: SubmitCheckTask[]
   /** Persona die de sessie uitvoert. */
   persona: ControlePersona
+  /** Ronde van de controle (alleen Benjamin: ochtend/avond). Merlijn: null. */
+  shift?: ControleShift | null
 }
 
 /**
@@ -47,16 +49,22 @@ export async function submitCheck(input: SubmitCheckInput): Promise<{ error?: st
 
   const admin = createAdminClient()
 
+  // De shift-kolom wordt alleen meegestuurd als er een shift is (Benjamin).
+  // Zo blijft Merlijns insert werken, ook als de shift-migratie nog niet is
+  // toegepast.
+  const checkRow: Record<string, unknown> = {
+    client_id: input.clientId,
+    check_type: input.checkType,
+    num_campaigns: input.numCampaigns,
+    answers: input.answers,
+    created_by: userId,
+    assignee: input.persona,
+  }
+  if (input.shift) checkRow.shift = input.shift
+
   const { data: check, error: insertError } = await admin
     .from('operator_client_checks')
-    .insert({
-      client_id: input.clientId,
-      check_type: input.checkType,
-      num_campaigns: input.numCampaigns,
-      answers: input.answers,
-      created_by: userId,
-      assignee: input.persona,
-    })
+    .insert(checkRow)
     .select('id')
     .single()
 

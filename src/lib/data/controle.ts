@@ -2,9 +2,45 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getClientList, type ClientListItem } from './admin-stats'
 
 export type ControlePersona = 'benjamin' | 'merlijn'
+export type ControleShift = 'ochtend' | 'avond'
 
 export interface ControleClientListItem extends ClientListItem {
   lastCheckedAt: string | null
+}
+
+/**
+ * Klanten waarvoor Benjamin de dagelijkse controle doet. De namen zijn de
+ * canonieke bedrijfsnamen uit de clients-tabel; matching gebeurt hoofdletter-
+ * ongevoelig en getrimd zodat kleine verschillen (trailing spaces, casing)
+ * geen invloed hebben. Alle overige (niet-verborgen) klanten vallen onder
+ * Merlijn — en vice versa.
+ */
+const BENJAMIN_CLIENT_NAMES = new Set<string>([
+  'advies & meer',
+  'bluebrd',
+  'copytalent',
+  'fresh-brains',
+  'glamorous goat',
+  'ledscherm media',
+  'obs-solutions',
+  'org topologies',
+  'quickworks',
+  'trenchcoat film',
+  'ugly duck',
+])
+
+function normalizeClientName(name: string): string {
+  return name.trim().toLowerCase()
+}
+
+/**
+ * Bepaalt welke persona verantwoordelijk is voor de controle van een klant,
+ * puur op basis van de bedrijfsnaam.
+ */
+export function controleOwnerForName(companyName: string): ControlePersona {
+  return BENJAMIN_CLIENT_NAMES.has(normalizeClientName(companyName))
+    ? 'benjamin'
+    : 'merlijn'
 }
 
 /**
@@ -19,19 +55,26 @@ export interface ControleClientListItem extends ClientListItem {
  * met `assignee = persona` mee. Historische controles van vóór de persona-
  * splitsing (`assignee IS NULL`) tellen dan voor géén van beide personen —
  * dat is opzet: Benjamin en Merlijn doen hun controle onafhankelijk en
- * mogen elkaars werk niet als 'al gedaan' zien.
+ * mogen elkaars werk niet als 'al gedaan' zien. De klantenlijst wordt dan
+ * óók gefilterd op verantwoordelijkheid (controleOwnerForName).
+ *
+ * Wanneer `shift` is meegegeven (alleen Benjamin), telt enkel de meest
+ * recente controle van díe ronde mee — zo houdt de ochtend- en avondronde
+ * elk een eigen "laatst gecheckt"-status per dag.
  */
 export async function getClientsWithLastCheck(
-  persona?: ControlePersona
+  persona?: ControlePersona,
+  shift?: ControleShift
 ): Promise<ControleClientListItem[]> {
   const [clients, lastCheckMap, excludedIds] = await Promise.all([
     getClientList(),
-    fetchLastCheckMap(persona),
+    fetchLastCheckMap(persona, shift),
     fetchExcludedClientIds(),
   ])
 
   return clients
     .filter((c) => !c.isHidden && !excludedIds.has(c.id))
+    .filter((c) => !persona || controleOwnerForName(c.companyName) === persona)
     .map((c) => ({ ...c, lastCheckedAt: lastCheckMap.get(c.id) ?? null }))
     .sort((a, b) => {
       // Never-checked clients (null) bubble to the top.
@@ -46,7 +89,8 @@ export async function getClientsWithLastCheck(
 }
 
 async function fetchLastCheckMap(
-  persona?: ControlePersona
+  persona?: ControlePersona,
+  shift?: ControleShift
 ): Promise<Map<string, string>> {
   const supabase = createAdminClient()
   let query = supabase
@@ -55,6 +99,7 @@ async function fetchLastCheckMap(
     .order('created_at', { ascending: false })
 
   if (persona) query = query.eq('assignee', persona)
+  if (shift) query = query.eq('shift', shift)
 
   const { data, error } = await query
 
