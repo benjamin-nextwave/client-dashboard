@@ -19,6 +19,7 @@ const PERSONA_LABEL: Record<'benjamin' | 'merlijn', string> = {
 const SHIFT_LABEL: Record<ControleShift, string> = {
   ochtend: 'Ochtendcontrole',
   avond: 'Avondcontrole',
+  wekelijks: 'Wekelijkse analyse',
 }
 
 export default async function OchtendPersonaPage({ params, searchParams }: PageProps) {
@@ -28,7 +29,8 @@ export default async function OchtendPersonaPage({ params, searchParams }: PageP
   // Benjamin kiest eerst een ronde (ochtend/avond). Merlijn slaat deze stap
   // over en heeft geen shift.
   const shift: ControleShift | null =
-    persona === 'benjamin' && (shiftParam === 'ochtend' || shiftParam === 'avond')
+    persona === 'benjamin' &&
+    (shiftParam === 'ochtend' || shiftParam === 'avond' || shiftParam === 'wekelijks')
       ? shiftParam
       : null
 

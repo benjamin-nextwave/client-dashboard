@@ -35,11 +35,11 @@ export function ShiftPicker({
           Dagelijkse controle — Benjamin
         </h1>
         <p className="mt-1 text-sm text-gray-500">
-          Kies welke ronde je nu doet. Beide rondes doe je elke dag, elk met een eigen vragenlijst.
+          Kies welke ronde je nu doet. Ochtend en avond doe je dagelijks, de analyse wekelijks — elk met een eigen vragenlijst.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <ShiftCard
           href={`${basePath}?shift=ochtend`}
           name="Ochtendcontrole"
@@ -63,6 +63,19 @@ export function ShiftPicker({
           icon={
             <svg className="h-12 w-12" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.718 9.718 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
+            </svg>
+          }
+        />
+        <ShiftCard
+          href={`${basePath}?shift=wekelijks`}
+          name="Wekelijkse analyse"
+          gradient="from-emerald-500 via-teal-500 to-cyan-600"
+          shadowColor="shadow-teal-500/30"
+          ringColor="hover:shadow-teal-500/40"
+          description="Diepere weekanalyse: reacties exporteren en categoriseren, weerleggingen, reply rate, opportunities en eindrapport naar de klant."
+          icon={
+            <svg className="h-12 w-12" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
             </svg>
           }
         />

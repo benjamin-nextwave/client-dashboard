@@ -14,8 +14,8 @@
 
 export type QuestionType = 'text' | 'number' | 'checkbox' | 'checkbox_cross' | 'date'
 export type Persona = 'benjamin' | 'merlijn'
-/** Benjamin doet twee controles per dag; Merlijn heeft geen shift (null). */
-export type Shift = 'ochtend' | 'avond'
+/** Benjamin doet meerdere rondes; Merlijn heeft geen shift (null). */
+export type Shift = 'ochtend' | 'avond' | 'wekelijks'
 
 /**
  * Threshold-config: zodra het antwoord op de vraag aan de drempel voldoet,
@@ -74,6 +74,13 @@ export interface CheckQuestion {
   suggestOnYes?: TaskSuggestion
   /** Bij een leeg checkbox-antwoord (niet aangevinkt): voorgestelde taak. */
   suggestOnUnchecked?: TaskSuggestion
+  /**
+   * Toon deze vraag alleen als een andere vraag (binnen dezelfde campagne)
+   * een bepaalde waarde heeft. Verborgen vragen worden niet gerenderd en
+   * tellen niet mee voor 'alle vragen beantwoord'. Gebruikt voor de
+   * voorwaardelijke taak in de wekelijkse analyse.
+   */
+  showIf?: { questionId: string; equals: string }
 }
 
 // ---------------------------------------------------------------------------
@@ -396,6 +403,57 @@ export const LIVE_QUESTIONS_BENJAMIN_AVOND: CheckQuestion[] = [
 ]
 
 // ---------------------------------------------------------------------------
+// WEKELIJKS — Benjamin (wekelijkse analyse, per campagne)
+// ---------------------------------------------------------------------------
+// (Taak)-items zijn checkboxes die je afvinkt zodra ze gedaan zijn (of skipt
+// als ze nog open staan). Taak 7 verschijnt alleen als vraag 6 met 'Nee' is
+// beantwoord (showIf).
+export const LIVE_QUESTIONS_BENJAMIN_WEKELIJKS: CheckQuestion[] = [
+  {
+    id: 'export_categoriseer_reacties',
+    label: 'Exporteer iedere reactie van alle campagnes van deze klant, categoriseer de resultaten individueel en als geheel.',
+    type: 'checkbox',
+  },
+  {
+    id: 'weerleggingen_wekelijks',
+    label: 'Wat zijn de meest voorkomende weerleggingen?',
+    type: 'text',
+  },
+  {
+    id: 'iets_met_weerleggingen',
+    label: 'Kunnen we iets met deze weerleggingen doen?',
+    type: 'text',
+  },
+  {
+    id: 'inbox_gezondheid_check',
+    label: 'Controleer de inbox gezondheid.',
+    type: 'checkbox',
+  },
+  {
+    id: 'reply_rate_7',
+    label: 'Heeft de campagne een reply rate van 7%?',
+    type: 'checkbox_cross',
+  },
+  {
+    id: 'tien_opportunities',
+    label: 'Heeft de campagne 10 opportunities?',
+    type: 'checkbox_cross',
+  },
+  {
+    id: 'betere_mailvarianten',
+    label: 'Maak betere mailvarianten op basis van alle inzichten.',
+    type: 'checkbox',
+    // Verschijnt alleen als de campagne géén 10 opportunities heeft.
+    showIf: { questionId: 'tien_opportunities', equals: 'Nee' },
+  },
+  {
+    id: 'complete_analyse_naar_klant',
+    label: 'Maak een complete analyse met conclusies en inzichten en stuur deze naar de klant.',
+    type: 'checkbox',
+  },
+]
+
+// ---------------------------------------------------------------------------
 // Backwards-compat exports (history view leest labels uit de stored payload
 // dus deze constanten zijn voor type-import voldoende — we bewaren ze als
 // alias zodat code die nog 'ONBOARDING_QUESTIONS' importeert blijft werken).
@@ -412,7 +470,9 @@ export const LIVE_QUESTIONS = LIVE_QUESTIONS_MERLIJN
  */
 export function liveQuestionsFor(persona: Persona, shift?: Shift): CheckQuestion[] {
   if (persona !== 'benjamin') return LIVE_QUESTIONS_MERLIJN
-  return shift === 'avond' ? LIVE_QUESTIONS_BENJAMIN_AVOND : LIVE_QUESTIONS_BENJAMIN_OCHTEND
+  if (shift === 'avond') return LIVE_QUESTIONS_BENJAMIN_AVOND
+  if (shift === 'wekelijks') return LIVE_QUESTIONS_BENJAMIN_WEKELIJKS
+  return LIVE_QUESTIONS_BENJAMIN_OCHTEND
 }
 
 /**

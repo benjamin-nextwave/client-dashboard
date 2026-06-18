@@ -95,6 +95,20 @@ function parseCount(value: string | undefined): number {
   return Number.isFinite(n) && n > 0 ? n : 0
 }
 
+/**
+ * Bepaalt of een vraag zichtbaar is binnen een campagne. Vragen met een
+ * `showIf` verschijnen alleen als de gerefereerde vraag exact de opgegeven
+ * waarde heeft (bv. de voorwaardelijke taak in de wekelijkse analyse).
+ */
+function isQuestionVisible(
+  q: CheckQuestion,
+  answers: Record<string, string>,
+  campaignIndex: number
+): boolean {
+  if (!q.showIf) return true
+  return answers[`${campaignIndex}_${q.showIf.questionId}`] === q.showIf.equals
+}
+
 function isAnswered(value: string | undefined): boolean {
   if (value === undefined) return false
   if (value === SKIPPED_ANSWER) return true
@@ -323,6 +337,7 @@ export function CheckSession({ clients, persona, shift }: CheckSessionProps) {
     for (let i = 0; i < state.numCampaigns; i++) {
       if ((state.campaignNames[i] ?? '').trim().length === 0) return false
       for (const q of liveQuestions) {
+        if (!isQuestionVisible(q, state.answers, i)) continue
         const key = `${i}_${q.id}`
         if (!isAnswered(state.answers[key])) return false
       }
@@ -350,11 +365,13 @@ export function CheckSession({ clients, persona, shift }: CheckSessionProps) {
           numCampaigns: state.numCampaigns!,
           campaigns: Array.from({ length: state.numCampaigns! }, (_, i) => ({
             index: i,
-            questions: questionList.map<CheckAnswerEntry>((q) => ({
-              id: q.id,
-              label: fillTemplate(q.label, current.monthlyContacts),
-              answer: state.answers[`${i}_${q.id}`] ?? '',
-            })),
+            questions: questionList
+              .filter((q) => isQuestionVisible(q, state.answers, i))
+              .map<CheckAnswerEntry>((q) => ({
+                id: q.id,
+                label: fillTemplate(q.label, current.monthlyContacts),
+                answer: state.answers[`${i}_${q.id}`] ?? '',
+              })),
           })) satisfies CheckCampaignBlock[],
         }
 
@@ -564,7 +581,7 @@ function PersonaBadge({ persona, shift }: { persona: Persona; shift: Shift | nul
       {isB ? 'Benjamin' : 'Merlijn'}
       {shift && (
         <span className="ml-1 rounded-full bg-white/70 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide">
-          {shift === 'ochtend' ? 'Ochtend' : 'Avond'}
+          {shift === 'ochtend' ? 'Ochtend' : shift === 'avond' ? 'Avond' : 'Wekelijks'}
         </span>
       )}
     </span>
@@ -889,7 +906,7 @@ function LiveForm({
                   onChange={(v) => onSetCampaignName(i, v)}
                 />
                 <div className="space-y-3">
-                  {questions.map((q, idx) => {
+                  {questions.filter((q) => isQuestionVisible(q, answers, i)).map((q, idx) => {
                     const key = `${i}_${q.id}`
                     const value = answers[key] ?? ''
                     const sourceKey = `live_${i}_${q.id}`

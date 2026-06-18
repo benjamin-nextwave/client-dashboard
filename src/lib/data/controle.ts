@@ -2,7 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getClientList, type ClientListItem } from './admin-stats'
 
 export type ControlePersona = 'benjamin' | 'merlijn'
-export type ControleShift = 'ochtend' | 'avond'
+export type ControleShift = 'ochtend' | 'avond' | 'wekelijks'
 
 export interface ControleClientListItem extends ClientListItem {
   lastCheckedAt: string | null

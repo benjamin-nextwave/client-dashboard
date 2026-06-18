@@ -36,7 +36,7 @@ interface ClientSelectionListProps {
   /** Persona-segment in de URL — bepaalt waar 'Begin de controle' heen springt. */
   persona: 'benjamin' | 'merlijn'
   /** Gekozen ronde (alleen Benjamin) — wordt meegegeven aan de sessie. */
-  shift?: 'ochtend' | 'avond' | null
+  shift?: 'ochtend' | 'avond' | 'wekelijks' | null
 }
 
 export function ClientSelectionList({ clients, persona, shift }: ClientSelectionListProps) {

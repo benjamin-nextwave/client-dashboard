@@ -81,7 +81,8 @@ export default async function OchtendSessiePage({ params, searchParams }: PagePr
   if (!ids) redirect(`/admin/controle/ochtend/${persona}`)
 
   const shift: ControleShift | null =
-    persona === 'benjamin' && (shiftParam === 'ochtend' || shiftParam === 'avond')
+    persona === 'benjamin' &&
+    (shiftParam === 'ochtend' || shiftParam === 'avond' || shiftParam === 'wekelijks')
       ? shiftParam
       : null
 
