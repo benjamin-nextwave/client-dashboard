@@ -1,6 +1,8 @@
 import { notFound, redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getClientMonthlyData, type ControleShift } from '@/lib/data/controle'
+import { getClientCommissionCategories } from '@/lib/data/commissions'
+import type { CommissionCategory } from '@/lib/commissions-shared'
 import { CheckSession } from './_components/check-session'
 
 export const dynamic = 'force-dynamic'
@@ -17,9 +19,13 @@ interface SessionClient {
   logoUrl: string | null
   isOnboarding: boolean
   monthlyContacts: number | null
+  commissionCategories: CommissionCategory[]
 }
 
-async function loadSelectedClients(idsParam: string): Promise<SessionClient[]> {
+async function loadSelectedClients(
+  idsParam: string,
+  loadCommissions: boolean
+): Promise<SessionClient[]> {
   const ids = idsParam.split(',').map((s) => s.trim()).filter(Boolean)
   if (ids.length === 0) return []
 
@@ -39,10 +45,14 @@ async function loadSelectedClients(idsParam: string): Promise<SessionClient[]> {
   const month = now.getMonth() + 1
 
   const monthlyById = new Map<string, number | null>()
+  const categoriesById = new Map<string, CommissionCategory[]>()
   await Promise.all(
     data.map(async (c) => {
       const row = await getClientMonthlyData(c.id, year, month)
       monthlyById.set(c.id, row?.contactsToApproach ?? null)
+      if (loadCommissions) {
+        categoriesById.set(c.id, await getClientCommissionCategories(c.id))
+      }
     })
   )
 
@@ -59,6 +69,7 @@ async function loadSelectedClients(idsParam: string): Promise<SessionClient[]> {
         logoUrl: c.logo_url,
         isOnboarding: (c.onboarding_status ?? 'live') === 'onboarding',
         monthlyContacts: monthlyById.get(c.id) ?? null,
+        commissionCategories: categoriesById.get(c.id) ?? [],
       } satisfies SessionClient
     })
     .filter((c): c is SessionClient => c !== null)
@@ -80,7 +91,7 @@ export default async function OchtendSessiePage({ params, searchParams }: PagePr
     redirect('/admin/controle/ochtend/benjamin')
   }
 
-  const clients = await loadSelectedClients(ids)
+  const clients = await loadSelectedClients(ids, persona === 'benjamin' && shift === 'avond')
   if (clients.length === 0) notFound()
 
   return <CheckSession clients={clients} persona={persona} shift={shift} />

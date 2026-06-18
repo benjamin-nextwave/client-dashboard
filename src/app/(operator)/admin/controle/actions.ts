@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import type { ControlePersona, ControleShift } from '@/lib/data/controle'
+import { amsterdamDateString } from '@/lib/data/commissions'
 
 export interface CheckAnswerEntry {
   id: string
@@ -26,6 +27,19 @@ export interface SubmitCheckTask {
   assignee: ControlePersona
 }
 
+/** Eén commissie-categorie met het aantal leads voor één campagne die dag. */
+export interface SubmitCommissionCategory {
+  categoryId: string
+  categoryName: string
+  unitPriceCents: number
+  count: number
+}
+
+export interface SubmitCommissionCampaign {
+  campaignName: string
+  categories: SubmitCommissionCategory[]
+}
+
 export interface SubmitCheckInput {
   clientId: string
   checkType: 'onboarding' | 'live'
@@ -36,6 +50,8 @@ export interface SubmitCheckInput {
   persona: ControlePersona
   /** Ronde van de controle (alleen Benjamin: ochtend/avond). Merlijn: null. */
   shift?: ControleShift | null
+  /** Commissie-invoer per campagne (alleen avondcontrole). */
+  commissions?: SubmitCommissionCampaign[]
 }
 
 /**
@@ -90,6 +106,36 @@ export async function submitCheck(input: SubmitCheckInput): Promise<{ error?: st
   if (taskRows.length > 0) {
     const { error: tasksError } = await admin.from('operator_check_tasks').insert(taskRows)
     if (tasksError) return { error: tasksError.message }
+  }
+
+  // Commissie-entries (alleen avondcontrole). Eén rij per (campagne, categorie)
+  // voor vandaag; bestaande rij van dezelfde dag wordt overschreven (upsert).
+  // Ook tellingen van 0 worden bewaard zodat de dag als 'gedraaid' telt voor
+  // de €20-dagkosten in de overzichten.
+  if (input.shift === 'avond' && input.commissions && input.commissions.length > 0) {
+    const entryDate = amsterdamDateString()
+    const commissionRows = input.commissions.flatMap((camp) => {
+      const campaignName = camp.campaignName.trim()
+      if (campaignName.length === 0) return []
+      return camp.categories.map((cat) => ({
+        client_id: input.clientId,
+        campaign_name: campaignName,
+        entry_date: entryDate,
+        category_id: cat.categoryId,
+        category_name: cat.categoryName,
+        unit_price_cents: cat.unitPriceCents,
+        lead_count: Number.isFinite(cat.count) && cat.count > 0 ? Math.floor(cat.count) : 0,
+        check_id: check.id,
+        updated_at: new Date().toISOString(),
+      }))
+    })
+
+    if (commissionRows.length > 0) {
+      const { error: commissionError } = await admin
+        .from('operator_commission_entries')
+        .upsert(commissionRows, { onConflict: 'client_id,campaign_name,entry_date,category_id' })
+      if (commissionError) return { error: commissionError.message }
+    }
   }
 
   revalidatePath('/admin/controle')

@@ -9,7 +9,13 @@ import {
   type CheckAnswerEntry,
   type CheckCampaignBlock,
   type SubmitCheckTask,
+  type SubmitCommissionCampaign,
 } from '../../../../actions'
+import {
+  DAILY_COST_CENTS,
+  formatEuroCents,
+  type CommissionCategory,
+} from '@/lib/commissions-shared'
 import {
   liveQuestionsFor,
   onboardingQuestionsFor,
@@ -29,6 +35,8 @@ interface SessionClient {
   isOnboarding: boolean
   /** Statisch maandcijfer 'contacten te benaderen', voor {{aantal}}-template. */
   monthlyContacts: number | null
+  /** Commissie-categorieën (alleen geladen voor Benjamins avondcontrole). */
+  commissionCategories: CommissionCategory[]
 }
 
 interface CheckSessionProps {
@@ -52,6 +60,8 @@ interface ClientFormState {
   numCampaigns: number | null
   campaignNames: string[]
   answers: Record<string, string>
+  /** Commissie-aantallen per campagne+categorie, key `${campaignIndex}_${categoryId}`. */
+  commissionCounts: Record<string, string>
   tasks: TaskDraft[]
   /** Set met `key`s die de operator al expliciet heeft afgewezen
    *  ("Niet nodig") — zodat de suggestie niet steeds terugkomt. */
@@ -72,10 +82,17 @@ function emptyState(persona: Persona): ClientFormState {
     numCampaigns: null,
     campaignNames: [],
     answers: {},
+    commissionCounts: {},
     tasks: [emptyTask(persona)],
     dismissedSuggestions: new Set(),
     submitted: false,
   }
+}
+
+function parseCount(value: string | undefined): number {
+  if (!value) return 0
+  const n = parseInt(value.trim(), 10)
+  return Number.isFinite(n) && n > 0 ? n : 0
 }
 
 function isAnswered(value: string | undefined): boolean {
@@ -137,6 +154,26 @@ export function CheckSession({ clients, persona, shift }: CheckSessionProps) {
     [persona, shift]
   )
 
+  // Commissie-invoer verschijnt alleen in Benjamins avondcontrole en alleen
+  // als de klant categorieën heeft ingesteld.
+  const showCommission =
+    persona === 'benjamin' && shift === 'avond' && current.commissionCategories.length > 0
+
+  const commissionDay = useMemo(() => {
+    if (!showCommission || !state || !state.numCampaigns) return null
+    const perCampaign: number[] = []
+    let totalCents = 0
+    for (let i = 0; i < state.numCampaigns; i++) {
+      let campCents = 0
+      for (const cat of current.commissionCategories) {
+        campCents += parseCount(state.commissionCounts[`${i}_${cat.id}`]) * cat.priceCents
+      }
+      perCampaign[i] = campCents
+      totalCents += campCents
+    }
+    return { perCampaign, commissionCents: totalCents, netCents: totalCents - DAILY_COST_CENTS }
+  }, [showCommission, state, current])
+
   const updateState = (clientId: string, patch: Partial<ClientFormState>) => {
     setStates((prev) => ({ ...prev, [clientId]: { ...prev[clientId], ...patch } }))
   }
@@ -147,6 +184,17 @@ export function CheckSession({ clients, persona, shift }: CheckSessionProps) {
       [current.id]: {
         ...prev[current.id],
         answers: { ...prev[current.id].answers, [key]: value },
+      },
+    }))
+  }
+
+  const setCommissionCount = (campaignIndex: number, categoryId: string, value: string) => {
+    const key = `${campaignIndex}_${categoryId}`
+    setStates((prev) => ({
+      ...prev,
+      [current.id]: {
+        ...prev[current.id],
+        commissionCounts: { ...prev[current.id].commissionCounts, [key]: value },
       },
     }))
   }
@@ -261,7 +309,7 @@ export function CheckSession({ clients, persona, shift }: CheckSessionProps) {
       }))
       return {
         ...prev,
-        [current.id]: { ...s, numCampaigns: n, campaignNames: names, answers: {}, tasks },
+        [current.id]: { ...s, numCampaigns: n, campaignNames: names, answers: {}, commissionCounts: {}, tasks },
       }
     })
   }
@@ -321,6 +369,19 @@ export function CheckSession({ clients, persona, shift }: CheckSessionProps) {
       assignee: t.assignee,
     }))
 
+    const commissions: SubmitCommissionCampaign[] | undefined =
+      showCommission && state.checkType === 'live' && state.numCampaigns
+        ? Array.from({ length: state.numCampaigns }, (_, i) => ({
+            campaignName: (state.campaignNames[i] ?? '').trim(),
+            categories: current.commissionCategories.map((cat) => ({
+              categoryId: cat.id,
+              categoryName: cat.name,
+              unitPriceCents: cat.priceCents,
+              count: parseCount(state.commissionCounts[`${i}_${cat.id}`]),
+            })),
+          }))
+        : undefined
+
     startTransition(async () => {
       const result = await submitCheck({
         clientId: current.id,
@@ -330,6 +391,7 @@ export function CheckSession({ clients, persona, shift }: CheckSessionProps) {
         tasks: submitTasks,
         persona,
         shift,
+        commissions,
       })
 
       if (result.error) {
@@ -420,13 +482,19 @@ export function CheckSession({ clients, persona, shift }: CheckSessionProps) {
                   tasks={state.tasks}
                   dismissed={state.dismissedSuggestions}
                   monthlyContacts={current.monthlyContacts}
+                  showCommission={showCommission}
+                  commissionCategories={current.commissionCategories}
+                  commissionCounts={state.commissionCounts}
                   onSetNumCampaigns={setNumCampaigns}
                   onSetCampaignName={setCampaignName}
                   onChange={setAnswer}
                   onAcceptSuggestion={acceptSuggestion}
                   onDismissSuggestion={dismissSuggestion}
+                  onSetCommissionCount={setCommissionCount}
                 />
               )}
+
+              {commissionDay && <CommissionDayTotal day={commissionDay} />}
 
               <TasksBlock
                 tasks={state.tasks}
@@ -777,11 +845,15 @@ function LiveForm({
   tasks,
   dismissed,
   monthlyContacts,
+  showCommission,
+  commissionCategories,
+  commissionCounts,
   onSetNumCampaigns,
   onSetCampaignName,
   onChange,
   onAcceptSuggestion,
   onDismissSuggestion,
+  onSetCommissionCount,
 }: {
   questions: CheckQuestion[]
   numCampaigns: number | null
@@ -790,11 +862,15 @@ function LiveForm({
   tasks: TaskDraft[]
   dismissed: Set<string>
   monthlyContacts: number | null
+  showCommission: boolean
+  commissionCategories: CommissionCategory[]
+  commissionCounts: Record<string, string>
   onSetNumCampaigns: (n: number) => void
   onSetCampaignName: (i: number, value: string) => void
   onChange: (key: string, value: string) => void
   onAcceptSuggestion: (sourceKey: string, suggestion: string, assignTo: Persona, campaignIndex: number | null) => void
   onDismissSuggestion: (sourceKey: string) => void
+  onSetCommissionCount: (campaignIndex: number, categoryId: string, value: string) => void
 }) {
   return (
     <div className="space-y-4">
@@ -841,6 +917,14 @@ function LiveForm({
                     )
                   })}
                 </div>
+                {showCommission && (
+                  <CommissionBlock
+                    categories={commissionCategories}
+                    counts={commissionCounts}
+                    campaignIndex={i}
+                    onChange={(categoryId, value) => onSetCommissionCount(i, categoryId, value)}
+                  />
+                )}
                 <div className="text-[11px] text-gray-400">
                   Bovenstaande antwoorden horen bij <span className="font-semibold text-gray-600">{namedTitle}</span>.
                 </div>
@@ -849,6 +933,115 @@ function LiveForm({
           })}
         </div>
       )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Commissie-invoer (alleen Benjamins avondcontrole)
+// ---------------------------------------------------------------------------
+
+function CommissionBlock({
+  categories,
+  counts,
+  campaignIndex,
+  onChange,
+}: {
+  categories: CommissionCategory[]
+  counts: Record<string, string>
+  campaignIndex: number
+  onChange: (categoryId: string, value: string) => void
+}) {
+  let subtotalCents = 0
+  for (const cat of categories) {
+    subtotalCents += parseCount(counts[`${campaignIndex}_${cat.id}`]) * cat.priceCents
+  }
+
+  return (
+    <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50/70 to-teal-50/40 p-4 shadow-sm">
+      <div className="flex items-center gap-2">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-sm">
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+          </svg>
+        </div>
+        <div className="min-w-0 flex-1">
+          <h4 className="text-sm font-semibold text-gray-900">Commissies — leads per categorie vandaag</h4>
+          <p className="text-[11px] text-gray-600">
+            Vul per categorie het aantal leads van vandaag voor deze campagne in.
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-3 space-y-2">
+        {categories.map((cat) => {
+          const key = `${campaignIndex}_${cat.id}`
+          const count = parseCount(counts[key])
+          const lineCents = count * cat.priceCents
+          return (
+            <div
+              key={cat.id}
+              className="flex flex-wrap items-center gap-2 rounded-xl border border-emerald-100 bg-white/80 px-3 py-2"
+            >
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-medium text-gray-900">{cat.name}</div>
+                <div className="text-[11px] text-gray-500">{formatEuroCents(cat.priceCents)} per lead</div>
+              </div>
+              <input
+                type="number"
+                min={0}
+                inputMode="numeric"
+                value={counts[key] ?? ''}
+                onChange={(e) => onChange(cat.id, e.target.value)}
+                placeholder="0"
+                className="h-9 w-20 rounded-lg border border-gray-200 bg-gray-50/40 px-2 text-center text-sm font-semibold text-gray-900 transition-all focus:border-emerald-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-100"
+              />
+              <div className="w-24 text-right text-sm font-semibold text-emerald-700">
+                {formatEuroCents(lineCents)}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      <div className="mt-3 flex items-center justify-between border-t border-emerald-200 pt-2">
+        <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+          Commissie deze campagne
+        </span>
+        <span className="text-sm font-bold text-emerald-700">{formatEuroCents(subtotalCents)}</span>
+      </div>
+    </div>
+  )
+}
+
+function CommissionDayTotal({
+  day,
+}: {
+  day: { commissionCents: number; netCents: number }
+}) {
+  const positive = day.netCents >= 0
+  return (
+    <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+      <h3 className="text-sm font-semibold text-gray-900">Dagtotaal commissies</h3>
+      <p className="mt-0.5 text-xs text-gray-500">
+        Alle campagnes samen, minus de vaste dagkosten van {formatEuroCents(DAILY_COST_CENTS)}.
+      </p>
+      <div className="mt-3 space-y-1.5">
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-gray-600">Commissies vandaag</span>
+          <span className="font-semibold text-gray-900">{formatEuroCents(day.commissionCents)}</span>
+        </div>
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-gray-600">Dagkosten campagne</span>
+          <span className="font-semibold text-rose-600">−{formatEuroCents(DAILY_COST_CENTS)}</span>
+        </div>
+        <div className="flex items-center justify-between border-t border-gray-200 pt-2 text-base">
+          <span className="font-semibold text-gray-900">Netto vandaag</span>
+          <span className={`font-bold ${positive ? 'text-emerald-700' : 'text-rose-700'}`}>
+            {formatEuroCents(day.netCents)}
+          </span>
+        </div>
+      </div>
     </div>
   )
 }

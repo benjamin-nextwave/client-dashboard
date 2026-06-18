@@ -22,6 +22,7 @@ export function OperatorHeader({ signOutAction }: OperatorHeaderProps) {
     { href: '/admin', label: 'Klanten', match: (p: string) => p === '/admin' || p.startsWith('/admin/clients') },
     { href: '/admin/maandelijks-rapport', label: 'Maandelijks rapport', match: (p: string) => p.startsWith('/admin/maandelijks-rapport') },
     { href: '/admin/controle', label: 'Controle', match: (p: string) => p.startsWith('/admin/controle') },
+    { href: '/admin/commissies', label: 'Commissies', match: (p: string) => p.startsWith('/admin/commissies') },
     { href: '/admin/overzicht', label: 'Overzicht', match: (p: string) => p.startsWith('/admin/overzicht') },
     { href: '/admin/news', label: t('operator.nav.news'), match: (p: string) => p.startsWith('/admin/news') },
     { href: '/admin/errors', label: 'Fouten', match: (p: string) => p.startsWith('/admin/errors') },
