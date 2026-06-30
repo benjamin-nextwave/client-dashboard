@@ -121,11 +121,17 @@ export function InboxItem({ lead, isArchived = false, folders, currentFolderId }
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-2">
             <span
-              className={`truncate text-sm ${
+              className={`flex min-w-0 items-center gap-1.5 truncate text-sm ${
                 needsAction && !isArchived ? 'font-semibold text-gray-900' : 'font-medium text-gray-700'
               }`}
             >
-              {name}
+              {lead.has_referral && (
+                <span
+                  title="Doorverwijzing: contactgegevens beschikbaar"
+                  className="inline-block h-2.5 w-2.5 flex-shrink-0 rounded-full bg-red-500 ring-2 ring-red-100"
+                />
+              )}
+              <span className="truncate">{name}</span>
             </span>
             <span className="flex-shrink-0 text-xs text-gray-500">
               {relativeDate}

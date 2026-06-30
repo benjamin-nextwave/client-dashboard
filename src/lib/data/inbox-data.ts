@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getAdminContactsMap, hasAdminContact } from '@/lib/data/lead-admin-contacts'
 
 // --- Types ---
 
@@ -20,6 +21,7 @@ export interface InboxLead {
   archived_at: string | null
   objection_status: string | null
   folder_id: string | null
+  has_referral: boolean
 }
 
 export interface InboxFolder {
@@ -71,6 +73,9 @@ export async function getPositiveLeadsForInbox(
 
   if (!data || data.length === 0) return []
 
+  // Look up which lead emails have an admin "doorverwijzing" note.
+  const adminContacts = await getAdminContactsMap(clientId)
+
   // Deduplicate: keep first occurrence per email (most recent due to ordering)
   const seen = new Set<string>()
   const leads: InboxLead[] = []
@@ -96,6 +101,7 @@ export async function getPositiveLeadsForInbox(
         archived_at: row.archived_at ?? null,
         objection_status: row.objection_status ?? null,
         folder_id: row.folder_id ?? null,
+        has_referral: hasAdminContact(adminContacts.get(row.email.toLowerCase())),
       })
     }
   }
