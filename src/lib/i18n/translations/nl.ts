@@ -243,6 +243,14 @@ export interface Translations {
     objectionAlreadyPending: string
     objectionApprovedNote: string
     objectionRejectedNote: string
+    adminContactTitle: string
+    adminContactIntro: string
+    adminContactNone: string
+    adminContactName: string
+    adminContactJobTitle: string
+    adminContactEmail: string
+    adminContactLinkedIn: string
+    adminContactOpenLinkedIn: string
   }
   leads: {
     title: string
@@ -819,6 +827,14 @@ export const nl: Translations = {
     objectionAlreadyPending: 'Je bezwaar is in behandeling.',
     objectionApprovedNote: 'Je bezwaar is goedgekeurd.',
     objectionRejectedNote: 'Je bezwaar is afgewezen.',
+    adminContactTitle: 'Doorverwijzing naar de beslisser',
+    adminContactIntro: 'Onze specialist heeft de juiste contactpersoon voor je opgezocht:',
+    adminContactNone: 'We hebben helaas geen contactgegevens kunnen vinden voor de beslisser.',
+    adminContactName: 'Naam',
+    adminContactJobTitle: 'Functietitel',
+    adminContactEmail: 'E-mailadres',
+    adminContactLinkedIn: 'LinkedIn',
+    adminContactOpenLinkedIn: 'Open LinkedIn-profiel',
   },
 
   leads: {

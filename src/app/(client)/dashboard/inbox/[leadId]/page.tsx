@@ -10,6 +10,7 @@ import { ArchiveButton } from '../_components/archive-button'
 import { ObjectionButton } from '../_components/objection-form'
 import { VacancySnippets } from '../_components/vacancy-snippets'
 import { LeadNotes } from '../_components/lead-notes'
+import { AdminContactBox } from '../_components/admin-contact-box'
 import { ThreadRealtimeProvider } from '../_components/thread-realtime-provider'
 import { getTranslator } from '@/lib/i18n/server'
 
@@ -62,7 +63,7 @@ export default async function LeadThreadPage({
   const { data: lead, error: leadError } = await supabase
     .from('synced_leads')
     .select(
-      'id, email, first_name, last_name, company_name, job_title, linkedin_url, vacancy_url, sender_account, campaign_id, client_has_replied, reply_subject, archived_at, objection_status, objection_data'
+      'id, email, first_name, last_name, company_name, job_title, linkedin_url, vacancy_url, sender_account, campaign_id, client_has_replied, reply_subject, archived_at, objection_status, objection_data, admin_contact_name, admin_contact_email, admin_contact_linkedin_url, admin_contact_job_title, admin_contact_none'
     )
     .eq('id', leadId)
     .single()
@@ -131,6 +132,17 @@ export default async function LeadThreadPage({
 
   const isRecruitment = clientData?.is_recruitment ?? false
 
+  const adminContact = {
+    name: lead.admin_contact_name ?? null,
+    email: lead.admin_contact_email ?? null,
+    linkedinUrl: lead.admin_contact_linkedin_url ?? null,
+    jobTitle: lead.admin_contact_job_title ?? null,
+    none: lead.admin_contact_none ?? false,
+  }
+  const showAdminContact =
+    adminContact.none ||
+    !!(adminContact.name || adminContact.email || adminContact.linkedinUrl || adminContact.jobTitle)
+
   return (
     <div>
       <ThreadRealtimeProvider clientId={client.id} leadEmail={lead.email} />
@@ -143,6 +155,12 @@ export default async function LeadThreadPage({
         </Link>
         <ArchiveButton leadId={lead.id} isArchived={!!lead.archived_at} />
       </div>
+
+      {showAdminContact && (
+        <div className="mb-6">
+          <AdminContactBox contact={adminContact} />
+        </div>
+      )}
 
       <div className="lg:grid lg:grid-cols-3 lg:gap-6">
         <div className="lg:col-span-2">

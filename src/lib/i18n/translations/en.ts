@@ -273,6 +273,14 @@ export const en: Translations = {
     objectionAlreadyPending: 'Your objection is pending.',
     objectionApprovedNote: 'Your objection was approved.',
     objectionRejectedNote: 'Your objection was rejected.',
+    adminContactTitle: 'Referral to the decision-maker',
+    adminContactIntro: 'Our specialist looked up the right contact for you:',
+    adminContactNone: 'Unfortunately we could not find any contact details for the decision-maker.',
+    adminContactName: 'Name',
+    adminContactJobTitle: 'Job title',
+    adminContactEmail: 'Email address',
+    adminContactLinkedIn: 'LinkedIn',
+    adminContactOpenLinkedIn: 'Open LinkedIn profile',
   },
 
   leads: {

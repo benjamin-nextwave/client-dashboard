@@ -273,6 +273,14 @@ export const hi: Translations = {
     objectionAlreadyPending: 'आपकी आपत्ति विचाराधीन है।',
     objectionApprovedNote: 'आपकी आपत्ति स्वीकृत हो गई।',
     objectionRejectedNote: 'आपकी आपत्ति अस्वीकृत हो गई।',
+    adminContactTitle: 'निर्णयकर्ता के लिए रेफ़रल',
+    adminContactIntro: 'हमारे विशेषज्ञ ने आपके लिए सही संपर्क व्यक्ति खोज निकाला है:',
+    adminContactNone: 'दुर्भाग्यवश हमें निर्णयकर्ता का कोई संपर्क विवरण नहीं मिल सका।',
+    adminContactName: 'नाम',
+    adminContactJobTitle: 'पदनाम',
+    adminContactEmail: 'ईमेल पता',
+    adminContactLinkedIn: 'लिंक्डइन',
+    adminContactOpenLinkedIn: 'लिंक्डइन प्रोफ़ाइल खोलें',
   },
 
   leads: {
