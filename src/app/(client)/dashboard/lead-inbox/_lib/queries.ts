@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getAdminContactsMap, hasAdminContact } from '@/lib/data/lead-admin-contacts'
 import type {
   Lead,
   LeadNote,
@@ -97,9 +98,11 @@ function deriveStatus(
 type LabelAssignmentRow = { lead_id: string; label_id: string }
 
 export async function getLeadsWithStatusForCustomer(
-  customerId: string
+  customerId: string,
+  clientId: string
 ): Promise<LeadWithStatus[]> {
   const supabase = await createClient()
+  const adminContacts = await getAdminContactsMap(clientId)
   const [leadsResult, outboundResult, labelsResult, assignmentsResult, notesResult] =
     await Promise.all([
       supabase
@@ -155,6 +158,7 @@ export async function getLeadsWithStatusForCustomer(
       ...deriveStatus(lead, leadOutbounds),
       labels: labelsByLead.get(lead.id) ?? [],
       noteCount: noteCountByLead.get(lead.id) ?? 0,
+      hasReferral: hasAdminContact(adminContacts.get(lead.email.toLowerCase())),
     }
   })
 }

@@ -100,8 +100,14 @@ export function LeadListPane({ leads }: { leads: LeadWithStatus[] }) {
               ].join(' ')}
             >
               <div className="flex items-baseline justify-between gap-3">
-                <p className="truncate text-sm font-semibold text-gray-900">
-                  {lead.name || lead.email}
+                <p className="flex min-w-0 items-center gap-1.5 truncate text-sm font-semibold text-gray-900">
+                  {lead.hasReferral && (
+                    <span
+                      title="Doorverwijzing: contactgegevens beschikbaar"
+                      className="inline-block h-2.5 w-2.5 shrink-0 rounded-full bg-red-500 ring-2 ring-red-100"
+                    />
+                  )}
+                  <span className="truncate">{lead.name || lead.email}</span>
                 </p>
                 <span className="shrink-0 text-xs text-gray-500">
                   {formatRelative(lead.last_reply_at)}

@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { getClientBranding } from '@/lib/client/get-client-branding'
+import { AdminContactBox } from '@/components/admin-contact-box'
+import { getAdminContactByEmail, hasAdminContact } from '@/lib/data/lead-admin-contacts'
 import { LeadWorkspace } from '../_components/lead-workspace'
 import { RepliesThread } from '../_components/replies-thread'
 import { requireLeadInboxCustomerId } from '../_lib/customer'
@@ -35,6 +37,10 @@ export default async function LeadDetailPage({
     ])
 
   if (!lead) notFound()
+
+  const adminContact = branding
+    ? await getAdminContactByEmail(branding.id, lead.email)
+    : null
 
   const thread = buildThreadItems(lead, outbounds)
   const lastInbound = [...lead.replies]
@@ -80,6 +86,12 @@ export default async function LeadDetailPage({
           />
         </div>
       </header>
+
+      {hasAdminContact(adminContact) && adminContact && (
+        <div className="mt-5">
+          <AdminContactBox data={adminContact} />
+        </div>
+      )}
 
       <section className="mt-5">
         <RepliesThread items={thread} />

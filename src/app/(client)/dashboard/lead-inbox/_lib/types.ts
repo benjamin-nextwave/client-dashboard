@@ -87,6 +87,7 @@ export type LeadWithStatus = Lead & {
   pendingOutboundCount: number
   labels: UserLabel[]
   noteCount: number
+  hasReferral: boolean
 }
 
 // Genormaliseerde thread-entry voor weergave (mengt inbound JSONB en outbound table).
