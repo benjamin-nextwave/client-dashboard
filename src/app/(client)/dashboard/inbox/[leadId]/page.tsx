@@ -151,7 +151,7 @@ export default async function LeadThreadPage({
 
       {showAdminContact && adminContact && (
         <div className="mb-6">
-          <AdminContactBox contact={adminContact} />
+          <AdminContactBox data={adminContact} />
         </div>
       )}
 

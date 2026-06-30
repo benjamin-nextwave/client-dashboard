@@ -6,15 +6,20 @@ import {
   saveAdminContact,
   markNoAdminContact,
   clearAdminContact,
+  type AdminContactInput,
 } from '../actions'
 
 export type LeadSourceTag = 'inbox' | 'campaign'
 
-export interface ManagerContact {
+export interface ManagerContactEntry {
   name: string | null
   email: string | null
   linkedinUrl: string | null
   jobTitle: string | null
+}
+
+export interface ManagerContactRecord {
+  contacts: ManagerContactEntry[]
   none: boolean
 }
 
@@ -23,7 +28,7 @@ export interface ManagerLead {
   fullName: string | null
   companyName: string | null
   sources: LeadSourceTag[]
-  contact: ManagerContact | null
+  contact: ManagerContactRecord | null
 }
 
 interface Props {
@@ -31,8 +36,22 @@ interface Props {
   leads: ManagerLead[]
 }
 
-function hasContact(c: ManagerContact | null): boolean {
-  return !!c && (c.none || !!(c.name || c.email || c.linkedinUrl || c.jobTitle))
+function hasContact(c: ManagerContactRecord | null): boolean {
+  return !!c && (c.none || c.contacts.length > 0)
+}
+
+function emptyEntry(): AdminContactInput {
+  return { name: '', email: '', linkedinUrl: '', jobTitle: '' }
+}
+
+function toInputs(record: ManagerContactRecord | null): AdminContactInput[] {
+  if (!record || record.contacts.length === 0) return [emptyEntry()]
+  return record.contacts.map((c) => ({
+    name: c.name ?? '',
+    email: c.email ?? '',
+    linkedinUrl: c.linkedinUrl ?? '',
+    jobTitle: c.jobTitle ?? '',
+  }))
 }
 
 const SOURCE_LABEL: Record<LeadSourceTag, string> = {
@@ -45,10 +64,7 @@ export function AdminContactManager({ clientId, leads }: Props) {
   const [pending, startTransition] = useTransition()
 
   const [selectedEmail, setSelectedEmail] = useState('')
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
-  const [linkedinUrl, setLinkedinUrl] = useState('')
-  const [jobTitle, setJobTitle] = useState('')
+  const [entries, setEntries] = useState<AdminContactInput[]>([emptyEntry()])
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
 
@@ -62,23 +78,26 @@ export function AdminContactManager({ clientId, leads }: Props) {
     setError(null)
     setSaved(false)
     const lead = leads.find((l) => l.email === value)
-    setName(lead?.contact?.name ?? '')
-    setEmail(lead?.contact?.email ?? '')
-    setLinkedinUrl(lead?.contact?.linkedinUrl ?? '')
-    setJobTitle(lead?.contact?.jobTitle ?? '')
+    setEntries(toInputs(lead?.contact ?? null))
   }
+
+  const updateEntry = (index: number, field: keyof AdminContactInput, value: string) => {
+    setEntries((prev) =>
+      prev.map((e, i) => (i === index ? { ...e, [field]: value } : e))
+    )
+  }
+
+  const addEntry = () => setEntries((prev) => [...prev, emptyEntry()])
+
+  const removeEntry = (index: number) =>
+    setEntries((prev) => (prev.length <= 1 ? prev : prev.filter((_, i) => i !== index)))
 
   const handleSave = () => {
     if (!selectedLead) return
     setError(null)
     setSaved(false)
     startTransition(async () => {
-      const result = await saveAdminContact(clientId, selectedLead.email, {
-        name,
-        email,
-        linkedinUrl,
-        jobTitle,
-      })
+      const result = await saveAdminContact(clientId, selectedLead.email, entries)
       if (result.error) {
         setError(result.error)
         return
@@ -98,10 +117,7 @@ export function AdminContactManager({ clientId, leads }: Props) {
         setError(result.error)
         return
       }
-      setName('')
-      setEmail('')
-      setLinkedinUrl('')
-      setJobTitle('')
+      setEntries([emptyEntry()])
       setSaved(true)
       router.refresh()
     })
@@ -117,10 +133,7 @@ export function AdminContactManager({ clientId, leads }: Props) {
         setError(result.error)
         return
       }
-      setName('')
-      setEmail('')
-      setLinkedinUrl('')
-      setJobTitle('')
+      setEntries([emptyEntry()])
       setSaved(true)
       router.refresh()
     })
@@ -175,36 +188,75 @@ export function AdminContactManager({ clientId, leads }: Props) {
       {selectedLead && (
         <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
           <div className="mb-4">
-            <h2 className="text-sm font-semibold text-gray-900">Contactgegevens beslisser</h2>
+            <h2 className="text-sm font-semibold text-gray-900">Contactgegevens beslisser(s)</h2>
             <p className="text-xs text-gray-500">
-              Alle velden zijn optioneel. Vul in wat je hebt, of klik op
-              &ldquo;Geen contactgegevens gevonden&rdquo;.
+              Voeg één of meerdere contacten toe. Alle velden zijn optioneel —
+              vul in wat je hebt, of klik op &ldquo;Geen contactgegevens gevonden&rdquo;.
             </p>
           </div>
 
           <div className="space-y-4">
-            <Field label="Naam" value={name} onChange={setName} placeholder="Bijv. Jan de Vries" />
-            <Field
-              label="Functietitel"
-              value={jobTitle}
-              onChange={setJobTitle}
-              placeholder="Bijv. HR Manager"
-            />
-            <Field
-              label="E-mailadres"
-              value={email}
-              onChange={setEmail}
-              placeholder="naam@bedrijf.nl"
-              type="email"
-            />
-            <Field
-              label="LinkedIn URL"
-              value={linkedinUrl}
-              onChange={setLinkedinUrl}
-              placeholder="https://linkedin.com/in/..."
-              type="url"
-            />
+            {entries.map((entry, index) => (
+              <div
+                key={index}
+                className="rounded-xl border border-gray-200 bg-gray-50/60 p-4"
+              >
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    Contact {index + 1}
+                  </span>
+                  {entries.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeEntry(index)}
+                      className="rounded-md px-2 py-1 text-xs font-medium text-gray-400 hover:bg-gray-200 hover:text-gray-700"
+                    >
+                      Verwijderen
+                    </button>
+                  )}
+                </div>
+                <div className="space-y-3">
+                  <Field
+                    label="Naam"
+                    value={entry.name}
+                    onChange={(v) => updateEntry(index, 'name', v)}
+                    placeholder="Bijv. Jan de Vries"
+                  />
+                  <Field
+                    label="Functietitel"
+                    value={entry.jobTitle}
+                    onChange={(v) => updateEntry(index, 'jobTitle', v)}
+                    placeholder="Bijv. HR Manager"
+                  />
+                  <Field
+                    label="E-mailadres"
+                    value={entry.email}
+                    onChange={(v) => updateEntry(index, 'email', v)}
+                    placeholder="naam@bedrijf.nl"
+                    type="email"
+                  />
+                  <Field
+                    label="LinkedIn URL"
+                    value={entry.linkedinUrl}
+                    onChange={(v) => updateEntry(index, 'linkedinUrl', v)}
+                    placeholder="https://linkedin.com/in/..."
+                    type="url"
+                  />
+                </div>
+              </div>
+            ))}
           </div>
+
+          <button
+            type="button"
+            onClick={addEntry}
+            className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-dashed border-gray-300 px-3 py-2 text-sm font-medium text-gray-600 hover:border-indigo-300 hover:text-indigo-700"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            Nog een contact toevoegen
+          </button>
 
           {error && (
             <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p>

@@ -274,7 +274,7 @@ export const hi: Translations = {
     objectionApprovedNote: 'आपकी आपत्ति स्वीकृत हो गई।',
     objectionRejectedNote: 'आपकी आपत्ति अस्वीकृत हो गई।',
     adminContactTitle: 'निर्णयकर्ता के लिए रेफ़रल',
-    adminContactIntro: 'हमारे विशेषज्ञ ने आपके लिए सही संपर्क व्यक्ति खोज निकाला है:',
+    adminContactIntro: 'हमारे विशेषज्ञ ने आपके लिए सही संपर्क विवरण खोज निकाले हैं:',
     adminContactNone: 'दुर्भाग्यवश हमें निर्णयकर्ता का कोई संपर्क विवरण नहीं मिल सका।',
     adminContactName: 'नाम',
     adminContactJobTitle: 'पदनाम',

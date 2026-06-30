@@ -1,6 +1,6 @@
 import { cache } from 'react'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getAdminContactsMap, type AdminContact } from '@/lib/data/lead-admin-contacts'
+import { getAdminContactsMap, type AdminContactRecord } from '@/lib/data/lead-admin-contacts'
 
 export const LEAD_LABELS = [
   'meeting_voorstel',
@@ -116,7 +116,7 @@ export type CampaignLead = {
   objectionResolvedAt: string | null
   objectionProposedLabel: LeadLabel | null
   objectionProposedLabelNote: string | null
-  adminContact: AdminContact | null
+  adminContact: AdminContactRecord | null
   createdAt: string
   updatedAt: string
 }

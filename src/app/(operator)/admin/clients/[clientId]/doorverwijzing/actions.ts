@@ -12,14 +12,35 @@ export interface AdminContactInput {
   jobTitle: string
 }
 
-function clean(value: string): string | null {
+interface CleanedContact {
+  name?: string
+  email?: string
+  linkedinUrl?: string
+  jobTitle?: string
+}
+
+function clean(value: string): string | undefined {
   const trimmed = value.trim()
-  return trimmed.length > 0 ? trimmed : null
+  return trimmed.length > 0 ? trimmed : undefined
 }
 
 function normalizeEmail(email: string): string | null {
   const trimmed = email.trim().toLowerCase()
   return trimmed.length > 0 ? trimmed : null
+}
+
+/** Strip empty fields; drop the contact entirely if nothing is filled in. */
+function cleanContact(input: AdminContactInput): CleanedContact | null {
+  const entry: CleanedContact = {}
+  const name = clean(input.name)
+  const email = clean(input.email)
+  const linkedinUrl = clean(input.linkedinUrl)
+  const jobTitle = clean(input.jobTitle)
+  if (name) entry.name = name
+  if (email) entry.email = email
+  if (linkedinUrl) entry.linkedinUrl = linkedinUrl
+  if (jobTitle) entry.jobTitle = jobTitle
+  return Object.keys(entry).length > 0 ? entry : null
 }
 
 function revalidateClientViews(clientId: string) {
@@ -28,23 +49,22 @@ function revalidateClientViews(clientId: string) {
   revalidatePath('/dashboard/inbox', 'layout')
 }
 
-/** Save manually-entered decision-maker contact details for a lead email. */
+/** Save one or more decision-maker contacts for a lead email. */
 export async function saveAdminContact(
   clientId: string,
   leadEmail: string,
-  input: AdminContactInput
+  contacts: AdminContactInput[]
 ): Promise<ActionResult> {
   const email = normalizeEmail(leadEmail)
   if (!email) return { error: 'Geen geldig e-mailadres voor de lead.' }
 
-  const name = clean(input.name)
-  const contactEmail = clean(input.email)
-  const linkedinUrl = clean(input.linkedinUrl)
-  const jobTitle = clean(input.jobTitle)
+  const cleaned = contacts
+    .map(cleanContact)
+    .filter((c): c is CleanedContact => c !== null)
 
-  if (!name && !contactEmail && !linkedinUrl && !jobTitle) {
+  if (cleaned.length === 0) {
     return {
-      error: 'Vul minstens één veld in of kies "Geen contactgegevens gevonden".',
+      error: 'Vul minstens één contact in of kies "Geen contactgegevens gevonden".',
     }
   }
 
@@ -53,10 +73,7 @@ export async function saveAdminContact(
     {
       client_id: clientId,
       lead_email: email,
-      contact_name: name,
-      contact_email: contactEmail,
-      contact_linkedin_url: linkedinUrl,
-      contact_job_title: jobTitle,
+      contacts: cleaned,
       contact_none: false,
       updated_at: new Date().toISOString(),
     },
@@ -82,10 +99,7 @@ export async function markNoAdminContact(
     {
       client_id: clientId,
       lead_email: email,
-      contact_name: null,
-      contact_email: null,
-      contact_linkedin_url: null,
-      contact_job_title: null,
+      contacts: [],
       contact_none: true,
       updated_at: new Date().toISOString(),
     },

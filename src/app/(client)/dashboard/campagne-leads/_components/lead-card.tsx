@@ -103,7 +103,7 @@ export function LeadCard({ lead }: { lead: CampaignLead }) {
         <div className="border-t border-gray-100 bg-gray-50/60 px-5 py-4">
           {hasReferral && lead.adminContact && (
             <div className="mb-4">
-              <AdminContactBox contact={lead.adminContact} />
+              <AdminContactBox data={lead.adminContact} />
             </div>
           )}
           {(hasSent || hasReply) && (

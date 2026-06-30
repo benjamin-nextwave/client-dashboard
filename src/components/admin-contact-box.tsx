@@ -2,23 +2,27 @@
 
 import { useT } from '@/lib/i18n/client'
 
-export interface AdminContactBoxData {
+export interface AdminContactBoxEntry {
   name: string | null
   email: string | null
   linkedinUrl: string | null
   jobTitle: string | null
+}
+
+export interface AdminContactBoxData {
+  contacts: AdminContactBoxEntry[]
   none: boolean
 }
 
 /** Returns true when there is anything worth showing to the client. */
-export function hasAdminContactBox(c: AdminContactBoxData | null | undefined): boolean {
-  return !!c && (c.none || !!(c.name || c.email || c.linkedinUrl || c.jobTitle))
+export function hasAdminContactBox(d: AdminContactBoxData | null | undefined): boolean {
+  return !!d && (d.none || d.contacts.length > 0)
 }
 
-export function AdminContactBox({ contact }: { contact: AdminContactBoxData }) {
+export function AdminContactBox({ data }: { data: AdminContactBoxData }) {
   const t = useT()
 
-  if (!hasAdminContactBox(contact)) return null
+  if (!hasAdminContactBox(data)) return null
 
   return (
     <div className="rounded-xl border-2 border-red-500 bg-red-50 p-5 shadow-sm">
@@ -31,51 +35,69 @@ export function AdminContactBox({ contact }: { contact: AdminContactBoxData }) {
         <div className="min-w-0 flex-1">
           <h2 className="text-base font-bold text-red-800">{t('inbox.adminContactTitle')}</h2>
 
-          {contact.none ? (
+          {data.none ? (
             <p className="mt-1.5 text-sm font-medium text-red-700">
               {t('inbox.adminContactNone')}
             </p>
           ) : (
             <>
               <p className="mt-1 text-sm text-red-700">{t('inbox.adminContactIntro')}</p>
-              <dl className="mt-3 space-y-2.5">
-                {contact.name && (
-                  <Row label={t('inbox.adminContactName')}>
-                    <span className="font-semibold text-red-900">{contact.name}</span>
-                  </Row>
-                )}
-                {contact.jobTitle && (
-                  <Row label={t('inbox.adminContactJobTitle')}>
-                    <span className="text-red-900">{contact.jobTitle}</span>
-                  </Row>
-                )}
-                {contact.email && (
-                  <Row label={t('inbox.adminContactEmail')}>
-                    <a
-                      href={`mailto:${contact.email}`}
-                      className="font-medium text-red-700 underline hover:text-red-900"
-                    >
-                      {contact.email}
-                    </a>
-                  </Row>
-                )}
-                {contact.linkedinUrl && (
-                  <Row label={t('inbox.adminContactLinkedIn')}>
-                    <a
-                      href={contact.linkedinUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-medium text-red-700 underline hover:text-red-900"
-                    >
-                      {t('inbox.adminContactOpenLinkedIn')}
-                    </a>
-                  </Row>
-                )}
-              </dl>
+              <div className="mt-3 space-y-3">
+                {data.contacts.map((contact, i) => (
+                  <ContactBlock key={i} contact={contact} t={t} />
+                ))}
+              </div>
             </>
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+function ContactBlock({
+  contact,
+  t,
+}: {
+  contact: AdminContactBoxEntry
+  t: ReturnType<typeof useT>
+}) {
+  return (
+    <div className="rounded-lg border border-red-200 bg-white/60 p-3">
+      <dl className="space-y-2">
+        {contact.name && (
+          <Row label={t('inbox.adminContactName')}>
+            <span className="font-semibold text-red-900">{contact.name}</span>
+          </Row>
+        )}
+        {contact.jobTitle && (
+          <Row label={t('inbox.adminContactJobTitle')}>
+            <span className="text-red-900">{contact.jobTitle}</span>
+          </Row>
+        )}
+        {contact.email && (
+          <Row label={t('inbox.adminContactEmail')}>
+            <a
+              href={`mailto:${contact.email}`}
+              className="font-medium text-red-700 underline hover:text-red-900"
+            >
+              {contact.email}
+            </a>
+          </Row>
+        )}
+        {contact.linkedinUrl && (
+          <Row label={t('inbox.adminContactLinkedIn')}>
+            <a
+              href={contact.linkedinUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-red-700 underline hover:text-red-900"
+            >
+              {t('inbox.adminContactOpenLinkedIn')}
+            </a>
+          </Row>
+        )}
+      </dl>
     </div>
   )
 }
