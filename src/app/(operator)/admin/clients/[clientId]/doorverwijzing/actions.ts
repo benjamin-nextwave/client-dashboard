@@ -17,92 +17,104 @@ function clean(value: string): string | null {
   return trimmed.length > 0 ? trimmed : null
 }
 
-/** Save manually-entered decision-maker contact details on a lead. */
+function normalizeEmail(email: string): string | null {
+  const trimmed = email.trim().toLowerCase()
+  return trimmed.length > 0 ? trimmed : null
+}
+
+function revalidateClientViews(clientId: string) {
+  revalidatePath(`/admin/clients/${clientId}/doorverwijzing`)
+  revalidatePath('/dashboard/campagne-leads')
+  revalidatePath('/dashboard/inbox', 'layout')
+}
+
+/** Save manually-entered decision-maker contact details for a lead email. */
 export async function saveAdminContact(
   clientId: string,
-  leadId: string,
+  leadEmail: string,
   input: AdminContactInput
 ): Promise<ActionResult> {
+  const email = normalizeEmail(leadEmail)
+  if (!email) return { error: 'Geen geldig e-mailadres voor de lead.' }
+
   const name = clean(input.name)
-  const email = clean(input.email)
+  const contactEmail = clean(input.email)
   const linkedinUrl = clean(input.linkedinUrl)
   const jobTitle = clean(input.jobTitle)
 
-  if (!name && !email && !linkedinUrl && !jobTitle) {
+  if (!name && !contactEmail && !linkedinUrl && !jobTitle) {
     return {
       error: 'Vul minstens één veld in of kies "Geen contactgegevens gevonden".',
     }
   }
 
   const supabase = createAdminClient()
-  const { error } = await supabase
-    .from('synced_leads')
-    .update({
-      admin_contact_name: name,
-      admin_contact_email: email,
-      admin_contact_linkedin_url: linkedinUrl,
-      admin_contact_job_title: jobTitle,
-      admin_contact_none: false,
-      admin_contact_updated_at: new Date().toISOString(),
-    })
-    .eq('id', leadId)
-    .eq('client_id', clientId)
+  const { error } = await supabase.from('lead_admin_contacts').upsert(
+    {
+      client_id: clientId,
+      lead_email: email,
+      contact_name: name,
+      contact_email: contactEmail,
+      contact_linkedin_url: linkedinUrl,
+      contact_job_title: jobTitle,
+      contact_none: false,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'client_id,lead_email' }
+  )
 
   if (error) return { error: error.message }
 
-  revalidatePath(`/admin/clients/${clientId}/doorverwijzing`)
-  revalidatePath(`/dashboard/inbox/${leadId}`)
+  revalidateClientViews(clientId)
   return {}
 }
 
 /** Mark the lead as "no contact details found" (shown explicitly to the client). */
 export async function markNoAdminContact(
   clientId: string,
-  leadId: string
+  leadEmail: string
 ): Promise<ActionResult> {
+  const email = normalizeEmail(leadEmail)
+  if (!email) return { error: 'Geen geldig e-mailadres voor de lead.' }
+
   const supabase = createAdminClient()
-  const { error } = await supabase
-    .from('synced_leads')
-    .update({
-      admin_contact_name: null,
-      admin_contact_email: null,
-      admin_contact_linkedin_url: null,
-      admin_contact_job_title: null,
-      admin_contact_none: true,
-      admin_contact_updated_at: new Date().toISOString(),
-    })
-    .eq('id', leadId)
-    .eq('client_id', clientId)
+  const { error } = await supabase.from('lead_admin_contacts').upsert(
+    {
+      client_id: clientId,
+      lead_email: email,
+      contact_name: null,
+      contact_email: null,
+      contact_linkedin_url: null,
+      contact_job_title: null,
+      contact_none: true,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'client_id,lead_email' }
+  )
 
   if (error) return { error: error.message }
 
-  revalidatePath(`/admin/clients/${clientId}/doorverwijzing`)
-  revalidatePath(`/dashboard/inbox/${leadId}`)
+  revalidateClientViews(clientId)
   return {}
 }
 
-/** Remove the admin note entirely so nothing shows on the client side. */
+/** Remove the note entirely so nothing shows on the client side. */
 export async function clearAdminContact(
   clientId: string,
-  leadId: string
+  leadEmail: string
 ): Promise<ActionResult> {
+  const email = normalizeEmail(leadEmail)
+  if (!email) return { error: 'Geen geldig e-mailadres voor de lead.' }
+
   const supabase = createAdminClient()
   const { error } = await supabase
-    .from('synced_leads')
-    .update({
-      admin_contact_name: null,
-      admin_contact_email: null,
-      admin_contact_linkedin_url: null,
-      admin_contact_job_title: null,
-      admin_contact_none: false,
-      admin_contact_updated_at: null,
-    })
-    .eq('id', leadId)
+    .from('lead_admin_contacts')
+    .delete()
     .eq('client_id', clientId)
+    .eq('lead_email', email)
 
   if (error) return { error: error.message }
 
-  revalidatePath(`/admin/clients/${clientId}/doorverwijzing`)
-  revalidatePath(`/dashboard/inbox/${leadId}`)
+  revalidateClientViews(clientId)
   return {}
 }

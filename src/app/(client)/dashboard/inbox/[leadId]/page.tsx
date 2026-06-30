@@ -10,7 +10,8 @@ import { ArchiveButton } from '../_components/archive-button'
 import { ObjectionButton } from '../_components/objection-form'
 import { VacancySnippets } from '../_components/vacancy-snippets'
 import { LeadNotes } from '../_components/lead-notes'
-import { AdminContactBox } from '../_components/admin-contact-box'
+import { AdminContactBox } from '@/components/admin-contact-box'
+import { getAdminContactByEmail, hasAdminContact } from '@/lib/data/lead-admin-contacts'
 import { ThreadRealtimeProvider } from '../_components/thread-realtime-provider'
 import { getTranslator } from '@/lib/i18n/server'
 
@@ -63,7 +64,7 @@ export default async function LeadThreadPage({
   const { data: lead, error: leadError } = await supabase
     .from('synced_leads')
     .select(
-      'id, email, first_name, last_name, company_name, job_title, linkedin_url, vacancy_url, sender_account, campaign_id, client_has_replied, reply_subject, archived_at, objection_status, objection_data, admin_contact_name, admin_contact_email, admin_contact_linkedin_url, admin_contact_job_title, admin_contact_none'
+      'id, email, first_name, last_name, company_name, job_title, linkedin_url, vacancy_url, sender_account, campaign_id, client_has_replied, reply_subject, archived_at, objection_status, objection_data'
     )
     .eq('id', leadId)
     .single()
@@ -132,16 +133,8 @@ export default async function LeadThreadPage({
 
   const isRecruitment = clientData?.is_recruitment ?? false
 
-  const adminContact = {
-    name: lead.admin_contact_name ?? null,
-    email: lead.admin_contact_email ?? null,
-    linkedinUrl: lead.admin_contact_linkedin_url ?? null,
-    jobTitle: lead.admin_contact_job_title ?? null,
-    none: lead.admin_contact_none ?? false,
-  }
-  const showAdminContact =
-    adminContact.none ||
-    !!(adminContact.name || adminContact.email || adminContact.linkedinUrl || adminContact.jobTitle)
+  const adminContact = await getAdminContactByEmail(client.id, lead.email)
+  const showAdminContact = hasAdminContact(adminContact)
 
   return (
     <div>
@@ -156,7 +149,7 @@ export default async function LeadThreadPage({
         <ArchiveButton leadId={lead.id} isArchived={!!lead.archived_at} />
       </div>
 
-      {showAdminContact && (
+      {showAdminContact && adminContact && (
         <div className="mb-6">
           <AdminContactBox contact={adminContact} />
         </div>

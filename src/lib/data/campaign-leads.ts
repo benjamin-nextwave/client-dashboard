@@ -1,5 +1,6 @@
 import { cache } from 'react'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getAdminContactsMap, type AdminContact } from '@/lib/data/lead-admin-contacts'
 
 export const LEAD_LABELS = [
   'meeting_voorstel',
@@ -115,6 +116,7 @@ export type CampaignLead = {
   objectionResolvedAt: string | null
   objectionProposedLabel: LeadLabel | null
   objectionProposedLabelNote: string | null
+  adminContact: AdminContact | null
   createdAt: string
   updatedAt: string
 }
@@ -209,6 +211,7 @@ function rowToLead(row: DbRow): CampaignLead {
     objectionResolvedAt: row.objection_resolved_at,
     objectionProposedLabel: isLeadLabel(row.objection_proposed_label) ? row.objection_proposed_label : null,
     objectionProposedLabelNote: row.objection_proposed_label_note,
+    adminContact: null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
@@ -303,9 +306,24 @@ function leadInboxRowToCampaignLead(
       ? classificationToLabel(objection.proposed_label)
       : null,
     objectionProposedLabelNote: objection?.proposed_label_note ?? null,
+    adminContact: null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
+}
+
+/** Attach admin "doorverwijzing" contacts (keyed by lead email) to leads. */
+async function attachAdminContacts(
+  clientId: string,
+  leads: CampaignLead[]
+): Promise<CampaignLead[]> {
+  if (leads.length === 0) return leads
+  const contacts = await getAdminContactsMap(clientId)
+  if (contacts.size === 0) return leads
+  return leads.map((lead) => ({
+    ...lead,
+    adminContact: contacts.get(lead.leadEmail.toLowerCase()) ?? null,
+  }))
 }
 
 async function getLeadInboxAsCampaignLeads(
@@ -350,7 +368,8 @@ export const getCampaignLeads = cache(
       .single()
 
     if (clientRow?.lead_inbox_visible && clientRow.lead_inbox_customer_id) {
-      return getLeadInboxAsCampaignLeads(clientId, clientRow.lead_inbox_customer_id)
+      const leads = await getLeadInboxAsCampaignLeads(clientId, clientRow.lead_inbox_customer_id)
+      return attachAdminContacts(clientId, leads)
     }
 
     const { data, error } = await admin
@@ -364,7 +383,7 @@ export const getCampaignLeads = cache(
       return []
     }
 
-    return (data as DbRow[]).map(rowToLead)
+    return attachAdminContacts(clientId, (data as DbRow[]).map(rowToLead))
   }
 )
 

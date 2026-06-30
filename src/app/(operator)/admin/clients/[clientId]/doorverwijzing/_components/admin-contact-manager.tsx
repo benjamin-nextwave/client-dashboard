@@ -8,18 +8,22 @@ import {
   clearAdminContact,
 } from '../actions'
 
+export type LeadSourceTag = 'inbox' | 'campaign'
+
+export interface ManagerContact {
+  name: string | null
+  email: string | null
+  linkedinUrl: string | null
+  jobTitle: string | null
+  none: boolean
+}
+
 export interface ManagerLead {
-  id: string
   email: string
   fullName: string | null
   companyName: string | null
-  contact: {
-    name: string | null
-    email: string | null
-    linkedinUrl: string | null
-    jobTitle: string | null
-    none: boolean
-  }
+  sources: LeadSourceTag[]
+  contact: ManagerContact | null
 }
 
 interface Props {
@@ -27,15 +31,20 @@ interface Props {
   leads: ManagerLead[]
 }
 
-function hasContact(c: ManagerLead['contact']): boolean {
-  return c.none || !!(c.name || c.email || c.linkedinUrl || c.jobTitle)
+function hasContact(c: ManagerContact | null): boolean {
+  return !!c && (c.none || !!(c.name || c.email || c.linkedinUrl || c.jobTitle))
+}
+
+const SOURCE_LABEL: Record<LeadSourceTag, string> = {
+  inbox: 'Inbox',
+  campaign: 'Campagne',
 }
 
 export function AdminContactManager({ clientId, leads }: Props) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
 
-  const [selectedId, setSelectedId] = useState('')
+  const [selectedEmail, setSelectedEmail] = useState('')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [linkedinUrl, setLinkedinUrl] = useState('')
@@ -44,19 +53,19 @@ export function AdminContactManager({ clientId, leads }: Props) {
   const [saved, setSaved] = useState(false)
 
   const selectedLead = useMemo(
-    () => leads.find((l) => l.id === selectedId) ?? null,
-    [leads, selectedId]
+    () => leads.find((l) => l.email === selectedEmail) ?? null,
+    [leads, selectedEmail]
   )
 
-  const handleSelect = (id: string) => {
-    setSelectedId(id)
+  const handleSelect = (value: string) => {
+    setSelectedEmail(value)
     setError(null)
     setSaved(false)
-    const lead = leads.find((l) => l.id === id)
-    setName(lead?.contact.name ?? '')
-    setEmail(lead?.contact.email ?? '')
-    setLinkedinUrl(lead?.contact.linkedinUrl ?? '')
-    setJobTitle(lead?.contact.jobTitle ?? '')
+    const lead = leads.find((l) => l.email === value)
+    setName(lead?.contact?.name ?? '')
+    setEmail(lead?.contact?.email ?? '')
+    setLinkedinUrl(lead?.contact?.linkedinUrl ?? '')
+    setJobTitle(lead?.contact?.jobTitle ?? '')
   }
 
   const handleSave = () => {
@@ -64,7 +73,7 @@ export function AdminContactManager({ clientId, leads }: Props) {
     setError(null)
     setSaved(false)
     startTransition(async () => {
-      const result = await saveAdminContact(clientId, selectedLead.id, {
+      const result = await saveAdminContact(clientId, selectedLead.email, {
         name,
         email,
         linkedinUrl,
@@ -84,7 +93,7 @@ export function AdminContactManager({ clientId, leads }: Props) {
     setError(null)
     setSaved(false)
     startTransition(async () => {
-      const result = await markNoAdminContact(clientId, selectedLead.id)
+      const result = await markNoAdminContact(clientId, selectedLead.email)
       if (result.error) {
         setError(result.error)
         return
@@ -103,7 +112,7 @@ export function AdminContactManager({ clientId, leads }: Props) {
     setError(null)
     setSaved(false)
     startTransition(async () => {
-      const result = await clearAdminContact(clientId, selectedLead.id)
+      const result = await clearAdminContact(clientId, selectedLead.email)
       if (result.error) {
         setError(result.error)
         return
@@ -120,8 +129,8 @@ export function AdminContactManager({ clientId, leads }: Props) {
   if (leads.length === 0) {
     return (
       <div className="rounded-2xl border border-gray-200 bg-white p-6 text-sm text-gray-500 shadow-sm">
-        Deze klant heeft nog geen positieve leads. Zodra er een lead positief
-        reageert, kun je hier contactgegevens van de beslisser toevoegen.
+        Deze klant heeft nog geen leads (inbox of campagne). Zodra er een lead
+        binnenkomt, kun je hier contactgegevens van de beslisser toevoegen.
       </div>
     )
   }
@@ -138,25 +147,27 @@ export function AdminContactManager({ clientId, leads }: Props) {
         </p>
         <select
           id="lead-select"
-          value={selectedId}
+          value={selectedEmail}
           onChange={(e) => handleSelect(e.target.value)}
           className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
         >
           <option value="">— Kies een lead —</option>
           {leads.map((lead) => {
+            const srcLabel = lead.sources.map((s) => SOURCE_LABEL[s]).join('/')
             const label = [lead.email, lead.fullName, lead.companyName]
               .filter(Boolean)
               .join(' · ')
             return (
-              <option key={lead.id} value={lead.id}>
+              <option key={lead.email} value={lead.email}>
                 {hasContact(lead.contact) ? '● ' : ''}
                 {label}
+                {srcLabel ? ` [${srcLabel}]` : ''}
               </option>
             )
           })}
         </select>
         <p className="mt-2 text-[11px] text-gray-400">
-          ● = er staat al een notitie klaar voor deze lead.
+          ● = er staat al een notitie klaar. [Inbox/Campagne] = waar de lead voorkomt.
         </p>
       </section>
 
@@ -200,7 +211,7 @@ export function AdminContactManager({ clientId, leads }: Props) {
           )}
           {saved && !error && (
             <p className="mt-4 rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
-              Opgeslagen. De klant ziet dit nu in de inbox.
+              Opgeslagen. De klant ziet dit nu bij de lead.
             </p>
           )}
 

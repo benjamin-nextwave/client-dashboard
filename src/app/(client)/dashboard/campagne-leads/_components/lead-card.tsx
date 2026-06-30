@@ -15,6 +15,7 @@ import {
   submitLeadObjection,
 } from '@/lib/actions/campaign-leads-actions'
 import { useT } from '@/lib/i18n/client'
+import { AdminContactBox, hasAdminContactBox } from '@/components/admin-contact-box'
 
 // Hoeveel echte berichten van de klant minimaal moeten zijn gestuurd voordat
 // de definitief-indienen knop verschijnt. De AI duwt door — de klant moet
@@ -45,6 +46,7 @@ export function LeadCard({ lead }: { lead: CampaignLead }) {
 
   // Status-pill rechts in de header
   const objectionBadge = renderObjectionBadge(lead, t)
+  const hasReferral = hasAdminContactBox(lead.adminContact)
 
   return (
     <article className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md">
@@ -63,6 +65,12 @@ export function LeadCard({ lead }: { lead: CampaignLead }) {
               {meta.short}
             </span>
             {objectionBadge}
+            {hasReferral && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-red-300 bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-700">
+                <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                {t('inbox.adminContactTitle')}
+              </span>
+            )}
             <span className="text-xs text-gray-400">{DATE_FMT.format(new Date(lead.receivedAt))}</span>
           </div>
           <div className="mt-2">
@@ -93,6 +101,11 @@ export function LeadCard({ lead }: { lead: CampaignLead }) {
 
       {open && (
         <div className="border-t border-gray-100 bg-gray-50/60 px-5 py-4">
+          {hasReferral && lead.adminContact && (
+            <div className="mb-4">
+              <AdminContactBox contact={lead.adminContact} />
+            </div>
+          )}
           {(hasSent || hasReply) && (
             <div
               className={`grid gap-4 ${hasSent && hasReply ? 'md:grid-cols-2' : 'grid-cols-1'}`}

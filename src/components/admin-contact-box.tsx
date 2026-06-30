@@ -2,7 +2,7 @@
 
 import { useT } from '@/lib/i18n/client'
 
-export interface AdminContact {
+export interface AdminContactBoxData {
   name: string | null
   email: string | null
   linkedinUrl: string | null
@@ -11,14 +11,14 @@ export interface AdminContact {
 }
 
 /** Returns true when there is anything worth showing to the client. */
-export function hasAdminContact(c: AdminContact): boolean {
-  return c.none || !!(c.name || c.email || c.linkedinUrl || c.jobTitle)
+export function hasAdminContactBox(c: AdminContactBoxData | null | undefined): boolean {
+  return !!c && (c.none || !!(c.name || c.email || c.linkedinUrl || c.jobTitle))
 }
 
-export function AdminContactBox({ contact }: { contact: AdminContact }) {
+export function AdminContactBox({ contact }: { contact: AdminContactBoxData }) {
   const t = useT()
 
-  if (!hasAdminContact(contact)) return null
+  if (!hasAdminContactBox(contact)) return null
 
   return (
     <div className="rounded-xl border-2 border-red-500 bg-red-50 p-5 shadow-sm">

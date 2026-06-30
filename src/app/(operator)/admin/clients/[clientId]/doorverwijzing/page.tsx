@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getCampaignLeads } from '@/lib/data/campaign-leads'
+import { getAdminContactsMap } from '@/lib/data/lead-admin-contacts'
 import { AdminContactManager, type ManagerLead } from './_components/admin-contact-manager'
 
 export const dynamic = 'force-dynamic'
@@ -9,18 +11,11 @@ interface PageProps {
   params: Promise<{ clientId: string }>
 }
 
-interface LeadRow {
-  id: string
+interface SyncedRow {
   email: string
   first_name: string | null
   last_name: string | null
   company_name: string | null
-  updated_at: string | null
-  admin_contact_name: string | null
-  admin_contact_email: string | null
-  admin_contact_linkedin_url: string | null
-  admin_contact_job_title: string | null
-  admin_contact_none: boolean | null
 }
 
 export default async function AdminClientReferralPage({ params }: PageProps) {
@@ -38,39 +33,58 @@ export default async function AdminClientReferralPage({ params }: PageProps) {
 
   const companyName = (client.company_name as string) ?? ''
 
-  const { data: leadsData } = await supabase
-    .from('synced_leads')
-    .select(
-      'id, email, first_name, last_name, company_name, updated_at, admin_contact_name, admin_contact_email, admin_contact_linkedin_url, admin_contact_job_title, admin_contact_none'
-    )
-    .eq('client_id', clientId)
-    .eq('interest_status', 'positive')
-    .order('updated_at', { ascending: false })
+  // Twee bronnen samenvoegen: inbox-leads (synced_leads, positief) en
+  // campagne-leads (campaign_leads of lead-inbox). Gekoppeld op e-mailadres.
+  const [{ data: syncedData }, campaignLeads, contacts] = await Promise.all([
+    supabase
+      .from('synced_leads')
+      .select('email, first_name, last_name, company_name')
+      .eq('client_id', clientId)
+      .eq('interest_status', 'positive')
+      .order('updated_at', { ascending: false }),
+    getCampaignLeads(clientId),
+    getAdminContactsMap(clientId),
+  ])
 
-  const rows = (leadsData ?? []) as LeadRow[]
+  // Merge in een map gekoppeld op lowercased e-mailadres.
+  const byEmail = new Map<string, ManagerLead>()
 
-  // Deduplicate by email — keep the most recent occurrence (rows are ordered desc).
-  const seen = new Set<string>()
-  const leads: ManagerLead[] = []
-  for (const row of rows) {
-    const key = row.email.toLowerCase()
-    if (seen.has(key)) continue
-    seen.add(key)
-    const fullName = [row.first_name, row.last_name].filter(Boolean).join(' ')
-    leads.push({
-      id: row.id,
-      email: row.email,
-      fullName: fullName || null,
-      companyName: row.company_name,
-      contact: {
-        name: row.admin_contact_name,
-        email: row.admin_contact_email,
-        linkedinUrl: row.admin_contact_linkedin_url,
-        jobTitle: row.admin_contact_job_title,
-        none: row.admin_contact_none ?? false,
-      },
-    })
+  const ensure = (email: string): ManagerLead => {
+    const key = email.toLowerCase()
+    let entry = byEmail.get(key)
+    if (!entry) {
+      entry = {
+        email: key,
+        fullName: null,
+        companyName: null,
+        sources: [],
+        contact: contacts.get(key) ?? null,
+      }
+      byEmail.set(key, entry)
+    }
+    return entry
   }
+
+  for (const lead of campaignLeads) {
+    if (!lead.leadEmail) continue
+    const entry = ensure(lead.leadEmail)
+    entry.fullName ??= lead.leadName
+    entry.companyName ??= lead.leadCompany
+    if (!entry.sources.includes('campaign')) entry.sources.push('campaign')
+  }
+
+  for (const row of (syncedData ?? []) as SyncedRow[]) {
+    if (!row.email) continue
+    const entry = ensure(row.email)
+    const fullName = [row.first_name, row.last_name].filter(Boolean).join(' ')
+    entry.fullName ??= fullName || null
+    entry.companyName ??= row.company_name
+    if (!entry.sources.includes('inbox')) entry.sources.push('inbox')
+  }
+
+  const leads = Array.from(byEmail.values()).sort((a, b) =>
+    a.email.localeCompare(b.email)
+  )
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -90,7 +104,8 @@ export default async function AdminClientReferralPage({ params }: PageProps) {
         <p className="mt-1 text-sm text-gray-500">
           Voeg handmatig de contactgegevens van de beslisser toe wanneer een lead
           doorverwijst (bijv. &ldquo;hiervoor moet je bij HR zijn&rdquo;). Deze
-          verschijnen als een duidelijke rode notitie in de inbox van de klant.
+          verschijnen als een duidelijke rode notitie bij de klant — zowel in de
+          inbox als bij de campagne-leads.
         </p>
       </header>
 
