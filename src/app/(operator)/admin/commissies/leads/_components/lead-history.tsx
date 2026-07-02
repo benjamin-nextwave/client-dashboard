@@ -7,6 +7,7 @@ import { downloadCsv } from '@/lib/csv-client'
 import type { CommissionLeadHistoryRow } from '@/lib/data/commissions'
 import {
   setCommissionLeadChecked,
+  setCommissionLeadsChecked,
   setCommissionLeadRejected,
 } from '@/app/(operator)/admin/commissies/actions'
 
@@ -83,7 +84,20 @@ export function LeadHistory({ leads: initialLeads }: LeadHistoryProps) {
     downloadCsv('commissie-leads-mailadressen.csv', ['Mailadres'], emails)
   }
 
+  const markAllDone = () => {
+    // Markeert de momenteel zichtbare (gefilterde) leads die nog niet afgerond zijn.
+    const ids = filtered.filter((l) => !l.isChecked).map((l) => l.id)
+    if (ids.length === 0) return
+    if (!confirm(`${ids.length} lead${ids.length === 1 ? '' : 's'} als afgerond markeren?`)) return
+    const idSet = new Set(ids)
+    setLeads((prev) => prev.map((l) => (idSet.has(l.id) ? { ...l, isChecked: true } : l)))
+    startTransition(async () => {
+      await setCommissionLeadsChecked(ids, true)
+    })
+  }
+
   const notCheckedCount = leads.filter((l) => !l.isChecked).length
+  const visibleNotDoneCount = filtered.filter((l) => !l.isChecked).length
 
   const resetFilters = () => {
     setSearch('')
@@ -105,17 +119,30 @@ export function LeadHistory({ leads: initialLeads }: LeadHistoryProps) {
           placeholder="Zoek op mailadres…"
           className={`${FILTER_CLASS} w-full max-w-xs`}
         />
-        <button
-          type="button"
-          onClick={handleExport}
-          disabled={notCheckedCount === 0}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-          </svg>
-          Exporteren ({notCheckedCount})
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={markAllDone}
+            disabled={visibleNotDoneCount === 0}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 shadow-sm transition-all hover:border-emerald-300 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+            </svg>
+            Markeer alles als afgerond ({visibleNotDoneCount})
+          </button>
+          <button
+            type="button"
+            onClick={handleExport}
+            disabled={notCheckedCount === 0}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+            </svg>
+            Exporteren ({notCheckedCount})
+          </button>
+        </div>
       </div>
 
       {/* Filters */}

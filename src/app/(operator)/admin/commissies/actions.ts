@@ -80,6 +80,19 @@ export async function setCommissionLeadChecked(id: string, value: boolean): Prom
   return {}
 }
 
+/** Markeert meerdere leads in één keer als (niet-)afgerond. */
+export async function setCommissionLeadsChecked(ids: string[], value: boolean): Promise<ActionResult> {
+  if (ids.length === 0) return {}
+  const supabase = createAdminClient()
+  const { error } = await supabase
+    .from('operator_commission_leads')
+    .update({ is_checked: value, updated_at: new Date().toISOString() })
+    .in('id', ids)
+  if (error) return { error: error.message }
+  revalidatePath('/admin/commissies/leads')
+  return {}
+}
+
 export async function setCommissionLeadRejected(id: string, value: boolean): Promise<ActionResult> {
   const supabase = createAdminClient()
   const { error } = await supabase
