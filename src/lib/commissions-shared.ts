@@ -38,6 +38,18 @@ export function amsterdamDateString(date: Date = new Date()): string {
   }).format(date)
 }
 
+/**
+ * Is de gegeven datum (YYYY-MM-DD) een werkdag (ma–vr)? Weekenddagen (za/zo)
+ * tellen geen dagkosten. Parse't de datum als kalenderdatum (UTC-middernacht)
+ * zodat er geen tijdzone-verschuiving optreedt bij het bepalen van de weekdag.
+ */
+export function isWeekday(dateStr: string): boolean {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  if (!y || !m || !d) return true
+  const day = new Date(Date.UTC(y, m - 1, d)).getUTCDay() // 0 = zo, 6 = za
+  return day !== 0 && day !== 6
+}
+
 /** Formatteert centen als euro-bedrag, bv. 1250 → "€ 12,50". */
 export function formatEuroCents(cents: number): string {
   return new Intl.NumberFormat('nl-NL', {

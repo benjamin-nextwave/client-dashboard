@@ -1,0 +1,70 @@
+import Link from 'next/link'
+import {
+  getCompanyCommissionOverview,
+  getCommissionChartSeries,
+  getClientsWithCommissionData,
+  amsterdamDateString,
+} from '@/lib/data/commissions'
+import { PeriodSelector } from '@/components/commissions/period-selector'
+import { CompanyOverview } from '../_components/company-overview'
+import { CommissionChart } from './_components/commission-chart'
+
+export const dynamic = 'force-dynamic'
+
+interface PageProps {
+  searchParams: Promise<{ from?: string; to?: string }>
+}
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+
+function shiftDays(dateStr: string, delta: number): string {
+  const d = new Date(dateStr + 'T00:00:00')
+  d.setDate(d.getDate() + delta)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+export default async function FinancieelOverzichtPage({ searchParams }: PageProps) {
+  const { from: fromParam, to: toParam } = await searchParams
+
+  const today = amsterdamDateString()
+  const defaultFrom = today.slice(0, 8) + '01'
+  const from = fromParam && DATE_RE.test(fromParam) ? fromParam : defaultFrom
+  const to = toParam && DATE_RE.test(toParam) ? toParam : today
+
+  // Grafiek start standaard op de laatste 7 dagen (los van de tabel-periode).
+  const chartFrom = shiftDays(today, -6)
+
+  const [overview, chartSeries, chartClients] = await Promise.all([
+    getCompanyCommissionOverview(from, to),
+    getCommissionChartSeries(chartFrom, today),
+    getClientsWithCommissionData(),
+  ])
+
+  return (
+    <div className="mx-auto max-w-5xl space-y-6">
+      <header>
+        <Link
+          href="/admin/commissies"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-500 transition-colors hover:text-gray-900"
+        >
+          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+          </svg>
+          Terug
+        </Link>
+        <h1 className="mt-2 text-2xl font-semibold tracking-tight text-gray-900">Financieel overzicht</h1>
+        <p className="mt-1 text-sm text-gray-500">
+          Opgetelde commissies per klant over de gekozen periode, minus de vaste dagkosten. Klik op een klant voor het detail.
+        </p>
+      </header>
+
+      <CommissionChart clients={chartClients} initialSeries={chartSeries} />
+
+      <PeriodSelector from={from} to={to} />
+      <CompanyOverview overview={overview} />
+    </div>
+  )
+}

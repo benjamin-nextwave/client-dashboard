@@ -54,12 +54,12 @@ export function ShiftPicker({
           }
         />
         <ShiftCard
-          href={`${basePath}?shift=avond`}
-          name="Avondcontrole"
+          href="/admin/controle/commissie"
+          name="Commissiecontrole"
           gradient="from-indigo-600 via-violet-700 to-slate-800"
           shadowColor="shadow-violet-700/30"
           ringColor="hover:shadow-violet-700/40"
-          description="Leads en reacties van vandaag, weerleggingen, verbeterkansen en contacten voor morgen."
+          description="Voer per lead de commissie in: mailadres, klant, categorie en campagne."
           icon={
             <svg className="h-12 w-12" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.718 9.718 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
