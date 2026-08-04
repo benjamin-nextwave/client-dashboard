@@ -126,15 +126,36 @@ export interface CommissionControlClient {
 }
 
 /**
+ * Klanten die wél in de commissiecontrole thuishoren, maar buiten Benjamins
+ * dagelijkse controle-lijst vallen (controleOwnerForName wijst ze aan Merlijn
+ * toe). Namen worden hoofdletter-ongevoelig en getrimd vergeleken, net als in
+ * de persona-toewijzing. Bewust een aparte lijst: zo verandert er niets aan
+ * wie de ochtend-/avondcontrole voor deze klant doet.
+ */
+const EXTRA_COMMISSION_CONTROL_CLIENT_NAMES = new Set<string>(['recruitportal'])
+
+/**
  * Klanten die in de commissiecontrole (voorheen avondcontrole) geïncludeerd
- * zijn: Benjamins niet-verborgen, niet-geëxcludeerde klanten. Hergebruikt de
- * exacte filter van de klantselectie zodat beide altijd gelijk lopen.
+ * zijn: Benjamins niet-verborgen, niet-geëxcludeerde klanten, aangevuld met de
+ * expliciete extra's hierboven. Hergebruikt de exacte filter van de
+ * klantselectie zodat beide altijd gelijk lopen.
  */
 export async function getCommissionControlClients(): Promise<CommissionControlClient[]> {
-  const clients = await getClientsWithLastCheck('benjamin', 'avond')
-  return clients
-    .map((c) => ({ id: c.id, companyName: c.companyName }))
-    .sort((a, b) => a.companyName.localeCompare(b.companyName))
+  const [clients, allClients] = await Promise.all([
+    getClientsWithLastCheck('benjamin', 'avond'),
+    getClientList(),
+  ])
+
+  const byId = new Map<string, CommissionControlClient>(
+    clients.map((c) => [c.id, { id: c.id, companyName: c.companyName }])
+  )
+  for (const c of allClients) {
+    if (c.isHidden) continue
+    if (!EXTRA_COMMISSION_CONTROL_CLIENT_NAMES.has(c.companyName.trim().toLowerCase())) continue
+    byId.set(c.id, { id: c.id, companyName: c.companyName })
+  }
+
+  return Array.from(byId.values()).sort((a, b) => a.companyName.localeCompare(b.companyName))
 }
 
 /**
@@ -348,10 +369,12 @@ export interface CommissionLeadHistoryRow {
   companyName: string
   leadEmail: string
   campaignName: string
+  categoryId: string
   categoryName: string
   entryDate: string
   isChecked: boolean
   isRejected: boolean
+  note: string
 }
 
 /** Alle commissie-leads (nieuwste eerst), verrijkt met de klantnaam. */
@@ -360,7 +383,7 @@ export async function getAllCommissionLeads(): Promise<CommissionLeadHistoryRow[
   const [{ data }, clients] = await Promise.all([
     supabase
       .from('operator_commission_leads')
-      .select('id, client_id, lead_email, campaign_name, category_name, entry_date, is_checked, is_rejected')
+      .select('id, client_id, lead_email, campaign_name, category_id, category_name, entry_date, is_checked, is_rejected, note')
       .order('entry_date', { ascending: false })
       .order('created_at', { ascending: false })
       .limit(5000),
@@ -373,10 +396,12 @@ export async function getAllCommissionLeads(): Promise<CommissionLeadHistoryRow[
       client_id: string
       lead_email: string
       campaign_name: string
+      category_id: string | null
       category_name: string
       entry_date: string
       is_checked: boolean
       is_rejected: boolean
+      note: string | null
     }>
   ).map((r) => ({
     id: r.id,
@@ -384,10 +409,12 @@ export async function getAllCommissionLeads(): Promise<CommissionLeadHistoryRow[
     companyName: nameById.get(r.client_id) ?? 'Onbekende klant',
     leadEmail: r.lead_email,
     campaignName: r.campaign_name,
+    categoryId: r.category_id ?? '',
     categoryName: r.category_name,
     entryDate: r.entry_date,
     isChecked: r.is_checked,
     isRejected: r.is_rejected,
+    note: r.note ?? '',
   }))
 }
 
