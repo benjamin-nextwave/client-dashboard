@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { replyToEmail, listEmails, listLeads } from '@/lib/instantly/client'
+import { isOutboundBlocked } from '@/lib/safety/write-guard'
 
 // --- Zod Schemas ---
 
@@ -77,6 +78,7 @@ export async function sendReply(input: SendReplyInput): Promise<ActionResult> {
       bodyHtml,
     })
   } catch (err) {
+    if (isOutboundBlocked(err)) return { error: err.message }
     console.error('Failed to send reply via Instantly:', err)
     return { error: 'Fout bij het verzenden van de e-mail. Probeer het opnieuw.' }
   }
@@ -161,6 +163,7 @@ export async function composeReply(
       bodyHtml,
     })
   } catch (err) {
+    if (isOutboundBlocked(err)) return { error: err.message }
     console.error('Failed to compose reply via Instantly:', err)
     return { error: 'Fout bij het verzenden van de e-mail. Probeer het opnieuw.' }
   }
@@ -362,6 +365,7 @@ export async function composeNewEmail(
       bodyHtml,
     })
   } catch (err) {
+    if (isOutboundBlocked(err)) return { error: err.message }
     console.error('Failed to compose email:', err)
     return { error: 'Fout bij het verzenden. Probeer het opnieuw.' }
   }

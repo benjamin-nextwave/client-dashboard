@@ -1,3 +1,4 @@
+import { assertOutboundAllowed } from '@/lib/safety/write-guard'
 import type {
   InstantlyCampaign,
   InstantlyCampaignAnalytics,
@@ -215,6 +216,11 @@ interface ReplyEmailOptions {
 export async function replyToEmail(
   options: ReplyEmailOptions
 ): Promise<InstantlyEmail> {
+  // Enige call in dit bestand die daadwerkelijk iets naar buiten stuurt: dit
+  // verstuurt een echte e-mail naar een echte prospect. Alle andere functies
+  // hier zijn lees-operaties en blijven in elke omgeving gewoon werken.
+  assertOutboundAllowed('e-mail versturen via Instantly')
+
   const response = await fetch(`${BASE_URL}/emails/reply`, {
     method: 'POST',
     headers: getHeaders(options.apiKey),
