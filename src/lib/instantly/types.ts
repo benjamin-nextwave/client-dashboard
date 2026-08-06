@@ -4,18 +4,6 @@ export interface InstantlyCampaign {
   status: number
 }
 
-/**
- * Eén campagne zoals GET /campaigns/{id} hem teruggeeft. `email_list` bevat de
- * mailboxen die aan de campagne gekoppeld zijn. Optioneel getypt omdat oudere
- * campagnes het veld niet altijd meesturen.
- */
-export interface InstantlyCampaignDetail {
-  id: string
-  name: string
-  status?: number
-  email_list?: string[]
-}
-
 export interface InstantlyListResponse<T> {
   items: T[]
   next_starting_after?: string

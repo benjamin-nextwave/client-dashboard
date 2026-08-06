@@ -2,7 +2,6 @@ import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { getClientBranding } from '@/lib/client/get-client-branding'
 import { getOverviewStats, getDailyStats } from '@/lib/data/campaign-stats'
-import { getSendingFootprint } from '@/lib/data/sending-accounts'
 import { getLocale, getTranslator } from '@/lib/i18n/server'
 import { createClient } from '@/lib/supabase/server'
 import type { Locale, Translator } from '@/lib/i18n'
@@ -185,10 +184,9 @@ export default async function OverzichtPage({
   // -------------------------------------------------------------------------
   // Existing dashboard data fetch — UNCHANGED.
   // -------------------------------------------------------------------------
-  const [stats, dailyStats, footprint] = await Promise.all([
+  const [stats, dailyStats] = await Promise.all([
     getOverviewStats(client.id, startDate, endDate),
     getDailyStats(client.id, startDate, endDate),
-    getSendingFootprint(client.id),
   ])
 
   return (
@@ -215,7 +213,6 @@ export default async function OverzichtPage({
         brandColor={client.primary_color ?? '#3B82F6'}
         currentRange={params.range ?? '30d'}
         periodLabel={periodLabel}
-        footprint={footprint}
       />
       <NewsOverlay items={unreadItems} />
     </div>
