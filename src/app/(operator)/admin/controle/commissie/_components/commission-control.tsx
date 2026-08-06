@@ -22,6 +22,8 @@ interface Block {
   categoryId: string
   campaignName: string
   date: string
+  note: string
+  noteOpen: boolean
 }
 
 const FIELD_CLASS =
@@ -37,6 +39,8 @@ export function CommissionControl({ clients, categoriesByClient, campaignNames }
     categoryId: '',
     campaignName: '',
     date: amsterdamDateString(),
+    note: '',
+    noteOpen: false,
   })
 
   const [blocks, setBlocks] = useState<Block[]>(() => [makeBlock()])
@@ -81,6 +85,7 @@ export function CommissionControl({ clients, categoriesByClient, campaignNames }
       categoryId: b.categoryId,
       campaignName: b.campaignName,
       date: b.date,
+      note: b.note,
     }))
     startTransition(async () => {
       const result = await addCommissionLeads(rows)
@@ -215,6 +220,37 @@ export function CommissionControl({ clients, categoriesByClient, campaignNames }
                   Commissie voor deze lead: <span className="font-semibold text-gray-700">{formatEuroCents(selectedCat.priceCents)}</span>
                 </p>
               )}
+
+              <div className="mt-3">
+                <button
+                  type="button"
+                  onClick={() => updateBlock(block.key, { noteOpen: !block.noteOpen })}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-500 transition-colors hover:text-indigo-600"
+                >
+                  <svg
+                    className={`h-4 w-4 transition-transform ${block.noteOpen ? 'rotate-90' : ''}`}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={2}
+                    stroke="currentColor"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                  </svg>
+                  Notitie{block.note.trim() ? ' ·' : ' (optioneel)'}
+                  {block.note.trim() && !block.noteOpen && (
+                    <span className="font-normal text-gray-400">{block.note.trim().length} tekens</span>
+                  )}
+                </button>
+                {block.noteOpen && (
+                  <textarea
+                    value={block.note}
+                    onChange={(e) => updateBlock(block.key, { note: e.target.value })}
+                    placeholder="Optionele notitie bij deze lead…"
+                    rows={4}
+                    className={`${FIELD_CLASS} mt-2 resize-y`}
+                  />
+                )}
+              </div>
             </div>
           )
         })}

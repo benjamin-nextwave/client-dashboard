@@ -1,11 +1,41 @@
 import Link from 'next/link'
-import { getAllCommissionLeads } from '@/lib/data/commissions'
+import { createAdminClient } from '@/lib/supabase/admin'
+import {
+  getAllCommissionLeads,
+  getCategoriesForClients,
+} from '@/lib/data/commissions'
+import { getClientList } from '@/lib/data/admin-stats'
 import { LeadHistory } from './_components/lead-history'
 
 export const dynamic = 'force-dynamic'
 
+async function getExistingCampaignNames(): Promise<string[]> {
+  const supabase = createAdminClient()
+  const { data } = await supabase
+    .from('operator_commission_leads')
+    .select('campaign_name')
+    .not('campaign_name', 'eq', '')
+    .limit(1000)
+  const names = new Set<string>()
+  for (const r of (data ?? []) as Array<{ campaign_name: string }>) {
+    if (r.campaign_name) names.add(r.campaign_name)
+  }
+  return Array.from(names).sort((a, b) => a.localeCompare(b))
+}
+
 export default async function LeadGeschiedenisPage() {
-  const leads = await getAllCommissionLeads()
+  const [leads, clientList, campaignNames] = await Promise.all([
+    getAllCommissionLeads(),
+    getClientList(),
+    getExistingCampaignNames(),
+  ])
+
+  // Volledige klantlijst als bewerk-opties (ook verborgen/geëxcludeerde klanten,
+  // zodat historische leads altijd hun klant kunnen behouden).
+  const clients = clientList
+    .map((c) => ({ id: c.id, companyName: c.companyName }))
+    .sort((a, b) => a.companyName.localeCompare(b.companyName))
+  const categoriesByClient = await getCategoriesForClients(clients.map((c) => c.id))
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -21,11 +51,17 @@ export default async function LeadGeschiedenisPage() {
         </Link>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight text-gray-900">Lead geschiedenis</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Alle leads die ooit in de commissiecontrole zijn ingevoerd. Zoek, filter, vink af en exporteer.
+          Alle leads die ooit in de commissiecontrole zijn ingevoerd. Zoek, filter, vink af, bewerk,
+          verwijder en exporteer.
         </p>
       </header>
 
-      <LeadHistory leads={leads} />
+      <LeadHistory
+        leads={leads}
+        clients={clients}
+        categoriesByClient={categoriesByClient}
+        campaignNames={campaignNames}
+      />
     </div>
   )
 }

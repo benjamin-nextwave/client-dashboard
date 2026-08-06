@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { createAdminClient } from './admin'
 
 const LOGO_BUCKET = 'client-logos'
@@ -112,6 +113,45 @@ export async function deleteCampaignVariantsPdf(clientId: string): Promise<void>
     const paths = files.map((f) => `${clientId}/${f.name}`)
     await supabase.storage.from(CAMPAIGN_PDF_BUCKET).remove(paths)
   }
+}
+
+// --- Weekly reports (per client, multiple PDFs) ---
+
+const WEEKLY_REPORTS_BUCKET = 'weekly-reports'
+
+export async function uploadWeeklyReport(
+  clientId: string,
+  file: File
+): Promise<{ url: string; path: string } | { error: string }> {
+  if (file.type !== 'application/pdf') {
+    return { error: `Alleen PDF bestanden toegestaan (ontvangen: ${file.type || 'onbekend'}).` }
+  }
+  if (file.size > MAX_PDF_SIZE) {
+    return { error: 'Bestand is te groot. Maximaal 20MB.' }
+  }
+
+  const path = `${clientId}/${randomUUID()}.pdf`
+
+  const supabase = createAdminClient()
+
+  const { error } = await supabase.storage
+    .from(WEEKLY_REPORTS_BUCKET)
+    .upload(path, file, {
+      upsert: true,
+      contentType: 'application/pdf',
+    })
+
+  if (error) {
+    return { error: `Upload mislukt: ${error.message}` }
+  }
+
+  const { data } = supabase.storage.from(WEEKLY_REPORTS_BUCKET).getPublicUrl(path)
+  return { url: data.publicUrl, path }
+}
+
+export async function deleteWeeklyReportFile(path: string): Promise<void> {
+  const supabase = createAdminClient()
+  await supabase.storage.from(WEEKLY_REPORTS_BUCKET).remove([path])
 }
 
 // --- News images (Phase 9) ---

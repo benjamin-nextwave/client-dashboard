@@ -17,15 +17,6 @@ interface PageProps {
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 
-function shiftDays(dateStr: string, delta: number): string {
-  const d = new Date(dateStr + 'T00:00:00')
-  d.setDate(d.getDate() + delta)
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
-
 export default async function FinancieelOverzichtPage({ searchParams }: PageProps) {
   const { from: fromParam, to: toParam } = await searchParams
 
@@ -34,12 +25,10 @@ export default async function FinancieelOverzichtPage({ searchParams }: PageProp
   const from = fromParam && DATE_RE.test(fromParam) ? fromParam : defaultFrom
   const to = toParam && DATE_RE.test(toParam) ? toParam : today
 
-  // Grafiek start standaard op de laatste 7 dagen (los van de tabel-periode).
-  const chartFrom = shiftDays(today, -6)
-
+  // Grafiek én overzicht volgen dezelfde gekozen periode (from/to).
   const [overview, chartSeries, chartClients] = await Promise.all([
     getCompanyCommissionOverview(from, to),
-    getCommissionChartSeries(chartFrom, today),
+    getCommissionChartSeries(from, to),
     getClientsWithCommissionData(),
   ])
 
@@ -61,9 +50,8 @@ export default async function FinancieelOverzichtPage({ searchParams }: PageProp
         </p>
       </header>
 
-      <CommissionChart clients={chartClients} initialSeries={chartSeries} />
-
       <PeriodSelector from={from} to={to} />
+      <CommissionChart clients={chartClients} from={from} to={to} initialSeries={chartSeries} />
       <CompanyOverview overview={overview} />
     </div>
   )

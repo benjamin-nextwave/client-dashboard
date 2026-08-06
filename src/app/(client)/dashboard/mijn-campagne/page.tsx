@@ -7,10 +7,13 @@ import {
   getAllMailVariantFeedback,
   deriveTasks,
   deriveVariantStatus,
+  canSubmitCampaignForm,
 } from '@/lib/data/campaign'
 import { getLinkedInFlowsByClient } from '@/lib/data/linkedin-flow'
+import { getWeeklyReports } from '@/lib/data/weekly-reports'
 import { StatusTracker } from './_components/status-tracker'
 import { CampaignBody } from './_components/campaign-body'
+import { AvailableFormCard } from './_components/available-form-card'
 import { MailVariantsApprovalBlock } from './_components/mail-variants-approval-block'
 import { LinkedInFlowBlock } from './_components/linkedin-flow-block'
 import { ProposalApprovalBlock } from './_components/proposal-approval-block'
@@ -42,13 +45,14 @@ export default async function MijnCampagnePage() {
     redirect('/dashboard')
   }
 
-  const [state, allVariants, feedbackByVariant, allFeedbackByVariant, linkedInByFlow] =
+  const [state, allVariants, feedbackByVariant, allFeedbackByVariant, linkedInByFlow, weeklyReports] =
     await Promise.all([
       getCampaignState(profile.client_id),
       getMailVariants(profile.client_id),
       getLatestMailVariantFeedback(profile.client_id),
       getAllMailVariantFeedback(profile.client_id),
       getLinkedInFlowsByClient(profile.client_id),
+      getWeeklyReports(profile.client_id),
     ])
 
   if (!state) redirect('/dashboard')
@@ -163,6 +167,14 @@ export default async function MijnCampagnePage() {
         </>
       )}
 
+      {/* Invulformulier los van de onboarding: zodra NextWave een (extra)
+          formulier klaarzet, blijft de knop bereikbaar — ook tijdens een
+          lopende campagne. Binnen de onboarding-flow toont CampaignBody de
+          knop al, dus daar niet nogmaals. */}
+      {onboardingDone && canSubmitCampaignForm(state) && (
+        <AvailableFormCard isFirst={state.formSubmissionCount === 0} />
+      )}
+
       <ContactBlock isOnboardingComplete={onboardingDone} />
 
       {/* ─── Mailvarianten tijdlijn ─── */}
@@ -185,6 +197,7 @@ export default async function MijnCampagnePage() {
         proposalTitle={state.proposalTitle}
         proposalAcknowledged={!proposalNeedsApproval && !!state.proposalAcknowledgedAt}
         feedbackByVariant={feedbackByVariant}
+        weeklyReports={weeklyReports}
       />
 
       {/* ─── Campaign flow visualisatie ─── */}

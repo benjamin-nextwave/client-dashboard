@@ -35,6 +35,49 @@ export async function updateClientDealbasis(
   return {}
 }
 
+export async function updateClientCommissieCap(
+  clientId: string,
+  value: string
+): Promise<ActionResult> {
+  const supabase = createAdminClient()
+  const trimmed = value.trim()
+  let amount: number | null = null
+  if (trimmed.length > 0) {
+    // Sta zowel "1.500,50" (NL) als "1500.50" toe: strip duizendtal-punten,
+    // vervang decimaalkomma door punt, houd alleen cijfers/punt/min over.
+    const normalized = trimmed
+      .replace(/[^\d.,-]/g, '')
+      .replace(/\.(?=\d{3}(\D|$))/g, '')
+      .replace(',', '.')
+    const parsed = Number(normalized)
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      return { error: 'Ongeldig bedrag' }
+    }
+    amount = parsed
+  }
+  const { error } = await supabase
+    .from('clients')
+    .update({ commission_cap: amount })
+    .eq('id', clientId)
+  if (error) return { error: error.message }
+  revalidatePath(`/admin/clients/${clientId}`)
+  return {}
+}
+
+export async function updateClientDailyTopup(
+  clientId: string,
+  value: boolean
+): Promise<ActionResult> {
+  const supabase = createAdminClient()
+  const { error } = await supabase
+    .from('clients')
+    .update({ daily_topup: value })
+    .eq('id', clientId)
+  if (error) return { error: error.message }
+  revalidatePath(`/admin/clients/${clientId}`)
+  return {}
+}
+
 export async function updateClientInboxApproach(
   clientId: string,
   value: string | null

@@ -12,6 +12,7 @@ export const en: Translations = {
     overview: 'Overview',
     email: 'Email',
     leads: 'Leads',
+    crm: 'CRM',
     preview: 'Preview',
     dnc: 'DNC',
     contacts: 'Contacts',
@@ -71,6 +72,9 @@ export const en: Translations = {
     archiveDownloadPdf: 'Download PDF',
     archiveOpenVariants: 'View variants',
     archiveOpenProposal: 'View proposal',
+    weeklyReportsTitle: 'Weekly reports',
+    weeklyReportsCount: '{count} reports',
+    weeklyReportsDownload: 'Download',
     contactBlockTitle: 'Contact & support',
     contactBlockDescription:
       'Got a question or feedback? Reach out to the NextWave team.',

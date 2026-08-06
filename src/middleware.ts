@@ -90,6 +90,9 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    // mp4/webm staan erbij zodat statische video's uit /public rechtstreeks
+    // worden geserveerd — auth-middleware op een videostream breekt de
+    // range-requests die de <video>-speler doet.
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|mp4|webm)$).*)',
   ],
 }

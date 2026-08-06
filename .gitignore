@@ -43,3 +43,9 @@ next-env.d.ts
 
 .vercel
 .env*.local
+
+# lokale werkbestanden — horen niet in de repo
+Videos Library Loom July.mp4
+CLAUDE-HIER-ZIJN.csv
+claude_code_prompt.md
+.claude/

@@ -17,6 +17,7 @@ export interface ControleClientListItem extends ClientListItem {
  */
 const BENJAMIN_CLIENT_NAMES = new Set<string>([
   'advies & meer',
+  'armora',
   'bluebrd',
   'copytalent',
   'fresh-brains',

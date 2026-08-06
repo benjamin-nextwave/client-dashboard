@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
   updateClientDealbasis,
+  updateClientCommissieCap,
+  updateClientDailyTopup,
   updateClientInboxApproach,
   updateClientStartDateMaand,
   updateClientEndDateMaand,
@@ -16,10 +18,21 @@ interface Props {
   email: string
   password: string | null
   dealbasis: string | null
+  commissieCap: number | null
+  dailyTopup: boolean
   inboxApproach: string | null
   startDateMaand: string | null
   endDateMaand: string | null
   hasFormSubmission: boolean
+}
+
+function formatEuro(amount: number): string {
+  return amount.toLocaleString('nl-NL', {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: amount % 1 === 0 ? 0 : 2,
+    maximumFractionDigits: 2,
+  })
 }
 
 const INBOX_APPROACH_LABELS: Record<string, string> = {
@@ -41,6 +54,8 @@ export function ClientOverviewBubbles({
   email,
   password,
   dealbasis,
+  commissieCap,
+  dailyTopup,
   inboxApproach,
   startDateMaand,
   endDateMaand,
@@ -49,6 +64,8 @@ export function ClientOverviewBubbles({
   return (
     <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
       <DealbasisBubble clientId={clientId} value={dealbasis} />
+      <CommissieCapBubble clientId={clientId} value={commissieCap} />
+      <DailyTopupBubble clientId={clientId} value={dailyTopup} />
       <CopyBubble
         label="E-mail"
         value={email || null}
@@ -175,6 +192,129 @@ function DealbasisBubble({ clientId, value }: { clientId: string; value: string 
           {value ?? <span className="italic text-gray-400">Klik om in te vullen</span>}
         </button>
       )}
+    </BubbleShell>
+  )
+}
+
+function CommissieCapBubble({ clientId, value }: { clientId: string; value: number | null }) {
+  const router = useRouter()
+  const [editing, setEditing] = useState(false)
+  const [text, setText] = useState(value != null ? String(value) : '')
+  const [pending, startTransition] = useTransition()
+
+  const handleSave = () => {
+    startTransition(async () => {
+      await updateClientCommissieCap(clientId, text)
+      setEditing(false)
+      router.refresh()
+    })
+  }
+
+  return (
+    <BubbleShell
+      tint="from-green-50 to-emerald-50 border-green-200/60"
+      iconColor="text-green-700 bg-green-100"
+      icon={
+        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+        </svg>
+      }
+      label="Commissie cap"
+    >
+      {editing ? (
+        <div className="space-y-2">
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm font-medium text-gray-500">€</span>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="Bijv. 2500"
+              className="w-full rounded-lg border border-green-300 bg-white px-2 py-1.5 text-sm text-gray-900 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200"
+              autoFocus
+            />
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={pending}
+              className="rounded-lg bg-gray-900 px-3 py-1 text-[11px] font-semibold text-white hover:bg-gray-800 disabled:opacity-50"
+            >
+              {pending ? 'Opslaan…' : 'Opslaan'}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setText(value != null ? String(value) : ''); setEditing(false) }}
+              className="rounded-lg border border-gray-200 bg-white px-3 py-1 text-[11px] font-semibold text-gray-700 hover:bg-gray-50"
+            >
+              Annuleren
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          className="block w-full truncate text-left text-sm font-medium text-gray-900 hover:text-green-700"
+          title={value != null ? formatEuro(value) : 'Klik om in te vullen'}
+        >
+          {value != null ? formatEuro(value) : <span className="italic text-gray-400">Klik om in te vullen</span>}
+        </button>
+      )}
+    </BubbleShell>
+  )
+}
+
+function DailyTopupBubble({ clientId, value }: { clientId: string; value: boolean }) {
+  const router = useRouter()
+  const [checked, setChecked] = useState(value)
+  const [pending, startTransition] = useTransition()
+
+  const toggle = () => {
+    const next = !checked
+    setChecked(next)
+    startTransition(async () => {
+      const res = await updateClientDailyTopup(clientId, next)
+      if (res.error) {
+        setChecked(!next)
+      } else {
+        router.refresh()
+      }
+    })
+  }
+
+  return (
+    <BubbleShell
+      tint="from-sky-50 to-blue-50 border-sky-200/60"
+      iconColor="text-sky-600 bg-sky-100"
+      icon={
+        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+        </svg>
+      }
+      label="Dagelijks aanvullen?"
+    >
+      <button
+        type="button"
+        onClick={toggle}
+        disabled={pending}
+        className="flex items-center gap-2 text-left disabled:opacity-60"
+      >
+        <span
+          className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border transition-colors ${
+            checked ? 'border-sky-600 bg-sky-600' : 'border-gray-300 bg-white'
+          }`}
+        >
+          {checked && (
+            <svg className="h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+            </svg>
+          )}
+        </span>
+        <span className="text-sm font-medium text-gray-900">{checked ? 'Ja' : 'Nee'}</span>
+      </button>
     </BubbleShell>
   )
 }

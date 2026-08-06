@@ -25,47 +25,36 @@ interface ChartClient {
 
 interface CommissionChartProps {
   clients: ChartClient[]
+  from: string
+  to: string
   initialSeries: CommissionChartSeries
 }
-
-type Period = 'week' | 'maand'
 
 const POSITIVE_COLOR = '#10B981' // emerald-500
 const NEGATIVE_COLOR = '#EF4444' // red-500
 
-function ymd(d: Date): string {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
+function formatDay(dateStr: string): string {
+  return format(new Date(dateStr + 'T00:00:00'), 'd MMM', { locale: nl })
 }
 
-function rangeForPeriod(period: Period): [string, string] {
-  const now = new Date()
-  const start = new Date(now)
-  start.setDate(now.getDate() - (period === 'week' ? 6 : 29))
-  return [ymd(start), ymd(now)]
-}
-
-export function CommissionChart({ clients, initialSeries }: CommissionChartProps) {
-  const [period, setPeriod] = useState<Period>('week')
+export function CommissionChart({ clients, from, to, initialSeries }: CommissionChartProps) {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [series, setSeries] = useState<CommissionChartSeries>(initialSeries)
   const [isPending, startTransition] = useTransition()
-  // Sla de eerste render over: initialSeries dekt de default (week, iedereen).
-  const [mounted, setMounted] = useState(false)
 
+  // De grafiek volgt de periode (from/to) die bovenaan met de kalender gekozen
+  // wordt. Zonder klantfilter is de server-geleverde initialSeries al correct
+  // voor die periode; met een filter halen we de gefilterde reeks client-side op.
   useEffect(() => {
-    if (!mounted) {
-      setMounted(true)
+    if (selected.size === 0) {
+      setSeries(initialSeries)
       return
     }
-    const [from, to] = rangeForPeriod(period)
     startTransition(async () => {
       const next = await fetchCommissionChartSeries(from, to, Array.from(selected))
       setSeries(next)
     })
-  }, [period, selected, mounted])
+  }, [from, to, selected, initialSeries])
 
   const toggleClient = (id: string) => {
     setSelected((prev) => {
@@ -94,7 +83,7 @@ export function CommissionChart({ clients, initialSeries }: CommissionChartProps
         </div>
         <div className="text-right">
           <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
-            Netto {period === 'week' ? 'deze week' : 'deze maand'}
+            Netto {formatDay(from)} – {formatDay(to)}
           </div>
           <div className={`text-2xl font-semibold ${totalTone}`}>
             {formatEuroCents(series.totalNetCents)}
@@ -102,28 +91,9 @@ export function CommissionChart({ clients, initialSeries }: CommissionChartProps
         </div>
       </div>
 
-      {/* Periode-toggle */}
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        {(['week', 'maand'] as Period[]).map((p) => (
-          <button
-            key={p}
-            type="button"
-            onClick={() => setPeriod(p)}
-            className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-all ${
-              period === p
-                ? 'bg-indigo-600 text-white shadow-sm'
-                : 'border border-gray-200 bg-white text-gray-600 hover:border-indigo-300 hover:text-indigo-700'
-            }`}
-          >
-            {p === 'week' ? 'Week' : 'Maand'}
-          </button>
-        ))}
-        {isPending && <span className="text-xs text-gray-400">Laden…</span>}
-      </div>
-
       {/* Klantfilter */}
       {clients.length > 0 && (
-        <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div className="mt-4 flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={() => setSelected(new Set())}
@@ -152,6 +122,7 @@ export function CommissionChart({ clients, initialSeries }: CommissionChartProps
               </button>
             )
           })}
+          {isPending && <span className="text-xs text-gray-400">Laden…</span>}
         </div>
       )}
 

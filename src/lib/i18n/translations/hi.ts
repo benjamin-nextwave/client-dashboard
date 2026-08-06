@@ -12,6 +12,7 @@ export const hi: Translations = {
     overview: 'अवलोकन',
     email: 'ईमेल',
     leads: 'लीड्स',
+    crm: 'CRM',
     preview: 'पूर्वावलोकन',
     dnc: 'संपर्क न करें',
     contacts: 'संपर्क',
@@ -71,6 +72,9 @@ export const hi: Translations = {
     archiveDownloadPdf: 'PDF डाउनलोड करें',
     archiveOpenVariants: 'प्रकार देखें',
     archiveOpenProposal: 'प्रस्ताव देखें',
+    weeklyReportsTitle: 'साप्ताहिक रिपोर्ट',
+    weeklyReportsCount: '{count} रिपोर्ट',
+    weeklyReportsDownload: 'डाउनलोड',
     contactBlockTitle: 'संपर्क और सहायता',
     contactBlockDescription:
       'कोई प्रश्न या प्रतिक्रिया है? NextWave टीम से संपर्क करें।',

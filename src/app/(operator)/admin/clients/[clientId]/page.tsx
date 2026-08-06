@@ -87,6 +87,12 @@ export default async function ClientOverviewPage({ params }: PageProps) {
   const logoUrl = (c.logo_url as string | null) ?? null
   const password = (c.password as string | null) ?? null
   const dealbasis = (c.dealbasis as string | null) ?? null
+  const commissieCapRaw = c.commission_cap
+  const commissieCap =
+    commissieCapRaw == null || commissieCapRaw === ''
+      ? null
+      : Number(commissieCapRaw)
+  const dailyTopup = Boolean(c.daily_topup)
   const inboxApproach = (c.inbox_approach as string | null) ?? null
   const startDateMaand = (c.start_date_maand as string | null) ?? null
   const endDateMaand = (c.end_date_maand as string | null) ?? null
@@ -150,6 +156,8 @@ export default async function ClientOverviewPage({ params }: PageProps) {
         email={clientEmail}
         password={password}
         dealbasis={dealbasis}
+        commissieCap={commissieCap}
+        dailyTopup={dailyTopup}
         inboxApproach={inboxApproach}
         startDateMaand={startDateMaand}
         endDateMaand={endDateMaand}

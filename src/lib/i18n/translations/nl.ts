@@ -7,6 +7,7 @@ export interface Translations {
     overview: string
     email: string
     leads: string
+    crm: string
     preview: string
     dnc: string
     contacts: string
@@ -61,6 +62,9 @@ export interface Translations {
     archiveDownloadPdf: string
     archiveOpenVariants: string
     archiveOpenProposal: string
+    weeklyReportsTitle: string
+    weeklyReportsCount: string
+    weeklyReportsDownload: string
     contactBlockTitle: string
     contactBlockDescription: string
     contactBlockButton: string
@@ -559,6 +563,7 @@ export const nl: Translations = {
     overview: 'Overzicht',
     email: 'E-mail',
     leads: 'Leads',
+    crm: 'CRM',
     preview: 'Voorvertoning',
     dnc: 'DNC',
     contacts: 'Contacten',
@@ -618,6 +623,9 @@ export const nl: Translations = {
     archiveDownloadPdf: 'Download PDF',
     archiveOpenVariants: 'Bekijk varianten',
     archiveOpenProposal: 'Bekijk voorstel',
+    weeklyReportsTitle: 'Weekrapporten',
+    weeklyReportsCount: '{count} rapporten',
+    weeklyReportsDownload: 'Download',
     contactBlockTitle: 'Contact & ondersteuning',
     contactBlockDescription:
       'Heb je een vraag of feedback? Neem contact op met het NextWave team.',
