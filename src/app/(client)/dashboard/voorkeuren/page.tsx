@@ -32,8 +32,8 @@ export default async function VoorkeurenPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900">{t('settings.title')}</h1>
-      <p className="mt-1 text-sm text-gray-600">{t('settings.description')}</p>
+      <h1 className="text-[25px] font-semibold tracking-[-0.03em]">{t('settings.title')}</h1>
+      <p className="mt-1 text-[12.5px] text-muted">{t('settings.description')}</p>
 
       <div className="mt-6 space-y-6">
         <PreferencesForm
@@ -46,8 +46,8 @@ export default async function VoorkeurenPage() {
       </div>
 
       <div className="mt-10">
-        <h2 className="text-lg font-bold text-gray-900">{t('settings.helpSection')}</h2>
-        <p className="mt-1 text-sm text-gray-600">{t('settings.helpDescription')}</p>
+        <h2 className="text-lg font-bold text-fg">{t('settings.helpSection')}</h2>
+        <p className="mt-1 text-[12.5px] text-muted">{t('settings.helpDescription')}</p>
 
         <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
           {[
@@ -55,9 +55,9 @@ export default async function VoorkeurenPage() {
             { title: t('settings.videoReply'), id: '41fbd7812a784bcea74b8e791ddb7279' },
             { title: t('settings.videoInbox'), id: '87e25d43233745d8bd3771c71706389f' },
           ].map((video) => (
-            <div key={video.id} className="overflow-hidden rounded-lg bg-white shadow-sm">
+            <div key={video.id} className="overflow-hidden rounded-panel border border-line bg-panel">
               <div className="px-5 py-3">
-                <h3 className="text-sm font-semibold text-gray-900">{video.title}</h3>
+                <h3 className="text-[12.5px] font-semibold text-fg">{video.title}</h3>
               </div>
               <div className="relative aspect-video">
                 <iframe

@@ -31,8 +31,11 @@ export default async function ClientLayout({
 
   return (
     <I18nProvider locale={locale}>
+      {/* client-theme draagt alle ontwerptokens én de merk-tinten. Die moeten op
+          hetzelfde element staan als --brand-color, anders rekenen ze met de
+          standaardkleur in plaats van met die van de klant. */}
       <div
-        className="flex min-h-screen bg-[#fafafa] text-gray-900"
+        className="client-theme flex min-h-screen bg-canvas font-[family-name:var(--font-instrument-sans)] text-fg"
         style={{ '--brand-color': brandColor } as React.CSSProperties}
       >
         <SidebarNav

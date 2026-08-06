@@ -31,27 +31,31 @@ export function DateRangePicker({ currentRange }: DateRangePickerProps) {
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <span className="text-sm text-gray-500">{t('overview.period')}</span>
-      {PRESETS.map((preset) => {
-        const isActive =
-          currentRange === preset.value ||
-          (currentRange === '' && preset.value === '30d')
-        return (
-          <button
-            key={preset.value}
-            type="button"
-            onClick={() => handleSelect(preset.value)}
-            className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-              isActive
-                ? 'bg-[var(--brand-color)] text-white'
-                : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'
-            }`}
-          >
-            {preset.label}
-          </button>
-        )
-      })}
+    <div className="flex flex-wrap items-center gap-2.5">
+      <span className="text-[12.5px] text-muted">{t('overview.period')}</span>
+      <div className="flex overflow-hidden rounded-control border border-line bg-panel">
+        {PRESETS.map((preset, i) => {
+          const isActive =
+            currentRange === preset.value ||
+            (currentRange === '' && preset.value === '30d')
+          return (
+            <button
+              key={preset.value}
+              type="button"
+              onClick={() => handleSelect(preset.value)}
+              className={`px-3.5 py-2 text-xs transition-colors ${
+                i < PRESETS.length - 1 ? 'border-r border-line' : ''
+              } ${
+                isActive
+                  ? 'bg-[var(--brand-10)] font-semibold text-brand'
+                  : 'font-medium text-muted hover:bg-[var(--brand-08)]'
+              }`}
+            >
+              {preset.label}
+            </button>
+          )
+        })}
+      </div>
     </div>
   )
 }

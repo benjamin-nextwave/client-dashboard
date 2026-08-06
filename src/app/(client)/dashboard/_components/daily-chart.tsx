@@ -13,6 +13,7 @@ import {
 import { format } from 'date-fns'
 import { nl, enUS, hi } from 'date-fns/locale'
 import { useT, useLocale } from '@/lib/i18n/client'
+import { Panel } from '@/components/client/ui/panel'
 
 const DATE_LOCALES = { nl, en: enUS, hi }
 
@@ -21,7 +22,9 @@ interface DailyChartProps {
   brandColor: string
 }
 
-const REPLIES_COLOR = '#10B981' // green-500
+// Reacties in een lichtere merk-tint in plaats van een losse groene kleur,
+// zodat de grafiek één kleurfamilie houdt.
+const REPLIES_COLOR = 'var(--brand-40)'
 
 export function DailyChart({ data, brandColor }: DailyChartProps) {
   const t = useT()
@@ -30,10 +33,9 @@ export function DailyChart({ data, brandColor }: DailyChartProps) {
 
   if (data.length === 0) {
     return (
-      <div className="rounded-lg bg-white p-6 shadow-sm">
-        <h3 className="text-base font-semibold text-gray-900">{t('overview.dailyOverview')}</h3>
-        <p className="mt-4 text-sm text-gray-500">{t('overview.dailyNoData')}</p>
-      </div>
+      <Panel title={t('overview.dailyOverview')}>
+        <p className="text-[12.5px] text-muted">{t('overview.dailyNoData')}</p>
+      </Panel>
     )
   }
 
@@ -43,22 +45,21 @@ export function DailyChart({ data, brandColor }: DailyChartProps) {
   }))
 
   return (
-    <div className="rounded-lg bg-white p-6 shadow-sm">
-      <h3 className="mb-4 text-base font-semibold text-gray-900">{t('overview.dailyOverview')}</h3>
+    <Panel title={t('overview.dailyOverview')} bodyClassName="px-3 pb-3 pt-[18px]">
       <ResponsiveContainer width="100%" height={320}>
         <LineChart data={chartData} margin={{ left: 0, right: 12, top: 8, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--c-line)" vertical={false} />
           <XAxis
             dataKey="label"
-            tick={{ fontSize: 12 }}
+            tick={{ fontSize: 10, fill: 'var(--c-faint)' }}
             tickLine={false}
-            axisLine={{ stroke: '#e5e7eb' }}
+            axisLine={{ stroke: 'var(--c-line)' }}
           />
           <YAxis
             allowDecimals={false}
-            tick={{ fontSize: 12 }}
+            tick={{ fontSize: 10, fill: 'var(--c-faint)' }}
             tickLine={false}
-            axisLine={{ stroke: '#e5e7eb' }}
+            axisLine={{ stroke: 'var(--c-line)' }}
           />
           <Tooltip
             formatter={(value, name) => [
@@ -67,9 +68,11 @@ export function DailyChart({ data, brandColor }: DailyChartProps) {
             ]}
             labelFormatter={(label) => label}
             contentStyle={{
-              borderRadius: '0.5rem',
-              border: 'none',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              borderRadius: '8px',
+              border: '1px solid var(--c-line)',
+              boxShadow: 'none',
+              fontSize: '12.5px',
+              background: 'var(--c-panel)',
             }}
           />
           <Legend
@@ -96,6 +99,6 @@ export function DailyChart({ data, brandColor }: DailyChartProps) {
           />
         </LineChart>
       </ResponsiveContainer>
-    </div>
+    </Panel>
   )
 }

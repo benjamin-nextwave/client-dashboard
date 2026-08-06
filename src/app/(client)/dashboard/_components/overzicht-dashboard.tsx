@@ -4,7 +4,7 @@ import { StatsCards } from './stats-cards'
 import { DailyChart } from './daily-chart'
 import { DateRangePicker } from './date-range-picker'
 import { ComingSoonCharts } from './coming-soon-charts'
-import { EmptyState } from '@/components/ui/empty-state'
+import { EmptyState } from '@/components/client/ui/empty-state'
 import { useT } from '@/lib/i18n/client'
 
 interface OverzichtDashboardProps {
@@ -44,19 +44,20 @@ export function OverzichtDashboard({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      <DateRangePicker currentRange={currentRange} />
+
       <StatsCards
         emailsSent={emailsSent}
         uniqueReplies={uniqueReplies}
         bounced={bounced}
         periodLabel={periodLabel}
+        dailyStats={dailyStats}
       />
-
-      <DateRangePicker currentRange={currentRange} />
 
       <DailyChart data={dailyStats} brandColor={brandColor} />
 
-      <p className="text-center text-xs text-gray-400">
+      <p className="text-center text-[11.5px] text-faint">
         {t('overview.refreshHint')}
       </p>
 

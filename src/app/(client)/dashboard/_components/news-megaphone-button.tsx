@@ -34,7 +34,7 @@ export function NewsMegaphoneButton({
         type="button"
         onClick={() => setOpen(true)}
         aria-label={t('client.news.megaphoneAriaLabel')}
-        className="inline-flex items-center justify-center rounded-xl border border-gray-200 bg-white px-3 py-3 text-gray-600 shadow-sm transition-all hover:bg-gray-50 hover:text-gray-900"
+        className="inline-flex h-[34px] w-[34px] items-center justify-center rounded-control border border-line bg-panel text-muted transition-colors hover:bg-[var(--brand-08)] active:bg-[var(--brand-15)]"
       >
         <MegaphoneIcon />
       </button>

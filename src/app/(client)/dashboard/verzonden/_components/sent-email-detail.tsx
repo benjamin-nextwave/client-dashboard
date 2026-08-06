@@ -12,27 +12,27 @@ export function SentEmailDetail({ email }: SentEmailDetailProps) {
     <div>
       <Link
         href="/dashboard/verzonden"
-        className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900"
+        className="inline-flex items-center text-[12.5px] text-muted hover:text-fg"
       >
         &larr; Terug naar verzonden
       </Link>
 
-      <div className="mt-4 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-        <h1 className="text-xl font-semibold text-gray-900">
+      <div className="mt-4 rounded-panel border border-line bg-panel p-6">
+        <h1 className="text-xl font-semibold text-fg">
           {email.subject || 'Geen onderwerp'}
         </h1>
 
-        <div className="mt-3 space-y-1 text-sm text-gray-600">
+        <div className="mt-3 space-y-1 text-[12.5px] text-muted">
           <p>
-            <span className="font-medium text-gray-700">Van:</span>{' '}
+            <span className="font-medium text-fg">Van:</span>{' '}
             {email.fromAddress}
           </p>
           <p>
-            <span className="font-medium text-gray-700">Aan:</span>{' '}
+            <span className="font-medium text-fg">Aan:</span>{' '}
             {email.toAddress}
           </p>
           <p>
-            <span className="font-medium text-gray-700">Datum:</span>{' '}
+            <span className="font-medium text-fg">Datum:</span>{' '}
             {email.sentAt
               ? format(new Date(email.sentAt), 'd MMMM yyyy HH:mm', {
                   locale: nl,
@@ -41,14 +41,14 @@ export function SentEmailDetail({ email }: SentEmailDetailProps) {
           </p>
         </div>
 
-        <div className="mt-4 border-t border-gray-200 pt-4">
+        <div className="mt-4 border-t border-line pt-4">
           {email.bodyHtml ? (
             <div
               className="prose max-w-none"
               dangerouslySetInnerHTML={{ __html: email.bodyHtml }}
             />
           ) : (
-            <pre className="whitespace-pre-wrap text-sm text-gray-800">
+            <pre className="whitespace-pre-wrap text-[12.5px] text-fg">
               {email.bodyText || 'Geen inhoud.'}
             </pre>
           )}

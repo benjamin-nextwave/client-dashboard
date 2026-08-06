@@ -109,10 +109,10 @@ export function NewsSidebar({ open, onClose, items }: NewsSidebarProps) {
         role="dialog"
         aria-modal="true"
         aria-label={t('client.news.sidebarTitle')}
-        className="fixed right-0 top-0 z-[55] flex h-screen w-full flex-col bg-white shadow-2xl sm:w-[420px] animate-slideInFromRight"
+        className="fixed right-0 top-0 z-[55] flex h-screen w-full flex-col bg-panel shadow-2xl sm:w-[420px] animate-slideInFromRight"
       >
         {/* Header */}
-        <header className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+        <header className="flex items-center justify-between border-b border-line px-5 py-4">
           {view === 'detail' ? (
             <button
               type="button"
@@ -120,7 +120,7 @@ export function NewsSidebar({ open, onClose, items }: NewsSidebarProps) {
                 setView('list')
                 setActiveItemId(null)
               }}
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 transition-colors hover:text-gray-900"
+              className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-muted transition-colors hover:text-fg"
             >
               <svg
                 className="h-4 w-4"
@@ -135,7 +135,7 @@ export function NewsSidebar({ open, onClose, items }: NewsSidebarProps) {
               {t('client.news.sidebarBackToList')}
             </button>
           ) : (
-            <h2 className="text-base font-semibold text-gray-900">
+            <h2 className="text-[13.5px] font-semibold tracking-[-0.01em]">
               {t('client.news.sidebarTitle')}
             </h2>
           )}
@@ -143,7 +143,7 @@ export function NewsSidebar({ open, onClose, items }: NewsSidebarProps) {
             type="button"
             onClick={onClose}
             aria-label={t('common.close')}
-            className="rounded-full p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
+            className="rounded-full p-1.5 text-muted transition-colors hover:bg-track hover:text-fg"
           >
             <svg
               className="h-5 w-5"
@@ -162,7 +162,7 @@ export function NewsSidebar({ open, onClose, items }: NewsSidebarProps) {
         <div className="flex-1 overflow-y-auto p-5">
           {view === 'list' ? (
             items.length === 0 ? (
-              <p className="py-12 text-center text-sm text-gray-500">
+              <p className="py-12 text-center text-[12.5px] text-muted">
                 {t('client.news.sidebarEmpty')}
               </p>
             ) : (
@@ -189,7 +189,7 @@ export function NewsSidebar({ open, onClose, items }: NewsSidebarProps) {
           ) : (
             // Defensive: detail view requested but item not in list (e.g.,
             // race with withdrawal). Fall back to empty-state message.
-            <p className="py-12 text-center text-sm text-gray-500">
+            <p className="py-12 text-center text-[12.5px] text-muted">
               {t('client.news.sidebarEmpty')}
             </p>
           )}
@@ -215,15 +215,15 @@ function NewsSidebarListItem({ item, onClick }: NewsSidebarListItemProps) {
       <button
         type="button"
         onClick={onClick}
-        className="block w-full cursor-pointer rounded-xl border border-gray-200 bg-white p-4 text-left transition-all hover:border-gray-300 hover:shadow-sm"
+        className="block w-full cursor-pointer rounded-panel border border-line bg-panel p-4 text-left transition-colors hover:bg-[var(--brand-08)]"
       >
-        <p className="text-sm font-semibold leading-tight text-gray-900">
+        <p className="text-[12.5px] font-semibold leading-tight text-fg">
           {item.title}
         </p>
-        <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-gray-600">
+        <p className="mt-1.5 line-clamp-2 text-[11.5px] leading-relaxed text-muted">
           {preview}
         </p>
-        <p className="mt-2 text-[11px] font-medium uppercase tracking-wide text-gray-400">
+        <p className="mt-2 text-[11px] font-medium uppercase tracking-wide text-faint">
           {relativeTime}
         </p>
       </button>

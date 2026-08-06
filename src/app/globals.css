@@ -4,6 +4,94 @@
   --color-brand: var(--brand-color, #3B82F6);
   --animate-fadeIn: fadeIn 0.4s ease-out;
   --animate-slideInFromRight: slideInFromRight 0.25s ease-out;
+
+  /* Tokens klantdashboard — zie .client-theme hieronder. Deze regels maken er
+     Tailwind-utilities van (bg-panel, text-muted, rounded-panel, …). Buiten
+     .client-theme bestaan de variabelen niet, dus het admin dashboard erft
+     hier niets van. */
+  --color-canvas: var(--c-canvas);
+  --color-panel: var(--c-panel);
+  --color-line: var(--c-line);
+  --color-track: var(--c-track);
+  --color-fg: var(--c-text);
+  --color-muted: var(--c-muted);
+  --color-faint: var(--c-faint);
+  --color-pos: var(--c-pos);
+  --color-neg: var(--c-neg);
+  --color-ink: var(--c-ink);
+  --color-brand-lift: var(--c-brand-lift);
+
+  --radius-panel: 12px;
+  --radius-control: 8px;
+}
+
+/* ---------------------------------------------------------------------------
+   Klantdashboard-thema — bewust een klasse en niet :root.
+
+   Twee redenen. Ten eerste blijft het admin dashboard hiermee volledig
+   ongemoeid. Ten tweede, en dat is een technische: custom properties met een
+   var() erin worden vastgelegd op het element waar ze gedeclareerd zijn. Zouden
+   de merk-tinten op :root staan, dan zouden ze rekenen met de standaard
+   brandkleur en niet meeveranderen als (client)/layout.tsx --brand-color per
+   klant overschrijft. Door ze op hetzelfde element te zetten als --brand-color,
+   volgen alle tinten de klantkleur.
+--------------------------------------------------------------------------- */
+
+.client-theme {
+  /* merk-tinten, transparant gemengd zodat ze op licht én donker werken */
+  --brand-08: color-mix(in oklab, var(--brand-color, #3b82f6) 8%, transparent);
+  --brand-10: color-mix(in oklab, var(--brand-color, #3b82f6) 10%, transparent);
+  --brand-15: color-mix(in oklab, var(--brand-color, #3b82f6) 15%, transparent);
+  --brand-20: color-mix(in oklab, var(--brand-color, #3b82f6) 20%, transparent);
+  --brand-32: color-mix(in oklab, var(--brand-color, #3b82f6) 32%, transparent);
+  --brand-40: color-mix(in oklab, var(--brand-color, #3b82f6) 40%, transparent);
+  --brand-50: color-mix(in oklab, var(--brand-color, #3b82f6) 50%, transparent);
+  --brand-55: color-mix(in oklab, var(--brand-color, #3b82f6) 55%, transparent);
+  --brand-65: color-mix(in oklab, var(--brand-color, #3b82f6) 65%, transparent);
+  --brand-80: color-mix(in oklab, var(--brand-color, #3b82f6) 80%, transparent);
+  --brand-90: color-mix(in oklab, var(--brand-color, #3b82f6) 90%, transparent);
+  --brand-95: color-mix(in oklab, var(--brand-color, #3b82f6) 95%, transparent);
+
+  /* sidebar-inkt en de lichte variant voor de actieve indicator */
+  --c-ink: color-mix(in oklab, var(--brand-color, #3b82f6) 26%, #080b11);
+  --c-brand-lift: color-mix(in oklab, var(--brand-color, #3b82f6) 45%, #ffffff);
+
+  /* licht */
+  --c-canvas: #f7f8fa;
+  --c-panel: #ffffff;
+  --c-line: #e8eaee;
+  --c-track: #f0f2f5;
+  --c-text: #0f1319;
+  --c-muted: #586070;
+  --c-faint: #8a92a0;
+  --c-pos: #15803d;
+  --c-neg: #b91c1c;
+}
+
+/* Donkere tokens staan klaar maar worden nergens aangezet — er is bewust nog
+   geen schakelaar. Zet class="dark" op <html> om ze te activeren. */
+.dark .client-theme,
+.client-theme.dark {
+  --c-ink: color-mix(in oklab, var(--brand-color, #3b82f6) 18%, #05070a);
+  --c-brand-lift: color-mix(in oklab, var(--brand-color, #3b82f6) 60%, #ffffff);
+
+  --c-canvas: #0b0d11;
+  --c-panel: #13161c;
+  --c-line: rgb(255 255 255 / 0.08);
+  --c-track: rgb(255 255 255 / 0.06);
+  --c-text: #edeff3;
+  --c-muted: #98a0ad;
+  --c-faint: #626a78;
+  --c-pos: #4ade80;
+  --c-neg: #f87171;
+}
+
+/* Focus-styling centraal in plaats van per component. Bewust binnen
+   .client-theme gescopet zodat het admin dashboard zijn browser-default houdt. */
+.client-theme :where(a, button, [tabindex]):focus-visible {
+  outline: 2px solid var(--brand-color, #3b82f6);
+  outline-offset: 2px;
+  border-radius: 6px;
 }
 
 @keyframes fadeIn {

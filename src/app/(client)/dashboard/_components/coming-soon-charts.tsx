@@ -93,7 +93,7 @@ function FakeLegend({ items }: { items: { color: string; label: string }[] }) {
       {items.map((item, i) => (
         <div key={i} className="flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-          <span className="text-xs text-gray-400">{item.label}</span>
+          <span className="text-[11.5px] text-faint">{item.label}</span>
         </div>
       ))}
     </div>
@@ -106,9 +106,9 @@ function ComingSoonOverlay() {
   const t = useT()
   return (
     <div className="absolute inset-0 z-10 flex items-center justify-center backdrop-blur-[6px]">
-      <div className="rounded-xl bg-white/80 px-6 py-4 text-center shadow-sm">
-        <p className="text-sm font-semibold text-gray-700">{t('overview.comingSoon')}</p>
-        <p className="mt-1 max-w-xs text-xs text-gray-500">
+      <div className="rounded-control border border-line bg-panel/85 px-5 py-3.5 text-center">
+        <p className="text-[12.5px] font-semibold">{t('overview.comingSoon')}</p>
+        <p className="mt-1 max-w-xs text-[11.5px] text-muted">
           {t('overview.comingSoonDescription')}
         </p>
       </div>
@@ -120,8 +120,8 @@ function ComingSoonOverlay() {
 
 function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="relative overflow-hidden rounded-lg bg-white p-6 shadow-sm">
-      <h3 className="mb-4 text-base font-semibold text-gray-900">{title}</h3>
+    <div className="relative overflow-hidden rounded-panel border border-line bg-panel p-5">
+      <h3 className="mb-4 text-[13.5px] font-semibold tracking-[-0.01em]">{title}</h3>
       <div className="relative">
         <div className="pointer-events-none select-none" aria-hidden="true">
           {children}
@@ -136,16 +136,16 @@ function ChartCard({ title, children }: { title: string; children: React.ReactNo
 
 export function ComingSoonCharts() {
   const t = useT()
-  const blue = '#3B82F6'
-  const blueShades = ['#3B82F6', '#60A5FA', '#93C5FD', '#BFDBFE', '#DBEAFE']
-  const red = '#EF4444'
-  const redShades = ['#EF4444', '#F87171', '#FCA5A5', '#FECACA', '#FEE2E2']
+  const blue = 'var(--brand-90)'
+  const blueShades = ['var(--brand-95)', 'var(--brand-80)', 'var(--brand-65)', 'var(--brand-50)', 'var(--brand-32)']
+  const red = 'var(--brand-65)'
+  const redShades = ['var(--brand-80)', 'var(--brand-65)', 'var(--brand-50)', 'var(--brand-32)', 'var(--brand-15)']
 
   return (
     <div className="space-y-8">
       {/* ── ICP sectie ── */}
       <div>
-        <h2 className="mb-4 text-lg font-bold text-gray-900">
+        <h2 className="mb-4 text-[15px] font-semibold tracking-[-0.02em]">
           {t('overview.icpTitle')}
         </h2>
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
@@ -192,7 +192,7 @@ export function ComingSoonCharts() {
 
       {/* ── WCP sectie ── */}
       <div>
-        <h2 className="mb-4 text-lg font-bold text-gray-900">
+        <h2 className="mb-4 text-[15px] font-semibold tracking-[-0.02em]">
           {t('overview.wcpTitle')}
         </h2>
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">

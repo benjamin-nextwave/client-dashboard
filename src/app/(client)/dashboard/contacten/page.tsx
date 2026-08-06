@@ -32,7 +32,7 @@ export default async function ContactenPage({ searchParams }: ContactenPageProps
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold text-gray-900">{t('contacts.title')}</h1>
+      <h1 className="mb-6 text-[25px] font-semibold tracking-[-0.03em]">{t('contacts.title')}</h1>
       <ContactsTable
         contacts={contacts.map((c) => ({ id: c.id, data: c.data }))}
         columns={columns}

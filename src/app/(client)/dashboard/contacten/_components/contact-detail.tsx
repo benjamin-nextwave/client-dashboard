@@ -43,7 +43,7 @@ function CopyButton({ value }: { value: string }) {
     <button
       type="button"
       onClick={handleCopy}
-      className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700"
+      className="flex items-center gap-1 rounded-md px-2 py-1 text-[11.5px] font-medium text-muted transition-colors hover:bg-track hover:text-fg"
       title="Kopiëren"
     >
       {copied ? (
@@ -51,7 +51,7 @@ function CopyButton({ value }: { value: string }) {
           <svg className="h-3.5 w-3.5 text-green-500" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
           </svg>
-          <span className="text-green-600">Gekopieerd</span>
+          <span className="text-pos">Gekopieerd</span>
         </>
       ) : (
         <>
@@ -90,14 +90,14 @@ export function ContactDetail({ contact, columns, onClose }: ContactDetailProps)
       />
 
       {/* Panel */}
-      <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col bg-white shadow-2xl">
+      <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col bg-panel shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-          <h3 className="text-lg font-semibold text-gray-900">Contactgegevens</h3>
+        <div className="flex items-center justify-between border-b border-line px-6 py-4">
+          <h3 className="text-[15px] font-semibold tracking-[-0.02em]">Contactgegevens</h3>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+            className="rounded-md p-1 text-faint hover:bg-track hover:text-muted"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -114,13 +114,13 @@ export function ContactDetail({ contact, columns, onClose }: ContactDetailProps)
                 return (
                   <div
                     key={col.id}
-                    className="group flex items-start justify-between rounded-lg px-3 py-3 transition-colors hover:bg-gray-50"
+                    className="group flex items-start justify-between rounded-lg px-3 py-3 transition-colors hover:bg-track"
                   >
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium uppercase tracking-wider text-gray-400">
+                      <p className="text-[11.5px] font-medium uppercase tracking-wider text-faint">
                         {col.name}
                       </p>
-                      <p className="mt-0.5 break-words text-sm text-gray-900">{value}</p>
+                      <p className="mt-0.5 break-words text-[12.5px] text-fg">{value}</p>
                     </div>
                     <div className="ml-2 shrink-0 opacity-0 transition-opacity group-hover:opacity-100">
                       <CopyButton value={value} />
@@ -130,16 +130,16 @@ export function ContactDetail({ contact, columns, onClose }: ContactDetailProps)
               })}
             </div>
           ) : (
-            <p className="text-sm text-gray-500">Geen gegevens beschikbaar voor dit contact.</p>
+            <p className="text-[12.5px] text-muted">Geen gegevens beschikbaar voor dit contact.</p>
           )}
         </div>
 
         {/* Footer */}
-        <div className="border-t border-gray-200 px-6 py-3">
+        <div className="border-t border-line px-6 py-3">
           <button
             type="button"
             onClick={onClose}
-            className="w-full rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
+            className="w-full rounded-lg bg-track px-4 py-2 text-[12.5px] font-medium text-fg hover:bg-line"
           >
             Sluiten
           </button>

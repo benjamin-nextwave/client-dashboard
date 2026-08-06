@@ -35,8 +35,8 @@ export default async function OnboardingPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="text-2xl font-bold text-gray-900">{t('onboarding.title')}</h1>
-      <p className="mt-2 text-sm text-gray-500">{t('onboarding.description')}</p>
+      <h1 className="text-[25px] font-semibold tracking-[-0.03em]">{t('onboarding.title')}</h1>
+      <p className="mt-2 text-[12.5px] text-muted">{t('onboarding.description')}</p>
 
       <OnboardingTimeline steps={steps ?? []} />
     </div>

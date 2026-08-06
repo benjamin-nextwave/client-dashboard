@@ -55,7 +55,7 @@ export function LanguageSwitcher() {
         type="button"
         onClick={() => setOpen(!open)}
         disabled={pending}
-        className={`group inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white/95 px-3 py-2 text-xs font-semibold text-gray-700 shadow-sm backdrop-blur transition-all hover:-translate-y-0.5 hover:border-indigo-200 hover:text-indigo-600 hover:shadow disabled:opacity-60 ${
+        className={`group inline-flex items-center gap-2 rounded-full border border-line bg-panel/95 px-3 py-2 text-[11.5px] font-semibold text-fg backdrop-blur transition-all hover:border-line hover:text-brand disabled:opacity-60 ${
           open ? 'ring-2 ring-indigo-200' : ''
         }`}
         aria-label={t('locale.chooseLanguage')}
@@ -63,7 +63,7 @@ export function LanguageSwitcher() {
         <span className="text-base leading-none">{LOCALE_FLAG[currentLocale]}</span>
         <span className="hidden sm:inline">{LOCALE_NATIVE_NAMES[currentLocale]}</span>
         <svg
-          className={`h-3 w-3 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`}
+          className={`h-3 w-3 text-faint transition-transform ${open ? 'rotate-180' : ''}`}
           fill="none"
           viewBox="0 0 24 24"
           strokeWidth={2.5}
@@ -74,8 +74,8 @@ export function LanguageSwitcher() {
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-44 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
-          <div className="border-b border-gray-100 bg-gray-50 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-500">
+        <div className="absolute right-0 mt-2 w-44 overflow-hidden rounded-2xl border border-line bg-panel ">
+          <div className="border-b border-line bg-track px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-muted">
             {t('locale.chooseLanguage')}
           </div>
           <ul className="py-1">
@@ -87,10 +87,10 @@ export function LanguageSwitcher() {
                     type="button"
                     onClick={() => handleSelect(l)}
                     disabled={pending}
-                    className={`flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition-colors disabled:opacity-60 ${
+                    className={`flex w-full items-center gap-3 px-3 py-2 text-left text-[12.5px] transition-colors disabled:opacity-60 ${
                       active
                         ? 'bg-indigo-50 text-indigo-700'
-                        : 'text-gray-700 hover:bg-gray-50'
+                        : 'text-fg hover:bg-track'
                     }`}
                   >
                     <span className="text-base leading-none">{LOCALE_FLAG[l]}</span>

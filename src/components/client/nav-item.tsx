@@ -16,30 +16,26 @@ export function NavItem({ href, label, icon, badge, external }: NavItemProps) {
   const isActive =
     pathname === href || (pathname.startsWith(href) && href !== '/dashboard')
 
-  const className = `group relative flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-all ${
+  const className = `group relative flex items-center gap-3 rounded-control px-3 py-[9px] text-[12.5px] transition-colors ${
     isActive
-      ? 'bg-white text-gray-900 shadow-sm ring-1 ring-gray-900/5'
-      : 'text-gray-500 hover:bg-white/60 hover:text-gray-900'
+      ? 'bg-white/10 font-semibold text-white'
+      : 'font-normal text-white/60 hover:bg-white/5 hover:text-white/90 active:bg-white/[0.14]'
   }`
 
   const content = (
     <>
       {isActive && (
         <span
-          className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r-full bg-brand"
+          className="absolute inset-y-2 left-0 w-0.5 rounded-r-sm bg-brand-lift"
           aria-hidden
         />
       )}
-      <span
-        className={`flex h-5 w-5 items-center justify-center transition-colors ${
-          isActive ? 'text-brand' : 'text-gray-400 group-hover:text-gray-600'
-        }`}
-      >
+      <span className="flex h-4 w-4 shrink-0 items-center justify-center">
         {icon}
       </span>
       <span className="flex-1">{label}</span>
       {badge != null && badge > 0 && (
-        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-semibold text-white">
+        <span className="text-[10.5px] font-semibold tabular-nums text-white/50">
           {badge}
         </span>
       )}

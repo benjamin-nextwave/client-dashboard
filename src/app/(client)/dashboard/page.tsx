@@ -191,9 +191,12 @@ export default async function OverzichtPage({
 
   return (
     <div>
-      <div className="mb-6 flex items-start justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">{t('overview.title')}</h1>
-        <div className="flex items-start gap-2">
+      <div className="mb-5 flex items-end justify-between gap-5">
+        <div>
+          <h1 className="text-[25px] font-semibold tracking-[-0.03em]">{t('overview.title')}</h1>
+          <p className="mt-[7px] text-[13px] text-muted">{periodLabel}</p>
+        </div>
+        <div className="flex items-start gap-2.5">
           <NewsMegaphoneButton archiveItems={archiveItems} />
           <RefreshButton />
         </div>

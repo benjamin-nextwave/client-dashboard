@@ -15,8 +15,8 @@ export default async function VerzondenPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900">{t('sent.title')}</h1>
-      <p className="mt-1 text-sm text-gray-600">{t('sent.description')}</p>
+      <h1 className="text-[25px] font-semibold tracking-[-0.03em]">{t('sent.title')}</h1>
+      <p className="mt-1 text-[12.5px] text-muted">{t('sent.description')}</p>
       <VerzondenClient />
     </div>
   )

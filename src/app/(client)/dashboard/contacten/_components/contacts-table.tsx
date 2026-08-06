@@ -59,7 +59,7 @@ export function ContactsTable({
       <form onSubmit={handleSearch} className="mb-4 flex gap-2">
         <div className="relative flex-1">
           <svg
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-faint"
             fill="none"
             viewBox="0 0 24 24"
             strokeWidth={1.5}
@@ -76,12 +76,12 @@ export function ContactsTable({
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder={t('contacts.searchPlaceholder')}
-            className="block w-full rounded-lg border border-gray-300 py-2.5 pl-10 pr-4 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="block w-full rounded-lg border border-line py-2.5 pl-10 pr-4 text-[12.5px] focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
         </div>
         <button
           type="submit"
-          className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-500"
+          className="rounded-lg bg-blue-600 px-4 py-2.5 text-[12.5px] font-semibold text-white hover:bg-blue-500"
         >
           {t('contacts.searchButton')}
         </button>
@@ -89,7 +89,7 @@ export function ContactsTable({
           <button
             type="button"
             onClick={() => navigate(0, '')}
-            className="rounded-lg bg-gray-100 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-200"
+            className="rounded-lg bg-track px-4 py-2.5 text-[12.5px] font-medium text-fg hover:bg-line"
           >
             {t('contacts.clearSearch')}
           </button>
@@ -97,7 +97,7 @@ export function ContactsTable({
       </form>
 
       {/* Results count */}
-      <div className="mb-3 text-sm text-gray-500">
+      <div className="mb-3 text-[12.5px] text-muted">
         {total === 1 ? t('contacts.foundCountSingular') : t('contacts.foundCount', { count: total.toLocaleString('nl-NL') })}
         {search && (
           <span> {t('contacts.foundFor', { query: search })}</span>
@@ -106,27 +106,27 @@ export function ContactsTable({
 
       {/* Table */}
       {contacts.length > 0 ? (
-        <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+        <div className="overflow-hidden rounded-panel border border-line bg-panel">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-line">
+              <thead className="bg-track">
                 <tr>
                   {visibleColumns.map((col) => (
                     <th
                       key={col.id}
-                      className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500"
+                      className="px-4 py-3 text-left text-[11.5px] font-semibold uppercase tracking-wider text-muted"
                     >
                       {col.name}
                     </th>
                   ))}
                   {columns.length > 5 && (
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    <th className="px-4 py-3 text-left text-[11.5px] font-semibold uppercase tracking-wider text-muted">
                       ...
                     </th>
                   )}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-line">
                 {contacts.map((contact) => (
                   <tr
                     key={contact.id}
@@ -136,13 +136,13 @@ export function ContactsTable({
                     {visibleColumns.map((col) => (
                       <td
                         key={col.id}
-                        className="max-w-[200px] truncate whitespace-nowrap px-4 py-3 text-sm text-gray-900"
+                        className="max-w-[200px] truncate whitespace-nowrap px-4 py-3 text-[12.5px] text-fg"
                       >
                         {contact.data[col.id] || '-'}
                       </td>
                     ))}
                     {columns.length > 5 && (
-                      <td className="px-4 py-3 text-sm text-gray-400">
+                      <td className="px-4 py-3 text-[12.5px] text-faint">
                         {t('contacts.moreFields', { count: columns.length - 5 })}
                       </td>
                     )}
@@ -154,8 +154,8 @@ export function ContactsTable({
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3">
-              <p className="text-sm text-gray-500">
+            <div className="flex items-center justify-between border-t border-line bg-panel px-4 py-3">
+              <p className="text-[12.5px] text-muted">
                 {t('contacts.pagination', { current: currentPage + 1, total: totalPages })}
               </p>
               <div className="flex gap-2">
@@ -163,7 +163,7 @@ export function ContactsTable({
                   type="button"
                   onClick={() => navigate(currentPage - 1)}
                   disabled={currentPage === 0}
-                  className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                  className="rounded-md border border-line px-3 py-1.5 text-[12.5px] font-medium text-fg hover:bg-track disabled:opacity-50"
                 >
                   {t('contacts.paginationPrevious')}
                 </button>
@@ -171,7 +171,7 @@ export function ContactsTable({
                   type="button"
                   onClick={() => navigate(currentPage + 1)}
                   disabled={currentPage >= totalPages - 1}
-                  className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                  className="rounded-md border border-line px-3 py-1.5 text-[12.5px] font-medium text-fg hover:bg-track disabled:opacity-50"
                 >
                   {t('contacts.paginationNext')}
                 </button>
@@ -180,7 +180,7 @@ export function ContactsTable({
           )}
         </div>
       ) : (
-        <div className="rounded-lg bg-gray-50 p-8 text-center text-sm text-gray-500">
+        <div className="rounded-lg bg-track p-8 text-center text-[12.5px] text-muted">
           {search ? t('inbox.noResultsForSearch') : t('contacts.empty')}
         </div>
       )}

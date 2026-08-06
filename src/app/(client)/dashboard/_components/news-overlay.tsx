@@ -115,7 +115,7 @@ export function NewsOverlay({ items }: NewsOverlayProps) {
         */}
       <div
         key={current.id}
-        className="relative flex max-h-[85vh] w-full max-w-[600px] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl animate-fadeIn"
+        className="relative flex max-h-[85vh] w-full max-w-[600px] flex-col overflow-hidden rounded-2xl bg-panel shadow-2xl animate-fadeIn"
       >
         {/* Scrollable content area — uses NewsContentRenderer (D-23 reuse). */}
         <div className="overflow-y-auto">
@@ -127,9 +127,9 @@ export function NewsOverlay({ items }: NewsOverlayProps) {
         </div>
 
         {/* Action footer — single button, brand-color CTA (D-25). */}
-        <div className="flex flex-col gap-2 border-t border-gray-100 bg-white p-4 sm:p-6">
+        <div className="flex flex-col gap-2 border-t border-line bg-panel p-4 sm:p-6">
           {dismissError && (
-            <p className="text-sm text-red-600" role="alert">
+            <p className="text-[12.5px] text-red-600" role="alert">
               {dismissError}
             </p>
           )}
