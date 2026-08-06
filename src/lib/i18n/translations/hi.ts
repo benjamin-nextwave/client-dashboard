@@ -158,15 +158,17 @@ export const hi: Translations = {
     comingSoon: 'जल्द आ रहा है',
     comingSoonDescription:
       'Nextwave टीम वर्तमान में इन आँकड़ों को संसाधित करने पर कड़ी मेहनत कर रही है। जल्द ही उपलब्ध!',
-    footprintMailboxes: 'सक्रिय मेलबॉक्स',
-    footprintMailboxesHint: 'जिन पतों से मेल भेजी गई',
-    footprintDomains: 'सक्रिय डोमेन',
+    footprintMailboxes: 'जुड़े हुए मेलबॉक्स',
+    footprintMailboxesHint: 'आपके कैम्पेन से जुड़े',
+    footprintDomains: 'जुड़े हुए डोमेन',
     footprintDomainsHint: 'इन मेलबॉक्स के डोमेन',
     footprintCampaigns: 'कैम्पेन',
     footprintNoCampaign: 'कोई कैम्पेन ज्ञात नहीं',
     footprintDomainOf: '{count} मेलबॉक्स',
-    footprintEmpty: 'अभी कोई भेजने का डेटा उपलब्ध नहीं है।',
+    footprintEmpty: 'आपके कैम्पेन से अभी कोई मेलबॉक्स नहीं जुड़ा है।',
     footprintViewAll: 'देखें',
+    footprintFallbackHint: 'जिन पतों से मेल भेजी गई',
+    footprintFallbackNotice: 'Instantly से लाइव डेटा नहीं मिल सका। ये वे पते हैं जिनसे पहले मेल भेजी गई थी, बिना कैम्पेन लिंक के।',
   },
 
   inbox: {

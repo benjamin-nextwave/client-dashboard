@@ -2,12 +2,13 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useT } from '@/lib/i18n/client'
-import type { MailboxEntry } from '@/lib/data/campaign-stats'
+import type { MailboxEntry, SendingFootprint } from '@/lib/data/sending-accounts'
 
 interface SendingFootprintCardsProps {
   mailboxes: number
   domains: number
   entries: MailboxEntry[]
+  source: SendingFootprint['source']
 }
 
 type Panel = 'mailboxes' | 'domains'
@@ -24,6 +25,7 @@ export function SendingFootprintCards({
   mailboxes,
   domains,
   entries,
+  source,
 }: SendingFootprintCardsProps) {
   const t = useT()
   const [panel, setPanel] = useState<Panel | null>(null)
@@ -32,7 +34,9 @@ export function SendingFootprintCards({
     {
       key: 'mailboxes' as const,
       label: t('overview.footprintMailboxes'),
-      hint: t('overview.footprintMailboxesHint'),
+      hint: source === 'instantly'
+        ? t('overview.footprintMailboxesHint')
+        : t('overview.footprintFallbackHint'),
       value: mailboxes,
       icon: 'M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75',
     },
@@ -88,6 +92,7 @@ export function SendingFootprintCards({
         <FootprintModal
           panel={panel}
           entries={entries}
+          source={source}
           onClose={() => setPanel(null)}
           title={panel === 'mailboxes' ? t('overview.footprintMailboxes') : t('overview.footprintDomains')}
         />
@@ -99,11 +104,13 @@ export function SendingFootprintCards({
 function FootprintModal({
   panel,
   entries,
+  source,
   title,
   onClose,
 }: {
   panel: Panel
   entries: MailboxEntry[]
+  source: SendingFootprint['source']
   title: string
   onClose: () => void
 }) {
@@ -157,6 +164,12 @@ function FootprintModal({
             </svg>
           </button>
         </div>
+
+        {source === 'database' && (
+          <p className="shrink-0 border-b border-line bg-track px-5 py-2.5 text-[11.5px] leading-relaxed text-muted">
+            {t('overview.footprintFallbackNotice')}
+          </p>
+        )}
 
         <div className="min-h-0 flex-1 overflow-y-auto">
           {isEmpty ? (

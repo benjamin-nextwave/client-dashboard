@@ -1,6 +1,7 @@
 import { assertOutboundAllowed } from '@/lib/safety/write-guard'
 import type {
   InstantlyCampaign,
+  InstantlyCampaignDetail,
   InstantlyCampaignAnalytics,
   InstantlyDailyAnalytics,
   InstantlyEmail,
@@ -231,6 +232,38 @@ export async function replyToEmail(
       body: { html: options.bodyHtml },
     }),
     cache: 'no-store',
+  })
+
+  if (!response.ok) {
+    throw new Error(
+      `Instantly API error: ${response.status} ${response.statusText}`
+    )
+  }
+
+  return response.json()
+}
+
+/**
+ * Haalt één campagne op inclusief `email_list`: de mailboxen die eraan
+ * gekoppeld zijn. Dit is de enige bron die weet welke mailbox bij welke
+ * campagne hoort — cached_emails heeft geen campaign_id en synced_leads bevat
+ * alleen leads met een reactie.
+ *
+ * Nieuwe functie; bestaande calls in dit bestand zijn ongewijzigd. Puur lezen,
+ * dus de write-guard raakt dit niet.
+ *
+ * Wijkt op één punt bewust af van de rest van dit bestand: in plaats van
+ * `cache: no-store` staat er een revalidate, omdat dit per paginaweergave
+ * één call per campagne zou zijn. De koppeling tussen campagne en mailboxen
+ * verandert zelden.
+ */
+export async function getCampaignDetail(
+  campaignId: string,
+  options?: { apiKey?: string; revalidateSeconds?: number }
+): Promise<InstantlyCampaignDetail> {
+  const response = await fetch(`${BASE_URL}/campaigns/${campaignId}`, {
+    headers: getHeaders(options?.apiKey),
+    next: { revalidate: options?.revalidateSeconds ?? 900 },
   })
 
   if (!response.ok) {

@@ -158,15 +158,17 @@ export const en: Translations = {
     comingSoon: 'Coming soon',
     comingSoonDescription:
       'The Nextwave team is currently working hard on processing these statistics. Available soon!',
-    footprintMailboxes: 'Active mailboxes',
-    footprintMailboxesHint: 'Addresses that have sent mail',
-    footprintDomains: 'Active domains',
+    footprintMailboxes: 'Connected mailboxes',
+    footprintMailboxesHint: 'Linked to your campaigns',
+    footprintDomains: 'Connected domains',
     footprintDomainsHint: 'Domains behind those mailboxes',
     footprintCampaigns: 'Campaigns',
     footprintNoCampaign: 'No campaign known',
     footprintDomainOf: '{count} mailboxes',
-    footprintEmpty: 'No sending data available yet.',
+    footprintEmpty: 'No mailboxes are linked to your campaigns yet.',
     footprintViewAll: 'View',
+    footprintFallbackHint: 'Addresses that have sent mail',
+    footprintFallbackNotice: 'Live data from Instantly could not be loaded. These are addresses that have sent mail for you before, without campaign links.',
   },
 
   inbox: {
