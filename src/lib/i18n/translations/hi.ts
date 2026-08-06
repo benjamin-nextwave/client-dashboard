@@ -162,6 +162,11 @@ export const hi: Translations = {
     footprintMailboxesHint: 'जिन पतों से मेल भेजी गई',
     footprintDomains: 'सक्रिय डोमेन',
     footprintDomainsHint: 'इन मेलबॉक्स के डोमेन',
+    footprintCampaigns: 'कैम्पेन',
+    footprintNoCampaign: 'कोई कैम्पेन ज्ञात नहीं',
+    footprintDomainOf: '{count} मेलबॉक्स',
+    footprintEmpty: 'अभी कोई भेजने का डेटा उपलब्ध नहीं है।',
+    footprintViewAll: 'देखें',
   },
 
   inbox: {

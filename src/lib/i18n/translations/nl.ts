@@ -141,6 +141,11 @@ export interface Translations {
     footprintMailboxesHint: string
     footprintDomains: string
     footprintDomainsHint: string
+    footprintCampaigns: string
+    footprintNoCampaign: string
+    footprintDomainOf: string
+    footprintEmpty: string
+    footprintViewAll: string
   }
   inbox: {
     title: string
@@ -723,6 +728,11 @@ export const nl: Translations = {
     footprintMailboxesHint: 'Adressen waarvandaan is verstuurd',
     footprintDomains: 'Actieve domeinen',
     footprintDomainsHint: 'Domeinen achter die mailboxen',
+    footprintCampaigns: 'Campagnes',
+    footprintNoCampaign: 'Geen campagne bekend',
+    footprintDomainOf: '{count} mailboxen',
+    footprintEmpty: 'Nog geen verzendgegevens beschikbaar.',
+    footprintViewAll: 'Bekijken',
   },
 
   inbox: {

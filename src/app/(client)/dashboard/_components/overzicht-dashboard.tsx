@@ -5,6 +5,7 @@ import { DailyChart } from './daily-chart'
 import { DateRangePicker } from './date-range-picker'
 import { ComingSoonCharts } from './coming-soon-charts'
 import { SendingFootprintCards } from './sending-footprint'
+import type { SendingFootprint } from '@/lib/data/campaign-stats'
 import { EmptyState } from '@/components/client/ui/empty-state'
 import { useT } from '@/lib/i18n/client'
 
@@ -16,7 +17,7 @@ interface OverzichtDashboardProps {
   brandColor: string
   currentRange: string
   periodLabel: string
-  footprint: { mailboxes: number; domains: number }
+  footprint: SendingFootprint
 }
 
 export function OverzichtDashboard({
@@ -58,7 +59,11 @@ export function OverzichtDashboard({
         dailyStats={dailyStats}
       />
 
-      <SendingFootprintCards mailboxes={footprint.mailboxes} domains={footprint.domains} />
+      <SendingFootprintCards
+        mailboxes={footprint.mailboxes}
+        domains={footprint.domains}
+        entries={footprint.entries}
+      />
 
       <DailyChart data={dailyStats} brandColor={brandColor} />
 

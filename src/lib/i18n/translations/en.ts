@@ -162,6 +162,11 @@ export const en: Translations = {
     footprintMailboxesHint: 'Addresses that have sent mail',
     footprintDomains: 'Active domains',
     footprintDomainsHint: 'Domains behind those mailboxes',
+    footprintCampaigns: 'Campaigns',
+    footprintNoCampaign: 'No campaign known',
+    footprintDomainOf: '{count} mailboxes',
+    footprintEmpty: 'No sending data available yet.',
+    footprintViewAll: 'View',
   },
 
   inbox: {
