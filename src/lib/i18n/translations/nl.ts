@@ -137,6 +137,10 @@ export interface Translations {
     chartCompanySize: string
     comingSoon: string
     comingSoonDescription: string
+    footprintMailboxes: string
+    footprintMailboxesHint: string
+    footprintDomains: string
+    footprintDomainsHint: string
   }
   inbox: {
     title: string
@@ -715,6 +719,10 @@ export const nl: Translations = {
     comingSoon: 'Coming soon',
     comingSoonDescription:
       'Momenteel is het Nextwave team hard aan het werk om deze statistieken te verwerken. Binnenkort beschikbaar!',
+    footprintMailboxes: 'Actieve mailboxen',
+    footprintMailboxesHint: 'Adressen waarvandaan is verstuurd',
+    footprintDomains: 'Actieve domeinen',
+    footprintDomainsHint: 'Domeinen achter die mailboxen',
   },
 
   inbox: {

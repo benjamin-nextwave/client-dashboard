@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { getClientBranding } from '@/lib/client/get-client-branding'
-import { getOverviewStats, getDailyStats } from '@/lib/data/campaign-stats'
+import { getOverviewStats, getDailyStats, getSendingFootprint } from '@/lib/data/campaign-stats'
 import { getLocale, getTranslator } from '@/lib/i18n/server'
 import { createClient } from '@/lib/supabase/server'
 import type { Locale, Translator } from '@/lib/i18n'
@@ -184,9 +184,10 @@ export default async function OverzichtPage({
   // -------------------------------------------------------------------------
   // Existing dashboard data fetch — UNCHANGED.
   // -------------------------------------------------------------------------
-  const [stats, dailyStats] = await Promise.all([
+  const [stats, dailyStats, footprint] = await Promise.all([
     getOverviewStats(client.id, startDate, endDate),
     getDailyStats(client.id, startDate, endDate),
+    getSendingFootprint(client.id),
   ])
 
   return (
@@ -196,9 +197,12 @@ export default async function OverzichtPage({
           <h1 className="text-[25px] font-semibold tracking-[-0.03em]">{t('overview.title')}</h1>
           <p className="mt-[7px] text-[13px] text-muted">{periodLabel}</p>
         </div>
-        <div className="flex items-start gap-2.5">
-          <NewsMegaphoneButton archiveItems={archiveItems} />
-          <RefreshButton />
+        <div className="flex flex-col items-end gap-1.5">
+          <div className="flex items-center gap-2">
+            <NewsMegaphoneButton archiveItems={archiveItems} />
+            <RefreshButton />
+          </div>
+          <p className="text-[11.5px] text-faint">{t('overview.refreshHintBelow')}</p>
         </div>
       </div>
       <GoLiveBlock clientId={client.id} />
@@ -210,6 +214,7 @@ export default async function OverzichtPage({
         brandColor={client.primary_color ?? '#3B82F6'}
         currentRange={params.range ?? '30d'}
         periodLabel={periodLabel}
+        footprint={footprint}
       />
       <NewsOverlay items={unreadItems} />
     </div>

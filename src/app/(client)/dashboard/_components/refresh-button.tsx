@@ -33,8 +33,11 @@ export function RefreshButton() {
     }
   }
 
+  // Alleen de knop zelf: de toelichting eronder stond eerder in dezelfde kolom
+  // en maakte die zo breed dat de nieuwsknop ernaast weggeduwd werd. De hint
+  // rendert nu in page.tsx, onder de knoppenrij.
   return (
-    <div className="flex flex-col items-end gap-2">
+    <div className="flex flex-col items-end gap-1.5">
       <button
         type="button"
         onClick={handleRefresh}
@@ -65,9 +68,8 @@ export function RefreshButton() {
           </>
         )}
       </button>
-      <p className="text-[11.5px] text-faint">{t('overview.refreshHintBelow')}</p>
       {error && (
-        <p className="text-[12.5px] text-neg">{error}</p>
+        <p className="whitespace-nowrap text-[12.5px] text-neg">{error}</p>
       )}
     </div>
   )

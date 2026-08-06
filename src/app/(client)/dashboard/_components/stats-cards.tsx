@@ -35,9 +35,23 @@ function sparkline(values: number[]) {
   return { line, area: `${line} L${w},${h} L0,${h} Z` }
 }
 
-function Sparkline({ values }: { values: number[] }) {
+/**
+ * `tone` bepaalt de kleur. Bij 'neg' — de bounced-kaart — tekenen we altijd
+ * een lijn, ook als er geen reeks is: dan een vlakke lijn die letterlijk laat
+ * zien dat er geen beweging is.
+ */
+function Sparkline({ values, tone = 'brand' }: { values: number[]; tone?: 'brand' | 'neg' }) {
   const path = sparkline(values)
-  if (!path) return null
+  const isNeg = tone === 'neg'
+
+  if (!path && !isNeg) return null
+
+  const stroke = isNeg ? 'var(--c-neg)' : 'var(--color-brand)'
+  const fill = isNeg ? 'color-mix(in oklab, var(--c-neg) 8%, transparent)' : 'var(--brand-10)'
+
+  // Vlakke lijn op halve hoogte wanneer er niets te tekenen valt.
+  const flat = { line: 'M0,20 L220,20', area: 'M0,20 L220,20 L220,40 L0,40 Z' }
+  const d = path ?? flat
 
   return (
     <svg
@@ -46,11 +60,11 @@ function Sparkline({ values }: { values: number[] }) {
       className="-mx-[18px] mt-3.5 block h-10 w-[calc(100%+36px)]"
       aria-hidden
     >
-      <path d={path.area} fill="var(--brand-10)" />
+      <path d={d.area} fill={fill} />
       <path
-        d={path.line}
+        d={d.line}
         fill="none"
-        stroke="var(--color-brand)"
+        stroke={stroke}
         strokeWidth={1.5}
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -69,25 +83,28 @@ export function StatsCards({
 }: StatsCardsProps) {
   const t = useT()
 
-  // Alleen verzonden en reacties hebben een dagreeks. Voor bounced bestaat die
-  // niet, dus die kaart krijgt bewust geen sparkline in plaats van een verzonnen
-  // lijn.
+  // Alleen verzonden en reacties hebben een dagreeks. Bounced heeft die niet en
+  // krijgt daarom een vlakke rode lijn: geen verzonnen verloop, wel zichtbaar
+  // dat er geen beweging is.
   const cards = [
     {
       label: t('overview.statEmailsSent'),
       value: emailsSent.toLocaleString('nl-NL'),
       trend: dailyStats.map((d) => d.emailsSent),
+      tone: 'brand' as const,
     },
     {
       label: t('overview.statUniqueReplies'),
       subtitle: t('overview.statUniqueRepliesSubtitle'),
       value: uniqueReplies.toLocaleString('nl-NL'),
       trend: dailyStats.map((d) => d.replies),
+      tone: 'brand' as const,
     },
     {
       label: t('overview.statBounced'),
       value: bounced.toLocaleString('nl-NL'),
       trend: [] as number[],
+      tone: 'neg' as const,
     },
   ]
 
@@ -96,7 +113,7 @@ export function StatsCards({
       {cards.map((card) => (
         <div
           key={card.label}
-          className="flex flex-col overflow-hidden rounded-panel border border-line bg-panel px-[18px] pb-4 pt-4"
+          className="flex flex-col overflow-hidden rounded-panel border border-line bg-panel px-[18px] pb-4 pt-4 transition-colors hover:border-[var(--brand-32)]"
         >
           <div className="text-xs font-medium text-muted">{card.label}</div>
           <div className="mt-2.5 text-[30px] font-semibold leading-none tracking-[-0.04em] tabular-nums">
@@ -106,7 +123,7 @@ export function StatsCards({
             <p className="mt-1.5 text-[11px] leading-tight text-faint">{card.subtitle}</p>
           )}
           <div className="mt-auto">
-            <Sparkline values={card.trend} />
+            <Sparkline values={card.trend} tone={card.tone} />
           </div>
           <span className="sr-only">{periodLabel}</span>
         </div>

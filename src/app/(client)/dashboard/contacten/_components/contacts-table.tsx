@@ -81,7 +81,7 @@ export function ContactsTable({
         </div>
         <button
           type="submit"
-          className="rounded-lg bg-blue-600 px-4 py-2.5 text-[12.5px] font-semibold text-white hover:bg-blue-500"
+          className="rounded-control bg-[var(--brand-color)] px-4 py-2.5 text-[12.5px] font-semibold text-white transition-opacity hover:opacity-90"
         >
           {t('contacts.searchButton')}
         </button>
@@ -131,7 +131,7 @@ export function ContactsTable({
                   <tr
                     key={contact.id}
                     onClick={() => setSelectedContact(contact)}
-                    className="cursor-pointer transition-colors hover:bg-blue-50"
+                    className="cursor-pointer transition-colors hover:bg-[var(--brand-08)]"
                   >
                     {visibleColumns.map((col) => (
                       <td
@@ -163,7 +163,7 @@ export function ContactsTable({
                   type="button"
                   onClick={() => navigate(currentPage - 1)}
                   disabled={currentPage === 0}
-                  className="rounded-md border border-line px-3 py-1.5 text-[12.5px] font-medium text-fg hover:bg-track disabled:opacity-50"
+                  className="rounded-md border border-line px-3 py-1.5 text-[12.5px] font-medium text-fg transition-colors hover:bg-[var(--brand-08)] disabled:opacity-50"
                 >
                   {t('contacts.paginationPrevious')}
                 </button>
@@ -171,7 +171,7 @@ export function ContactsTable({
                   type="button"
                   onClick={() => navigate(currentPage + 1)}
                   disabled={currentPage >= totalPages - 1}
-                  className="rounded-md border border-line px-3 py-1.5 text-[12.5px] font-medium text-fg hover:bg-track disabled:opacity-50"
+                  className="rounded-md border border-line px-3 py-1.5 text-[12.5px] font-medium text-fg transition-colors hover:bg-[var(--brand-08)] disabled:opacity-50"
                 >
                   {t('contacts.paginationNext')}
                 </button>

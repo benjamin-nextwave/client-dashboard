@@ -18,7 +18,7 @@ export function SentEmailList({ emails }: SentEmailListProps) {
         {emails.map((email) => (
           <li
             key={email.id}
-            className="cursor-pointer px-4 py-3 transition hover:bg-track"
+            className="cursor-pointer px-4 py-3 transition-colors hover:bg-[var(--brand-08)]"
             onClick={() => router.push(`/dashboard/verzonden/${email.id}`)}
           >
             <div className="flex items-center justify-between">

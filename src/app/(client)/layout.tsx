@@ -1,7 +1,6 @@
 import { redirect } from 'next/navigation'
 import { getClientBranding } from '@/lib/client/get-client-branding'
 import { SidebarNav } from '@/components/client/sidebar-nav'
-import { SafariBanner } from '@/components/client/safari-banner'
 import { LanguageSwitcher } from '@/components/client/language-switcher'
 import { TestEnvironmentBar } from '@/components/client/test-environment-bar'
 import { I18nProvider } from '@/lib/i18n/client'
@@ -48,7 +47,6 @@ export default async function ClientLayout({
         />
         <main className="flex-1 overflow-auto">
           <div className="mx-auto max-w-6xl px-6 py-10 lg:px-10">
-            <SafariBanner />
             {children}
           </div>
         </main>

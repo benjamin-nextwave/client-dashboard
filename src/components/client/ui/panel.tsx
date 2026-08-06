@@ -23,7 +23,7 @@ export function Panel({
 
   return (
     <section
-      className={`flex flex-col overflow-hidden rounded-panel border border-line bg-panel ${className}`}
+      className={`flex flex-col overflow-hidden rounded-panel border border-line bg-panel transition-colors ${className}`}
     >
       {hasHeader && (
         <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-[15px]">
@@ -41,4 +41,4 @@ export function Panel({
 
 /** Knopvorm uit het ontwerp: 34px hoog, haarlijn, merk-tint bij hover. */
 export const buttonClass =
-  'inline-flex h-[34px] items-center gap-2 rounded-control border border-line bg-panel px-[13px] text-[12.5px] font-medium text-fg transition-colors hover:bg-[var(--brand-08)] active:bg-[var(--brand-15)] disabled:opacity-50'
+  'inline-flex h-[34px] items-center gap-2 rounded-control border border-line bg-panel px-[13px] text-[12.5px] font-medium text-fg transition-colors hover:border-[var(--brand-32)] hover:bg-[var(--brand-08)] active:bg-[var(--brand-15)] disabled:opacity-50'

@@ -215,7 +215,7 @@ function NewsSidebarListItem({ item, onClick }: NewsSidebarListItemProps) {
       <button
         type="button"
         onClick={onClick}
-        className="block w-full cursor-pointer rounded-panel border border-line bg-panel p-4 text-left transition-colors hover:bg-[var(--brand-08)]"
+        className="block w-full cursor-pointer rounded-panel border border-line bg-panel p-4 text-left transition-colors hover:border-[var(--brand-32)] hover:bg-[var(--brand-08)]"
       >
         <p className="text-[12.5px] font-semibold leading-tight text-fg">
           {item.title}

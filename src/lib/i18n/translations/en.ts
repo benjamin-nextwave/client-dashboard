@@ -158,6 +158,10 @@ export const en: Translations = {
     comingSoon: 'Coming soon',
     comingSoonDescription:
       'The Nextwave team is currently working hard on processing these statistics. Available soon!',
+    footprintMailboxes: 'Active mailboxes',
+    footprintMailboxesHint: 'Addresses that have sent mail',
+    footprintDomains: 'Active domains',
+    footprintDomainsHint: 'Domains behind those mailboxes',
   },
 
   inbox: {

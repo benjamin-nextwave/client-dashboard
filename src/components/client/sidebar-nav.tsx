@@ -172,16 +172,16 @@ export function SidebarNav({ companyName, logoUrl, signOutAction, inboxUrl, inbo
       />
 
       {/* Merk */}
-      <div className="relative flex items-center px-5 pt-6 pb-[22px]">
+      <div className="relative flex items-center px-5 pb-4 pt-5">
         <ClientLogo logoUrl={logoUrl} companyName={companyName} />
       </div>
 
       {/* Navigatie */}
-      <nav className="relative flex-1 overflow-y-auto px-3 py-1">
+      <nav className="relative min-h-0 flex-1 overflow-y-auto px-3 py-0.5">
         {groups.map((group, i) => (
-          <div key={i} className="mb-5">
+          <div key={i} className="mb-3">
             {group.title && (
-              <div className="px-3 pb-[9px] text-[10px] font-semibold uppercase tracking-[0.18em] text-white/30">
+              <div className="px-3 pb-1.5 pt-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/30">
                 {group.title}
               </div>
             )}
@@ -195,11 +195,11 @@ export function SidebarNav({ companyName, logoUrl, signOutAction, inboxUrl, inbo
       </nav>
 
       {/* Uitloggen */}
-      <div className="relative border-t border-white/[0.09] p-3">
+      <div className="relative shrink-0 border-t border-white/[0.09] p-2.5">
         <form action={signOutAction}>
           <button
             type="submit"
-            className="flex w-full items-center gap-3 rounded-control px-3 py-[9px] text-[12.5px] text-white/60 transition-colors hover:bg-white/5 hover:text-white/90"
+            className="flex w-full items-center gap-3 rounded-control px-3 py-2 text-[12.5px] text-white/60 transition-colors hover:bg-white/5 hover:text-white/90"
           >
             <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={1.6} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />

@@ -158,6 +158,10 @@ export const hi: Translations = {
     comingSoon: 'जल्द आ रहा है',
     comingSoonDescription:
       'Nextwave टीम वर्तमान में इन आँकड़ों को संसाधित करने पर कड़ी मेहनत कर रही है। जल्द ही उपलब्ध!',
+    footprintMailboxes: 'सक्रिय मेलबॉक्स',
+    footprintMailboxesHint: 'जिन पतों से मेल भेजी गई',
+    footprintDomains: 'सक्रिय डोमेन',
+    footprintDomainsHint: 'इन मेलबॉक्स के डोमेन',
   },
 
   inbox: {
