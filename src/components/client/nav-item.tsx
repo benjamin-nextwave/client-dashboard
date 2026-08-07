@@ -17,7 +17,7 @@ export function NavItem({ href, label, icon, badge, external, collapsed }: NavIt
   const isActive =
     pathname === href || (pathname.startsWith(href) && href !== '/dashboard')
 
-  const className = `group relative flex items-center rounded-control py-2 text-[12.5px] transition-colors ${
+  const className = `group relative flex items-center rounded-control py-[7px] text-[12.5px] transition-colors ${
     collapsed ? 'justify-center px-0' : 'gap-3 px-3'
   } ${
     isActive

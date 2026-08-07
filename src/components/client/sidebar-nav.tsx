@@ -191,7 +191,7 @@ export function SidebarNav({ signOutAction, inboxUrl, inboxVisible, leadInboxVis
     // positioneert zijn iframe met vaste pixelwaarden die op deze breedte zijn
     // afgestemd.
     <aside
-      className={`sticky top-0 flex h-screen shrink-0 flex-col bg-ink transition-[width] duration-200 ${
+      className={`sticky top-0 flex h-screen shrink-0 flex-col overflow-hidden bg-ink transition-[width] duration-200 ${
         collapsed ? 'w-16' : 'w-60'
       }`}
     >
@@ -204,7 +204,7 @@ export function SidebarNav({ signOutAction, inboxUrl, inboxVisible, leadInboxVis
 
       {/* Merk — Nextwave, niet het klantlogo */}
       <div
-        className={`relative flex items-center pb-4 pt-5 ${
+        className={`relative flex items-center pb-3 pt-4 ${
           collapsed ? 'justify-center px-3' : 'px-5'
         }`}
       >
@@ -219,14 +219,14 @@ export function SidebarNav({ signOutAction, inboxUrl, inboxVisible, leadInboxVis
       </div>
 
       {/* Navigatie */}
-      <nav className="relative min-h-0 flex-1 overflow-y-auto px-3 py-0.5">
+      <nav className="relative min-h-0 flex-1 overflow-hidden px-3 py-0.5">
         {groups.map((group, i) => (
-          <div key={i} className="mb-3">
+          <div key={i} className="mb-2">
             {group.title &&
               (collapsed ? (
-                <div className="mx-3 mb-1.5 mt-1 border-t border-white/[0.09]" aria-hidden />
+                <div className="mx-3 mb-1 mt-0.5 border-t border-white/[0.09]" aria-hidden />
               ) : (
-                <div className="px-3 pb-1.5 pt-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/30">
+                <div className="px-3 pb-1 pt-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/30">
                   {group.title}
                 </div>
               ))}
@@ -246,14 +246,14 @@ export function SidebarNav({ signOutAction, inboxUrl, inboxVisible, leadInboxVis
       </nav>
 
       {/* In- en uitklappen */}
-      <div className="relative shrink-0 px-2.5 pb-1">
+      <div className="relative shrink-0 px-2.5 pb-0.5">
         <button
           type="button"
           onClick={toggle}
           title={collapsed ? 'Zijbalk uitklappen' : 'Zijbalk inklappen'}
           aria-label={collapsed ? 'Zijbalk uitklappen' : 'Zijbalk inklappen'}
           aria-expanded={!collapsed}
-          className={`flex w-full items-center rounded-control py-2 text-[12.5px] text-white/60 transition-colors hover:bg-white/5 hover:text-white/90 ${
+          className={`flex w-full items-center rounded-control py-[7px] text-[12.5px] text-white/60 transition-colors hover:bg-white/5 hover:text-white/90 ${
             collapsed ? 'justify-center px-0' : 'gap-3 px-3'
           }`}
         >
@@ -274,12 +274,12 @@ export function SidebarNav({ signOutAction, inboxUrl, inboxVisible, leadInboxVis
       </div>
 
       {/* Uitloggen */}
-      <div className="relative shrink-0 border-t border-white/[0.09] p-2.5">
+      <div className="relative shrink-0 border-t border-white/[0.09] p-2">
         <form action={signOutAction}>
           <button
             type="submit"
             title={collapsed ? t('nav.signOut') : undefined}
-            className={`flex w-full items-center rounded-control py-2 text-[12.5px] text-white/60 transition-colors hover:bg-white/5 hover:text-white/90 ${
+            className={`flex w-full items-center rounded-control py-[7px] text-[12.5px] text-white/60 transition-colors hover:bg-white/5 hover:text-white/90 ${
               collapsed ? 'justify-center px-0' : 'gap-3 px-3'
             }`}
           >
