@@ -378,6 +378,37 @@ export interface Translations {
     pagination: string
     paginationPrevious: string
     paginationNext: string
+    columns: string
+    columnsShow: string
+    columnsAll: string
+    columnsDefault: string
+    columnsFilled: string
+    resultsCount: string
+    clearSearchLabel: string
+    rowsSpacious: string
+    rowsCompact: string
+    noResults: string
+    noResultsHint: string
+    range: string
+    perPage: string
+    selectRow: string
+    selectAllOnPage: string
+    selectedCount: string
+    clearSelection: string
+    exportSelection: string
+    addToDnc: string
+    dncConfirm: string
+    dncConfirmSingular: string
+    dncNoEmails: string
+    dncDone: string
+    dncError: string
+    groupContact: string
+    groupCompany: string
+    groupOther: string
+    emptyFields: string
+    copyAll: string
+    detailPrevious: string
+    detailNext: string
   }
   dnc: {
     title: string
@@ -1000,6 +1031,39 @@ export const nl: Translations = {
     pagination: 'Pagina {current} van {total}',
     paginationPrevious: 'Vorige',
     paginationNext: 'Volgende',
+    columns: 'Kolommen',
+    columnsShow: 'Kolommen tonen',
+    columnsAll: 'Alles tonen',
+    columnsDefault: 'Standaard',
+    columnsFilled: '{percent}% gevuld op deze pagina',
+    resultsCount: '{count} resultaten',
+    clearSearchLabel: 'Zoekopdracht wissen',
+    rowsSpacious: 'Ruime rijen',
+    rowsCompact: 'Compacte rijen',
+    noResults: 'Geen contacten gevonden',
+    noResultsHint: 'Pas je zoekopdracht aan.',
+    range: '{from}–{to} van {total}',
+    perPage: 'Per pagina',
+    selectRow: 'Selecteer {name}',
+    selectAllOnPage: 'Alles op deze pagina selecteren',
+    selectedCount: 'geselecteerd',
+    clearSelection: 'Selectie wissen',
+    exportSelection: 'Exporteren',
+    addToDnc: 'Op DNC zetten',
+    dncConfirm:
+      '{count} contacten op de Do Not Contact-lijst zetten?\n\nZij krijgen geen campagne-mail meer. Je kunt ze later weer van de lijst halen.',
+    dncConfirmSingular:
+      '{email} op de Do Not Contact-lijst zetten?\n\nDeze persoon krijgt geen campagne-mail meer. Je kunt hem later weer van de lijst halen.',
+    dncNoEmails: 'Geen e-mailadressen in de selectie.',
+    dncDone: '{count} toegevoegd aan de Do Not Contact-lijst.',
+    dncError: 'Toevoegen aan de Do Not Contact-lijst is niet gelukt.',
+    groupContact: 'Contact',
+    groupCompany: 'Bedrijf',
+    groupOther: 'Overig',
+    emptyFields: 'Leeg gelaten',
+    copyAll: 'Alle gegevens kopiëren',
+    detailPrevious: 'Vorige · K',
+    detailNext: 'Volgende · J',
   },
 
   dnc: {

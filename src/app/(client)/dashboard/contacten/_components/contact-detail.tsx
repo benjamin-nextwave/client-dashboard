@@ -1,150 +1,226 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { useT } from '@/lib/i18n/client'
+import { CompanyLogo, domainOf } from './company-logo'
+import type { ColumnDef, ContactRow } from './contacts-table'
 
-type ContactRow = {
-  id: string
-  data: Record<string, string>
-}
-
-type ColumnDef = {
-  id: string
-  name: string
-}
-
-interface ContactDetailProps {
+interface Props {
   contact: ContactRow
   columns: ColumnDef[]
+  nameColumnId: string
+  emailColumnId: string
+  companyColumnId?: string
+  dncPending: boolean
+  onAddToDnc: (email: string) => void
+  onPrev: () => void
+  onNext: () => void
   onClose: () => void
 }
 
-function CopyButton({ value }: { value: string }) {
+/** Groepeert de dynamische kolommen in leesbare blokken. */
+const GROUPS = [
+  { key: 'contact', match: /naam|mail|telefoon|mobiel|functie|titel|name|phone|mobile|title|role/i },
+  { key: 'company', match: /bedrijf|company|branche|sector|plaats|stad|adres|website|medewerker|omzet|kvk|city|address|industry|revenue/i },
+] as const
+
+function CopyRow({ label, value }: { label: string; value: string }) {
   const [copied, setCopied] = useState(false)
 
-  async function handleCopy() {
+  async function copy() {
     try {
       await navigator.clipboard.writeText(value)
       setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      setTimeout(() => setCopied(false), 1600)
     } catch {
-      // Fallback
-      const textarea = document.createElement('textarea')
-      textarea.value = value
-      document.body.appendChild(textarea)
-      textarea.select()
-      document.execCommand('copy')
-      document.body.removeChild(textarea)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      /* clipboard geweigerd — stil falen is hier prima */
     }
   }
 
   return (
     <button
       type="button"
-      onClick={handleCopy}
-      className="flex items-center gap-1 rounded-md px-2 py-1 text-[11.5px] font-medium text-muted transition-colors hover:bg-track hover:text-fg"
-      title="Kopiëren"
+      onClick={copy}
+      className="flex w-full items-start gap-2.5 border-b border-line px-[18px] py-2 text-left transition-colors hover:bg-[var(--brand-05)]"
     >
-      {copied ? (
-        <>
-          <svg className="h-3.5 w-3.5 text-green-500" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+      <span className="w-24 shrink-0 pt-px text-[11.5px] text-faint">{label}</span>
+      {/* Waarden breken af in plaats van te worden afgekapt — op deze pagina
+          gaat het juist om het opzoeken van die gegevens. */}
+      <span className="min-w-0 flex-1 text-[12.5px] leading-[1.45] [overflow-wrap:anywhere]">
+        {value}
+      </span>
+      <span className="shrink-0 pt-0.5">
+        {copied ? (
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--color-pos)" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" className="h-[13px] w-[13px]" aria-hidden>
+            <path d="m4.5 12.75 6 6 9-13.5" />
           </svg>
-          <span className="text-pos">Gekopieerd</span>
-        </>
-      ) : (
-        <>
-          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184" />
+        ) : (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className="h-[13px] w-[13px] text-faint opacity-55" aria-hidden>
+            <path d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184" />
           </svg>
-          <span>Kopiëren</span>
-        </>
-      )}
+        )}
+      </span>
     </button>
   )
 }
 
-export function ContactDetail({ contact, columns, onClose }: ContactDetailProps) {
-  // Close on Escape key
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [onClose])
+export function ContactDetail({
+  contact,
+  columns,
+  nameColumnId,
+  emailColumnId,
+  companyColumnId,
+  dncPending,
+  onAddToDnc,
+  onPrev,
+  onNext,
+  onClose,
+}: Props) {
+  const t = useT()
 
-  // Get columns that have values for this contact
-  const fieldsWithValues = columns.filter((col) => {
-    const val = contact.data[col.id]
-    return val !== undefined && val !== ''
-  })
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const el = e.target as HTMLElement | null
+      if (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return
+      if (e.key === 'Escape') onClose()
+      if (e.key === 'j') onNext()
+      if (e.key === 'k') onPrev()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose, onNext, onPrev])
+
+  const name = contact.data[nameColumnId] || '—'
+  const email = contact.data[emailColumnId] || ''
+  const company = companyColumnId ? contact.data[companyColumnId] : ''
+  const domain = domainOf(email)
+
+  const filled = columns.filter((c) => (contact.data[c.id] ?? '').trim() !== '')
+  const empty = columns.filter((c) => (contact.data[c.id] ?? '').trim() === '')
+
+  const groupTitle: Record<string, string> = {
+    contact: t('contacts.groupContact'),
+    company: t('contacts.groupCompany'),
+  }
+
+  const grouped = GROUPS.map((g) => ({
+    title: groupTitle[g.key],
+    fields: filled.filter((c) => g.match.test(c.name)),
+  })).filter((g) => g.fields.length > 0)
+
+  const rest = filled.filter((c) => !GROUPS.some((g) => g.match.test(c.name)))
+  if (rest.length) grouped.push({ title: t('contacts.groupOther'), fields: rest })
 
   return (
-    <>
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 z-40 bg-black/30 transition-opacity"
-        onClick={onClose}
-      />
-
-      {/* Panel */}
-      <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col bg-panel shadow-2xl">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-line px-6 py-4">
-          <h3 className="text-[15px] font-semibold tracking-[-0.02em]">Contactgegevens</h3>
+    <aside className="hidden w-[356px] shrink-0 flex-col overflow-hidden rounded-panel border border-line bg-panel lg:flex">
+      <div className="shrink-0 border-b border-line px-[18px] py-4">
+        <div className="flex items-start gap-3">
+          <CompanyLogo domain={domain} label={company || name} size={38} />
+          <div className="min-w-0 flex-1">
+            <h2 className="truncate text-[15px] font-semibold tracking-[-0.02em]">{name}</h2>
+            <div className="mt-[3px] truncate text-[11.5px] text-faint">
+              {company}
+              {company && domain ? ' · ' : ''}
+              {domain}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() =>
+              navigator.clipboard.writeText(
+                filled.map((c) => `${c.name}: ${contact.data[c.id]}`).join('\n')
+              )
+            }
+            title={t('contacts.copyAll')}
+            aria-label={t('contacts.copyAll')}
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] border border-line bg-panel text-muted transition-colors hover:bg-[var(--brand-08)]"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5" aria-hidden>
+              <path d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612a.75.75 0 0 1-.75.75H9.75a.75.75 0 0 1-.75-.75c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184" />
+            </svg>
+          </button>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md p-1 text-faint hover:bg-track hover:text-muted"
+            aria-label={t('common.close')}
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] text-faint transition-colors hover:bg-[var(--brand-08)] hover:text-fg"
           >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden>
+              <path d="M6 18 18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
+      </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
-          {fieldsWithValues.length > 0 ? (
-            <div className="space-y-1">
-              {fieldsWithValues.map((col) => {
-                const value = contact.data[col.id]
-                return (
-                  <div
-                    key={col.id}
-                    className="group flex items-start justify-between rounded-lg px-3 py-3 transition-colors hover:bg-track"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[11.5px] font-medium uppercase tracking-wider text-faint">
-                        {col.name}
-                      </p>
-                      <p className="mt-0.5 break-words text-[12.5px] text-fg">{value}</p>
-                    </div>
-                    <div className="ml-2 shrink-0 opacity-0 transition-opacity group-hover:opacity-100">
-                      <CopyButton value={value} />
-                    </div>
-                  </div>
-                )
-              })}
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        {grouped.map((group) => (
+          <div key={group.title}>
+            <div className="px-[18px] pb-[7px] pt-[13px] text-[10px] font-semibold uppercase tracking-[0.14em] text-faint">
+              {group.title}
             </div>
-          ) : (
-            <p className="text-[12.5px] text-muted">Geen gegevens beschikbaar voor dit contact.</p>
-          )}
-        </div>
+            {group.fields.map((col) => (
+              <CopyRow key={col.id} label={col.name} value={contact.data[col.id]} />
+            ))}
+          </div>
+        ))}
 
-        {/* Footer */}
-        <div className="border-t border-line px-6 py-3">
+        {/* Lege velden blijven zichtbaar: zo zie je wat het bestand níét bevat */}
+        {empty.length > 0 && (
+          <div className="px-[18px] pb-[18px] pt-[13px]">
+            <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-faint">
+              {t('contacts.emptyFields')}
+            </div>
+            <div className="flex flex-wrap gap-[5px]">
+              {empty.map((col) => (
+                <span
+                  key={col.id}
+                  className="whitespace-nowrap rounded-[5px] border border-dashed border-line px-[7px] py-0.5 text-[10.5px] text-faint"
+                >
+                  {col.name}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="flex shrink-0 items-center gap-[9px] border-t border-line px-[18px] py-3">
+        <button
+          type="button"
+          onClick={() => onAddToDnc(email.trim().toLowerCase())}
+          disabled={dncPending || !email}
+          className="flex h-[34px] flex-1 items-center justify-center gap-[7px] whitespace-nowrap rounded-control border border-line bg-panel text-[12.5px] font-medium transition-colors hover:bg-[var(--brand-08)] disabled:opacity-50"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5 text-muted" aria-hidden>
+            <path d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
+          </svg>
+          {t('contacts.addToDnc')}
+        </button>
+        <div className="flex shrink-0 items-center gap-0.5">
           <button
             type="button"
-            onClick={onClose}
-            className="w-full rounded-lg bg-track px-4 py-2 text-[12.5px] font-medium text-fg hover:bg-line"
+            onClick={onPrev}
+            title={t('contacts.detailPrevious')}
+            aria-label={t('contacts.detailPrevious')}
+            className="flex h-[30px] w-[30px] items-center justify-center rounded-[7px] border border-line bg-panel text-faint transition-colors hover:bg-[var(--brand-08)]"
           >
-            Sluiten
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5" aria-hidden>
+              <path d="m4.5 15.75 7.5-7.5 7.5 7.5" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={onNext}
+            title={t('contacts.detailNext')}
+            aria-label={t('contacts.detailNext')}
+            className="flex h-[30px] w-[30px] items-center justify-center rounded-[7px] border border-line bg-panel text-faint transition-colors hover:bg-[var(--brand-08)]"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5" aria-hidden>
+              <path d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+            </svg>
           </button>
         </div>
       </div>
-    </>
+    </aside>
   )
 }

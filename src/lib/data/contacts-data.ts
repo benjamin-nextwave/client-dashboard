@@ -14,20 +14,23 @@ export type ContactColumnDef = {
   sort_order: number
 }
 
-const PAGE_SIZE = 50
+export const PAGE_SIZES = [50, 100, 250] as const
+const PAGE_SIZE = PAGE_SIZES[0]
 
 export const getContactsPage = cache(async (
   clientId: string,
   page: number = 0,
-  search: string = ''
+  search: string = '',
+  pageSize: number = PAGE_SIZE
 ): Promise<{ contacts: ContactRow[]; total: number }> => {
   const admin = createAdminClient()
-  const offset = page * PAGE_SIZE
+  const limit = (PAGE_SIZES as readonly number[]).includes(pageSize) ? pageSize : PAGE_SIZE
+  const offset = page * limit
 
   const { data, error } = await admin.rpc('search_contacts', {
     p_client_id: clientId,
     p_search: search.trim(),
-    p_limit: PAGE_SIZE,
+    p_limit: limit,
     p_offset: offset,
   })
 
@@ -63,6 +66,24 @@ export const getContactColumns = cache(async (
 
   return (data as ContactColumnDef[]) ?? []
 })
+
+/**
+ * Welke kolom-id's naam, e-mail en bedrijf bevatten. De vaste eerste kolom van
+ * de tabel en het logo hebben die nodig, en elke klant levert zijn CSV met
+ * eigen kolomnamen aan. Puur een naamherkenning, geen databasebevraging.
+ */
+export function resolveKeyColumns(columns: ContactColumnDef[]): {
+  nameColumnId: string
+  emailColumnId: string
+  companyColumnId?: string
+} {
+  const find = (re: RegExp) => columns.find((c) => re.test(c.name))?.id
+  return {
+    nameColumnId: find(/^(volledige )?naam|full ?name|contact/i) ?? columns[0]?.id ?? '',
+    emailColumnId: find(/e-?mail/i) ?? columns[1]?.id ?? '',
+    companyColumnId: find(/bedrijf|company|organisatie/i),
+  }
+}
 
 export const getContactById = cache(async (
   contactId: string

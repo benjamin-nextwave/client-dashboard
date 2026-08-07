@@ -1,13 +1,18 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getContactsPage, getContactColumns } from '@/lib/data/contacts-data'
+import {
+  getContactsPage,
+  getContactColumns,
+  resolveKeyColumns,
+  PAGE_SIZES,
+} from '@/lib/data/contacts-data'
 import { ContactsTable } from './_components/contacts-table'
 import { getTranslator } from '@/lib/i18n/server'
 
 export const dynamic = 'force-dynamic'
 
 interface ContactenPageProps {
-  searchParams: Promise<{ page?: string; q?: string }>
+  searchParams: Promise<{ page?: string; q?: string; per?: string }>
 }
 
 export default async function ContactenPage({ searchParams }: ContactenPageProps) {
@@ -22,13 +27,18 @@ export default async function ContactenPage({ searchParams }: ContactenPageProps
   const params = await searchParams
   const page = Math.max(0, parseInt(params.page ?? '0', 10) || 0)
   const search = params.q ?? ''
+  const requested = Number(params.per)
+  const pageSize = (PAGE_SIZES as readonly number[]).includes(requested)
+    ? requested
+    : PAGE_SIZES[0]
 
   const [{ contacts, total }, columns] = await Promise.all([
-    getContactsPage(clientId, page, search),
+    getContactsPage(clientId, page, search, pageSize),
     getContactColumns(clientId),
   ])
 
   const t = await getTranslator()
+  const keys = resolveKeyColumns(columns)
 
   return (
     <div>
@@ -38,7 +48,9 @@ export default async function ContactenPage({ searchParams }: ContactenPageProps
         columns={columns}
         total={total}
         currentPage={page}
+        pageSize={pageSize}
         search={search}
+        {...keys}
       />
     </div>
   )
