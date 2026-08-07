@@ -25,10 +25,10 @@ export function FilterChips({ leads }: { leads: LeadWithStatus[] }) {
 
   function chipClasses(isActive: boolean) {
     return [
-      'shrink-0 whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium transition-colors',
+      'shrink-0 whitespace-nowrap rounded-full px-3 py-1 text-[11.5px] font-medium transition-colors',
       isActive
         ? 'bg-[var(--color-brand)] text-white'
-        : 'bg-gray-100 text-gray-700 hover:bg-gray-200',
+        : 'bg-track text-fg hover:bg-line',
     ].join(' ')
   }
 

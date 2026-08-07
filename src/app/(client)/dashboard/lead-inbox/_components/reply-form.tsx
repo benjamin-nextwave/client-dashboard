@@ -72,22 +72,22 @@ export function ReplyForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="rounded-xl border border-gray-200 bg-white"
+      className="rounded-panel border border-line bg-panel"
     >
-      <div className="border-b border-gray-100 px-5 py-3 text-xs text-gray-600">
+      <div className="border-b border-line px-5 py-3 text-[11.5px] text-muted">
         <div className="flex flex-wrap gap-x-4 gap-y-1">
           <span>
-            <span className="font-semibold text-gray-700">Van:</span> {sendingAccount}
+            <span className="font-semibold text-fg">Van:</span> {sendingAccount}
           </span>
           <span>
-            <span className="font-semibold text-gray-700">Aan:</span> {toEmail}
+            <span className="font-semibold text-fg">Aan:</span> {toEmail}
           </span>
         </div>
       </div>
-      <div className="flex items-center gap-3 border-b border-gray-100 px-5 py-2">
+      <div className="flex items-center gap-3 border-b border-line px-5 py-2">
         <label
           htmlFor="reply-subject"
-          className="text-xs font-semibold text-gray-700"
+          className="text-[11.5px] font-semibold text-fg"
         >
           Onderwerp
         </label>
@@ -97,7 +97,7 @@ export function ReplyForm({
           value={subject}
           onChange={(e) => setSubject(e.target.value)}
           disabled={pending || success}
-          className="flex-1 border-0 bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-400 disabled:opacity-60"
+          className="flex-1 border-0 bg-transparent text-[12.5px] text-fg outline-none placeholder:text-faint disabled:opacity-60"
         />
       </div>
       <textarea
@@ -106,16 +106,16 @@ export function ReplyForm({
         disabled={pending || success}
         rows={6}
         placeholder="Schrijf je antwoord…"
-        className="block w-full resize-y border-0 bg-transparent px-5 py-3 text-sm text-gray-900 outline-none placeholder:text-gray-400 disabled:opacity-60"
+        className="block w-full resize-y border-0 bg-transparent px-5 py-3 text-[12.5px] text-fg outline-none placeholder:text-faint disabled:opacity-60"
       />
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 px-5 py-3">
-        <div className="flex items-center gap-3 text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-5 py-3">
+        <div className="flex items-center gap-3 text-[11.5px]">
           {signature && (
             <button
               type="button"
               onClick={appendSignature}
               disabled={pending || success}
-              className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              className="inline-flex items-center gap-1 rounded-control border border-line bg-panel px-2.5 py-1 text-[11.5px] font-medium text-fg hover:bg-[var(--brand-08)] disabled:opacity-50"
             >
               <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2.4} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -123,9 +123,9 @@ export function ReplyForm({
               Handtekening
             </button>
           )}
-          {error && <span className="text-rose-700">{error}</span>}
+          {error && <span className="text-neg">{error}</span>}
           {success && !error && (
-            <span className="inline-flex items-center gap-1.5 text-emerald-700">
+            <span className="inline-flex items-center gap-1.5 text-pos">
               <svg
                 className="h-3.5 w-3.5"
                 fill="none"
@@ -146,7 +146,7 @@ export function ReplyForm({
               type="button"
               onClick={onCancel}
               disabled={pending || success}
-              className="rounded-md px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+              className="rounded-control px-3 py-2 text-[12.5px] font-medium text-fg hover:bg-[var(--brand-08)] disabled:opacity-50"
             >
               Annuleren
             </button>
@@ -154,7 +154,7 @@ export function ReplyForm({
         <button
           type="submit"
           disabled={pending || success || !subject.trim() || !body.trim()}
-          className="inline-flex items-center gap-2 rounded-md bg-[var(--color-brand)] px-4 py-2 text-sm font-medium text-white shadow-sm transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-control bg-[var(--color-brand)] px-4 py-2 text-[12.5px] font-medium text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {pending && (
             <svg

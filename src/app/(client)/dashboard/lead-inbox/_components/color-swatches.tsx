@@ -24,7 +24,7 @@ export function ColorSwatches({
             aria-label={c.name}
             title={c.name}
             className={`${dim} rounded-full border-2 transition-transform ${
-              selected ? 'border-gray-900 scale-110' : 'border-white hover:scale-110'
+              selected ? 'border-fg scale-110' : 'border-line hover:scale-110'
             }`}
             style={{ backgroundColor: c.value, boxShadow: '0 0 0 1px #e5e7eb' }}
           />

@@ -6,7 +6,7 @@ import { getAdminContactByEmail, hasAdminContact } from '@/lib/data/lead-admin-c
 import { LeadWorkspace } from '../_components/lead-workspace'
 import { RepliesThread } from '../_components/replies-thread'
 import { requireLeadInboxCustomerId } from '../_lib/customer'
-import { CLASSIFICATION_BADGE, CLASSIFICATION_LABEL } from '../_lib/labels'
+import { CLASSIFICATION_DOT, CLASSIFICATION_LABEL } from '../_lib/labels'
 import {
   buildThreadItems,
   getLabelsForLead,
@@ -55,18 +55,21 @@ export default async function LeadDetailPage({
 
   return (
     <div className="px-5 py-5 lg:px-8 lg:py-6">
-      <header className="border-b border-gray-200 pb-4">
+      <header className="border-b border-line pb-4">
         <div className="flex flex-wrap items-center gap-3 pr-12">
-          <h1 className="text-xl font-semibold text-gray-900">
+          <h1 className="text-xl font-semibold text-fg">
             {lead.name || lead.email}
           </h1>
-          <span
-            className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${CLASSIFICATION_BADGE[lead.classification]}`}
-          >
+          <span className="inline-flex items-center gap-1.5 rounded-[5px] border border-line bg-track px-2 py-[3px] text-[11px] font-semibold">
+            <span
+              className="h-[5px] w-[5px] shrink-0 rounded-full"
+              style={{ background: CLASSIFICATION_DOT[lead.classification] }}
+              aria-hidden
+            />
             {CLASSIFICATION_LABEL[lead.classification]}
           </span>
           {isTrashed && (
-            <span className="inline-flex rounded-full bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700">
+            <span className="inline-flex rounded-[5px] bg-[color-mix(in_oklab,var(--c-neg)_10%,transparent)] px-2 py-[3px] text-[11px] font-semibold text-neg">
               In prullenbak
             </span>
           )}

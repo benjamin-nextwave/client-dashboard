@@ -82,18 +82,18 @@ export function NotesSection({
           {notes.map((note) => (
             <li
               key={note.id}
-              className="rounded-lg border border-l-4 bg-white p-3 shadow-sm"
+              className="rounded-control border border-l-4 bg-panel p-3"
               style={{ borderLeftColor: note.color, borderColor: '#e5e7eb' }}
             >
               <div className="flex items-start justify-between gap-3">
-                <p className="whitespace-pre-wrap break-words text-sm text-gray-800">
+                <p className="whitespace-pre-wrap break-words text-[12.5px] text-fg">
                   {note.body}
                 </p>
                 <div className="flex shrink-0 gap-1">
                   <button
                     type="button"
                     onClick={() => startEdit(note)}
-                    className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                    className="rounded-control p-1 text-faint hover:bg-[var(--brand-08)] hover:text-fg"
                     aria-label="Bewerken"
                   >
                     <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
@@ -104,7 +104,7 @@ export function NotesSection({
                     type="button"
                     onClick={() => handleDelete(note.id)}
                     disabled={pending}
-                    className="rounded-md p-1 text-gray-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"
+                    className="rounded-control p-1 text-faint hover:bg-[color-mix(in_oklab,var(--c-neg)_10%,transparent)] hover:text-neg disabled:opacity-50"
                     aria-label="Verwijderen"
                   >
                     <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
@@ -113,7 +113,7 @@ export function NotesSection({
                   </button>
                 </div>
               </div>
-              <p className="mt-1.5 text-[10px] uppercase tracking-wider text-gray-400">
+              <p className="mt-1.5 text-[10px] uppercase tracking-wider text-faint">
                 {formatDateTime(note.updated_at)}
               </p>
             </li>
@@ -122,30 +122,30 @@ export function NotesSection({
       )}
 
       {creating || editingId ? (
-        <form onSubmit={handleSubmit} className="rounded-lg border border-gray-200 bg-white p-3">
+        <form onSubmit={handleSubmit} className="rounded-panel border border-line bg-panel p-3">
           <textarea
             value={body}
             onChange={(e) => setBody(e.target.value)}
             disabled={pending}
             rows={3}
             placeholder="Notitie schrijven…"
-            className="block w-full resize-y rounded-md border-0 bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-400 disabled:opacity-60"
+            className="block w-full resize-y rounded-control border-0 bg-transparent text-[12.5px] text-fg outline-none placeholder:text-faint disabled:opacity-60"
           />
-          <div className="mt-2 flex items-center justify-between gap-3 border-t border-gray-100 pt-2">
+          <div className="mt-2 flex items-center justify-between gap-3 border-t border-line pt-2">
             <ColorSwatches value={color} onChange={setColor} size="sm" />
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={reset}
                 disabled={pending}
-                className="rounded-md px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-50"
+                className="rounded-control px-3 py-1.5 text-[11.5px] font-medium text-muted hover:bg-[var(--brand-08)] disabled:opacity-50"
               >
                 Annuleren
               </button>
               <button
                 type="submit"
                 disabled={pending || !body.trim()}
-                className="rounded-md bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+                className="rounded-control bg-[var(--brand-color)] px-3 py-1.5 text-[11.5px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
               >
                 {editingId ? 'Opslaan' : 'Toevoegen'}
               </button>
@@ -156,7 +156,7 @@ export function NotesSection({
         <button
           type="button"
           onClick={startCreate}
-          className="inline-flex items-center gap-1 rounded-md border border-dashed border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:border-gray-400 hover:text-gray-900"
+          className="inline-flex items-center gap-1 rounded-control border border-dashed border-line px-3 py-1.5 text-[11.5px] font-medium text-muted hover:border-[var(--brand-32)] hover:text-fg"
         >
           <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2.4} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -165,7 +165,7 @@ export function NotesSection({
         </button>
       )}
 
-      {error && <p className="text-xs text-rose-700">{error}</p>}
+      {error && <p className="text-[11.5px] text-neg">{error}</p>}
     </div>
   )
 }

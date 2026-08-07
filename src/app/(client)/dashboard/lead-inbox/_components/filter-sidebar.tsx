@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import type { LeadWithStatus, LeadClassification } from '../_lib/types'
-import { CLASSIFICATION_LABEL } from '../_lib/labels'
+import { CLASSIFICATION_DOT, CLASSIFICATION_LABEL } from '../_lib/labels'
 
 // "not_interested" wordt bewust niet als filter getoond.
 const CATEGORIES: LeadClassification[] = [
@@ -38,31 +38,33 @@ export function FilterSidebar({ leads }: { leads: LeadWithStatus[] }) {
 
   function itemClasses(isActive: boolean) {
     return [
-      'flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors',
+      'flex items-center justify-between rounded-control px-3 py-[7px] text-[12.5px] transition-colors',
       isActive
-        ? 'bg-[var(--color-brand)] text-white'
-        : 'text-gray-700 hover:bg-gray-100',
+        ? 'bg-[var(--brand-12)] font-semibold text-brand-ink'
+        : 'text-muted hover:bg-[var(--brand-07)] hover:text-fg',
     ].join(' ')
+  }
+
+  function countClasses(isActive: boolean) {
+    return isActive
+      ? 'ml-2 shrink-0 text-[11px] tabular-nums text-brand-ink/70'
+      : 'ml-2 shrink-0 text-[11px] tabular-nums text-faint'
   }
 
   const noFilterActive = !active && !isTrash
 
   return (
-    <nav className="flex flex-col gap-1 p-3">
-      <p className="px-3 pb-2 pt-1 text-xs font-semibold uppercase tracking-wider text-gray-500">
+    <nav className="flex flex-col gap-0.5 p-3">
+      <p className="px-3 pb-1.5 pt-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-faint">
         Inbox
       </p>
       <Link href="/dashboard/lead-inbox" className={itemClasses(noFilterActive)}>
         <span className="font-medium">Alle</span>
-        <span
-          className={
-            noFilterActive ? 'text-white/80 text-xs' : 'text-gray-500 text-xs'
-          }
-        >
+        <span className={countClasses(noFilterActive)}>
           {inboxCount}
         </span>
       </Link>
-      <p className="mt-3 px-3 pb-2 pt-1 text-xs font-semibold uppercase tracking-wider text-gray-500">
+      <p className="mt-3.5 px-3 pb-1.5 pt-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-faint">
         Beantwoord
       </p>
       {CATEGORIES.map((cat) => {
@@ -73,20 +75,21 @@ export function FilterSidebar({ leads }: { leads: LeadWithStatus[] }) {
             href={`/dashboard/lead-inbox?classification=${cat}`}
             className={itemClasses(isActive)}
           >
-            <span className="truncate">{CLASSIFICATION_LABEL[cat]}</span>
-            <span
-              className={
-                isActive
-                  ? 'ml-2 shrink-0 text-white/80 text-xs'
-                  : 'ml-2 shrink-0 text-gray-500 text-xs'
-              }
-            >
+            <span className="flex min-w-0 items-center gap-2">
+              <span
+                className="h-[6px] w-[6px] shrink-0 rounded-full"
+                style={{ background: CLASSIFICATION_DOT[cat] }}
+                aria-hidden
+              />
+              <span className="truncate">{CLASSIFICATION_LABEL[cat]}</span>
+            </span>
+            <span className={countClasses(isActive)}>
               {folderCounts[cat]}
             </span>
           </Link>
         )
       })}
-      <p className="mt-3 px-3 pb-2 pt-1 text-xs font-semibold uppercase tracking-wider text-gray-500">
+      <p className="mt-3.5 px-3 pb-1.5 pt-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-faint">
         Overig
       </p>
       <Link href="/dashboard/lead-inbox?view=trash" className={itemClasses(isTrash)}>
@@ -107,11 +110,7 @@ export function FilterSidebar({ leads }: { leads: LeadWithStatus[] }) {
           </svg>
           Prullenbak
         </span>
-        <span
-          className={
-            isTrash ? 'ml-2 shrink-0 text-white/80 text-xs' : 'ml-2 shrink-0 text-gray-500 text-xs'
-          }
-        >
+        <span className={countClasses(isTrash)}>
           {trashedLeads.length}
         </span>
       </Link>

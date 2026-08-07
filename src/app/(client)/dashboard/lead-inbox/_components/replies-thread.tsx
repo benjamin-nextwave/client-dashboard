@@ -15,10 +15,10 @@ const STATUS_BADGE: Record<
   OutboundReplyStatus,
   { label: string; className: string }
 > = {
-  queued: { label: 'Wordt verzonden', className: 'bg-blue-100 text-blue-800' },
-  sending: { label: 'Wordt verzonden', className: 'bg-blue-100 text-blue-800' },
-  sent: { label: 'Verzonden', className: 'bg-emerald-100 text-emerald-800' },
-  failed: { label: 'Verzending mislukt', className: 'bg-rose-100 text-rose-800' },
+  queued: { label: 'Wordt verzonden', className: 'bg-[var(--brand-12)] text-brand-ink' },
+  sending: { label: 'Wordt verzonden', className: 'bg-[var(--brand-12)] text-brand-ink' },
+  sent: { label: 'Verzonden', className: 'bg-[color-mix(in_oklab,var(--c-pos)_12%,transparent)] text-pos' },
+  failed: { label: 'Verzending mislukt', className: 'bg-[color-mix(in_oklab,var(--c-neg)_12%,transparent)] text-neg' },
 }
 
 export function RepliesThread({ items }: { items: ThreadItem[] }) {
@@ -27,14 +27,14 @@ export function RepliesThread({ items }: { items: ThreadItem[] }) {
 
   if (ordered.length === 0) {
     return (
-      <div className="rounded-xl border border-gray-200 bg-white px-6 py-8 text-sm text-gray-600">
+      <div className="rounded-panel border border-line bg-panel px-6 py-8 text-[12.5px] text-muted">
         Geen replies in deze thread.
       </div>
     )
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+    <div className="overflow-hidden rounded-panel border border-line bg-panel">
       {ordered.map((item, index) => {
         const isOutbound = item.kind === 'outbound'
         const statusBadge =
@@ -43,18 +43,18 @@ export function RepliesThread({ items }: { items: ThreadItem[] }) {
           <article
             key={item.id}
             className={[
-              index !== 0 ? 'border-t border-gray-200' : '',
-              isOutbound ? 'bg-blue-50/30' : '',
+              index !== 0 ? 'border-t border-line' : '',
+              isOutbound ? 'bg-[var(--brand-04)]' : '',
             ].join(' ')}
           >
             <header className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 px-5 pb-2 pt-4">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-sm font-semibold text-gray-900">
+                  <p className="text-[12.5px] font-semibold text-fg">
                     {isOutbound ? 'Jij' : item.from_email}
                   </p>
                   {isOutbound && (
-                    <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-blue-700">
+                    <span className="rounded-[4px] bg-[var(--brand-12)] px-1.5 py-0.5 text-[9.5px] font-semibold uppercase tracking-[0.08em] text-brand-ink">
                       Verzonden door jou
                     </span>
                   )}
@@ -63,33 +63,33 @@ export function RepliesThread({ items }: { items: ThreadItem[] }) {
                       className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${statusBadge.className}`}
                     >
                       {(item.status === 'queued' || item.status === 'sending') && (
-                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-500" />
+                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-brand" />
                       )}
                       {statusBadge.label}
                     </span>
                   )}
                 </div>
-                <p className="mt-0.5 text-xs text-gray-600">
+                <p className="mt-0.5 text-[11.5px] text-muted">
                   {isOutbound ? `naar ${item.to_email}` : `via ${item.sending_account}`}
                 </p>
               </div>
-              <p className="shrink-0 text-xs text-gray-600">
+              <p className="shrink-0 text-[11.5px] text-muted">
                 {formatDateTime(item.occurred_at)}
               </p>
             </header>
             <div className="px-5 pb-5">
               {item.subject && (
-                <p className="mb-2 break-words text-sm font-medium text-gray-900">
+                <p className="mb-2 break-words text-[12.5px] font-medium text-fg">
                   {item.subject}
                 </p>
               )}
-              <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-6 text-gray-800">
+              <pre className="whitespace-pre-wrap break-words font-sans text-[12.5px] leading-6 text-fg">
                 {item.body}
               </pre>
               {item.kind === 'outbound' &&
                 item.status === 'failed' &&
                 item.error_message && (
-                  <p className="mt-3 rounded-md bg-rose-50 px-3 py-2 text-xs text-rose-800">
+                  <p className="mt-3 rounded-control bg-[color-mix(in_oklab,var(--c-neg)_10%,transparent)] px-3 py-2 text-[11.5px] text-neg">
                     Fout: {item.error_message}
                   </p>
                 )}

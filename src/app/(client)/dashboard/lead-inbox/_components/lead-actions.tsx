@@ -52,7 +52,7 @@ export function LeadActions({
             type="button"
             onClick={() => handle('restore')}
             disabled={pending}
-            className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            className="inline-flex items-center gap-1 rounded-control border border-line bg-panel px-3 py-1.5 text-[11.5px] font-medium text-fg hover:bg-[var(--brand-08)] disabled:opacity-50"
           >
             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" />
@@ -63,7 +63,7 @@ export function LeadActions({
             type="button"
             onClick={() => handle('permanent')}
             disabled={pending}
-            className="inline-flex items-center gap-1 rounded-md border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-100 disabled:opacity-50"
+            className="inline-flex items-center gap-1 rounded-control border border-[color-mix(in_oklab,var(--c-neg)_22%,transparent)] bg-[color-mix(in_oklab,var(--c-neg)_8%,transparent)] px-3 py-1.5 text-[11.5px] font-medium text-neg hover:bg-[color-mix(in_oklab,var(--c-neg)_14%,transparent)] disabled:opacity-50"
           >
             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166M19.228 5.79 18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79M19.228 5.79a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
@@ -76,7 +76,7 @@ export function LeadActions({
           type="button"
           onClick={() => handle('trash')}
           disabled={pending}
-          className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+          className="inline-flex items-center gap-1 rounded-control border border-line bg-panel px-3 py-1.5 text-[11.5px] font-medium text-fg hover:bg-[var(--brand-08)] disabled:opacity-50"
         >
           <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166M19.228 5.79 18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79" />
@@ -84,7 +84,7 @@ export function LeadActions({
           Naar prullenbak
         </button>
       )}
-      {error && <span className="text-xs text-rose-700">{error}</span>}
+      {error && <span className="text-[11.5px] text-neg">{error}</span>}
     </div>
   )
 }

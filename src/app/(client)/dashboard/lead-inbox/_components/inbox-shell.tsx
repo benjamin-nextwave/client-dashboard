@@ -30,26 +30,26 @@ export function InboxShell({
     // ruimte naast de outer SidebarNav (w-60 = 15rem). Position: fixed neemt
     // de viewport als containing-block, dus we hoeven niet om de mx-auto heen
     // te rekenen.
-    <div className="fixed inset-y-0 left-60 right-0 z-10 flex overflow-hidden bg-white pt-6 lg:pt-8">
+    <div className="fixed inset-y-0 left-60 right-0 z-10 flex overflow-hidden bg-canvas pt-6 lg:pt-8">
       {/* Filter sidebar — lg+ alleen */}
-      <aside className="hidden w-48 shrink-0 border-r border-gray-200 bg-gray-50 lg:block xl:w-56">
+      <aside className="hidden w-[196px] shrink-0 overflow-y-auto border-r border-line bg-panel lg:block">
         <FilterSidebar leads={leads} />
       </aside>
 
       {/* List pane */}
       <section
         className={[
-          'flex-col border-r border-gray-200 bg-white md:w-[270px] md:shrink-0 xl:w-[315px]',
+          'min-h-0 flex-col border-r border-line bg-panel md:w-[312px] md:shrink-0',
           hasSelection ? 'hidden md:flex' : 'flex w-full',
         ].join(' ')}
       >
         {/* Filter chips — alleen <lg */}
-        <div className="border-b border-gray-200 lg:hidden">
+        <div className="border-b border-line lg:hidden">
           <FilterChips leads={leads} />
         </div>
-        <header className="hidden items-baseline justify-between border-b border-gray-200 px-4 py-3 lg:flex">
-          <h1 className="text-base font-semibold text-gray-900">Lead Inbox</h1>
-          <span className="text-xs text-gray-500">
+        <header className="hidden shrink-0 items-baseline justify-between border-b border-line px-4 py-[13px] lg:flex">
+          <h1 className="text-[13.5px] font-semibold tracking-[-0.01em]">Lead Inbox</h1>
+          <span className="text-[11.5px] tabular-nums text-faint">
             {leads.filter((l) => l.awaitingOurReply).length} wacht op antwoord
           </span>
         </header>
@@ -59,15 +59,15 @@ export function InboxShell({
       {/* Detail pane */}
       <section
         className={[
-          'min-w-0 flex-1 flex-col bg-[#fafafa]',
+          'min-h-0 min-w-0 flex-1 flex-col bg-canvas',
           hasSelection ? 'flex' : 'hidden md:flex',
         ].join(' ')}
       >
         {hasSelection && (
-          <div className="flex items-center border-b border-gray-200 bg-white px-4 py-2 md:hidden">
+          <div className="flex shrink-0 items-center border-b border-line bg-panel px-4 py-2 md:hidden">
             <Link
               href={backHref}
-              className="inline-flex items-center gap-1 text-sm text-gray-700 hover:text-gray-900"
+              className="inline-flex items-center gap-1 text-[12.5px] text-muted transition-colors hover:text-fg"
             >
               <svg
                 className="h-4 w-4"

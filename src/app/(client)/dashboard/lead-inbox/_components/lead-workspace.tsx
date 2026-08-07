@@ -155,7 +155,7 @@ export function LeadWorkspace({
         )}
       </div>
 
-      {error && <p className="mt-2 text-xs text-rose-700">{error}</p>}
+      {error && <p className="mt-2 text-[11.5px] text-neg">{error}</p>}
 
       {/* Active panel */}
       {panel === 'reply' && canReply && !isTrashed && (
@@ -236,13 +236,13 @@ function ToolbarButton({
   icon: React.ReactNode
 }) {
   const base =
-    'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50'
+    'inline-flex items-center gap-1.5 rounded-control px-3 py-1.5 text-[11.5px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50'
   const variantClasses =
     variant === 'primary'
       ? 'bg-[var(--color-brand)] text-white hover:opacity-90'
       : variant === 'danger'
-        ? 'border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100'
-        : `border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 ${active ? 'ring-2 ring-[var(--color-brand)]' : ''}`
+        ? 'border border-[color-mix(in_oklab,var(--c-neg)_22%,transparent)] bg-[color-mix(in_oklab,var(--c-neg)_8%,transparent)] text-neg hover:bg-[color-mix(in_oklab,var(--c-neg)_14%,transparent)]'
+        : `border border-line bg-panel text-fg hover:bg-[var(--brand-08)] ${active ? 'ring-2 ring-[var(--color-brand)]' : ''}`
   return (
     <button type="button" onClick={onClick} disabled={disabled} className={`${base} ${variantClasses}`}>
       {icon}
@@ -259,7 +259,7 @@ function AssignedLabelChip({ leadId, label }: { leadId: string; label: UserLabel
     })
   }
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700">
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-track px-2.5 py-1 text-[11.5px] font-medium text-fg">
       <span
         className="h-2 w-2 rounded-full"
         style={{ backgroundColor: label.color }}
@@ -270,7 +270,7 @@ function AssignedLabelChip({ leadId, label }: { leadId: string; label: UserLabel
         type="button"
         onClick={remove}
         disabled={pending}
-        className="rounded-full p-0.5 hover:bg-gray-200 disabled:opacity-50"
+        className="rounded-full p-0.5 hover:bg-line disabled:opacity-50"
         aria-label={`Verwijder label ${label.name}`}
       >
         <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2.4} stroke="currentColor">
@@ -330,26 +330,26 @@ function LabelPicker({
   }
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-3">
-      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+    <div className="rounded-panel border border-line bg-panel p-3">
+      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted">
         Labels toewijzen
       </p>
       <div className="flex flex-wrap gap-1.5">
         {available.length === 0 && (
-          <p className="text-xs text-gray-500">Nog geen labels aangemaakt.</p>
+          <p className="text-[11.5px] text-muted">Nog geen labels aangemaakt.</p>
         )}
         {available.map((label) => {
           const isAssigned = assignedIds.has(label.id)
           return (
             <span
               key={label.id}
-              className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white py-0.5 pl-2 pr-1"
+              className="inline-flex items-center gap-1 rounded-full border border-line bg-panel py-0.5 pl-2 pr-1"
             >
               <button
                 type="button"
                 onClick={() => toggle(label)}
                 disabled={pending}
-                className={`inline-flex items-center gap-1.5 text-xs font-medium ${isAssigned ? 'text-gray-900' : 'text-gray-600 hover:text-gray-900'} disabled:opacity-50`}
+                className={`inline-flex items-center gap-1.5 text-[11.5px] font-medium ${isAssigned ? 'text-fg' : 'text-muted hover:text-fg'} disabled:opacity-50`}
               >
                 <span
                   className="h-2 w-2 rounded-full"
@@ -358,7 +358,7 @@ function LabelPicker({
                 />
                 {label.name}
                 {isAssigned && (
-                  <svg className="h-3 w-3 text-emerald-600" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                  <svg className="h-3 w-3 text-pos" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                   </svg>
                 )}
@@ -367,7 +367,7 @@ function LabelPicker({
                 type="button"
                 onClick={() => handleDelete(label.id)}
                 disabled={pending}
-                className="rounded-full p-0.5 text-gray-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"
+                className="rounded-full p-0.5 text-faint hover:bg-[color-mix(in_oklab,var(--c-neg)_10%,transparent)] hover:text-neg disabled:opacity-50"
                 title="Label definitief verwijderen"
                 aria-label={`Verwijder label ${label.name}`}
               >
@@ -388,7 +388,7 @@ function LabelPicker({
             onChange={(e) => setName(e.target.value)}
             disabled={pending}
             placeholder="Label-naam"
-            className="block w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm outline-none focus:border-gray-400 disabled:opacity-60"
+            className="block w-full rounded-control border border-line px-2.5 py-1.5 text-[12.5px] outline-none focus:border-[var(--brand-color)] disabled:opacity-60"
           />
           <ColorSwatches value={color} onChange={setColor} size="sm" />
           <div className="flex justify-end gap-2 pt-1">
@@ -396,14 +396,14 @@ function LabelPicker({
               type="button"
               onClick={() => setCreating(false)}
               disabled={pending}
-              className="rounded-md px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-50"
+              className="rounded-control px-3 py-1.5 text-[11.5px] font-medium text-muted hover:bg-[var(--brand-08)] disabled:opacity-50"
             >
               Annuleren
             </button>
             <button
               type="submit"
               disabled={pending || !name.trim()}
-              className="rounded-md bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+              className="rounded-control bg-[var(--brand-color)] px-3 py-1.5 text-[11.5px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
             >
               Aanmaken
             </button>
@@ -413,7 +413,7 @@ function LabelPicker({
         <button
           type="button"
           onClick={() => setCreating(true)}
-          className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-gray-700 hover:text-gray-900"
+          className="mt-3 inline-flex items-center gap-1 text-[11.5px] font-medium text-fg hover:text-fg"
         >
           <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2.4} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -421,7 +421,7 @@ function LabelPicker({
           Nieuw label
         </button>
       )}
-      {error && <p className="mt-2 text-xs text-rose-700">{error}</p>}
+      {error && <p className="mt-2 text-[11.5px] text-neg">{error}</p>}
     </div>
   )
 }
@@ -456,36 +456,36 @@ function NoteEditor({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-lg border border-gray-200 bg-white p-3">
+    <form onSubmit={handleSubmit} className="rounded-panel border border-line bg-panel p-3">
       <textarea
         value={body}
         onChange={(e) => setBody(e.target.value)}
         disabled={pending}
         rows={3}
         placeholder="Notitie schrijven…"
-        className="block w-full resize-y rounded-md border-0 bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-400 disabled:opacity-60"
+        className="block w-full resize-y rounded-control border-0 bg-transparent text-[12.5px] text-fg outline-none placeholder:text-faint disabled:opacity-60"
       />
-      <div className="mt-2 flex items-center justify-between gap-3 border-t border-gray-100 pt-2">
+      <div className="mt-2 flex items-center justify-between gap-3 border-t border-line pt-2">
         <ColorSwatches value={color} onChange={setColor} size="sm" />
         <div className="flex gap-2">
           <button
             type="button"
             onClick={onDone}
             disabled={pending}
-            className="rounded-md px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-50"
+            className="rounded-control px-3 py-1.5 text-[11.5px] font-medium text-muted hover:bg-[var(--brand-08)] disabled:opacity-50"
           >
             Annuleren
           </button>
           <button
             type="submit"
             disabled={pending || !body.trim()}
-            className="rounded-md bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+            className="rounded-control bg-[var(--brand-color)] px-3 py-1.5 text-[11.5px] font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
           >
             {note ? 'Opslaan' : 'Toevoegen'}
           </button>
         </div>
       </div>
-      {error && <p className="mt-2 text-xs text-rose-700">{error}</p>}
+      {error && <p className="mt-2 text-[11.5px] text-neg">{error}</p>}
     </form>
   )
 }
@@ -500,16 +500,16 @@ function NoteListItem({ note, onEdit }: { note: LeadNote; onEdit: () => void }) 
   }
   return (
     <li
-      className="rounded-lg border border-l-4 bg-white p-3 shadow-sm"
+      className="rounded-control border border-l-4 bg-panel p-3"
       style={{ borderLeftColor: note.color, borderColor: '#e5e7eb' }}
     >
       <div className="flex items-start justify-between gap-3">
-        <p className="whitespace-pre-wrap break-words text-sm text-gray-800">{note.body}</p>
+        <p className="whitespace-pre-wrap break-words text-[12.5px] text-fg">{note.body}</p>
         <div className="flex shrink-0 gap-1">
           <button
             type="button"
             onClick={onEdit}
-            className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+            className="rounded-control p-1 text-faint hover:bg-[var(--brand-08)] hover:text-fg"
             aria-label="Bewerken"
           >
             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
@@ -520,7 +520,7 @@ function NoteListItem({ note, onEdit }: { note: LeadNote; onEdit: () => void }) 
             type="button"
             onClick={handleDelete}
             disabled={pending}
-            className="rounded-md p-1 text-gray-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"
+            className="rounded-control p-1 text-faint hover:bg-[color-mix(in_oklab,var(--c-neg)_10%,transparent)] hover:text-neg disabled:opacity-50"
             aria-label="Verwijderen"
           >
             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
@@ -529,7 +529,7 @@ function NoteListItem({ note, onEdit }: { note: LeadNote; onEdit: () => void }) 
           </button>
         </div>
       </div>
-      <p className="mt-1.5 text-[10px] uppercase tracking-wider text-gray-400">
+      <p className="mt-1.5 text-[10px] uppercase tracking-wider text-faint">
         {formatDateTime(note.updated_at)}
       </p>
     </li>

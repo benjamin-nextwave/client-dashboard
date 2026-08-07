@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useSearchParams, useSelectedLayoutSegment } from 'next/navigation'
 import { useMemo } from 'react'
 import type { LeadWithStatus, LeadClassification } from '../_lib/types'
-import { CLASSIFICATION_BADGE, CLASSIFICATION_LABEL } from '../_lib/labels'
+import { CLASSIFICATION_DOT, CLASSIFICATION_LABEL } from '../_lib/labels'
 
 function formatRelative(iso: string): string {
   const date = new Date(iso)
@@ -37,6 +37,24 @@ function snippetFromLead(lead: LeadWithStatus): string {
   return cleaned.length > 140 ? `${cleaned.slice(0, 140)}…` : cleaned
 }
 
+/**
+ * Bedrijfsnaam afgeleid uit het e-maildomein. Puur cosmetisch: er is geen
+ * bedrijfsveld op een lead, en gratis providers zeggen niets over een bedrijf.
+ */
+const FREE_PROVIDERS = new Set([
+  'gmail.com', 'googlemail.com', 'outlook.com', 'hotmail.com', 'live.nl',
+  'live.com', 'icloud.com', 'me.com', 'yahoo.com', 'ziggo.nl', 'kpnmail.nl',
+  'planet.nl', 'home.nl', 'upcmail.nl', 'proton.me', 'protonmail.com',
+])
+
+function companyFromEmail(email: string): string | null {
+  const domain = email.split('@')[1]?.toLowerCase()
+  if (!domain || FREE_PROVIDERS.has(domain)) return null
+  const base = domain.split('.')[0]
+  if (!base) return null
+  return base.charAt(0).toUpperCase() + base.slice(1)
+}
+
 export function LeadListPane({ leads }: { leads: LeadWithStatus[] }) {
   const params = useSearchParams()
   const activeFilter = params.get('classification') as LeadClassification | null
@@ -65,8 +83,8 @@ export function LeadListPane({ leads }: { leads: LeadWithStatus[] }) {
     return (
       <div className="flex flex-1 items-center justify-center px-6 py-12 text-center">
         <div>
-          <h3 className="text-base font-semibold text-gray-900">Geen leads</h3>
-          <p className="mt-1 text-sm text-gray-600">
+          <h3 className="text-[13.5px] font-semibold tracking-[-0.01em]">Geen leads</h3>
+          <p className="mt-1.5 text-[12.5px] text-muted">
             {isTrash
               ? 'De prullenbak is leeg.'
               : activeFilter
@@ -79,7 +97,7 @@ export function LeadListPane({ leads }: { leads: LeadWithStatus[] }) {
   }
 
   return (
-    <ul className="flex-1 divide-y divide-gray-100 overflow-y-auto">
+    <ul className="min-h-0 flex-1 divide-y divide-line overflow-y-auto">
       {filtered.map((lead) => {
         const isSelected = selectedSegment === lead.id
         const qs = isTrash
@@ -88,44 +106,55 @@ export function LeadListPane({ leads }: { leads: LeadWithStatus[] }) {
             ? `?classification=${activeFilter}`
             : ''
         const href = `/dashboard/lead-inbox/${lead.id}${qs}`
+        const company = companyFromEmail(lead.email)
         return (
           <li key={lead.id}>
             <Link
               href={href}
               className={[
-                'block px-4 py-4 transition-colors',
+                'block border-l-2 px-4 py-3.5 transition-colors',
                 isSelected
-                  ? 'bg-[var(--color-brand)]/10 border-l-2 border-[var(--color-brand)]'
-                  : 'border-l-2 border-transparent hover:bg-gray-50',
+                  ? 'border-[var(--color-brand)] bg-[var(--brand-08)]'
+                  : 'border-transparent hover:bg-[var(--brand-05)]',
               ].join(' ')}
             >
               <div className="flex items-baseline justify-between gap-3">
-                <p className="flex min-w-0 items-center gap-1.5 truncate text-sm font-semibold text-gray-900">
+                <p
+                  className={`flex min-w-0 items-center gap-1.5 truncate text-[13px] ${
+                    lead.awaitingOurReply ? 'font-semibold' : 'font-medium'
+                  }`}
+                >
                   {lead.hasReferral && (
                     <span
                       title="Doorverwijzing: contactgegevens beschikbaar"
-                      className="inline-block h-2.5 w-2.5 shrink-0 rounded-full bg-red-500 ring-2 ring-red-100"
+                      className="inline-block h-2.5 w-2.5 shrink-0 rounded-full bg-neg ring-2 ring-[color-mix(in_oklab,var(--c-neg)_18%,transparent)]"
                     />
                   )}
                   <span className="truncate">{lead.name || lead.email}</span>
                 </p>
-                <span className="shrink-0 text-xs text-gray-500">
+                <span className="shrink-0 text-[11px] tabular-nums text-faint">
                   {formatRelative(lead.last_reply_at)}
                 </span>
               </div>
-              <p className="mt-1.5 truncate text-xs text-gray-600">
+              {company && (
+                <p className="mt-0.5 truncate text-[11.5px] text-faint">{company}</p>
+              )}
+              <p className="mt-1.5 line-clamp-2 text-xs leading-[1.45] text-muted">
                 {snippetFromLead(lead)}
               </p>
-              <div className="mt-2.5 flex flex-wrap items-center gap-2">
-                <span
-                  className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${CLASSIFICATION_BADGE[lead.classification]}`}
-                >
+              <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                <span className="inline-flex items-center gap-1.5 rounded-[5px] bg-track px-2 py-0.5 text-[10.5px] font-medium">
+                  <span
+                    className="h-[5px] w-[5px] shrink-0 rounded-full"
+                    style={{ background: CLASSIFICATION_DOT[lead.classification] }}
+                    aria-hidden
+                  />
                   {CLASSIFICATION_LABEL[lead.classification]}
                 </span>
                 {lead.labels.slice(0, 3).map((label) => (
                   <span
                     key={label.id}
-                    className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-700"
+                    className="inline-flex items-center gap-1 rounded-[5px] bg-track px-2 py-0.5 text-[10.5px] font-medium text-muted"
                   >
                     <span
                       className="h-1.5 w-1.5 rounded-full"
@@ -136,13 +165,13 @@ export function LeadListPane({ leads }: { leads: LeadWithStatus[] }) {
                   </span>
                 ))}
                 {lead.labels.length > 3 && (
-                  <span className="text-[10px] text-gray-500">
+                  <span className="text-[10.5px] text-faint">
                     +{lead.labels.length - 3}
                   </span>
                 )}
                 {lead.noteCount > 0 && (
                   <span
-                    className="inline-flex items-center gap-1 text-[10px] text-gray-500"
+                    className="inline-flex items-center gap-1 text-[10.5px] text-faint"
                     title={`${lead.noteCount} notitie${lead.noteCount === 1 ? '' : 's'}`}
                   >
                     <svg
@@ -163,8 +192,8 @@ export function LeadListPane({ leads }: { leads: LeadWithStatus[] }) {
                   </span>
                 )}
                 {lead.pendingOutboundCount > 0 && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-medium text-blue-800">
-                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-500" />
+                  <span className="inline-flex items-center gap-1 rounded-[5px] bg-[var(--brand-12)] px-2 py-0.5 text-[10.5px] font-medium text-brand-ink">
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-brand" />
                     Wordt verzonden
                   </span>
                 )}

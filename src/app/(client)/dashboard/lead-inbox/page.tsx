@@ -7,7 +7,7 @@ export default function LeadInboxEmptyState() {
     <div className="flex h-full items-center justify-center px-6 text-center">
       <div>
         <svg
-          className="mx-auto h-12 w-12 text-gray-300"
+          className="mx-auto h-12 w-12 text-faint"
           fill="none"
           viewBox="0 0 24 24"
           strokeWidth={1.5}
@@ -20,8 +20,8 @@ export default function LeadInboxEmptyState() {
             d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75"
           />
         </svg>
-        <h2 className="mt-4 text-base font-semibold text-gray-900">Selecteer een lead</h2>
-        <p className="mt-1 text-sm text-gray-600">
+        <h2 className="mt-4 text-[13.5px] font-semibold tracking-[-0.01em]">Selecteer een lead</h2>
+        <p className="mt-1 text-[12.5px] text-muted">
           Kies links een lead om de thread te lezen.
         </p>
       </div>

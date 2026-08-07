@@ -10,12 +10,17 @@ export const CLASSIFICATION_LABEL: Record<LeadClassification, string> = {
   not_interested: 'Geen interesse',
 }
 
-export const CLASSIFICATION_BADGE: Record<LeadClassification, string> = {
-  meeting_request: 'bg-emerald-100 text-emerald-800',
-  phone_request: 'bg-teal-100 text-teal-800',
-  interested: 'bg-blue-100 text-blue-800',
-  referral: 'bg-indigo-100 text-indigo-800',
-  internal_review: 'bg-amber-100 text-amber-800',
-  not_now_maybe_later: 'bg-gray-100 text-gray-800',
-  not_interested: 'bg-rose-100 text-rose-800',
+/**
+ * Stipkleur per categorie. Vervangt het gekleurde vlak van CLASSIFICATION_BADGE
+ * in de lijst en de mappen: één neutrale chip met een gekleurde stip, zodat de
+ * kleur betekenis houdt zonder dat de lijst uiteenvalt in zeven kleurvlakken.
+ */
+export const CLASSIFICATION_DOT: Record<LeadClassification, string> = {
+  meeting_request: 'var(--c-cat-meeting)',
+  phone_request: 'var(--c-cat-phone)',
+  interested: 'var(--c-cat-interested)',
+  referral: 'var(--c-cat-referral)',
+  internal_review: 'var(--c-cat-internal)',
+  not_now_maybe_later: 'var(--c-cat-later)',
+  not_interested: 'var(--c-cat-none)',
 }

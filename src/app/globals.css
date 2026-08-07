@@ -21,6 +21,9 @@
   --color-ink: var(--c-ink);
   --color-brand-lift: var(--c-brand-lift);
 
+  --color-brand-ink: var(--c-brand-ink);
+  --color-warn: var(--c-warn);
+
   --radius-panel: 12px;
   --radius-control: 8px;
 }
@@ -39,8 +42,12 @@
 
 .client-theme {
   /* merk-tinten, transparant gemengd zodat ze op licht én donker werken */
+  --brand-04: color-mix(in oklab, var(--brand-color, #3b82f6) 4%, transparent);
+  --brand-05: color-mix(in oklab, var(--brand-color, #3b82f6) 5%, transparent);
+  --brand-07: color-mix(in oklab, var(--brand-color, #3b82f6) 7%, transparent);
   --brand-08: color-mix(in oklab, var(--brand-color, #3b82f6) 8%, transparent);
   --brand-10: color-mix(in oklab, var(--brand-color, #3b82f6) 10%, transparent);
+  --brand-12: color-mix(in oklab, var(--brand-color, #3b82f6) 12%, transparent);
   --brand-15: color-mix(in oklab, var(--brand-color, #3b82f6) 15%, transparent);
   --brand-20: color-mix(in oklab, var(--brand-color, #3b82f6) 20%, transparent);
   --brand-32: color-mix(in oklab, var(--brand-color, #3b82f6) 32%, transparent);
@@ -66,6 +73,18 @@
   --c-faint: #8a92a0;
   --c-pos: #15803d;
   --c-neg: #b91c1c;
+  --c-warn: #b45309;
+  --c-brand-ink: color-mix(in oklab, var(--brand-color, #3b82f6) 85%, #000);
+
+  /* Categoriekleuren van de lead inbox. Alleen als stip gebruikt, niet als
+     vlak — zo draagt de kleur nog betekenis zonder dat de lijst uiteenvalt. */
+  --c-cat-meeting: #15803d;
+  --c-cat-phone: #0369a1;
+  --c-cat-interested: #4338ca;
+  --c-cat-referral: #b45309;
+  --c-cat-internal: #7e22ce;
+  --c-cat-later: #6b7280;
+  --c-cat-none: #9f1239;
 }
 
 /* Donkere tokens staan klaar maar worden nergens aangezet — er is bewust nog
@@ -84,6 +103,16 @@
   --c-faint: #626a78;
   --c-pos: #4ade80;
   --c-neg: #f87171;
+  --c-warn: #f0a868;
+  --c-brand-ink: color-mix(in oklab, var(--brand-color, #3b82f6) 55%, #fff);
+
+  --c-cat-meeting: #4ade80;
+  --c-cat-phone: #38bdf8;
+  --c-cat-interested: #818cf8;
+  --c-cat-referral: #f0a868;
+  --c-cat-internal: #c084fc;
+  --c-cat-later: #8a929f;
+  --c-cat-none: #fb7185;
 }
 
 /* Focus-styling centraal in plaats van per component. Bewust binnen
