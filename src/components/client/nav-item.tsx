@@ -9,14 +9,17 @@ interface NavItemProps {
   icon: React.ReactNode
   badge?: number
   external?: boolean
+  collapsed?: boolean
 }
 
-export function NavItem({ href, label, icon, badge, external }: NavItemProps) {
+export function NavItem({ href, label, icon, badge, external, collapsed }: NavItemProps) {
   const pathname = usePathname()
   const isActive =
     pathname === href || (pathname.startsWith(href) && href !== '/dashboard')
 
-  const className = `group relative flex items-center gap-3 rounded-control px-3 py-2 text-[12.5px] transition-colors ${
+  const className = `group relative flex items-center rounded-control py-2 text-[12.5px] transition-colors ${
+    collapsed ? 'justify-center px-0' : 'gap-3 px-3'
+  } ${
     isActive
       ? 'bg-white/10 font-semibold text-white'
       : 'font-normal text-white/60 hover:bg-white/5 hover:text-white/90 active:bg-white/[0.14]'
@@ -33,25 +36,41 @@ export function NavItem({ href, label, icon, badge, external }: NavItemProps) {
       <span className="flex h-4 w-4 shrink-0 items-center justify-center">
         {icon}
       </span>
-      <span className="flex-1">{label}</span>
-      {badge != null && badge > 0 && (
-        <span className="text-[10.5px] font-semibold tabular-nums text-white/50">
-          {badge}
-        </span>
+      {!collapsed && (
+        <>
+          <span className="flex-1">{label}</span>
+          {badge != null && badge > 0 && (
+            <span className="text-[10.5px] font-semibold tabular-nums text-white/50">
+              {badge}
+            </span>
+          )}
+        </>
       )}
     </>
   )
 
   if (external) {
     return (
-      <a href={href} target="_blank" rel="noopener noreferrer" className={className}>
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={className}
+        title={collapsed ? label : undefined}
+        aria-label={collapsed ? label : undefined}
+      >
         {content}
       </a>
     )
   }
 
   return (
-    <Link href={href} className={className}>
+    <Link
+      href={href}
+      className={className}
+      title={collapsed ? label : undefined}
+      aria-label={collapsed ? label : undefined}
+    >
       {content}
     </Link>
   )

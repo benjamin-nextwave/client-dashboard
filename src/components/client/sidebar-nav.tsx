@@ -1,12 +1,15 @@
 'use client'
 
-import { ClientLogo } from '@/components/client/client-logo'
+import Image from 'next/image'
+import { useEffect, useState } from 'react'
 import { NavItem } from '@/components/client/nav-item'
 import { useT } from '@/lib/i18n/client'
 
+const STORAGE_KEY = 'nw-sidebar-collapsed'
+const WIDTH_EXPANDED = '240px'
+const WIDTH_COLLAPSED = '64px'
+
 interface SidebarNavProps {
-  companyName: string
-  logoUrl: string | null
   signOutAction: () => Promise<void>
   inboxUrl?: string
   inboxVisible?: boolean
@@ -24,8 +27,32 @@ interface NavGroup {
   items: NavItemData[]
 }
 
-export function SidebarNav({ companyName, logoUrl, signOutAction, inboxUrl, inboxVisible, leadInboxVisible }: SidebarNavProps) {
+export function SidebarNav({ signOutAction, inboxUrl, inboxVisible, leadInboxVisible }: SidebarNavProps) {
   const t = useT()
+  const [collapsed, setCollapsed] = useState(false)
+
+  // Voorkeur pas na de eerste render inlezen: localStorage bestaat niet op de
+  // server, en hem in de initiële state stoppen zou een hydration-mismatch geven.
+  useEffect(() => {
+    setCollapsed(window.localStorage.getItem(STORAGE_KEY) === '1')
+  }, [])
+
+  // De lead inbox hangt met position: fixed naast de zijbalk en kan de breedte
+  // niet uit de DOM afleiden. Via deze variabele schuift hij mee.
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      '--sidebar-w',
+      collapsed ? WIDTH_COLLAPSED : WIDTH_EXPANDED
+    )
+  }, [collapsed])
+
+  function toggle() {
+    setCollapsed((prev) => {
+      const next = !prev
+      window.localStorage.setItem(STORAGE_KEY, next ? '1' : '0')
+      return next
+    })
+  }
   const overviewItems: NavItemData[] = [
     {
       href: '/dashboard',
@@ -160,10 +187,14 @@ export function SidebarNav({ companyName, logoUrl, signOutAction, inboxUrl, inbo
   ]
 
   return (
-    // Breedte blijft bewust w-60 (240px) in plaats van de 244px uit het ontwerp:
-    // de inbox-embed positioneert zijn iframe met vaste pixelwaarden die op deze
-    // breedte zijn afgestemd.
-    <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col bg-ink">
+    // Uitgeklapt bewust 240px en niet de 244px uit het ontwerp: de inbox-embed
+    // positioneert zijn iframe met vaste pixelwaarden die op deze breedte zijn
+    // afgestemd.
+    <aside
+      className={`sticky top-0 flex h-screen shrink-0 flex-col bg-ink transition-[width] duration-200 ${
+        collapsed ? 'w-16' : 'w-60'
+      }`}
+    >
       {/* Merk-gloed vanaf de bovenkant — de enige plek waar de klantkleur het
           vlak zelf vult. */}
       <div
@@ -171,40 +202,91 @@ export function SidebarNav({ companyName, logoUrl, signOutAction, inboxUrl, inbo
         className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,var(--brand-20),transparent_320px)]"
       />
 
-      {/* Merk */}
-      <div className="relative flex items-center px-5 pb-4 pt-5">
-        <ClientLogo logoUrl={logoUrl} companyName={companyName} />
+      {/* Merk — Nextwave, niet het klantlogo */}
+      <div
+        className={`relative flex items-center pb-4 pt-5 ${
+          collapsed ? 'justify-center px-3' : 'px-5'
+        }`}
+      >
+        <Image
+          src={collapsed ? '/nextwave-logo-mark.png' : '/nextwave-logo-wide.png'}
+          alt="Nextwave Solutions"
+          width={collapsed ? 96 : 560}
+          height={collapsed ? 36 : 165}
+          priority
+          className={collapsed ? 'h-auto w-8' : 'h-auto w-[150px]'}
+        />
       </div>
 
       {/* Navigatie */}
       <nav className="relative min-h-0 flex-1 overflow-y-auto px-3 py-0.5">
         {groups.map((group, i) => (
           <div key={i} className="mb-3">
-            {group.title && (
-              <div className="px-3 pb-1.5 pt-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/30">
-                {group.title}
-              </div>
-            )}
+            {group.title &&
+              (collapsed ? (
+                <div className="mx-3 mb-1.5 mt-1 border-t border-white/[0.09]" aria-hidden />
+              ) : (
+                <div className="px-3 pb-1.5 pt-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/30">
+                  {group.title}
+                </div>
+              ))}
             <div className="flex flex-col gap-0.5">
               {group.items.map((item) => (
-                <NavItem key={item.href} href={item.href} label={item.label} icon={item.icon} />
+                <NavItem
+                  key={item.href}
+                  href={item.href}
+                  label={item.label}
+                  icon={item.icon}
+                  collapsed={collapsed}
+                />
               ))}
             </div>
           </div>
         ))}
       </nav>
 
+      {/* In- en uitklappen */}
+      <div className="relative shrink-0 px-2.5 pb-1">
+        <button
+          type="button"
+          onClick={toggle}
+          title={collapsed ? 'Zijbalk uitklappen' : 'Zijbalk inklappen'}
+          aria-label={collapsed ? 'Zijbalk uitklappen' : 'Zijbalk inklappen'}
+          aria-expanded={!collapsed}
+          className={`flex w-full items-center rounded-control py-2 text-[12.5px] text-white/60 transition-colors hover:bg-white/5 hover:text-white/90 ${
+            collapsed ? 'justify-center px-0' : 'gap-3 px-3'
+          }`}
+        >
+          <svg
+            className={`h-4 w-4 shrink-0 transition-transform duration-200 ${
+              collapsed ? 'rotate-180' : ''
+            }`}
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.6}
+            stroke="currentColor"
+            aria-hidden
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M18.75 19.5 11.25 12l7.5-7.5M11.25 19.5 3.75 12l7.5-7.5" />
+          </svg>
+          {!collapsed && <span className="flex-1 text-left">Inklappen</span>}
+        </button>
+      </div>
+
       {/* Uitloggen */}
       <div className="relative shrink-0 border-t border-white/[0.09] p-2.5">
         <form action={signOutAction}>
           <button
             type="submit"
-            className="flex w-full items-center gap-3 rounded-control px-3 py-2 text-[12.5px] text-white/60 transition-colors hover:bg-white/5 hover:text-white/90"
+            title={collapsed ? t('nav.signOut') : undefined}
+            className={`flex w-full items-center rounded-control py-2 text-[12.5px] text-white/60 transition-colors hover:bg-white/5 hover:text-white/90 ${
+              collapsed ? 'justify-center px-0' : 'gap-3 px-3'
+            }`}
           >
             <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={1.6} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
             </svg>
-            {t('nav.signOut')}
+            {!collapsed && t('nav.signOut')}
           </button>
         </form>
       </div>

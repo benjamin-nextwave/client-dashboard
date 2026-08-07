@@ -27,10 +27,11 @@ export function InboxShell({
 
   return (
     // Doorbreek de max-w-6xl container van (client)/layout.tsx en vul de hele
-    // ruimte naast de outer SidebarNav (w-60 = 15rem). Position: fixed neemt
+    // ruimte naast de outer SidebarNav. Die breedte staat in --sidebar-w, zodat
+    // dit paneel meeschuift wanneer de zijbalk in- of uitklapt. Position: fixed neemt
     // de viewport als containing-block, dus we hoeven niet om de mx-auto heen
     // te rekenen.
-    <div className="fixed inset-y-0 left-60 right-0 z-10 flex overflow-hidden bg-canvas pt-6 lg:pt-8">
+    <div className="fixed inset-y-0 right-0 left-[var(--sidebar-w)] z-10 flex overflow-hidden bg-canvas pt-6 transition-[left] duration-200 lg:pt-8">
       {/* Filter sidebar — lg+ alleen */}
       <aside className="hidden w-[196px] shrink-0 overflow-y-auto border-r border-line bg-panel lg:block">
         <FilterSidebar leads={leads} />

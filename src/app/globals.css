@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+/* Breedte van de klant-zijbalk. Staat op :root omdat de zijbalk hem bij het
+   in- en uitklappen op document.documentElement zet, en de lead inbox — die
+   met position: fixed naast de zijbalk hangt — hem moet kunnen uitlezen. */
+:root {
+  --sidebar-w: 240px;
+}
+
 @theme inline {
   --color-brand: var(--brand-color, #3B82F6);
   --animate-fadeIn: fadeIn 0.4s ease-out;

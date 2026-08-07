@@ -39,8 +39,6 @@ export default async function ClientLayout({
         style={{ '--brand-color': brandColor } as React.CSSProperties}
       >
         <SidebarNav
-          companyName={client.company_name}
-          logoUrl={client.logo_url}
           signOutAction={signOut}
           inboxUrl={client.inbox_url ?? undefined}
           inboxVisible={client.inbox_visible ?? false}
