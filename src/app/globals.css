@@ -92,6 +92,9 @@
   --c-cat-internal: #7e22ce;
   --c-cat-later: #6b7280;
   --c-cat-none: #9f1239;
+
+  /* accent voor notities van Nextwave op de leads-pagina */
+  --c-note: #d9a441;
 }
 
 /* Donkere tokens staan klaar maar worden nergens aangezet — er is bewust nog
@@ -120,6 +123,7 @@
   --c-cat-internal: #c084fc;
   --c-cat-later: #8a929f;
   --c-cat-none: #fb7185;
+  --c-note: #f5c15e;
 }
 
 /* Focus-styling centraal in plaats van per component. Bewust binnen

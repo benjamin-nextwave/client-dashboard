@@ -296,6 +296,34 @@ export interface Translations {
     objectionExplanationPlaceholder: string
     objectionSubmit: string
     objectionSubmitting: string
+    searchPlaceholder: string
+    filterCategories: string
+    filterClear: string
+    shownOfTotal: string
+    sortNewest: string
+    sortOldest: string
+    sortCompany: string
+    sortCategory: string
+    sortLabel: string
+    statLeads: string
+    statMeetings: string
+    statObjectionsOpen: string
+    statObjectionsGranted: string
+    colLead: string
+    colCategory: string
+    colReceived: string
+    colStatus: string
+    countedAs: string
+    replyFromLead: string
+    ourMessage: string
+    whyCategory: string
+    justificationBy: string
+    noteFrom: string
+    openInLeadInbox: string
+    prevLead: string
+    nextLead: string
+    noResults: string
+    selectLead: string
   }
   preview: {
     title: string
@@ -887,6 +915,34 @@ export const nl: Translations = {
     objectionExplanationPlaceholder: 'Voeg een korte toelichting toe (min. 10 tekens)',
     objectionSubmit: 'Bezwaar indienen',
     objectionSubmitting: 'Versturen...',
+    searchPlaceholder: 'Zoek op naam, bedrijf, e-mail of tekst',
+    filterCategories: 'Categorieën',
+    filterClear: 'Wissen',
+    shownOfTotal: '{shown} van {total} leads',
+    sortNewest: 'Nieuwste eerst',
+    sortOldest: 'Oudste eerst',
+    sortCompany: 'Bedrijf A-Z',
+    sortCategory: 'Categorie',
+    sortLabel: 'Sorteren',
+    statLeads: 'Leads in periode',
+    statMeetings: 'Meeting of telefonisch',
+    statObjectionsOpen: 'Bezwaren in behandeling',
+    statObjectionsGranted: 'Bezwaren toegekend',
+    colLead: 'Lead',
+    colCategory: 'Categorie',
+    colReceived: 'Ontvangen',
+    colStatus: 'Status',
+    countedAs: 'Geteld als',
+    replyFromLead: 'Reactie van de lead',
+    ourMessage: 'Ons bericht',
+    whyCategory: 'Waarom deze categorie',
+    justificationBy: 'Onderbouwing opgesteld door Nextwave',
+    noteFrom: 'Notitie van Nextwave',
+    openInLeadInbox: 'Openen in Lead inbox',
+    prevLead: 'Vorige lead',
+    nextLead: 'Volgende lead',
+    noResults: 'Geen leads gevonden.',
+    selectLead: 'Kies een lead om de details te zien.',
   },
 
   preview: {
