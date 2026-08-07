@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import type { CampaignState } from '@/lib/data/campaign'
-import { approvePreview, confirmCampaignApproval } from '../actions'
+import { confirmCampaignApproval } from '../actions'
 
 interface Props {
   state: CampaignState
@@ -25,21 +25,7 @@ export function CampaignBody({ state }: Props) {
   const isCompleted = !!state.completedAt
   const deadline = formatDeadline(state.approvalDeadline)
 
-  const canApprovePreview = !!state.previewApprovalRequestedAt && !state.previewApprovedAt && !isCompleted
-
   const bothApproved = !!state.previewApprovedAt && !!state.variantsApprovedAt && !isCompleted
-
-  const handleApprovePreview = () => {
-    setError(null)
-    startTransition(async () => {
-      const r = await approvePreview()
-      if (r.error) setError(r.error)
-      else {
-        router.refresh()
-        if (state.variantsApprovedAt) setShowConfirmModal(true)
-      }
-    })
-  }
 
   const handleConfirm = () => {
     setError(null)
@@ -115,36 +101,10 @@ export function CampaignBody({ state }: Props) {
         />
       )}
 
-      {/* Task 5: Voorvertoning goedkeuren */}
-      {canApprovePreview && (
-        <TaskCard
-          number={5}
-          highlight
-          urgencyNote="Binnen 5 werkdagen om op schema te blijven lopen"
-          title="Voorvertoning goedkeuren"
-          description="Bekijk hoe je campagne eruit komt te zien en keur de voorvertoning goed."
-        >
-          <div className="flex flex-wrap gap-3">
-            <Link
-              href="/dashboard/voorvertoning"
-              className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 shadow-sm hover:border-indigo-200 hover:text-indigo-600"
-            >
-              Voorvertoning openen
-            </Link>
-            <button
-              type="button"
-              onClick={handleApprovePreview}
-              disabled={pending}
-              className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-base font-bold text-white shadow-lg shadow-emerald-500/40 transition-all hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-xl disabled:opacity-50 disabled:hover:translate-y-0"
-            >
-              Goedkeuren
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-              </svg>
-            </button>
-          </div>
-        </TaskCard>
-      )}
+      {/* Taak 5 (Voorvertoning goedkeuren) is verborgen, samen met de
+          voorvertoning-pagina zelf. De klant kan de voorvertoning dus niet meer
+          vanuit het dashboard goedkeuren; `campaign_preview_approved_at` wordt
+          alleen nog buiten het dashboard om gezet. */}
 
       {state.previewApprovedAt && !isCompleted && <ApprovedNotice label="Voorvertoning goedgekeurd" />}
 
