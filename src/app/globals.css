@@ -96,6 +96,10 @@
 
   /* accent voor notities van Nextwave op de leads-pagina */
   --c-note: #d9a441;
+
+  /* Merkkleur van HubSpot. Staat bewust los van het palet: hij hoort bij de
+     koppeling en moet herkenbaar blijven, niet meebewegen met de klantkleur. */
+  --c-hubspot: #e8590c;
 }
 
 /* Donkere tokens staan klaar maar worden nergens aangezet — er is bewust nog
@@ -125,6 +129,7 @@
   --c-cat-later: #8a929f;
   --c-cat-none: #fb7185;
   --c-note: #f5c15e;
+  --c-hubspot: #ff7a59;
 }
 
 /* Focus-styling centraal in plaats van per component. Bewust binnen

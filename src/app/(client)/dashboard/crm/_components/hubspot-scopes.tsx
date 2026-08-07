@@ -24,12 +24,12 @@ function CopyButton({ value }: { value: string }) {
     <button
       type="button"
       onClick={copy}
-      className={`shrink-0 rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
+      className={`shrink-0 rounded-control border px-3 py-1.5 text-[11.5px] font-semibold transition ${
         state === 'copied'
-          ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+          ? 'border-[color-mix(in_oklab,var(--color-pos)_35%,transparent)] bg-[color-mix(in_oklab,var(--color-pos)_10%,transparent)] text-pos'
           : state === 'failed'
-            ? 'border-rose-300 bg-rose-50 text-rose-700'
-            : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+            ? 'border-[color-mix(in_oklab,var(--color-neg)_35%,transparent)] bg-[color-mix(in_oklab,var(--color-neg)_8%,transparent)] text-neg'
+            : 'border-line bg-panel text-muted hover:border-[var(--brand-32)]'
       }`}
       aria-label={`Kopieer ${value}`}
     >
@@ -44,20 +44,20 @@ function CopyButton({ value }: { value: string }) {
  */
 export function HubspotScopes() {
   return (
-    <div className="rounded-xl border border-orange-200 bg-orange-50/60 p-4">
-      <p className="text-xs font-semibold uppercase tracking-wider text-orange-800">
+    <div className="rounded-panel border border-[color-mix(in_oklab,var(--c-hubspot)_30%,transparent)] bg-[color-mix(in_oklab,var(--c-hubspot)_7%,transparent)] p-4">
+      <p className="text-[11.5px] font-semibold uppercase tracking-wider text-[var(--c-hubspot)]">
         Deze twee scopes heb je nodig
       </p>
       <ul className="mt-3 space-y-2">
         {HUBSPOT_SCOPES.map((scope, i) => (
           <li
             key={scope}
-            className="flex items-center gap-3 rounded-lg border border-orange-200 bg-white px-3 py-2.5"
+            className="flex items-center gap-3 rounded-control border border-[color-mix(in_oklab,var(--c-hubspot)_30%,transparent)] bg-panel px-3 py-2.5"
           >
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-orange-100 text-xs font-bold text-orange-700">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--c-hubspot)_15%,transparent)] text-[11.5px] font-bold text-[var(--c-hubspot)]">
               {i + 1}
             </span>
-            <code className="min-w-0 flex-1 break-all font-mono text-base font-semibold text-gray-900">
+            <code className="min-w-0 flex-1 break-all font-mono text-[15px] font-semibold text-fg">
               {scope}
             </code>
             <CopyButton value={scope} />

@@ -21,8 +21,8 @@ export function ColorSwatches({
             title={c.name}
             aria-label={c.name}
             aria-pressed={active}
-            className={`h-6 w-6 rounded-full ring-offset-2 transition ${
-              active ? 'ring-2 ring-gray-900' : 'ring-1 ring-gray-200 hover:ring-gray-400'
+            className={`h-6 w-6 rounded-full ring-offset-2 ring-offset-[var(--c-panel)] transition ${
+              active ? 'ring-2 ring-fg' : 'ring-1 ring-line hover:ring-[var(--brand-40)]'
             }`}
             style={{ backgroundColor: c.value }}
           />

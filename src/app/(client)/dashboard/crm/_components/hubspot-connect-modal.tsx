@@ -89,15 +89,15 @@ export function HubspotConnectModal({
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
       <div
-        className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-[color-mix(in_oklab,var(--color-ink)_45%,transparent)] backdrop-blur-sm"
         onClick={onClose}
         aria-hidden
       />
-      <div className="relative flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-gray-900/5">
-        <header className="flex items-start justify-between gap-3 border-b border-gray-100 px-5 py-4">
+      <div className="relative flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-panel bg-panel shadow-2xl ring-1 ring-line">
+        <header className="flex items-start justify-between gap-3 border-b border-line px-5 py-4">
           <div>
-            <h2 className="text-base font-semibold text-gray-900">HubSpot verbinden</h2>
-            <p className="mt-0.5 text-xs text-gray-500">
+            <h2 className="text-[15px] font-semibold text-fg">HubSpot verbinden</h2>
+            <p className="mt-0.5 text-[11.5px] text-muted">
               {connection
                 ? 'Er is één HubSpot-koppeling actief. Je kunt het token vervangen of de koppeling verwijderen.'
                 : 'Maak in HubSpot een Private App met onderstaande scopes en plak het token hierboven.'}
@@ -106,7 +106,7 @@ export function HubspotConnectModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+            className="rounded-control p-1.5 text-faint hover:bg-track hover:text-muted"
             aria-label="Sluiten"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
@@ -117,24 +117,24 @@ export function HubspotConnectModal({
 
         <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
           {error && (
-            <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700">{error}</p>
+            <p className="rounded-control bg-[color-mix(in_oklab,var(--color-neg)_8%,transparent)] px-3 py-2 text-[11.5px] text-neg">{error}</p>
           )}
           {notice && (
-            <p className="rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-700">{notice}</p>
+            <p className="rounded-control bg-[color-mix(in_oklab,var(--color-pos)_10%,transparent)] px-3 py-2 text-[11.5px] text-pos">{notice}</p>
           )}
 
           {/* 1. Token */}
-          <form onSubmit={handleSave} className="rounded-xl border border-gray-200 p-4">
+          <form onSubmit={handleSave} className="rounded-panel border border-line p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <label
                 htmlFor="hubspot-token"
-                className="text-[11px] font-semibold uppercase tracking-wider text-gray-500"
+                className="text-[11.5px] font-medium text-muted"
               >
                 Private App-token
               </label>
               {connection?.tokenHint && (
-                <span className="flex items-center gap-1.5 text-[11px] text-gray-500">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                <span className="flex items-center gap-1.5 text-[11px] text-muted">
+                  <span className="h-1.5 w-1.5 rounded-full bg-pos" />
                   Opgeslagen: <span className="font-mono">{connection.tokenHint}</span>
                 </span>
               )}
@@ -152,24 +152,24 @@ export function HubspotConnectModal({
                     ? 'Laat leeg om het huidige token te behouden'
                     : 'pat-eu1-…'
                 }
-                className="min-w-[240px] flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 font-mono text-sm outline-none transition focus:border-orange-500 disabled:bg-gray-50"
+                className="min-w-[240px] flex-1 rounded-control border border-line bg-panel px-3 py-2 font-mono text-[12.5px] outline-none transition focus:border-[var(--c-hubspot)] disabled:bg-track"
               />
               <button
                 type="submit"
                 disabled={pending || (!connection && !token.trim())}
-                className="rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-orange-700 disabled:opacity-50"
+                className="rounded-control bg-[var(--c-hubspot)] px-4 py-2 text-[12.5px] font-medium text-white transition hover:bg-[var(--c-hubspot)] disabled:opacity-50"
               >
                 {pending ? 'Bezig…' : connection ? 'Token vervangen' : 'Verbinden'}
               </button>
             </div>
 
             {connection && (
-              <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3">
+              <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-3">
                 <button
                   type="button"
                   onClick={handleTest}
                   disabled={pending}
-                  className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:border-gray-400 disabled:opacity-50"
+                  className="rounded-control border border-line px-3 py-1.5 text-[11.5px] font-medium text-muted hover:border-[var(--brand-32)] disabled:opacity-50"
                 >
                   Verbinding testen
                 </button>
@@ -177,7 +177,7 @@ export function HubspotConnectModal({
                   type="button"
                   onClick={handleDelete}
                   disabled={pending}
-                  className="rounded-lg px-3 py-1.5 text-xs font-medium text-gray-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"
+                  className="rounded-control px-3 py-1.5 text-[11.5px] font-medium text-faint hover:bg-[color-mix(in_oklab,var(--color-neg)_8%,transparent)] hover:text-neg disabled:opacity-50"
                 >
                   Koppeling verwijderen
                 </button>
@@ -185,10 +185,10 @@ export function HubspotConnectModal({
                   <span
                     className={`ml-auto text-[11px] ${
                       connection.lastExportStatus === 'error'
-                        ? 'text-rose-600'
+                        ? 'text-neg'
                         : connection.lastExportStatus === 'partial'
-                          ? 'text-amber-600'
-                          : 'text-gray-400'
+                          ? 'text-warn'
+                          : 'text-faint'
                     }`}
                   >
                     Laatste export {formatDateTime(connection.lastExportAt)}
@@ -203,7 +203,7 @@ export function HubspotConnectModal({
 
           {/* 3. Video */}
           <div>
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+            <p className="mb-2 text-[11.5px] font-medium text-muted">
               Uitleg: zo maak je de Private App aan
             </p>
             {HUBSPOT_VIDEO_SRC ? (
@@ -212,7 +212,7 @@ export function HubspotConnectModal({
                 controls
                 preload="metadata"
                 playsInline
-                className="w-full rounded-xl bg-black"
+                className="w-full rounded-panel bg-black"
               >
                 Je browser kan deze video niet afspelen.{' '}
                 <a href={HUBSPOT_VIDEO_SRC} download>
@@ -221,14 +221,14 @@ export function HubspotConnectModal({
                 .
               </video>
             ) : (
-              <div className="flex aspect-video w-full flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 bg-gray-50 px-6 text-center">
-                <svg className="h-10 w-10 text-gray-300" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <div className="flex aspect-video w-full flex-col items-center justify-center rounded-panel border border-dashed border-line bg-track px-6 text-center">
+                <svg className="h-10 w-10 text-faint" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M21 7.5 16.5 12 21 16.5V7.5ZM3.75 6h10.5A1.5 1.5 0 0 1 15.75 7.5v9a1.5 1.5 0 0 1-1.5 1.5H3.75a1.5 1.5 0 0 1-1.5-1.5v-9A1.5 1.5 0 0 1 3.75 6Z" />
                 </svg>
-                <p className="mt-3 text-sm font-medium text-gray-700">
+                <p className="mt-3 text-[12.5px] font-medium text-muted">
                   De uitlegvideo komt binnenkort
                 </p>
-                <p className="mt-1 max-w-sm text-xs text-gray-500">
+                <p className="mt-1 max-w-sm text-[11.5px] text-muted">
                   Je kunt intussen gewoon koppelen: maak in HubSpot een Private App met de
                   twee scopes hierboven en plak het token bovenaan dit scherm.
                 </p>
@@ -237,11 +237,11 @@ export function HubspotConnectModal({
           </div>
         </div>
 
-        <footer className="flex justify-end border-t border-gray-100 bg-gray-50/70 px-5 py-3">
+        <footer className="flex justify-end border-t border-line bg-track px-5 py-3">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100"
+            className="rounded-control px-3 py-2 text-[12.5px] font-medium text-muted hover:bg-track"
           >
             Sluiten
           </button>

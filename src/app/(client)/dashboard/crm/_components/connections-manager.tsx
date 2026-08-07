@@ -11,7 +11,7 @@ import type { CrmConnectionSummary, CrmProvider } from '../_lib/providers/types'
 import { formatDateTime } from '../_lib/view'
 
 const inputClass =
-  'block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-gray-900 disabled:bg-gray-50'
+  'block w-full rounded-control border border-line bg-panel px-3 py-2 text-[12.5px] text-fg outline-none transition focus:border-[var(--brand-40)] disabled:bg-track'
 
 type Draft = {
   id?: string
@@ -118,22 +118,22 @@ export function ConnectionsManager({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
-        className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm"
+        className="absolute inset-0 bg-[color-mix(in_oklab,var(--color-ink)_45%,transparent)] backdrop-blur-sm"
         onClick={onClose}
         aria-hidden
       />
-      <div className="relative flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-gray-900/5">
-        <header className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+      <div className="relative flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded-panel bg-panel shadow-2xl ring-1 ring-line">
+        <header className="flex items-center justify-between border-b border-line px-5 py-4">
           <div>
-            <h2 className="text-base font-semibold text-gray-900">Koppelingen</h2>
-            <p className="mt-0.5 text-xs text-gray-500">
+            <h2 className="text-[15px] font-semibold text-fg">Koppelingen</h2>
+            <p className="mt-0.5 text-[11.5px] text-muted">
               Stuur je leads rechtstreeks naar je eigen CRM.
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+            className="rounded-control p-1.5 text-faint hover:bg-track hover:text-muted"
             aria-label="Sluiten"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
@@ -144,14 +144,14 @@ export function ConnectionsManager({
 
         <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
           {error && (
-            <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700">{error}</p>
+            <p className="rounded-control bg-[color-mix(in_oklab,var(--color-neg)_8%,transparent)] px-3 py-2 text-[11.5px] text-neg">{error}</p>
           )}
           {notice && (
-            <p className="rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-700">{notice}</p>
+            <p className="rounded-control bg-[color-mix(in_oklab,var(--color-pos)_10%,transparent)] px-3 py-2 text-[11.5px] text-pos">{notice}</p>
           )}
 
           {connections.length === 0 && !draft && (
-            <p className="rounded-xl border border-dashed border-gray-200 px-4 py-8 text-center text-sm text-gray-500">
+            <p className="rounded-panel border border-dashed border-line px-4 py-8 text-center text-[12.5px] text-muted">
               Nog geen koppelingen. Kies hieronder een CRM om te beginnen.
             </p>
           )}
@@ -161,24 +161,24 @@ export function ConnectionsManager({
               {connections.map((connection) => {
                 const providerMeta = PROVIDER_META[connection.provider]
                 return (
-                  <li key={connection.id} className="rounded-xl border border-gray-200 p-3">
+                  <li key={connection.id} className="rounded-panel border border-line p-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <span
                         className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${providerMeta.badge}`}
                       >
                         {providerMeta.name}
                       </span>
-                      <span className="min-w-0 flex-1 truncate text-sm font-medium text-gray-900">
+                      <span className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-fg">
                         {connection.name}
                       </span>
-                      <span className="font-mono text-[11px] text-gray-400">
+                      <span className="font-mono text-[11px] text-faint">
                         {connection.tokenHint ?? 'geen token'}
                       </span>
                       <button
                         type="button"
                         onClick={() => handleTest(connection)}
                         disabled={pending}
-                        className="rounded-lg border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-700 hover:border-gray-400 disabled:opacity-50"
+                        className="rounded-control border border-line px-2.5 py-1 text-[11.5px] font-medium text-muted hover:border-[var(--brand-32)] disabled:opacity-50"
                       >
                         Testen
                       </button>
@@ -189,7 +189,7 @@ export function ConnectionsManager({
                             ? onOpenHubspot()
                             : startEdit(connection)
                         }
-                        className="rounded-lg px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100"
+                        className="rounded-control px-2.5 py-1 text-[11.5px] font-medium text-muted hover:bg-track"
                       >
                         Bewerken
                       </button>
@@ -197,20 +197,20 @@ export function ConnectionsManager({
                         type="button"
                         onClick={() => handleDelete(connection)}
                         disabled={pending}
-                        className="rounded-lg px-2 py-1 text-xs font-medium text-gray-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"
+                        className="rounded-control px-2 py-1 text-[11.5px] font-medium text-faint hover:bg-[color-mix(in_oklab,var(--color-neg)_8%,transparent)] hover:text-neg disabled:opacity-50"
                       >
                         Verwijderen
                       </button>
                     </div>
-                    <p className="mt-1.5 text-[11px] text-gray-500">{providerMeta.mapping}</p>
+                    <p className="mt-1.5 text-[11px] text-muted">{providerMeta.mapping}</p>
                     {connection.lastExportAt && (
                       <p
                         className={`mt-1 text-[11px] ${
                           connection.lastExportStatus === 'error'
-                            ? 'text-rose-600'
+                            ? 'text-neg'
                             : connection.lastExportStatus === 'partial'
-                              ? 'text-amber-600'
-                              : 'text-gray-400'
+                              ? 'text-warn'
+                              : 'text-faint'
                         }`}
                       >
                         Laatste export {formatDateTime(connection.lastExportAt)}
@@ -224,20 +224,20 @@ export function ConnectionsManager({
           )}
 
           {draft && meta ? (
-            <form onSubmit={handleSave} className="space-y-3 rounded-xl border border-gray-900/10 bg-gray-50/70 p-4">
+            <form onSubmit={handleSave} className="space-y-3 rounded-panel border border-line bg-track p-4">
               <div className="flex items-center gap-2">
                 <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${meta.badge}`}>
                   {meta.name}
                 </span>
-                <span className="text-sm font-medium text-gray-900">
+                <span className="text-[12.5px] font-medium text-fg">
                   {draft.id ? 'Koppeling bewerken' : 'Nieuwe koppeling'}
                 </span>
               </div>
 
-              <p className="text-xs text-gray-600">{meta.summary}</p>
+              <p className="text-[11.5px] text-muted">{meta.summary}</p>
 
               <label className="block">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+                <span className="text-[11.5px] font-medium text-muted">
                   Naam
                 </span>
                 <input
@@ -250,7 +250,7 @@ export function ConnectionsManager({
               </label>
 
               <label className="block">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+                <span className="text-[11.5px] font-medium text-muted">
                   {meta.tokenLabel}
                 </span>
                 <input
@@ -263,7 +263,7 @@ export function ConnectionsManager({
                   placeholder={draft.id ? 'Laat leeg om het huidige token te behouden' : meta.tokenPlaceholder}
                 />
                 {meta.tokenHelp && (
-                  <span className="mt-1 block text-[11px] leading-relaxed text-gray-500">
+                  <span className="mt-1 block text-[11px] leading-relaxed text-muted">
                     {meta.tokenHelp}
                   </span>
                 )}
@@ -271,7 +271,7 @@ export function ConnectionsManager({
 
               {meta.hasDomain && (
                 <label className="block">
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+                  <span className="text-[11.5px] font-medium text-muted">
                     {meta.domainLabel}
                   </span>
                   <input
@@ -281,12 +281,12 @@ export function ConnectionsManager({
                     disabled={pending}
                     placeholder="mijnbedrijf"
                   />
-                  <span className="mt-1 block text-[11px] text-gray-500">{meta.domainHelp}</span>
+                  <span className="mt-1 block text-[11px] text-muted">{meta.domainHelp}</span>
                 </label>
               )}
 
-              <p className="rounded-lg bg-white px-3 py-2 text-[11px] leading-relaxed text-gray-600 ring-1 ring-gray-200">
-                <strong className="font-semibold text-gray-800">Wat gaat er mee:</strong>{' '}
+              <p className="rounded-control bg-panel px-3 py-2 text-[11px] leading-relaxed text-muted ring-1 ring-line">
+                <strong className="font-semibold text-fg">Wat gaat er mee:</strong>{' '}
                 {meta.mapping} Bestaande records worden bijgewerkt op e-mailadres, dus je krijgt
                 geen dubbele contacten.
               </p>
@@ -296,21 +296,21 @@ export function ConnectionsManager({
                   type="button"
                   onClick={() => setDraft(null)}
                   disabled={pending}
-                  className="rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100"
+                  className="rounded-control px-3 py-2 text-[12.5px] font-medium text-muted hover:bg-track"
                 >
                   Annuleren
                 </button>
                 <button
                   type="submit"
                   disabled={pending || !draft.name.trim()}
-                  className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+                  className="rounded-control bg-ink px-4 py-2 text-[12.5px] font-medium text-white hover:opacity-90 disabled:opacity-50"
                 >
                   {pending ? 'Opslaan…' : 'Opslaan'}
                 </button>
               </div>
             </form>
           ) : (
-            <div className="flex flex-wrap gap-2 border-t border-gray-100 pt-4">
+            <div className="flex flex-wrap gap-2 border-t border-line pt-4">
               {PROVIDER_IDS.map((provider) => {
                 const isHubspot = provider === 'hubspot'
                 const hasHubspot = connections.some((c) => c.provider === 'hubspot')
@@ -319,10 +319,10 @@ export function ConnectionsManager({
                     key={provider}
                     type="button"
                     onClick={() => (isHubspot ? onOpenHubspot() : startNew(provider))}
-                    className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium ${
+                    className={`inline-flex items-center gap-1.5 rounded-control border px-3 py-2 text-[12.5px] font-medium ${
                       isHubspot
-                        ? 'border-orange-300 bg-orange-50 text-orange-700 hover:border-orange-400'
-                        : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                        ? 'border-[color-mix(in_oklab,var(--c-hubspot)_35%,transparent)] bg-[color-mix(in_oklab,var(--c-hubspot)_8%,transparent)] text-[var(--c-hubspot)] hover:border-[color-mix(in_oklab,var(--c-hubspot)_55%,transparent)]'
+                        : 'border-line bg-panel text-muted hover:border-[var(--brand-32)]'
                     }`}
                   >
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">

@@ -82,22 +82,22 @@ export function LabelManager({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
-        className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm"
+        className="absolute inset-0 bg-[color-mix(in_oklab,var(--color-ink)_45%,transparent)] backdrop-blur-sm"
         onClick={onClose}
         aria-hidden
       />
-      <div className="relative flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-gray-900/5">
-        <header className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+      <div className="relative flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-panel bg-panel shadow-2xl ring-1 ring-line">
+        <header className="flex items-center justify-between border-b border-line px-5 py-4">
           <div>
-            <h2 className="text-base font-semibold text-gray-900">Labels beheren</h2>
-            <p className="mt-0.5 text-xs text-gray-500">
+            <h2 className="text-[15px] font-semibold text-fg">Labels beheren</h2>
+            <p className="mt-0.5 text-[11.5px] text-muted">
               Eigen labels om leads te ordenen. Los van de automatische classificatie.
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+            className="rounded-control p-1.5 text-faint hover:bg-track hover:text-muted"
             aria-label="Sluiten"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
@@ -108,7 +108,7 @@ export function LabelManager({
 
         <div className="flex-1 overflow-y-auto px-5 py-4">
           {labels.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-gray-200 px-4 py-6 text-center text-sm text-gray-500">
+            <p className="rounded-panel border border-dashed border-line px-4 py-6 text-center text-[12.5px] text-muted">
               Nog geen labels. Maak er hieronder één aan.
             </p>
           ) : (
@@ -116,7 +116,7 @@ export function LabelManager({
               {labels.map((label) => (
                 <li
                   key={label.id}
-                  className="rounded-xl border border-gray-200 px-3 py-2.5"
+                  className="rounded-panel border border-line px-3 py-2.5"
                 >
                   {editingId === label.id ? (
                     <div className="space-y-2.5">
@@ -126,7 +126,7 @@ export function LabelManager({
                         onChange={(e) => setEditName(e.target.value)}
                         disabled={pending}
                         maxLength={40}
-                        className="block w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-gray-900"
+                        className="block w-full rounded-control border border-line px-3 py-1.5 text-[12.5px] outline-none focus:border-[var(--brand-40)]"
                       />
                       <ColorSwatches value={editColor} onChange={setEditColor} />
                       <div className="flex justify-end gap-2">
@@ -134,7 +134,7 @@ export function LabelManager({
                           type="button"
                           onClick={() => setEditingId(null)}
                           disabled={pending}
-                          className="rounded-lg px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100"
+                          className="rounded-control px-3 py-1.5 text-[11.5px] font-medium text-muted hover:bg-track"
                         >
                           Annuleren
                         </button>
@@ -142,7 +142,7 @@ export function LabelManager({
                           type="button"
                           onClick={() => handleSaveEdit(label.id)}
                           disabled={pending || !editName.trim()}
-                          className="rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+                          className="rounded-control bg-ink px-3 py-1.5 text-[11.5px] font-medium text-white hover:opacity-90 disabled:opacity-50"
                         >
                           Opslaan
                         </button>
@@ -155,16 +155,16 @@ export function LabelManager({
                         style={{ backgroundColor: label.color }}
                         aria-hidden
                       />
-                      <span className="min-w-0 flex-1 truncate text-sm font-medium text-gray-900">
+                      <span className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-fg">
                         {label.name}
                       </span>
-                      <span className="shrink-0 text-xs text-gray-400">
+                      <span className="shrink-0 text-[11.5px] text-faint">
                         {usageCount.get(label.id) ?? 0}×
                       </span>
                       <button
                         type="button"
                         onClick={() => startEdit(label)}
-                        className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                        className="rounded-control p-1.5 text-faint hover:bg-track hover:text-muted"
                         aria-label={`Bewerk ${label.name}`}
                       >
                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
@@ -175,7 +175,7 @@ export function LabelManager({
                         type="button"
                         onClick={() => handleDelete(label)}
                         disabled={pending}
-                        className="rounded-lg p-1.5 text-gray-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"
+                        className="rounded-control p-1.5 text-faint hover:bg-[color-mix(in_oklab,var(--color-neg)_8%,transparent)] hover:text-neg disabled:opacity-50"
                         aria-label={`Verwijder ${label.name}`}
                       >
                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
@@ -190,8 +190,8 @@ export function LabelManager({
           )}
         </div>
 
-        <form onSubmit={handleCreate} className="border-t border-gray-100 bg-gray-50/70 px-5 py-4">
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+        <form onSubmit={handleCreate} className="border-t border-line bg-track px-5 py-4">
+          <p className="mb-2 text-[11.5px] font-medium text-muted">
             Nieuw label
           </p>
           <div className="flex gap-2">
@@ -202,12 +202,12 @@ export function LabelManager({
               disabled={pending}
               maxLength={40}
               placeholder="Bijv. Warm, Enterprise, Regio Zuid"
-              className="min-w-0 flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-gray-900"
+              className="min-w-0 flex-1 rounded-control border border-line bg-panel px-3 py-2 text-[12.5px] outline-none focus:border-[var(--brand-40)]"
             />
             <button
               type="submit"
               disabled={pending || !name.trim()}
-              className="shrink-0 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+              className="shrink-0 rounded-control bg-ink px-4 py-2 text-[12.5px] font-medium text-white hover:opacity-90 disabled:opacity-50"
             >
               Toevoegen
             </button>
@@ -215,7 +215,7 @@ export function LabelManager({
           <div className="mt-3">
             <ColorSwatches value={color} onChange={setColor} />
           </div>
-          {error && <p className="mt-3 text-xs text-rose-700">{error}</p>}
+          {error && <p className="mt-3 text-[11.5px] text-neg">{error}</p>}
         </form>
       </div>
     </div>
