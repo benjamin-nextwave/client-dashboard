@@ -50,8 +50,6 @@ export type CrmRecord = {
   phone: string | null
   website: string | null
   linkedinUrl: string | null
-  dealValue: number | null
-  expectedCloseDate: string | null
   nextAction: string | null
   nextActionAt: string | null
   notes: string | null
@@ -74,8 +72,6 @@ export type CrmRecordPatch = Partial<
     | 'phone'
     | 'website'
     | 'linkedinUrl'
-    | 'dealValue'
-    | 'expectedCloseDate'
     | 'nextAction'
     | 'nextActionAt'
     | 'notes'

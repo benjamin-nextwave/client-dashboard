@@ -15,7 +15,7 @@ import type {
 
 const RECORD_COLUMNS = `
   id, lead_key, stage, priority, owner_name, contact_name, company_name,
-  job_title, phone, website, linkedin_url, deal_value, expected_close_date,
+  job_title, phone, website, linkedin_url,
   next_action, next_action_at, notes, created_at, updated_at
 `
 
@@ -155,17 +155,8 @@ export async function saveRecord(
   if (patch.linkedinUrl !== undefined) payload.linkedin_url = emptyToNull(patch.linkedinUrl)
   if (patch.notes !== undefined) payload.notes = emptyToNull(patch.notes)
   if (patch.nextAction !== undefined) payload.next_action = emptyToNull(patch.nextAction)
-  if (patch.expectedCloseDate !== undefined) {
-    payload.expected_close_date = emptyToNull(patch.expectedCloseDate)
-  }
   if (patch.nextActionAt !== undefined) {
     payload.next_action_at = emptyToNull(patch.nextActionAt)
-  }
-  if (patch.dealValue !== undefined) {
-    payload.deal_value =
-      patch.dealValue === null || !Number.isFinite(patch.dealValue)
-        ? null
-        : Math.max(0, patch.dealValue)
   }
 
   const ensured = await ensureRecordId(auth.supabase, auth.clientId, leadKey)
@@ -271,6 +262,42 @@ export async function resetRecord(
     .eq('lead_key', leadKey)
   if (error) return { ok: false, error: error.message }
   return { ok: true, value: undefined }
+}
+
+/**
+ * Meervoudige variant van `resetRecord` voor het kaartmenu en de bulkbalk.
+ * Verwijdert uitsluitend de CRM-laag: het record plus de activiteiten en
+ * labelkoppelingen die eraan hangen. De bron-lead blijft in de Lead inbox en
+ * bij Campagne leads staan; geeft de klant hem opnieuw een fase, dan ontstaat
+ * er een nieuw leeg record.
+ */
+export async function deleteCrmRecords(
+  leadKeysRaw: string[]
+): Promise<ActionResult<string[]>> {
+  const auth = await requireClientId()
+  if (!auth.ok) return auth
+
+  const keys = [
+    ...new Set(leadKeysRaw.map(normalizeLeadKey).filter((k): k is string => k !== null)),
+  ]
+  if (keys.length === 0) return { ok: false, error: 'Geen leads geselecteerd.' }
+
+  const { data, error } = await auth.supabase
+    .from('crm_records')
+    .delete()
+    .eq('client_id', auth.clientId)
+    .in('lead_key', keys)
+    .select('lead_key')
+
+  if (error) {
+    console.error('[crm:delete] error:', error.message)
+    return { ok: false, error: 'Verwijderen is niet gelukt. Probeer het opnieuw.' }
+  }
+
+  return {
+    ok: true,
+    value: ((data ?? []) as { lead_key: string }[]).map((r) => r.lead_key),
+  }
 }
 
 // ─── Labels ────────────────────────────────────────────────────────────────

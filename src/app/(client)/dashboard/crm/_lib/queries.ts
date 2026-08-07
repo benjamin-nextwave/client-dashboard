@@ -14,7 +14,7 @@ import type {
 
 const RECORD_COLUMNS = `
   id, lead_key, stage, priority, owner_name, contact_name, company_name,
-  job_title, phone, website, linkedin_url, deal_value, expected_close_date,
+  job_title, phone, website, linkedin_url,
   next_action, next_action_at, notes, created_at, updated_at
 `
 
@@ -30,8 +30,6 @@ type RecordRow = {
   phone: string | null
   website: string | null
   linkedin_url: string | null
-  deal_value: string | number | null
-  expected_close_date: string | null
   next_action: string | null
   next_action_at: string | null
   notes: string | null
@@ -88,12 +86,6 @@ export function toActivityType(value: unknown): CrmActivityType {
     : 'notitie'
 }
 
-function toNumber(value: string | number | null): number | null {
-  if (value === null) return null
-  const n = typeof value === 'number' ? value : Number(value)
-  return Number.isFinite(n) ? n : null
-}
-
 export function rowToRecord(
   row: RecordRow,
   labelIds: string[],
@@ -111,8 +103,6 @@ export function rowToRecord(
     phone: row.phone,
     website: row.website,
     linkedinUrl: row.linkedin_url,
-    dealValue: toNumber(row.deal_value),
-    expectedCloseDate: row.expected_close_date,
     nextAction: row.next_action,
     nextActionAt: row.next_action_at,
     notes: row.notes,

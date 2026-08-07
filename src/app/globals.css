@@ -51,6 +51,7 @@
   /* merk-tinten, transparant gemengd zodat ze op licht én donker werken */
   --brand-04: color-mix(in oklab, var(--brand-color, #3b82f6) 4%, transparent);
   --brand-05: color-mix(in oklab, var(--brand-color, #3b82f6) 5%, transparent);
+  --brand-06: color-mix(in oklab, var(--brand-color, #3b82f6) 6%, transparent);
   --brand-07: color-mix(in oklab, var(--brand-color, #3b82f6) 7%, transparent);
   --brand-08: color-mix(in oklab, var(--brand-color, #3b82f6) 8%, transparent);
   --brand-10: color-mix(in oklab, var(--brand-color, #3b82f6) 10%, transparent);

@@ -17,6 +17,9 @@ import {
   STAGE_META,
 } from '../_lib/constants'
 import { LABEL_META } from '@/lib/data/campaign-leads'
+// Eén bron voor de categoriestippen, zodat CRM, Lead inbox en Campagne leads
+// dezelfde kleuren tonen.
+import { LABEL_DOT } from '../../campagne-leads/_components/lead-meta'
 import type {
   CrmActivityType,
   CrmEntry,
@@ -47,8 +50,6 @@ type FormState = {
   linkedinUrl: string
   ownerName: string
   priority: CrmPriority
-  dealValue: string
-  expectedCloseDate: string
   nextAction: string
   nextActionAt: string
   notes: string
@@ -65,33 +66,29 @@ function formFrom(entry: CrmEntry): FormState {
     linkedinUrl: r?.linkedinUrl ?? '',
     ownerName: r?.ownerName ?? '',
     priority: priorityOf(entry),
-    dealValue: r && r.dealValue !== null ? String(r.dealValue) : '',
-    expectedCloseDate: r?.expectedCloseDate ?? '',
     nextAction: r?.nextAction ?? '',
     nextActionAt: r?.nextActionAt ?? '',
     notes: r?.notes ?? '',
   }
 }
 
-function Field({
-  label,
-  children,
-}: {
-  label: string
-  children: React.ReactNode
-}) {
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
-        {label}
-      </span>
+      <span className="text-[11.5px] font-medium text-muted">{label}</span>
       <span className="mt-1 block">{children}</span>
     </label>
   )
 }
 
 const inputClass =
-  'block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-gray-900 disabled:bg-gray-50 disabled:text-gray-500'
+  'block w-full rounded-control border border-line bg-panel px-3 py-2 text-[12.5px] text-fg outline-none transition-colors focus:border-[var(--brand-40)] disabled:bg-track disabled:text-faint'
+
+const primaryButtonClass =
+  'rounded-control bg-ink px-4 py-2 text-[12.5px] font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50'
+
+const ghostButtonClass =
+  'rounded-control px-3 py-2 text-[12.5px] font-medium text-muted transition-colors hover:bg-[var(--brand-08)] hover:text-fg'
 
 export function CrmDetail({
   entry,
@@ -139,7 +136,6 @@ export function CrmDetail({
 
   function handleSave() {
     setError(null)
-    const parsedValue = form.dealValue.trim().replace(',', '.')
     const patch: CrmRecordPatch = {
       contactName: form.contactName,
       companyName: form.companyName,
@@ -149,15 +145,9 @@ export function CrmDetail({
       linkedinUrl: form.linkedinUrl,
       ownerName: form.ownerName,
       priority: form.priority,
-      dealValue: parsedValue === '' ? null : Number(parsedValue),
-      expectedCloseDate: form.expectedCloseDate,
       nextAction: form.nextAction,
       nextActionAt: form.nextActionAt,
       notes: form.notes,
-    }
-    if (patch.dealValue !== null && !Number.isFinite(patch.dealValue as number)) {
-      setError('Dealwaarde moet een getal zijn.')
-      return
     }
     startTransition(async () => {
       const res = await saveRecord(entry.key, patch)
@@ -254,24 +244,27 @@ export function CrmDetail({
   return (
     <div className="fixed inset-0 z-40 flex justify-end">
       <div
-        className="absolute inset-0 bg-gray-900/30 backdrop-blur-[2px]"
+        className="absolute inset-0 bg-[color-mix(in_oklab,var(--color-ink)_35%,transparent)] backdrop-blur-[2px]"
         onClick={onClose}
         aria-hidden
       />
-      <aside className="relative flex h-full w-full max-w-xl flex-col bg-white shadow-2xl">
+      <aside className="relative flex h-full w-full max-w-xl flex-col border-l border-line bg-panel shadow-2xl">
         {/* Header */}
-        <header className="border-b border-gray-100 px-5 py-4">
+        <header className="border-b border-line px-5 py-4">
           <div className="flex items-start gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gray-900 text-sm font-semibold text-white">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-track text-[12.5px] font-semibold text-muted">
               {initialsOf(entry)}
             </span>
             <div className="min-w-0 flex-1">
-              <h2 className="truncate text-lg font-semibold text-gray-900">
+              <h2 className="truncate text-[17px] font-semibold tracking-[-0.02em]">
                 {displayName(entry)}
               </h2>
-              <p className="truncate text-sm text-gray-500">
+              <p className="truncate text-[12.5px] text-muted">
                 {company ? `${company} · ` : ''}
-                <a href={`mailto:${entry.email}`} className="hover:text-gray-900 hover:underline">
+                <a
+                  href={`mailto:${entry.email}`}
+                  className="transition-colors hover:text-fg hover:underline"
+                >
                   {entry.email}
                 </a>
               </p>
@@ -279,44 +272,66 @@ export function CrmDetail({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+              className="rounded-control p-1.5 text-faint transition-colors hover:bg-[var(--brand-08)] hover:text-fg"
               aria-label="Sluiten"
             >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+              <svg
+                className="h-[18px] w-[18px]"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.8}
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+              >
+                <path d="M6 18 18 6M6 6l12 12" />
               </svg>
             </button>
           </div>
 
           {/* Fase-schakelaar */}
           <div className="mt-3 flex flex-wrap gap-1.5">
-            {CRM_STAGES.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                disabled={pending}
-                onClick={() => s.id !== stage && onStageChange(entry.key, stage, s.id)}
-                className={`rounded-full border px-2.5 py-1 text-xs font-medium transition disabled:opacity-60 ${
-                  s.id === stage
-                    ? s.chip
-                    : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:text-gray-900'
-                }`}
-              >
-                {s.name}
-              </button>
-            ))}
+            {CRM_STAGES.map((s) => {
+              const active = s.id === stage
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  disabled={pending}
+                  onClick={() => !active && onStageChange(entry.key, stage, s.id)}
+                  title={s.description}
+                  className={`inline-flex items-center gap-1.5 rounded-control border px-2.5 py-1 text-[11.5px] font-medium transition-colors disabled:opacity-60 ${
+                    active
+                      ? 'border-[var(--brand-32)] bg-[var(--brand-10)] text-fg'
+                      : 'border-line bg-panel text-muted hover:bg-[var(--brand-08)]'
+                  }`}
+                >
+                  <span
+                    className="h-1.5 w-1.5 rounded-full"
+                    style={{ background: s.color }}
+                    aria-hidden
+                  />
+                  {s.name}
+                </button>
+              )
+            })}
           </div>
 
           {/* Automatische classificatie uit de inbox — alleen ter info */}
-          <p className="mt-2.5 flex items-center gap-1.5 text-[11px] text-gray-400">
-            <span className={`h-1.5 w-1.5 rounded-full ${LABEL_META[entry.leadLabel].dot}`} />
+          <p className="mt-2.5 flex items-center gap-1.5 text-[11px] text-faint">
+            <span
+              className="h-1.5 w-1.5 rounded-full"
+              style={{ background: LABEL_DOT[entry.leadLabel] }}
+              aria-hidden
+            />
             Inbox-classificatie: {LABEL_META[entry.leadLabel].short}
-            {entry.hasReferral && <span className="text-rose-600">· doorverwijzing bekend</span>}
+            {entry.hasReferral && <span className="text-neg">· doorverwijzing bekend</span>}
           </p>
         </header>
 
         {/* Tabs */}
-        <nav className="flex gap-1 border-b border-gray-100 px-4">
+        <nav className="flex gap-1 border-b border-line px-4">
           {(
             [
               ['gegevens', 'Gegevens'],
@@ -328,10 +343,10 @@ export function CrmDetail({
               key={id}
               type="button"
               onClick={() => setTab(id)}
-              className={`-mb-px border-b-2 px-3 py-2.5 text-sm font-medium transition ${
+              className={`-mb-px border-b-2 px-3 py-2.5 text-[12.5px] font-medium transition-colors ${
                 tab === id
-                  ? 'border-gray-900 text-gray-900'
-                  : 'border-transparent text-gray-500 hover:text-gray-800'
+                  ? 'border-brand text-fg'
+                  : 'border-transparent text-muted hover:text-fg'
               }`}
             >
               {label}
@@ -341,7 +356,9 @@ export function CrmDetail({
 
         <div className="flex-1 overflow-y-auto px-5 py-4">
           {error && (
-            <p className="mb-3 rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700">{error}</p>
+            <p className="mb-3 rounded-control border border-[color-mix(in_oklab,var(--color-neg)_28%,transparent)] bg-[color-mix(in_oklab,var(--color-neg)_8%,transparent)] px-3 py-2 text-[11.5px] text-neg">
+              {error}
+            </p>
           )}
 
           {tab === 'gegevens' && (
@@ -399,9 +416,6 @@ export function CrmDetail({
                     placeholder="https://linkedin.com/in/..."
                   />
                 </Field>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
                 <Field label="Prioriteit">
                   <select
                     className={inputClass}
@@ -425,31 +439,10 @@ export function CrmDetail({
                     placeholder="Wie pakt deze lead op?"
                   />
                 </Field>
-                <Field label="Dealwaarde (€)">
-                  <input
-                    className={inputClass}
-                    value={form.dealValue}
-                    onChange={(e) => set('dealValue', e.target.value)}
-                    disabled={pending}
-                    inputMode="decimal"
-                    placeholder="0"
-                  />
-                </Field>
-                <Field label="Verwachte sluitdatum">
-                  <input
-                    type="date"
-                    className={inputClass}
-                    value={form.expectedCloseDate}
-                    onChange={(e) => set('expectedCloseDate', e.target.value)}
-                    disabled={pending}
-                  />
-                </Field>
               </div>
 
-              <div className="rounded-xl border border-gray-200 p-3">
-                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-500">
-                  Volgende actie
-                </p>
+              <div className="rounded-panel border border-line p-3">
+                <p className="mb-2 text-[11.5px] font-medium text-muted">Volgende actie</p>
                 <div className="grid grid-cols-[1fr_auto] gap-2">
                   <input
                     className={inputClass}
@@ -457,6 +450,7 @@ export function CrmDetail({
                     onChange={(e) => set('nextAction', e.target.value)}
                     disabled={pending}
                     placeholder="Bijv. Terugbellen over offerte"
+                    aria-label="Volgende actie"
                   />
                   <input
                     type="date"
@@ -464,6 +458,7 @@ export function CrmDetail({
                     value={form.nextActionAt}
                     onChange={(e) => set('nextActionAt', e.target.value)}
                     disabled={pending}
+                    aria-label="Datum volgende actie"
                   />
                 </div>
               </div>
@@ -481,24 +476,22 @@ export function CrmDetail({
               {/* Labels */}
               <div>
                 <div className="mb-2 flex items-center justify-between">
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
-                    Labels
-                  </span>
+                  <span className="text-[11.5px] font-medium text-muted">Labels</span>
                   <button
                     type="button"
                     onClick={onManageLabels}
-                    className="text-xs font-medium text-gray-600 hover:text-gray-900"
+                    className="text-[11.5px] font-medium text-muted transition-colors hover:text-fg"
                   >
                     Beheren
                   </button>
                 </div>
                 {labels.length === 0 ? (
-                  <p className="rounded-lg border border-dashed border-gray-200 px-3 py-3 text-xs text-gray-500">
+                  <p className="rounded-control border border-dashed border-line px-3 py-3 text-[11.5px] text-muted">
                     Nog geen labels aangemaakt.{' '}
                     <button
                       type="button"
                       onClick={onManageLabels}
-                      className="font-medium text-gray-900 underline"
+                      className="font-medium text-fg underline underline-offset-2"
                     >
                       Maak er één
                     </button>
@@ -514,20 +507,16 @@ export function CrmDetail({
                           type="button"
                           onClick={() => toggleLabel(label.id)}
                           disabled={pending}
-                          className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition disabled:opacity-60 ${
+                          aria-pressed={active}
+                          className={`inline-flex items-center gap-1.5 rounded-control border px-2.5 py-1 text-[11.5px] font-medium transition-colors disabled:opacity-60 ${
                             active
-                              ? 'border-transparent'
-                              : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                              ? 'border-[var(--brand-32)] bg-[var(--brand-10)] text-fg'
+                              : 'border-line bg-panel text-muted hover:bg-[var(--brand-08)]'
                           }`}
-                          style={
-                            active
-                              ? { backgroundColor: `${label.color}1a`, color: label.color }
-                              : undefined
-                          }
                         >
                           <span
-                            className="h-2 w-2 rounded-full"
-                            style={{ backgroundColor: label.color }}
+                            className="h-1.5 w-1.5 rounded-full"
+                            style={{ background: label.color }}
                           />
                           {label.name}
                         </button>
@@ -537,16 +526,16 @@ export function CrmDetail({
                 )}
               </div>
 
-              <div className="border-t border-gray-100 pt-3">
+              <div className="border-t border-line pt-3">
                 <button
                   type="button"
                   onClick={handleReset}
                   disabled={pending || entry.record === null}
-                  className="text-xs font-medium text-gray-400 hover:text-rose-600 disabled:opacity-40"
+                  className="text-[11.5px] font-medium text-faint transition-colors hover:text-neg disabled:opacity-40"
                 >
                   CRM-gegevens van deze lead wissen
                 </button>
-                <p className="mt-1 text-[11px] text-gray-400">
+                <p className="mt-1 text-[11px] text-faint">
                   De lead en de e-mails in de inbox blijven altijd ongewijzigd.
                 </p>
               </div>
@@ -555,13 +544,14 @@ export function CrmDetail({
 
           {tab === 'tijdlijn' && (
             <div className="space-y-4">
-              <form onSubmit={handleAddActivity} className="rounded-xl border border-gray-200 p-3">
+              <form onSubmit={handleAddActivity} className="rounded-panel border border-line p-3">
                 <div className="flex gap-2">
                   <select
                     className={`${inputClass} w-40`}
                     value={activityType}
                     onChange={(e) => setActivityType(e.target.value as CrmActivityType)}
                     disabled={pending}
+                    aria-label="Soort activiteit"
                   >
                     {CRM_ACTIVITY_TYPES.filter((a) => a.id !== 'fase').map((a) => (
                       <option key={a.id} value={a.id}>
@@ -575,6 +565,7 @@ export function CrmDetail({
                     value={activityDate}
                     onChange={(e) => setActivityDate(e.target.value)}
                     disabled={pending}
+                    aria-label="Datum activiteit"
                   />
                 </div>
                 <textarea
@@ -583,12 +574,13 @@ export function CrmDetail({
                   onChange={(e) => setActivityBody(e.target.value)}
                   disabled={pending}
                   placeholder="Wat is er gebeurd of afgesproken?"
+                  aria-label="Omschrijving activiteit"
                 />
                 <div className="mt-2 flex justify-end">
                   <button
                     type="submit"
                     disabled={pending || !activityBody.trim()}
-                    className="rounded-lg bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+                    className={primaryButtonClass}
                   >
                     Toevoegen
                   </button>
@@ -596,20 +588,23 @@ export function CrmDetail({
               </form>
 
               {activities.length === 0 ? (
-                <p className="rounded-xl border border-dashed border-gray-200 px-4 py-8 text-center text-sm text-gray-500">
+                <p className="rounded-panel border border-dashed border-line px-4 py-8 text-center text-[12.5px] text-muted">
                   Nog geen activiteiten vastgelegd.
                 </p>
               ) : (
                 <ol className="space-y-2.5">
                   {activities.map((activity) => (
-                    <li key={activity.id} className="rounded-xl border border-gray-200 p-3">
+                    <li key={activity.id} className="rounded-panel border border-line p-3">
                       <div className="flex items-center gap-2">
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${ACTIVITY_META[activity.type].chip}`}
-                        >
+                        <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-[5px] border border-line px-[7px] py-0.5 text-[10px] font-medium text-muted">
+                          <span
+                            className="h-[5px] w-[5px] rounded-full"
+                            style={{ background: ACTIVITY_META[activity.type].color }}
+                            aria-hidden
+                          />
                           {ACTIVITY_META[activity.type].name}
                         </span>
-                        <span className="flex-1 text-[11px] text-gray-400">
+                        <span className="flex-1 text-[11px] tabular-nums text-faint">
                           {formatDateTime(activity.occurredAt)}
                         </span>
                         {activity.type !== 'fase' && (
@@ -620,22 +615,40 @@ export function CrmDetail({
                                 setEditingActivityId(activity.id)
                                 setEditingBody(activity.body)
                               }}
-                              className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                              className="rounded-md p-1 text-faint transition-colors hover:bg-[var(--brand-08)] hover:text-fg"
                               aria-label="Bewerken"
                             >
-                              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Z" />
+                              <svg
+                                className="h-3.5 w-3.5"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                strokeWidth={1.8}
+                                stroke="currentColor"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                aria-hidden
+                              >
+                                <path d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Z" />
                               </svg>
                             </button>
                             <button
                               type="button"
                               onClick={() => handleDeleteActivity(activity.id)}
                               disabled={pending}
-                              className="rounded p-1 text-gray-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"
+                              className="rounded-md p-1 text-faint transition-colors hover:bg-[color-mix(in_oklab,var(--color-neg)_10%,transparent)] hover:text-neg disabled:opacity-50"
                               aria-label="Verwijderen"
                             >
-                              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166M18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165" />
+                              <svg
+                                className="h-3.5 w-3.5"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                strokeWidth={1.8}
+                                stroke="currentColor"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                aria-hidden
+                              >
+                                <path d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166M18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165" />
                               </svg>
                             </button>
                           </>
@@ -648,12 +661,13 @@ export function CrmDetail({
                             value={editingBody}
                             onChange={(e) => setEditingBody(e.target.value)}
                             disabled={pending}
+                            aria-label="Tekst bewerken"
                           />
                           <div className="mt-2 flex justify-end gap-2">
                             <button
                               type="button"
                               onClick={() => setEditingActivityId(null)}
-                              className="rounded-lg px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100"
+                              className={ghostButtonClass}
                             >
                               Annuleren
                             </button>
@@ -661,14 +675,14 @@ export function CrmDetail({
                               type="button"
                               onClick={() => handleSaveActivity(activity.id, activity.type)}
                               disabled={pending || !editingBody.trim()}
-                              className="rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+                              className={primaryButtonClass}
                             >
                               Opslaan
                             </button>
                           </div>
                         </div>
                       ) : (
-                        <p className="mt-1.5 whitespace-pre-wrap text-sm text-gray-800">
+                        <p className="mt-1.5 whitespace-pre-wrap text-[12.5px] leading-[1.6] text-fg">
                           {activity.body}
                         </p>
                       )}
@@ -681,34 +695,32 @@ export function CrmDetail({
 
           {tab === 'email' && (
             <div className="space-y-4">
-              <p className="rounded-lg bg-gray-50 px-3 py-2 text-[11px] text-gray-500">
+              <p className="rounded-control bg-track px-3 py-2 text-[11px] text-muted">
                 Alleen-lezen kopie uit de inbox. Beantwoorden doe je in de Lead Inbox.
               </p>
-              <section className="rounded-xl border border-gray-200">
-                <header className="border-b border-gray-100 px-3 py-2">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
-                    Reactie van de lead
-                  </p>
-                  <p className="mt-0.5 truncate text-sm font-medium text-gray-900">
+              <section className="rounded-panel border border-line">
+                <header className="border-b border-line px-3 py-2">
+                  <p className="text-[11.5px] font-medium text-muted">Reactie van de lead</p>
+                  <p className="mt-0.5 truncate text-[12.5px] font-medium text-fg">
                     {entry.replySubject ?? '(geen onderwerp)'}
                   </p>
-                  <p className="text-[11px] text-gray-400">{formatDateTime(entry.receivedAt)}</p>
+                  <p className="text-[11px] tabular-nums text-faint">
+                    {formatDateTime(entry.receivedAt)}
+                  </p>
                 </header>
-                <p className="max-h-72 overflow-y-auto whitespace-pre-wrap px-3 py-2.5 text-sm text-gray-700">
+                <p className="max-h-72 overflow-y-auto whitespace-pre-wrap px-3 py-2.5 text-[12.5px] leading-[1.6] text-muted">
                   {entry.replyBody?.trim() || 'Geen tekst beschikbaar.'}
                 </p>
               </section>
 
-              <section className="rounded-xl border border-gray-200">
-                <header className="border-b border-gray-100 px-3 py-2">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
-                    Ons laatste bericht
-                  </p>
-                  <p className="mt-0.5 truncate text-sm font-medium text-gray-900">
+              <section className="rounded-panel border border-line">
+                <header className="border-b border-line px-3 py-2">
+                  <p className="text-[11.5px] font-medium text-muted">Ons laatste bericht</p>
+                  <p className="mt-0.5 truncate text-[12.5px] font-medium text-fg">
                     {entry.sentSubject ?? '(geen onderwerp)'}
                   </p>
                 </header>
-                <p className="max-h-72 overflow-y-auto whitespace-pre-wrap px-3 py-2.5 text-sm text-gray-700">
+                <p className="max-h-72 overflow-y-auto whitespace-pre-wrap px-3 py-2.5 text-[12.5px] leading-[1.6] text-muted">
                   {entry.sentBody?.trim() || 'Geen tekst beschikbaar.'}
                 </p>
               </section>
@@ -718,10 +730,10 @@ export function CrmDetail({
 
         {/* Footer */}
         {tab === 'gegevens' && (
-          <footer className="flex items-center justify-between gap-3 border-t border-gray-100 bg-gray-50/70 px-5 py-3">
-            <span className="text-xs text-gray-500">
+          <footer className="flex items-center justify-between gap-3 border-t border-line bg-track px-5 py-3">
+            <span className="text-[11.5px] text-muted">
               {saved && !dirty ? (
-                <span className="text-emerald-600">Opgeslagen</span>
+                <span className="text-pos">Opgeslagen</span>
               ) : dirty ? (
                 'Niet-opgeslagen wijzigingen'
               ) : (
@@ -729,18 +741,14 @@ export function CrmDetail({
               )}
             </span>
             <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className="rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100"
-              >
+              <button type="button" onClick={onClose} className={ghostButtonClass}>
                 Sluiten
               </button>
               <button
                 type="button"
                 onClick={handleSave}
                 disabled={pending || !dirty}
-                className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+                className={primaryButtonClass}
               >
                 {pending ? 'Opslaan…' : 'Opslaan'}
               </button>

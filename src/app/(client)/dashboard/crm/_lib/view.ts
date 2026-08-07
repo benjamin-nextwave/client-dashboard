@@ -9,10 +9,6 @@ export function priorityOf(entry: CrmEntry): CrmPriority {
   return entry.record?.priority ?? DEFAULT_PRIORITY
 }
 
-export function valueOf(entry: CrmEntry): number {
-  return entry.record?.dealValue ?? 0
-}
-
 export function labelIdsOf(entry: CrmEntry): string[] {
   return entry.record?.labelIds ?? []
 }
@@ -47,16 +43,6 @@ export function initialsOf(entry: CrmEntry): string {
   if (parts.length === 0) return '?'
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-}
-
-const CURRENCY = new Intl.NumberFormat('nl-NL', {
-  style: 'currency',
-  currency: 'EUR',
-  maximumFractionDigits: 0,
-})
-
-export function formatCurrency(value: number): string {
-  return CURRENCY.format(value)
 }
 
 const DATE_SHORT = new Intl.DateTimeFormat('nl-NL', {

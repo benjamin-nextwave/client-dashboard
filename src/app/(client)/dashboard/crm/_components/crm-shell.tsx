@@ -1,7 +1,12 @@
 'use client'
 
 import { useMemo, useState, useTransition } from 'react'
-import { bulkAddLabel, bulkSetStage, setStage as setStageAction } from '../_lib/actions'
+import {
+  bulkAddLabel,
+  bulkSetStage,
+  deleteCrmRecords,
+  setStage as setStageAction,
+} from '../_lib/actions'
 import {
   CRM_PRIORITIES,
   CRM_STAGES,
@@ -25,18 +30,19 @@ import {
   priorityOf,
   stageOf,
   todayInput,
-  valueOf,
 } from '../_lib/view'
 import type { CrmConnectionSummary } from '../_lib/providers/types'
 import { ConnectionsManager } from './connections-manager'
 import { HubspotConnectModal } from './hubspot-connect-modal'
 import { CrmBoard } from './crm-board'
+import { CrmBulkBar, DeleteFromCrmDialog } from './crm-bulk-bar'
 import { CrmDetail } from './crm-detail'
 import { CrmStats } from './crm-stats'
 import { CrmTable, SORT_KEYS, sortLabelOf, type SortKey } from './crm-table'
 import { ExportMenu } from './export-menu'
 import { FeedbackButton } from './feedback-button'
 import { LabelManager } from './label-manager'
+import { buttonClass } from '@/components/client/ui/panel'
 
 type ViewMode = 'board' | 'table'
 
@@ -55,8 +61,6 @@ function placeholderRecord(leadKey: string, stage: CrmStageId): CrmRecord {
     phone: null,
     website: null,
     linkedinUrl: null,
-    dealValue: null,
-    expectedCloseDate: null,
     nextAction: null,
     nextActionAt: null,
     notes: null,
@@ -68,7 +72,7 @@ function placeholderRecord(leadKey: string, stage: CrmStageId): CrmRecord {
 }
 
 const selectClass =
-  'rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 outline-none focus:border-gray-900'
+  'h-[30px] rounded-control border border-line bg-panel px-2.5 text-[11.5px] font-medium text-muted outline-none'
 
 export function CrmShell({
   initialEntries,
@@ -97,8 +101,10 @@ export function CrmShell({
   const [selection, setSelection] = useState<Set<string>>(new Set())
   const [detailKey, setDetailKey] = useState<string | null>(null)
   const [labelManagerOpen, setLabelManagerOpen] = useState(false)
+  const [deleteKeys, setDeleteKeys] = useState<string[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [, startTransition] = useTransition()
+  const [deletePending, startDelete] = useTransition()
 
   const today = todayInput()
 
@@ -124,8 +130,6 @@ export function CrmShell({
       switch (sort) {
         case 'name':
           return displayName(a).localeCompare(displayName(b), 'nl')
-        case 'value':
-          return valueOf(b) - valueOf(a)
         case 'stage':
           return (stageOrder.get(stageOf(a)) ?? 0) - (stageOrder.get(stageOf(b)) ?? 0)
         case 'action': {
@@ -240,6 +244,49 @@ export function CrmShell({
     })
   }
 
+  /** Eén lead labelen vanuit het kaartmenu — dezelfde actie als de bulkbalk. */
+  function handleAddLabel(key: string, labelId: string) {
+    setError(null)
+    startTransition(async () => {
+      const res = await bulkAddLabel([key], labelId)
+      if (!res.ok) {
+        setError(res.error)
+        return
+      }
+      applyRecords(res.value)
+    })
+  }
+
+  function confirmDelete() {
+    const keys = deleteKeys ?? []
+    if (keys.length === 0) return
+    setError(null)
+    startDelete(async () => {
+      const res = await deleteCrmRecords(keys)
+      if (!res.ok) {
+        setError(res.error)
+        return
+      }
+      // Record naar null: de lead blijft in de lijst, maar valt terug op de
+      // defaults — precies zoals een lead die nog nooit is aangeraakt.
+      setEntries((prev) =>
+        prev.map((e) => (keys.includes(e.key) ? { ...e, record: null } : e))
+      )
+      setSelection(new Set())
+      setDetailKey((k) => (k !== null && keys.includes(k) ? null : k))
+      setDeleteKeys(null)
+    })
+  }
+
+  function toggleSelect(key: string) {
+    setSelection((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
+
   function toggleLabelFilter(labelId: string) {
     setLabelFilter((prev) => {
       const next = new Set(prev)
@@ -259,8 +306,6 @@ export function CrmShell({
       'Telefoon',
       'Fase',
       'Prioriteit',
-      'Dealwaarde',
-      'Verwachte sluitdatum',
       'Volgende actie',
       'Actiedatum',
       'Eigenaar',
@@ -277,10 +322,6 @@ export function CrmShell({
         entry.record?.phone ?? '',
         STAGE_META[stageOf(entry)].name,
         priorityOf(entry),
-        entry.record?.dealValue !== null && entry.record?.dealValue !== undefined
-          ? String(entry.record.dealValue)
-          : '',
-        entry.record?.expectedCloseDate ?? '',
         entry.record?.nextAction ?? '',
         entry.record?.nextActionAt ?? '',
         entry.record?.ownerName ?? '',
@@ -315,19 +356,19 @@ export function CrmShell({
     <div className="space-y-5">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-gray-900">CRM</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-[25px] font-semibold tracking-[-0.03em]">CRM</h1>
+          <p className="mt-1 text-[15px] text-muted">
             Al je leads uit de inbox, met eigen fases, labels en opvolging.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {showFeedback && <FeedbackButton />}
           <button
             type="button"
             onClick={() => setHubspotOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-orange-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-orange-700"
+            className={buttonClass}
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
+            <svg className="h-[15px] w-[15px] text-muted" fill="none" viewBox="0 0 24 24" strokeWidth={1.7} stroke="currentColor" aria-hidden>
               <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" />
             </svg>
             HubSpot verbinden
@@ -335,9 +376,9 @@ export function CrmShell({
           <button
             type="button"
             onClick={() => setLabelManagerOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:border-gray-400"
+            className={buttonClass}
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
+            <svg className="h-[15px] w-[15px] text-muted" fill="none" viewBox="0 0 24 24" strokeWidth={1.7} stroke="currentColor" aria-hidden>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6Z" />
             </svg>
@@ -361,40 +402,49 @@ export function CrmShell({
       <CrmStats entries={entries} today={today} />
 
       {/* Toolbar */}
-      <div className="space-y-3 rounded-2xl border border-gray-200 bg-white p-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative min-w-[220px] flex-1">
+      <div className="space-y-3 rounded-panel border border-line bg-panel p-3">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <label className="flex h-[34px] min-w-[220px] flex-1 items-center gap-[9px] rounded-control bg-track px-[11px] focus-within:ring-2 focus-within:ring-[var(--brand-color)]">
             <svg
-              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+              className="h-[15px] w-[15px] shrink-0 text-faint"
               fill="none"
               viewBox="0 0 24 24"
-              strokeWidth={1.8}
+              strokeWidth={1.7}
               stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
             >
-              <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+              <path d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
             </svg>
             <input
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Zoek op naam, bedrijf, e-mail, notitie…"
-              className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-9 pr-3 text-sm outline-none focus:border-gray-900"
+              aria-label="Zoeken in het CRM"
+              className="w-full bg-transparent text-[12.5px] outline-none placeholder:text-faint"
             />
-          </div>
+          </label>
 
-          <div className="flex rounded-lg border border-gray-300 bg-white p-0.5">
+          <div className="flex shrink-0 overflow-hidden rounded-control border border-line bg-panel">
             {(
               [
                 ['board', 'Pipeline'],
                 ['table', 'Tabel'],
               ] as const
-            ).map(([id, label]) => (
+            ).map(([id, label], i) => (
               <button
                 key={id}
                 type="button"
                 onClick={() => setView(id)}
-                className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
-                  view === id ? 'bg-gray-900 text-white' : 'text-gray-600 hover:text-gray-900'
+                aria-pressed={view === id}
+                className={`px-3 py-2 text-xs transition-colors ${
+                  i === 0 ? 'border-r border-line' : ''
+                } ${
+                  view === id
+                    ? 'bg-[var(--brand-10)] font-semibold text-brand'
+                    : 'font-medium text-muted hover:bg-[var(--brand-08)]'
                 }`}
               >
                 {label}
@@ -448,10 +498,11 @@ export function CrmShell({
           <button
             type="button"
             onClick={() => setOnlyOpenActions((v) => !v)}
-            className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium transition ${
+            aria-pressed={onlyOpenActions}
+            className={`h-[30px] rounded-control border px-2.5 text-[11.5px] font-medium transition-colors ${
               onlyOpenActions
-                ? 'border-amber-300 bg-amber-50 text-amber-800'
-                : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'
+                ? 'border-[color-mix(in_oklab,var(--color-warn)_40%,transparent)] bg-[color-mix(in_oklab,var(--color-warn)_10%,transparent)] text-warn'
+                : 'border-line bg-panel text-muted hover:bg-[var(--brand-08)]'
             }`}
           >
             Acties open
@@ -464,14 +515,22 @@ export function CrmShell({
                 key={label.id}
                 type="button"
                 onClick={() => toggleLabelFilter(label.id)}
-                className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition ${
-                  active ? 'border-transparent' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                aria-pressed={active}
+                className={`inline-flex h-[30px] items-center gap-[7px] rounded-control border px-2.5 text-[11.5px] font-medium transition-colors ${
+                  active
+                    ? 'border-[var(--brand-32)] bg-[var(--brand-10)] text-fg'
+                    : 'border-line bg-panel text-muted hover:bg-[var(--brand-08)]'
                 }`}
-                style={active ? { backgroundColor: `${label.color}1a`, color: label.color } : undefined}
               >
-                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: label.color }} />
+                <span
+                  className="h-1.5 w-1.5 rounded-full"
+                  style={{ background: label.color }}
+                  aria-hidden
+                />
                 {label.name}
-                <span className="text-[10px] opacity-60">{labelUsage.get(label.id) ?? 0}</span>
+                <span className="tabular-nums text-faint">
+                  {labelUsage.get(label.id) ?? 0}
+                </span>
               </button>
             )
           })}
@@ -486,77 +545,37 @@ export function CrmShell({
                 setLabelFilter(new Set())
                 setOnlyOpenActions(false)
               }}
-              className="text-xs font-medium text-gray-500 underline hover:text-gray-900"
+              className="text-[11.5px] font-medium text-muted underline underline-offset-2 transition-colors hover:text-fg"
             >
               Filters wissen
             </button>
           )}
 
-          <span className="ml-auto text-xs text-gray-500">
+          <span className="ml-auto text-[11.5px] tabular-nums text-faint">
             {filtered.length} van {entries.length} leads
           </span>
         </div>
       </div>
 
       {error && (
-        <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>
+        <p className="rounded-control border border-[color-mix(in_oklab,var(--color-neg)_28%,transparent)] bg-[color-mix(in_oklab,var(--color-neg)_8%,transparent)] px-3 py-2 text-[12.5px] text-neg">
+          {error}
+        </p>
       )}
 
-      {/* Bulk-balk */}
-      {view === 'table' && selection.size > 0 && (
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-gray-900/10 bg-gray-900 px-3 py-2 text-white">
-          <span className="text-sm font-medium">{selection.size} geselecteerd</span>
-          <select
-            defaultValue=""
-            onChange={(e) => {
-              if (e.target.value) handleBulkStage(e.target.value as CrmStageId)
-              e.target.value = ''
-            }}
-            className="rounded-lg border border-white/20 bg-white/10 px-2.5 py-1.5 text-xs font-medium text-white outline-none"
-            aria-label="Fase toepassen op selectie"
-          >
-            <option value="" className="text-gray-900">
-              Fase wijzigen…
-            </option>
-            {CRM_STAGES.map((s) => (
-              <option key={s.id} value={s.id} className="text-gray-900">
-                {s.name}
-              </option>
-            ))}
-          </select>
-          <select
-            defaultValue=""
-            onChange={(e) => {
-              if (e.target.value) handleBulkLabel(e.target.value)
-              e.target.value = ''
-            }}
-            disabled={labels.length === 0}
-            className="rounded-lg border border-white/20 bg-white/10 px-2.5 py-1.5 text-xs font-medium text-white outline-none disabled:opacity-50"
-            aria-label="Label toevoegen aan selectie"
-          >
-            <option value="" className="text-gray-900">
-              Label toevoegen…
-            </option>
-            {labels.map((l) => (
-              <option key={l.id} value={l.id} className="text-gray-900">
-                {l.name}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            onClick={() => setSelection(new Set())}
-            className="ml-auto text-xs font-medium text-white/70 hover:text-white"
-          >
-            Selectie wissen
-          </button>
-        </div>
-      )}
+      <CrmBulkBar
+        selection={selection}
+        labels={labels}
+        onStage={handleBulkStage}
+        onLabel={handleBulkLabel}
+        onDelete={() => setDeleteKeys([...selection])}
+        onClear={() => setSelection(new Set())}
+      />
 
       {entries.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-gray-200 bg-white px-6 py-16 text-center">
-          <h2 className="text-base font-semibold text-gray-900">Nog geen leads</h2>
-          <p className="mx-auto mt-1 max-w-md text-sm text-gray-500">
+        <div className="rounded-panel border border-dashed border-line bg-panel px-6 py-16 text-center">
+          <h2 className="text-[15px] font-semibold">Nog geen leads</h2>
+          <p className="mx-auto mt-1.5 max-w-md text-[12.5px] leading-[1.6] text-muted">
             Zodra er reacties binnenkomen op je campagne verschijnen ze hier automatisch,
             precies zoals op het leads- en inbox-tabblad.
           </p>
@@ -566,7 +585,11 @@ export function CrmShell({
           entries={filtered}
           labels={labels}
           today={today}
+          selection={selection}
+          onToggleSelect={toggleSelect}
           onOpen={setDetailKey}
+          onDelete={setDeleteKeys}
+          onAddLabel={handleAddLabel}
           onStageChange={handleStageChange}
         />
       ) : (
@@ -577,18 +600,12 @@ export function CrmShell({
           selection={selection}
           sort={sort}
           onSortChange={setSort}
-          onToggleSelect={(key) =>
-            setSelection((prev) => {
-              const next = new Set(prev)
-              if (next.has(key)) next.delete(key)
-              else next.add(key)
-              return next
-            })
-          }
+          onToggleSelect={toggleSelect}
           onToggleAll={(checked) =>
             setSelection(checked ? new Set(filtered.map((e) => e.key)) : new Set())
           }
           onOpen={setDetailKey}
+          onDelete={setDeleteKeys}
           onStageChange={handleStageChange}
         />
       )}
@@ -607,6 +624,15 @@ export function CrmShell({
           }
           onStageChange={handleStageChange}
           onManageLabels={() => setLabelManagerOpen(true)}
+        />
+      )}
+
+      {deleteKeys && deleteKeys.length > 0 && (
+        <DeleteFromCrmDialog
+          entries={entries.filter((e) => deleteKeys.includes(e.key))}
+          pending={deletePending}
+          onCancel={() => setDeleteKeys(null)}
+          onConfirm={confirmDelete}
         />
       )}
 
