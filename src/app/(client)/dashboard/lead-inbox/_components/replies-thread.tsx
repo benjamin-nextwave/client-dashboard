@@ -21,6 +21,39 @@ const STATUS_BADGE: Record<
   failed: { label: 'Verzending mislukt', className: 'bg-[color-mix(in_oklab,var(--c-neg)_12%,transparent)] text-neg' },
 }
 
+/**
+ * Inline afbeeldingen in een handtekening komen als [cid:image001.png@...] door
+ * de tekstversie heen. De afbeelding zelf zit niet in onze database — die is een
+ * MIME-bijlage bij de oorspronkelijke mail. In plaats van die technische ruis
+ * tonen we een klein plaatje-teken, zodat je ziet dat er een afbeelding stond.
+ */
+const CID_PATTERN = /\[?cid:[^\]\s>"']+\]?/gi
+
+function renderBody(body: string) {
+  const parts: React.ReactNode[] = []
+  let last = 0
+  let i = 0
+  for (const match of body.matchAll(CID_PATTERN)) {
+    const start = match.index ?? 0
+    if (start > last) parts.push(body.slice(last, start))
+    parts.push(
+      <span
+        key={`img-${i++}`}
+        title="Afbeelding uit de handtekening (niet meegeleverd)"
+        className="mx-0.5 inline-flex items-center gap-1 rounded bg-track px-1.5 py-0.5 align-middle text-[10.5px] font-medium text-faint"
+      >
+        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" aria-hidden>
+          <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M18 8.25h.008v.008H18V8.25Zm2.25 10.5H3.75A1.5 1.5 0 0 1 2.25 17.25V6.75a1.5 1.5 0 0 1 1.5-1.5h16.5a1.5 1.5 0 0 1 1.5 1.5v10.5a1.5 1.5 0 0 1-1.5 1.5Z" />
+        </svg>
+        afbeelding
+      </span>
+    )
+    last = start + match[0].length
+  }
+  if (last < body.length) parts.push(body.slice(last))
+  return parts.length ? parts : body
+}
+
 export function RepliesThread({ items }: { items: ThreadItem[] }) {
   // Outlook-stijl: doorlopend vlak, nieuwste bovenaan, alles uitgeklapt.
   const ordered = [...items].reverse()
@@ -84,7 +117,7 @@ export function RepliesThread({ items }: { items: ThreadItem[] }) {
                 </p>
               )}
               <pre className="whitespace-pre-wrap break-words font-sans text-[12.5px] leading-6 text-fg">
-                {item.body}
+                {renderBody(item.body)}
               </pre>
               {item.kind === 'outbound' &&
                 item.status === 'failed' &&

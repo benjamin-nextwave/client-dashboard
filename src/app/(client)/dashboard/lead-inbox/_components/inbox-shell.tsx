@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useSearchParams, useSelectedLayoutSegment } from 'next/navigation'
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import type { LeadWithStatus } from '../_lib/types'
 import { FilterChips } from './filter-chips'
 import { FilterSidebar } from './filter-sidebar'
@@ -18,6 +18,7 @@ export function InboxShell({
   const params = useSearchParams()
   const selectedSegment = useSelectedLayoutSegment()
   const hasSelection = selectedSegment !== null
+  const [search, setSearch] = useState('')
 
   const backHref = (() => {
     if (params.get('view') === 'trash') return '/dashboard/lead-inbox?view=trash'
@@ -54,7 +55,44 @@ export function InboxShell({
             {leads.filter((l) => l.awaitingOurReply).length} wacht op antwoord
           </span>
         </header>
-        <LeadListPane leads={leads} />
+
+        {/* Zoeken filtert de leads die al ingeladen zijn — geen extra query. */}
+        <div className="shrink-0 border-b border-line px-3 py-2.5">
+          <div className="relative">
+            <svg
+              className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-faint"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.8}
+              stroke="currentColor"
+              aria-hidden
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+            </svg>
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Zoek op naam, e-mail of bericht"
+              aria-label="Zoeken in leads"
+              className="w-full rounded-control border border-line bg-canvas py-1.5 pl-8 pr-7 text-[12.5px] outline-none transition-colors placeholder:text-faint focus:border-[var(--brand-color)]"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                aria-label="Zoekopdracht wissen"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-faint transition-colors hover:text-fg"
+              >
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+        </div>
+
+        <LeadListPane leads={leads} search={search} />
       </section>
 
       {/* Detail pane */}

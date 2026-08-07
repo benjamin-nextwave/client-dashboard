@@ -23,6 +23,11 @@ function formatRelative(iso: string): string {
   return date.toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit' })
 }
 
+/** Verwijzingen naar inline afbeeldingen ([cid:...]) uit de leestekst halen. */
+export function stripCidTokens(text: string): string {
+  return text.replace(/\[?cid:[^\]\s>"']+\]?/gi, ' ')
+}
+
 function snippetFromLead(lead: LeadWithStatus): string {
   // Toon altijd snippet van laatste klant-reply (= meest recente inbound).
   const inbound = [...lead.replies]
@@ -33,7 +38,7 @@ function snippetFromLead(lead: LeadWithStatus): string {
     )
   const last = inbound[0]
   if (!last?.body) return ''
-  const cleaned = last.body.replace(/\s+/g, ' ').trim()
+  const cleaned = stripCidTokens(last.body).replace(/\s+/g, ' ').trim()
   return cleaned.length > 140 ? `${cleaned.slice(0, 140)}…` : cleaned
 }
 
@@ -55,7 +60,13 @@ function companyFromEmail(email: string): string | null {
   return base.charAt(0).toUpperCase() + base.slice(1)
 }
 
-export function LeadListPane({ leads }: { leads: LeadWithStatus[] }) {
+export function LeadListPane({
+  leads,
+  search = '',
+}: {
+  leads: LeadWithStatus[]
+  search?: string
+}) {
   const params = useSearchParams()
   const activeFilter = params.get('classification') as LeadClassification | null
   const isTrash = params.get('view') === 'trash'
@@ -73,19 +84,39 @@ export function LeadListPane({ leads }: { leads: LeadWithStatus[] }) {
           )
         : active.filter((l) => l.awaitingOurReply)
     }
+    const term = search.trim().toLowerCase()
+    if (term) {
+      base = base.filter((l) => {
+        const haystack = [
+          l.name ?? '',
+          l.email,
+          companyFromEmail(l.email) ?? '',
+          snippetFromLead(l),
+          ...l.labels.map((label) => label.name),
+        ]
+          .join(' ')
+          .toLowerCase()
+        return haystack.includes(term)
+      })
+    }
+
     return [...base].sort(
       (a, b) =>
         new Date(b.last_reply_at).getTime() - new Date(a.last_reply_at).getTime()
     )
-  }, [leads, activeFilter, isTrash])
+  }, [leads, activeFilter, isTrash, search])
 
   if (filtered.length === 0) {
     return (
       <div className="flex flex-1 items-center justify-center px-6 py-12 text-center">
         <div>
-          <h3 className="text-[13.5px] font-semibold tracking-[-0.01em]">Geen leads</h3>
+          <h3 className="text-[13.5px] font-semibold tracking-[-0.01em]">
+            {search.trim() ? 'Niets gevonden' : 'Geen leads'}
+          </h3>
           <p className="mt-1.5 text-[12.5px] text-muted">
-            {isTrash
+            {search.trim()
+              ? `Geen leads die passen bij "${search.trim()}".`
+              : isTrash
               ? 'De prullenbak is leeg.'
               : activeFilter
                 ? `Geen beantwoorde leads in "${CLASSIFICATION_LABEL[activeFilter]}".`
