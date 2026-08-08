@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react'
 import Papa from 'papaparse'
-import { bulkImportDnc } from '@/lib/actions/dnc-actions'
+import { addDncEntries } from '@/lib/actions/dnc-actions'
 import { useWebhookLocale, useT } from '@/lib/i18n/client'
 
 const DNC_WEBHOOK = 'https://hook.eu2.make.com/dhkkgga3ktiwgalbkeujdw21odiqqqa5'
@@ -15,6 +15,7 @@ export function DncCsvUpload({ companyName }: { companyName: string }) {
   const [parsedData, setParsedData] = useState<Record<string, string>[]>([])
   const [columns, setColumns] = useState<string[]>([])
   const [selectedColumn, setSelectedColumn] = useState<string | null>(null)
+  const [dragging, setDragging] = useState(false)
   const [status, setStatus] = useState<
     | { type: 'idle' }
     | { type: 'pick_column' }
@@ -24,10 +25,7 @@ export function DncCsvUpload({ companyName }: { companyName: string }) {
     | { type: 'error'; message: string }
   >({ type: 'idle' })
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-
+  function parseFile(file: File) {
     setStatus({ type: 'idle' })
     setEmails([])
     setParsedData([])
@@ -52,12 +50,14 @@ export function DncCsvUpload({ companyName }: { companyName: string }) {
         setStatus({ type: 'pick_column' })
       },
       error() {
-        setStatus({
-          type: 'error',
-          message: 'Fout bij het lezen van het CSV-bestand.',
-        })
+        setStatus({ type: 'error', message: t('dnc.csvError') })
       },
     })
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (file) parseFile(file)
   }
 
   function extractEmails(data: Record<string, string>[], column: string): string[] {
@@ -88,7 +88,7 @@ export function DncCsvUpload({ companyName }: { companyName: string }) {
 
     setStatus({ type: 'importing' })
 
-    const result = await bulkImportDnc(emails)
+    const result = await addDncEntries({ emails })
 
     if ('error' in result) {
       setStatus({ type: 'error', message: result.error })
@@ -97,12 +97,17 @@ export function DncCsvUpload({ companyName }: { companyName: string }) {
       fetch(DNC_WEBHOOK, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'bulk', company_name: companyName, emails: result.emails, ...localeInfo }),
+        body: JSON.stringify({
+          type: 'bulk',
+          company_name: companyName,
+          emails: result.emails,
+          ...localeInfo,
+        }),
       }).catch(() => {})
 
       setStatus({
         type: 'success',
-        message: t('dnc.csvSuccess', { imported: result.imported, total: emails.length }),
+        message: t('dnc.csvSuccess', { imported: result.inserted, total: emails.length }),
       })
       setEmails([])
       if (fileRef.current) fileRef.current.value = ''
@@ -118,12 +123,25 @@ export function DncCsvUpload({ companyName }: { companyName: string }) {
     if (fileRef.current) fileRef.current.value = ''
   }
 
-  return (
-    <div className="rounded-lg border border-gray-200 bg-white p-6">
-      <h3 className="text-sm font-medium text-gray-900">{t('dnc.csvUploadTitle')}</h3>
-      <p className="mt-1 text-xs text-gray-500">{t('dnc.csvUploadDescription')}</p>
+  const selectClass =
+    'block w-full rounded-control border border-line bg-panel px-3 py-2 text-[12.5px] text-fg outline-none'
+  const primaryClass =
+    'h-[34px] rounded-control bg-brand px-3.5 text-[12.5px] font-semibold text-white transition-opacity hover:opacity-90'
+  const ghostClass =
+    'h-[34px] rounded-control border border-line bg-panel px-3.5 text-[12.5px] font-medium text-muted transition-colors hover:bg-[var(--brand-08)]'
 
-      <div className="mt-3">
+  return (
+    <div className="shrink-0 overflow-hidden rounded-panel border border-line bg-panel">
+      <div className="px-4 pt-3.5">
+        <h3 className="text-[13.5px] font-semibold tracking-[-0.01em]">
+          {t('dnc.csvUploadTitle')}
+        </h3>
+        <p className="mt-[5px] text-[11.5px] leading-[1.5] text-muted">
+          {t('dnc.csvUploadDescription')}
+        </p>
+      </div>
+
+      <div className="px-4 pb-3.5 pt-3">
         <input
           ref={fileRef}
           id="dnc-csv-file"
@@ -134,80 +152,97 @@ export function DncCsvUpload({ companyName }: { companyName: string }) {
         />
         <label
           htmlFor="dnc-csv-file"
-          className="inline-flex cursor-pointer items-center rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
+          onDragOver={(e) => {
+            e.preventDefault()
+            setDragging(true)
+          }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={(e) => {
+            e.preventDefault()
+            setDragging(false)
+            const file = e.dataTransfer.files?.[0]
+            if (file) parseFile(file)
+          }}
+          className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-[9px] border border-dashed px-4 py-6 text-center transition-colors ${
+            dragging
+              ? 'border-brand bg-[var(--brand-08)]'
+              : 'border-line bg-track hover:border-[var(--brand-32)]'
+          }`}
         >
-          {t('dnc.csvChooseFile')}
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.7}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-5 w-5 text-faint"
+            aria-hidden
+          >
+            <path d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M7.5 7.5 12 3m0 0 4.5 4.5M12 3v13.5" />
+          </svg>
+          <span className="text-[11.5px] leading-[1.5] text-muted">{t('dnc.csvDropHint')}</span>
         </label>
-      </div>
 
-      {status.type === 'pick_column' && (
-        <div className="mt-3 space-y-2">
-          <label className="block text-sm font-medium text-gray-700">
-            {t('dnc.csvPickColumn')}
-          </label>
-          <select
-            value={selectedColumn ?? ''}
-            onChange={(e) => setSelectedColumn(e.target.value)}
-            className="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500"
-          >
-            {columns.map((col) => (
-              <option key={col} value={col}>
-                {col}
-              </option>
-            ))}
-          </select>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleColumnConfirm}
-              className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
+        {status.type === 'pick_column' && (
+          <div className="mt-3 space-y-2">
+            <label className="block text-[11.5px] font-medium text-muted">
+              {t('dnc.csvPickColumn')}
+            </label>
+            <select
+              value={selectedColumn ?? ''}
+              onChange={(e) => setSelectedColumn(e.target.value)}
+              className={selectClass}
             >
-              {t('dnc.csvConfirm')}
-            </button>
-            <button
-              onClick={reset}
-              className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              {t('common.cancel')}
-            </button>
+              {columns.map((col) => (
+                <option key={col} value={col}>
+                  {col}
+                </option>
+              ))}
+            </select>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={handleColumnConfirm} className={primaryClass}>
+                {t('dnc.csvConfirm')}
+              </button>
+              <button type="button" onClick={reset} className={ghostClass}>
+                {t('common.cancel')}
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {status.type === 'preview' && (
-        <div className="mt-3 flex items-center gap-3">
-          <span className="text-sm text-gray-700">
-            {t('dnc.csvFoundEmails', { count: status.count })}
-          </span>
-          <button
-            onClick={handleImport}
-            className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
-          >
-            {t('dnc.csvImport')}
-          </button>
-          <button
-            onClick={reset}
-            className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            {t('common.cancel')}
-          </button>
-        </div>
-      )}
+        {status.type === 'preview' && (
+          <div className="mt-3 space-y-2">
+            <p className="text-[12.5px] text-fg">
+              {t('dnc.csvFoundEmails', { count: status.count })}
+            </p>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={handleImport} className={primaryClass}>
+                {t('dnc.csvImport')}
+              </button>
+              <button type="button" onClick={reset} className={ghostClass}>
+                {t('common.cancel')}
+              </button>
+            </div>
+          </div>
+        )}
 
-      {status.type === 'importing' && (
-        <p className="mt-3 text-sm text-gray-500">{t('dnc.csvImporting')}</p>
-      )}
+        {status.type === 'importing' && (
+          <p className="mt-3 text-[12.5px] text-muted">{t('dnc.csvImporting')}</p>
+        )}
 
-      {status.type === 'success' && (
-        <div className="mt-3 rounded-md bg-green-50 p-3 text-sm text-green-700">
-          {status.message}
-        </div>
-      )}
+        {status.type === 'success' && (
+          <p className="mt-3 rounded-control border border-[color-mix(in_oklab,var(--color-pos)_30%,transparent)] bg-[color-mix(in_oklab,var(--color-pos)_10%,transparent)] px-3 py-2 text-[12.5px] text-pos">
+            {status.message}
+          </p>
+        )}
 
-      {status.type === 'error' && (
-        <div className="mt-3 rounded-md bg-red-50 p-3 text-sm text-red-700">
-          {status.message}
-        </div>
-      )}
+        {status.type === 'error' && (
+          <p className="mt-3 rounded-control border border-[color-mix(in_oklab,var(--color-neg)_28%,transparent)] bg-[color-mix(in_oklab,var(--color-neg)_8%,transparent)] px-3 py-2 text-[12.5px] text-neg">
+            {status.message}
+          </p>
+        )}
+      </div>
     </div>
   )
 }

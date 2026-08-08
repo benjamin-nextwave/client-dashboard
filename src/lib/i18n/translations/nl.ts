@@ -442,6 +442,53 @@ export interface Translations {
     statusColumn: string
     statusPending: string
     statusApproved: string
+    intro: string
+    statTotal: string
+    statEmails: string
+    statDomains: string
+    statActive: string
+    statActiveMeta: string
+    statProcessing: string
+    addTitle: string
+    addHint: string
+    addPlaceholder: string
+    addButton: string
+    addButtonCount: string
+    addBusy: string
+    clearInput: string
+    countEmails: string
+    countEmailsSingular: string
+    countDomains: string
+    countDomainsSingular: string
+    countDuplicates: string
+    countDuplicatesSingular: string
+    countInvalid: string
+    searchPlaceholder: string
+    filterAll: string
+    filterEmails: string
+    filterDomains: string
+    statusAll: string
+    columnValue: string
+    columnDate: string
+    wholeDomain: string
+    removeTooltip: string
+    listNothing: string
+    listNothingHint: string
+    listNoResults: string
+    listNoResultsHint: string
+    selectRow: string
+    selectAllOnPage: string
+    selectedCount: string
+    clearSelection: string
+    removeSelected: string
+    removeSelectedHint: string
+    removeConfirm: string
+    removeConfirmSingular: string
+    range: string
+    pageOf: string
+    csvDropHint: string
+    explainerTitle: string
+    explainerBody: string
   }
   sent: {
     title: string
@@ -1098,8 +1145,59 @@ export const nl: Translations = {
     typeDomain: 'Domein',
     removeButton: 'Verwijderen',
     statusColumn: 'Status',
-    statusPending: 'In verwerking',
-    statusApproved: 'Doorgevoerd',
+    statusPending: 'Wordt verwerkt',
+    statusApproved: 'Actief gefilterd',
+    intro:
+      'Adressen en domeinen die nooit benaderd worden. Alles op deze lijst wordt uit elke campagne gefilterd voordat er wordt verzonden.',
+    statTotal: 'Op de lijst',
+    statEmails: 'Losse adressen',
+    statDomains: 'Hele domeinen',
+    statActive: 'Actief gefilterd',
+    statActiveMeta: 'doorgevoerd',
+    statProcessing: 'wordt nog verwerkt',
+    addTitle: 'Toevoegen',
+    addHint: 'Eén per regel. Een heel domein blokkeer je met {example}.',
+    addPlaceholder: 'info@concurrent.nl\n@partnerbedrijf.nl',
+    addButton: 'Toevoegen',
+    addButtonCount: '{count} toevoegen',
+    addBusy: 'Bezig…',
+    clearInput: 'Wissen',
+    countEmails: '{count} adressen',
+    countEmailsSingular: '1 adres',
+    countDomains: '{count} domeinen',
+    countDomainsSingular: '1 domein',
+    countDuplicates: '{count} stonden er al op',
+    countDuplicatesSingular: '1 stond er al op',
+    countInvalid: '{count} onleesbaar',
+    searchPlaceholder: 'Zoek een adres of domein',
+    filterAll: 'Alles',
+    filterEmails: 'Adressen',
+    filterDomains: 'Domeinen',
+    statusAll: 'Alle statussen',
+    columnValue: 'Adres of domein',
+    columnDate: 'Datum',
+    wholeDomain: 'Heel domein',
+    removeTooltip: 'Van de lijst halen',
+    listNothing: 'Nog niets uitgesloten',
+    listNothingHint: 'Voeg hiernaast adressen of domeinen toe die nooit benaderd mogen worden.',
+    listNoResults: 'Geen resultaten',
+    listNoResultsHint: 'Pas je zoekopdracht of filters aan.',
+    selectRow: 'Selecteer {value}',
+    selectAllOnPage: 'Alles op deze pagina selecteren',
+    selectedCount: 'geselecteerd',
+    clearSelection: 'Selectie wissen',
+    removeSelected: 'Van de lijst halen',
+    removeSelectedHint: 'Deze adressen worden weer benaderbaar',
+    removeConfirm:
+      '{count} vermeldingen van de lijst halen?\n\nDeze adressen en domeinen worden weer benaderbaar in toekomstige campagnes.',
+    removeConfirmSingular:
+      '{value} van de lijst halen?\n\nDit adres wordt weer benaderbaar in toekomstige campagnes.',
+    range: '{from}–{to} van {total}',
+    pageOf: '{current} / {total}',
+    csvDropHint: 'Sleep een CSV-bestand hierheen of klik om te kiezen',
+    explainerTitle: 'Hoe het werkt',
+    explainerBody:
+      'Nieuwe vermeldingen krijgen eerst "Wordt verwerkt". Zodra ons team ze heeft doorgevoerd, staan ze op "Actief gefilterd" en worden ze uit elke verzending gehouden.',
   },
 
   sent: {

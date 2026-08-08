@@ -4,8 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import {
-  AddDncEmailSchema,
-  AddDncDomainSchema,
+  AddDncEntriesSchema,
   DncBulkImportSchema,
 } from '@/lib/validations/dnc'
 
@@ -20,13 +19,15 @@ export type DncEntry = {
   created_at: string
 }
 
-type FormActionState = { error: string }
-
 type BulkImportResult =
   | { success: true; imported: number; emails: string[] }
   | { error: string }
 
-type RemoveResult = { success: true } | { error: string }
+type AddResult =
+  | { success: true; inserted: number; emails: string[]; domains: string[] }
+  | { error: string }
+
+type RemoveResult = { success: true; removed: number } | { error: string }
 
 // --- Helper: get authenticated client_id ---
 
@@ -42,103 +43,113 @@ async function getAuthClientId() {
   return clientId ?? null
 }
 
-// --- Server Actions ---
+// --- Helpers ---
 
-export async function addDncEmail(
-  _prevState: FormActionState,
-  formData: FormData
-): Promise<FormActionState> {
-  const parsed = AddDncEmailSchema.safeParse({
-    email: formData.get('email'),
-  })
-  if (!parsed.success) {
-    return { error: parsed.error.errors[0]?.message ?? 'Ongeldige invoer.' }
-  }
-
-  const clientId = await getAuthClientId()
-  if (!clientId) {
-    return { error: 'Niet ingelogd.' }
-  }
-
-  const supabase = await createClient()
-  const { error } = await supabase.from('dnc_entries').insert({
-    client_id: clientId,
-    entry_type: 'email',
-    value: parsed.data.email.toLowerCase(),
-  })
-
-  if (error) {
-    if (error.code === '23505') {
-      return { error: 'Dit e-mailadres staat al op de DNC-lijst.' }
-    }
-    return { error: 'Fout bij het toevoegen. Probeer het opnieuw.' }
-  }
-
-  revalidatePath('/dashboard/dnc')
-  return { error: '' }
-}
-
-export async function addDncDomain(
-  _prevState: FormActionState,
-  formData: FormData
-): Promise<FormActionState> {
-  // Strip leading @ if present
-  let domain = (formData.get('domain') as string) ?? ''
-  domain = domain.replace(/^@/, '').toLowerCase()
-
-  const parsed = AddDncDomainSchema.safeParse({ domain })
-  if (!parsed.success) {
-    return { error: parsed.error.errors[0]?.message ?? 'Ongeldige invoer.' }
-  }
-
-  const clientId = await getAuthClientId()
-  if (!clientId) {
-    return { error: 'Niet ingelogd.' }
-  }
-
-  const supabase = await createClient()
-  const { error } = await supabase.from('dnc_entries').insert({
-    client_id: clientId,
-    entry_type: 'domain',
-    value: parsed.data.domain,
-  })
-
-  if (error) {
-    if (error.code === '23505') {
-      return { error: 'Dit domein staat al op de DNC-lijst.' }
-    }
-    return { error: 'Fout bij het toevoegen. Probeer het opnieuw.' }
-  }
-
-  revalidatePath('/dashboard/dnc')
-  return { error: '' }
-}
-
-export async function removeDncEntry(entryId: string): Promise<RemoveResult> {
-  if (!entryId) {
-    return { error: 'Ongeldig vermelding-ID.' }
-  }
-
-  const clientId = await getAuthClientId()
-  if (!clientId) {
-    return { error: 'Niet ingelogd.' }
-  }
+/**
+ * De enige plek waar rijen in dnc_entries worden gezet. De admin-client is
+ * nodig voor de upsert met ON CONFLICT DO NOTHING; de client_id komt altijd uit
+ * het ingelogde account, nooit uit de aanroep.
+ */
+async function insertEntries(
+  clientId: string,
+  emails: string[],
+  domains: string[]
+): Promise<{ inserted: number } | { error: string }> {
+  const rows = [
+    ...emails.map((value) => ({ client_id: clientId, entry_type: 'email' as const, value })),
+    ...domains.map((value) => ({ client_id: clientId, entry_type: 'domain' as const, value })),
+  ]
+  if (rows.length === 0) return { inserted: 0 }
 
   const admin = createAdminClient()
-  const { error } = await admin
-    .from('dnc_entries')
-    .delete()
-    .eq('id', entryId)
-    .eq('client_id', clientId)
+  const { error, count } = await admin.from('dnc_entries').upsert(rows, {
+    onConflict: 'client_id,entry_type,value',
+    ignoreDuplicates: true,
+    count: 'exact',
+  })
 
   if (error) {
-    return { error: 'Fout bij het verwijderen. Probeer het opnieuw.' }
+    console.error('[dnc:insert] error:', error.message)
+    return { error: 'Toevoegen is niet gelukt. Probeer het opnieuw.' }
   }
 
   revalidatePath('/dashboard/dnc')
-  return { success: true }
+  return { inserted: count ?? rows.length }
 }
 
+const normalizeEmail = (v: string) => v.trim().toLowerCase()
+const normalizeDomain = (v: string) => v.trim().toLowerCase().replace(/^@/, '')
+
+// --- Server Actions ---
+
+/**
+ * Adressen én domeinen in één keer. Vervangt de twee losse formulieren: het
+ * invoerveld op de DNC-pagina levert beide soorten tegelijk aan.
+ */
+export async function addDncEntries({
+  emails = [],
+  domains = [],
+}: {
+  emails?: string[]
+  domains?: string[]
+}): Promise<AddResult> {
+  const cleanEmails = [...new Set(emails.map(normalizeEmail).filter(Boolean))]
+  const cleanDomains = [...new Set(domains.map(normalizeDomain).filter(Boolean))]
+
+  if (cleanEmails.length + cleanDomains.length === 0) {
+    return { error: 'Niets om toe te voegen.' }
+  }
+
+  const parsed = AddDncEntriesSchema.safeParse({
+    emails: cleanEmails,
+    domains: cleanDomains,
+  })
+  if (!parsed.success) {
+    return { error: parsed.error.errors[0]?.message ?? 'Ongeldige invoer.' }
+  }
+
+  const clientId = await getAuthClientId()
+  if (!clientId) return { error: 'Niet ingelogd.' }
+
+  const res = await insertEntries(clientId, cleanEmails, cleanDomains)
+  if ('error' in res) return res
+
+  return {
+    success: true,
+    inserted: res.inserted,
+    emails: cleanEmails,
+    domains: cleanDomains,
+  }
+}
+
+export async function removeDncEntries(entryIds: string[]): Promise<RemoveResult> {
+  const ids = entryIds.filter(Boolean)
+  if (ids.length === 0) return { success: true, removed: 0 }
+
+  const clientId = await getAuthClientId()
+  if (!clientId) return { error: 'Niet ingelogd.' }
+
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from('dnc_entries')
+    .delete()
+    .eq('client_id', clientId)
+    .in('id', ids)
+    .select('id')
+
+  if (error) {
+    console.error('[dnc:remove] error:', error.message)
+    return { error: 'Verwijderen is niet gelukt. Probeer het opnieuw.' }
+  }
+
+  revalidatePath('/dashboard/dnc')
+  return { success: true, removed: data?.length ?? 0 }
+}
+
+/**
+ * Alleen adressen, met de oude uitvoervorm. De contactenpagina gebruikt deze
+ * nog; nieuwe aanroepen kunnen beter addDncEntries nemen.
+ */
 export async function bulkImportDnc(
   emails: string[]
 ): Promise<BulkImportResult> {
@@ -152,27 +163,11 @@ export async function bulkImportDnc(
     return { error: 'Niet ingelogd.' }
   }
 
-  // Deduplicate and lowercase
-  const uniqueEmails = [...new Set(parsed.data.emails.map((e) => e.toLowerCase()))]
+  const uniqueEmails = [...new Set(parsed.data.emails.map(normalizeEmail))]
+  const res = await insertEntries(clientId, uniqueEmails, [])
+  if ('error' in res) return { error: 'Fout bij het importeren. Probeer het opnieuw.' }
 
-  // Use admin client for bulk performance with ON CONFLICT DO NOTHING
-  const admin = createAdminClient()
-  const rows = uniqueEmails.map((email) => ({
-    client_id: clientId,
-    entry_type: 'email' as const,
-    value: email,
-  }))
-
-  const { error, count } = await admin
-    .from('dnc_entries')
-    .upsert(rows, { onConflict: 'client_id,entry_type,value', ignoreDuplicates: true, count: 'exact' })
-
-  if (error) {
-    return { error: 'Fout bij het importeren. Probeer het opnieuw.' }
-  }
-
-  revalidatePath('/dashboard/dnc')
-  return { success: true, imported: count ?? uniqueEmails.length, emails: uniqueEmails }
+  return { success: true, imported: res.inserted, emails: uniqueEmails }
 }
 
 export async function getDncEntries(): Promise<DncEntry[]> {
