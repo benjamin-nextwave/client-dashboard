@@ -564,6 +564,83 @@ export interface Translations {
   mailVariantsPage: {
     title: string
     intro: string
+    tabVariants: string
+    tabFlow: string
+    tabHistory: string
+    statusOpen: string
+    statusApproved: string
+    statusFeedback: string
+    mailTitle1: string
+    mailTitle2: string
+    mailTitle3: string
+    mailTitleFallback: string
+    newSince: string
+    newSinceOne: string
+    newSinceMany: string
+    revised: string
+    updatedOn: string
+    version: string
+    roundsOne: string
+    roundsMany: string
+    viewTemplate: string
+    viewExample: string
+    whyTitle: string
+    feedbackTitle: string
+    feedbackHint: string
+    feedbackHintExample: string
+    noNotes: string
+    noteRemove: string
+    notePlaceholder: string
+    generalPlaceholder: string
+    sendFeedback: string
+    sending: string
+    approve: string
+    approvedTitle: string
+    approvedBody: string
+    awaitingTitle: string
+    awaitingBody: string
+    errorEmpty: string
+    errorNoteText: string
+    errorOverlap: string
+    actionReplace: string
+    actionRemove: string
+    actionOther: string
+    previousFeedbackTitle: string
+    selectVariant: string
+    pdfTitle: string
+    pdfOpen: string
+    pdfApprove: string
+    emptyTitle: string
+    emptyBody: string
+    flowIntro: string
+    flowVariantOne: string
+    flowEmptyTitle: string
+    flowEmptyBody: string
+    historyEmptyTitle: string
+    historyEmptyBody: string
+    historyEmptyFilter: string
+    historyFilter: string
+    historySummary: string
+    filterAll: string
+    filterRevised: string
+    filterApproved: string
+    filterFeedback: string
+    eventCreated: string
+    eventRevised: string
+    eventApproved: string
+    eventFeedback: string
+    actorYou: string
+    actorNextwave: string
+    today: string
+    yesterday: string
+    commentsOne: string
+    commentsMany: string
+    summaryVariants: string
+    summaryTotal: string
+    summaryRounds: string
+    summaryOpen: string
+    summaryOpenOne: string
+    summaryOpenMany: string
   }
   sent: {
     title: string
@@ -1357,6 +1434,87 @@ export const nl: Translations = {
     title: 'Mailvarianten',
     intro:
       'De mails die namens jou worden verstuurd: wat er nu loopt, wat er op je goedkeuring wacht en wat er eerder is verstuurd.',
+    tabVariants: 'Varianten',
+    tabFlow: 'Campagneflow',
+    tabHistory: 'Geschiedenis',
+    statusOpen: 'Open',
+    statusApproved: 'Goedgekeurd',
+    statusFeedback: 'Feedback',
+    mailTitle1: 'Eerste aanschrijving',
+    mailTitle2: 'Opvolging',
+    mailTitle3: 'Laatste herinnering',
+    mailTitleFallback: 'Mail {number}',
+    newSince: 'Nieuw sinds {date}',
+    newSinceOne: 'Eén variant is herschreven op basis van je feedback.',
+    newSinceMany: '{count} varianten zijn herschreven op basis van je feedback.',
+    revised: 'Herzien',
+    updatedOn: 'Bijgewerkt {date}',
+    version: 'Versie {number}',
+    roundsOne: '1 eerdere feedbackronde',
+    roundsMany: '{count} eerdere feedbackrondes',
+    viewTemplate: 'Template',
+    viewExample: 'Voorbeeld',
+    whyTitle: 'Waarom deze aanpak',
+    feedbackTitle: 'Jouw feedback',
+    feedbackHint: 'Selecteer een passage in de tekst om er iets over te zeggen.',
+    feedbackHintExample: 'Schakel naar Template om een passage te kunnen selecteren.',
+    noNotes: 'Nog geen opmerkingen',
+    noteRemove: 'Opmerking verwijderen',
+    notePlaceholder: 'Wat moet er in plaats daarvan komen?',
+    generalPlaceholder: 'Algemene opmerking over deze variant…',
+    sendFeedback: 'Feedback versturen',
+    sending: 'Bezig…',
+    approve: 'Goedkeuren',
+    approvedTitle: 'Goedgekeurd',
+    approvedBody:
+      'Deze versie is akkoord. Past NextWave de tekst later aan, dan kun je opnieuw reageren.',
+    awaitingTitle: 'Feedback verstuurd',
+    awaitingBody:
+      'NextWave werkt deze variant bij. Zodra er een nieuwe versie klaarstaat, kun je opnieuw reageren.',
+    errorEmpty: 'Voeg een opmerking toe of keur de variant goed.',
+    errorNoteText: 'Vul in wat er met de geselecteerde tekst moet gebeuren.',
+    errorOverlap: 'Deze selectie overlapt met een opmerking die je al hebt gemaakt.',
+    actionReplace: 'Vervangen door',
+    actionRemove: 'Weglaten',
+    actionOther: 'Opmerking',
+    previousFeedbackTitle: 'Eerder gegeven feedback',
+    selectVariant: 'Kies links een variant om hem te bekijken.',
+    pdfTitle: 'Mailvarianten als PDF',
+    pdfOpen: 'PDF openen',
+    pdfApprove: 'PDF goedkeuren',
+    emptyTitle: 'Nog geen mailvarianten',
+    emptyBody:
+      'Zodra NextWave de eerste mailvarianten klaarzet, verschijnen ze hier ter beoordeling.',
+    flowIntro: 'Het pad dat een lead doorloopt, van eerste mail tot afhandeling.',
+    flowVariantOne: '1 variant',
+    flowEmptyTitle: 'Nog geen campagneflow',
+    flowEmptyBody: 'Zodra NextWave de campagneflow publiceert, zie je hier het volledige pad.',
+    historyEmptyTitle: 'Nog geen geschiedenis',
+    historyEmptyBody:
+      'Hier komt straks alles te staan wat er met de mailvarianten is gebeurd: wat is klaargezet, wat je hebt goedgekeurd en welke feedback je hebt gegeven.',
+    historyEmptyFilter: 'Geen gebeurtenissen in dit filter.',
+    historyFilter: 'Filter',
+    historySummary: 'Samenvatting',
+    filterAll: 'Alles',
+    filterRevised: 'Nieuw of herzien',
+    filterApproved: 'Goedgekeurd',
+    filterFeedback: 'Feedback',
+    eventCreated: '{variant} klaargezet',
+    eventRevised: '{variant} herschreven',
+    eventApproved: '{variant} goedgekeurd',
+    eventFeedback: '{variant} — feedback gegeven',
+    actorYou: 'Jij',
+    actorNextwave: 'NextWave',
+    today: 'Vandaag',
+    yesterday: 'Gisteren',
+    commentsOne: '1 opmerking',
+    commentsMany: '{count} opmerkingen',
+    summaryVariants: 'Varianten',
+    summaryTotal: '{count} totaal',
+    summaryRounds: 'Feedbackrondes',
+    summaryOpen: 'Nog open',
+    summaryOpenOne: '1 variant',
+    summaryOpenMany: '{count} varianten',
   },
 
   sent: {
