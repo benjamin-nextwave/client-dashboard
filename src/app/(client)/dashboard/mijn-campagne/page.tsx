@@ -4,30 +4,32 @@ import {
   getCampaignState,
   getMailVariants,
   getLatestMailVariantFeedback,
-  getAllMailVariantFeedback,
   deriveTasks,
   deriveVariantStatus,
   canSubmitCampaignForm,
 } from '@/lib/data/campaign'
-import { getLinkedInFlowsByClient } from '@/lib/data/linkedin-flow'
-import { getWeeklyReports } from '@/lib/data/weekly-reports'
 import { StatusTracker } from './_components/status-tracker'
 import { CampaignBody } from './_components/campaign-body'
 import { AvailableFormCard } from './_components/available-form-card'
 import { MailVariantsApprovalBlock } from './_components/mail-variants-approval-block'
-import { LinkedInFlowBlock } from './_components/linkedin-flow-block'
 import { ProposalApprovalBlock } from './_components/proposal-approval-block'
 import { DncBlock } from './_components/dnc-block'
 import { ArchiveSection } from './_components/archive-section'
-import { ContactBlock } from './_components/contact-block'
-import { CampaignFlowSection } from './_components/campaign-flow-section'
-import { MailVariantsTimelineSection } from './_components/mail-variants-timeline-section'
 import { getTranslator } from '@/lib/i18n/server'
 
 export const dynamic = 'force-dynamic'
-export const metadata = { title: 'Mijn campagne' }
+export const metadata = { title: 'Onboarding' }
 
-export default async function MijnCampagnePage() {
+/**
+ * De onboardingpagina. De mailvarianten-tijdlijn, de campagne-flow en de
+ * LinkedIn-flow staan sinds de herindeling op /dashboard/mailvarianten; de
+ * week- en maandrapporten op /dashboard/rapporten. Wat hier overblijft is wat
+ * de klant zelf moet doen om de onboarding af te ronden.
+ *
+ * De route heet nog mijn-campagne omdat de subpagina's (invulformulier,
+ * antwoorden) en de revalidatePath-aanroepen in de serveracties eraan hangen.
+ */
+export default async function OnboardingPage() {
   const supabase = await createClient()
   const {
     data: { user },
@@ -45,15 +47,11 @@ export default async function MijnCampagnePage() {
     redirect('/dashboard')
   }
 
-  const [state, allVariants, feedbackByVariant, allFeedbackByVariant, linkedInByFlow, weeklyReports] =
-    await Promise.all([
-      getCampaignState(profile.client_id),
-      getMailVariants(profile.client_id),
-      getLatestMailVariantFeedback(profile.client_id),
-      getAllMailVariantFeedback(profile.client_id),
-      getLinkedInFlowsByClient(profile.client_id),
-      getWeeklyReports(profile.client_id),
-    ])
+  const [state, allVariants, feedbackByVariant] = await Promise.all([
+    getCampaignState(profile.client_id),
+    getMailVariants(profile.client_id),
+    getLatestMailVariantFeedback(profile.client_id),
+  ])
 
   if (!state) redirect('/dashboard')
 
@@ -70,17 +68,12 @@ export default async function MijnCampagnePage() {
   // Onboarding is done as soon as *every* task is completed — regardless
   // of the order the client handled them. The tracker + action blocks
   // disappear and a "Onboarding voltooid" banner takes their place.
-  const onboardingDone = tasks.every((t) => t.status === 'completed')
+  const onboardingDone = tasks.every((task) => task.status === 'completed')
 
   // The DNC block (step 6) only becomes visible when it is the active step —
   // i.e. all previous tasks (form, drafts, variants, preview) are done.
-  const dncIsCurrent = tasks.find((t) => t.status === 'current')?.id === 'dnc'
+  const dncIsCurrent = tasks.find((task) => task.status === 'current')?.id === 'dnc'
 
-  // Do the published variants / PDF need (re-)approval? Computed once so
-  // both the approval block and the archive section can use the same answer.
-  // For text variants the per-variant status is the source of truth (the
-  // round is "open" as long as at least one variant has status 'open').
-  // The PDF still uses the legacy ack timestamp.
   const pdfTime = state.variantsPdfUploadedAt
     ? new Date(state.variantsPdfUploadedAt).getTime()
     : 0
@@ -96,25 +89,19 @@ export default async function MijnCampagnePage() {
   const proposalNeedsApproval =
     hasProposal &&
     (!state.proposalAcknowledgedAt ||
-      new Date(state.proposalPublishedAt!).getTime() > new Date(state.proposalAcknowledgedAt).getTime())
+      new Date(state.proposalPublishedAt!).getTime() >
+        new Date(state.proposalAcknowledgedAt).getTime())
 
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-gray-900">{t('campaign.title')}</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          {onboardingDone
-            ? t('campaign.introOnboardingDone')
-            : t('campaign.introInProgress')}
+        <h1 className="text-[25px] font-semibold tracking-[-0.03em]">{t('nav.onboarding')}</h1>
+        <p className="mt-[7px] max-w-[640px] text-[15px] leading-[1.5] text-muted">
+          {onboardingDone ? t('campaign.introOnboardingDone') : t('campaign.introInProgress')}
         </p>
       </div>
 
-      {onboardingDone && !variantsNeedApproval && !proposalNeedsApproval ? (
-        <OnboardingCompleteBanner
-          title={t('campaign.onboardingCompleteTitle')}
-          body={t('campaign.onboardingCompleteBody')}
-        />
-      ) : onboardingDone ? (
+      {onboardingDone ? (
         <>
           <OnboardingCompleteBanner
             title={t('campaign.onboardingCompleteTitle')}
@@ -129,14 +116,6 @@ export default async function MijnCampagnePage() {
               isPostOnboarding
             />
           )}
-          <MailVariantsApprovalBlock
-            variants={variants}
-            pdfUrl={state.variantsPdfUrl}
-            pdfUploadedAt={state.variantsPdfUploadedAt}
-            lastAcknowledgedAt={state.mailVariantsLastAcknowledgedAt}
-            isPostOnboarding={onboardingDone}
-            feedbackByVariant={feedbackByVariant}
-          />
         </>
       ) : (
         <>
@@ -152,12 +131,14 @@ export default async function MijnCampagnePage() {
             />
           )}
 
+          {/* Stap 4 van de onboarding. Na de onboarding staat dit blok op
+              /dashboard/mailvarianten. */}
           <MailVariantsApprovalBlock
             variants={variants}
             pdfUrl={state.variantsPdfUrl}
             pdfUploadedAt={state.variantsPdfUploadedAt}
             lastAcknowledgedAt={state.mailVariantsLastAcknowledgedAt}
-            isPostOnboarding={onboardingDone}
+            isPostOnboarding={false}
             feedbackByVariant={feedbackByVariant}
           />
 
@@ -175,19 +156,6 @@ export default async function MijnCampagnePage() {
         <AvailableFormCard isFirst={state.formSubmissionCount === 0} />
       )}
 
-      <ContactBlock isOnboardingComplete={onboardingDone} />
-
-      {/* ─── Mailvarianten tijdlijn ─── */}
-      <MailVariantsTimelineSection
-        variants={variants}
-        allFeedbackByVariant={allFeedbackByVariant}
-      />
-
-      {/* ─── LinkedIn flow (optioneel, na de mailflow) ─── */}
-      {Object.values(linkedInByFlow).map((s) => (
-        <LinkedInFlowBlock key={s.flowId} state={s} />
-      ))}
-
       {/* ─── Archive zone ─── */}
       <ArchiveSection
         formSubmissionCount={state.formSubmissionCount}
@@ -197,28 +165,23 @@ export default async function MijnCampagnePage() {
         proposalTitle={state.proposalTitle}
         proposalAcknowledged={!proposalNeedsApproval && !!state.proposalAcknowledgedAt}
         feedbackByVariant={feedbackByVariant}
-        weeklyReports={weeklyReports}
       />
-
-      {/* ─── Campaign flow visualisatie ─── */}
-      <CampaignFlowSection clientId={profile.client_id} />
     </div>
   )
 }
 
 function OnboardingCompleteBanner({ title, body }: { title: string; body: string }) {
   return (
-    <section className="relative overflow-hidden rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-5 shadow-sm">
-      <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-gradient-to-br from-emerald-400/25 to-transparent blur-3xl" />
-      <div className="relative flex items-center gap-4">
-        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-sm shadow-emerald-500/30">
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
+    <section className="rounded-panel border border-[color-mix(in_oklab,var(--color-pos)_30%,transparent)] bg-[color-mix(in_oklab,var(--color-pos)_8%,transparent)] p-5">
+      <div className="flex items-center gap-4">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-pos text-white">
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" aria-hidden>
             <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
           </svg>
         </div>
         <div className="min-w-0 flex-1">
-          <h2 className="text-base font-bold text-gray-900">{title}</h2>
-          <p className="mt-0.5 text-xs leading-relaxed text-gray-600">{body}</p>
+          <h2 className="text-[15px] font-semibold tracking-[-0.02em]">{title}</h2>
+          <p className="mt-0.5 text-[12.5px] leading-[1.6] text-muted">{body}</p>
         </div>
       </div>
     </section>

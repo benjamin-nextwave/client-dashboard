@@ -3,21 +3,27 @@
 import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { uploadWeeklyReport, deleteWeeklyReportFile } from '@/lib/supabase/storage'
+import type { ReportType } from '@/lib/data/weekly-reports'
 
 function paths(clientId: string) {
   return [
     `/admin/clients/${clientId}/weekrapporten`,
-    `/dashboard/mijn-campagne`,
+    `/dashboard/rapporten`,
   ]
 }
 
 /**
  * Derives a friendly display name from the uploaded filename: strips the
- * .pdf extension, falls back to "Weekrapport" for empty names.
+ * .pdf extension, falls back to the report kind for empty names.
  */
-function deriveName(fileName: string): string {
+function deriveName(fileName: string, reportType: ReportType): string {
   const base = fileName.replace(/\.pdf$/i, '').trim()
-  return base.length > 0 ? base.slice(0, 200) : 'Weekrapport'
+  if (base.length > 0) return base.slice(0, 200)
+  return reportType === 'month' ? 'Maandrapport' : 'Weekrapport'
+}
+
+function toReportType(value: FormDataEntryValue | null): ReportType {
+  return value === 'month' ? 'month' : 'week'
 }
 
 export async function uploadWeeklyReportAction(
@@ -27,15 +33,18 @@ export async function uploadWeeklyReportAction(
   const file = formData.get('pdf') as File | null
   if (!file || file.size === 0) return { error: 'Geen bestand geselecteerd' }
 
+  const reportType = toReportType(formData.get('reportType'))
+
   const result = await uploadWeeklyReport(clientId, file)
   if ('error' in result) return { error: result.error }
 
   const supabase = createAdminClient()
   const { error } = await supabase.from('client_weekly_reports').insert({
     client_id: clientId,
-    name: deriveName(file.name),
+    name: deriveName(file.name, reportType),
     file_path: result.path,
     file_url: result.url,
+    report_type: reportType,
   })
 
   if (error) {

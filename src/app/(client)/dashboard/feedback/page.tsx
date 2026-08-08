@@ -1,17 +1,14 @@
-import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
-import { getClientBranding } from '@/lib/client/get-client-branding'
-import { getClientFeedback } from '@/lib/data/feedback-data'
-import { FeedbackPage } from './_components/feedback-page'
 
-export const metadata: Metadata = { title: 'Contact & feedback' }
-export const dynamic = 'force-dynamic'
-
-export default async function FeedbackPageRoute() {
-  const client = await getClientBranding()
-  if (!client) redirect('/login')
-
-  const feedbackRequests = await getClientFeedback(client.id)
-
-  return <FeedbackPage feedbackRequests={feedbackRequests} />
+/**
+ * Contact & feedback is uit de zijbalk gehaald bij de herindeling: vragen lopen
+ * nu via de assistent op Hulp & uitleg, die kan doorverbinden met een
+ * medewerker. Deze route stuurt door naar het overzicht, zodat een oude
+ * bladwijzer niet op een foutpagina uitkomt.
+ *
+ * De componenten in `_components/` en de acties in lib/actions/feedback-actions
+ * zijn met opzet blijven staan.
+ */
+export default function FeedbackPageRoute() {
+  redirect('/dashboard')
 }

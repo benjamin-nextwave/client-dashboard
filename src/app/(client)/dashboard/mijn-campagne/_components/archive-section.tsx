@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import type { MailVariant, MailVariantFeedbackSubmission } from '@/lib/data/campaign'
-import type { WeeklyReport } from '@/lib/data/weekly-reports'
 import { MailVariantsModal } from './mail-variants-modal'
 import { useT } from '@/lib/i18n/client'
 
@@ -15,7 +14,6 @@ interface Props {
   proposalTitle: string | null
   proposalAcknowledged: boolean
   feedbackByVariant: Record<string, MailVariantFeedbackSubmission>
-  weeklyReports: WeeklyReport[]
 }
 
 /**
@@ -24,6 +22,9 @@ interface Props {
  * in uniform rows with consistent "Inzien" buttons. Mail variants and PDF
  * only appear here AFTER the client has acknowledged them — before that
  * they're shown in the prominent approval block higher on the page.
+ *
+ * De week- en maandrapporten stonden hier ook; die hebben sinds de herindeling
+ * een eigen pagina onder /dashboard/rapporten.
  */
 export function ArchiveSection({
   formSubmissionCount,
@@ -33,7 +34,6 @@ export function ArchiveSection({
   proposalTitle,
   proposalAcknowledged,
   feedbackByVariant,
-  weeklyReports,
 }: Props) {
   const t = useT()
   const [modalOpen, setModalOpen] = useState(false)
@@ -42,10 +42,9 @@ export function ArchiveSection({
   const hasPdf = !!variantsPdfUrl
   const hasVariants = mailVariants.length > 0 && variantsAcknowledged
   const hasProposal = !!proposalTitle && proposalAcknowledged
-  const hasWeeklyReports = weeklyReports.length > 0
 
   // If nothing to show yet, don't render the section
-  if (!hasForm && !hasPdf && !hasVariants && !hasProposal && !hasWeeklyReports) return null
+  if (!hasForm && !hasPdf && !hasVariants && !hasProposal) return null
 
   return (
     <>
@@ -112,8 +111,6 @@ export function ArchiveSection({
               subtitle={proposalTitle!}
             />
           )}
-
-          {hasWeeklyReports && <WeeklyReportsRow reports={weeklyReports} />}
         </div>
       </section>
 
@@ -184,71 +181,5 @@ function ArchiveRow({
     <button type="button" onClick={onClick} className={className}>
       {content}
     </button>
-  )
-}
-
-/**
- * Expandable archive row that reveals the list of weekly-report PDF download
- * links. Collapsed by default; clicking the row toggles the list open.
- */
-function WeeklyReportsRow({ reports }: { reports: WeeklyReport[] }) {
-  const t = useT()
-  const [open, setOpen] = useState(false)
-
-  return (
-    <div>
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="group flex w-full items-center gap-3 px-5 py-4 text-left transition-colors hover:bg-gray-50"
-        aria-expanded={open}
-      >
-        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-500 transition-colors group-hover:bg-indigo-50 group-hover:text-indigo-600">
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-          </svg>
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="text-sm font-semibold text-gray-900">{t('campaign.weeklyReportsTitle')}</div>
-          <div className="mt-0.5 text-xs text-gray-500">
-            {t('campaign.weeklyReportsCount', { count: reports.length })}
-          </div>
-        </div>
-        <svg
-          className={`h-4 w-4 flex-shrink-0 text-gray-400 transition-transform group-hover:text-indigo-600 ${open ? 'rotate-180' : ''}`}
-          fill="none"
-          viewBox="0 0 24 24"
-          strokeWidth={2.5}
-          stroke="currentColor"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-        </svg>
-      </button>
-
-      {open && (
-        <ul className="divide-y divide-gray-100 border-t border-gray-100 bg-gray-50/50">
-          {reports.map((report) => (
-            <li key={report.id}>
-              <a
-                href={report.fileUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group flex items-center gap-3 py-3 pl-14 pr-5 transition-colors hover:bg-white"
-              >
-                <div className="min-w-0 flex-1 truncate text-sm font-medium text-gray-700 group-hover:text-indigo-700">
-                  {report.name}
-                </div>
-                <span className="inline-flex flex-shrink-0 items-center gap-1 text-xs font-semibold text-gray-500 transition-colors group-hover:text-indigo-600">
-                  {t('campaign.weeklyReportsDownload')}
-                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                  </svg>
-                </span>
-              </a>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
   )
 }

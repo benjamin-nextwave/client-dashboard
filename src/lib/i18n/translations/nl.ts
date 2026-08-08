@@ -14,8 +14,13 @@ export interface Translations {
     myCampaign: string
     contact: string
     settings: string
+    onboarding: string
+    reports: string
+    mailVariants: string
+    help: string
     groupCampaign: string
     groupSupport: string
+    groupMyCampaign: string
     signOut: string
   }
   common: {
@@ -491,6 +496,28 @@ export interface Translations {
     explainerTitle: string
     explainerBody: string
   }
+  reportsPage: {
+    title: string
+    intro: string
+    weekTitle: string
+    weekEmpty: string
+    monthTitle: string
+    monthEmpty: string
+    count: string
+    countSingular: string
+    download: string
+  }
+  helpPage: {
+    title: string
+    intro: string
+    chatTitle: string
+    chatIntro: string
+    videosTitle: string
+  }
+  mailVariantsPage: {
+    title: string
+    intro: string
+  }
   sent: {
     title: string
     description: string
@@ -677,8 +704,13 @@ export const nl: Translations = {
     myCampaign: 'Mijn campagne',
     contact: 'Contact',
     settings: 'Instellingen & uitleg',
+    onboarding: 'Onboarding',
+    reports: 'Rapporten',
+    mailVariants: 'Mailvarianten',
+    help: 'Hulp & uitleg',
     groupCampaign: 'Campagne',
     groupSupport: 'Ondersteuning',
+    groupMyCampaign: 'Mijn campagne',
     signOut: 'Uitloggen',
   },
 
@@ -1200,6 +1232,31 @@ export const nl: Translations = {
     explainerTitle: 'Hoe het werkt',
     explainerBody:
       'Nieuwe vermeldingen staan eerst op "In behandeling". Zodra ons team ze heeft doorgevoerd, staan ze op "Verwerkt" en worden ze uit elke verzending gehouden.',
+  },
+
+  reportsPage: {
+    title: 'Rapporten',
+    intro: 'Alle week- en maandrapporten van je campagne, nieuwste eerst.',
+    weekTitle: 'Weekrapporten',
+    weekEmpty: 'Zodra we het eerste weekrapport klaarzetten, verschijnt het hier.',
+    monthTitle: 'Maandrapporten',
+    monthEmpty: 'Zodra we het eerste maandrapport klaarzetten, verschijnt het hier.',
+    count: '{count} rapporten',
+    countSingular: '1 rapport',
+    download: 'Downloaden',
+  },
+  helpPage: {
+    title: 'Hulp & uitleg',
+    intro: 'Stel je vraag aan de assistent of bekijk een van de uitlegvideo’s.',
+    chatTitle: 'Stel je vraag',
+    chatIntro:
+      'De assistent beantwoordt vragen over je campagne en het dashboard. Kom je er niet uit, dan verbindt hij je door met een medewerker.',
+    videosTitle: 'Uitlegvideo’s',
+  },
+  mailVariantsPage: {
+    title: 'Mailvarianten',
+    intro:
+      'De mails die namens jou worden verstuurd: wat er nu loopt, wat er op je goedkeuring wacht en wat er eerder is verstuurd.',
   },
 
   sent: {

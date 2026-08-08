@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import type { WeeklyReport } from '@/lib/data/weekly-reports'
+import type { ReportType, WeeklyReport } from '@/lib/data/weekly-reports'
 import {
   uploadWeeklyReportAction,
   renameWeeklyReportAction,
@@ -20,6 +20,7 @@ export function WeeklyReportsManager({ clientId, reports }: Props) {
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [dragOver, setDragOver] = useState(false)
+  const [reportType, setReportType] = useState<ReportType>('week')
 
   const handleFiles = (files: FileList | null) => {
     if (!files || files.length === 0) return
@@ -29,6 +30,7 @@ export function WeeklyReportsManager({ clientId, reports }: Props) {
       for (const file of list) {
         const formData = new FormData()
         formData.append('pdf', file)
+        formData.append('reportType', reportType)
         const result = await uploadWeeklyReportAction(clientId, formData)
         if (result.error) {
           setError(result.error)
@@ -43,11 +45,33 @@ export function WeeklyReportsManager({ clientId, reports }: Props) {
     <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
       <div className="mb-5 flex items-start justify-between gap-4 border-b border-gray-100 pb-4">
         <div>
-          <h2 className="text-sm font-semibold text-gray-900">Weekrapporten</h2>
+          <h2 className="text-sm font-semibold text-gray-900">Rapporten</h2>
           <p className="mt-0.5 text-xs text-gray-500">
-            Upload PDF-weekrapporten. De klant ziet ze terug onderaan hun campagne-pagina bij
-            &ldquo;Terug te vinden&rdquo;.
+            Upload PDF-rapporten. De klant ziet ze terug op de pagina &ldquo;Rapporten&rdquo;,
+            gescheiden per soort.
           </p>
+        </div>
+
+        {/* Bepaalt onder welke kop het rapport bij de klant terechtkomt. */}
+        <div className="flex flex-shrink-0 gap-0.5 rounded-lg border border-gray-200 bg-gray-50 p-0.5">
+          {([
+            ['week', 'Weekrapport'],
+            ['month', 'Maandrapport'],
+          ] as [ReportType, string][]).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setReportType(value)}
+              aria-pressed={reportType === value}
+              className={`rounded-md px-3 py-1.5 text-xs transition-colors ${
+                reportType === value
+                  ? 'bg-white font-semibold text-gray-900 shadow-sm'
+                  : 'font-medium text-gray-500 hover:text-gray-800'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -82,7 +106,12 @@ export function WeeklyReportsManager({ clientId, reports }: Props) {
           </svg>
         </div>
         <p className="mt-3 text-sm font-semibold text-gray-900">Sleep je PDF-bestanden hierheen</p>
-        <p className="mt-1 text-xs text-gray-500">of klik om te bladeren · PDF · maximaal 20 MB per stuk</p>
+        <p className="mt-1 text-xs text-gray-500">
+          of klik om te bladeren · PDF · maximaal 20 MB per stuk · uploaden als{' '}
+          <span className="font-semibold text-gray-700">
+            {reportType === 'month' ? 'maandrapport' : 'weekrapport'}
+          </span>
+        </p>
         {pending && (
           <p className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-indigo-600">
             <svg className="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -210,7 +239,18 @@ function WeeklyReportRow({
           </div>
         ) : (
           <>
-            <div className="truncate text-sm font-semibold text-gray-900">{report.name}</div>
+            <div className="flex items-center gap-2">
+              <span className="truncate text-sm font-semibold text-gray-900">{report.name}</span>
+              <span
+                className={`flex-shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                  report.reportType === 'month'
+                    ? 'bg-violet-50 text-violet-700'
+                    : 'bg-gray-100 text-gray-600'
+                }`}
+              >
+                {report.reportType === 'month' ? 'Maand' : 'Week'}
+              </span>
+            </div>
             <div className="mt-0.5 text-xs text-gray-500">Geüpload op {dateLabel}</div>
           </>
         )}

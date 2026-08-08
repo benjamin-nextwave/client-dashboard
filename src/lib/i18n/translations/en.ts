@@ -19,8 +19,13 @@ export const en: Translations = {
     myCampaign: 'My campaign',
     contact: 'Contact',
     settings: 'Settings & help',
+    onboarding: 'Onboarding',
+    reports: 'Reports',
+    mailVariants: 'Mail variants',
+    help: 'Help & guides',
     groupCampaign: 'Campaign',
     groupSupport: 'Support',
+    groupMyCampaign: 'My campaign',
     signOut: 'Sign out',
   },
 
@@ -534,6 +539,31 @@ export const en: Translations = {
     explainerTitle: 'How this works',
     explainerBody:
       'New entries start as "In progress". Once our team has applied them they show as "Processed" and are kept out of every send.',
+  },
+
+  reportsPage: {
+    title: 'Reports',
+    intro: 'Every weekly and monthly report for your campaign, newest first.',
+    weekTitle: 'Weekly reports',
+    weekEmpty: 'The first weekly report will appear here once we publish it.',
+    monthTitle: 'Monthly reports',
+    monthEmpty: 'The first monthly report will appear here once we publish it.',
+    count: '{count} reports',
+    countSingular: '1 report',
+    download: 'Download',
+  },
+  helpPage: {
+    title: 'Help & guides',
+    intro: 'Ask the assistant a question, or watch one of the walkthrough videos.',
+    chatTitle: 'Ask your question',
+    chatIntro:
+      'The assistant answers questions about your campaign and this dashboard. If it cannot help, it puts you through to a colleague.',
+    videosTitle: 'Walkthrough videos',
+  },
+  mailVariantsPage: {
+    title: 'Mail variants',
+    intro:
+      'The emails sent on your behalf: what is running, what is waiting for your approval, and what went out earlier.',
   },
 
   sent: {

@@ -10,9 +10,11 @@ interface NavItemProps {
   badge?: number
   external?: boolean
   collapsed?: boolean
+  /** Navigeer met een volledige paginalading in plaats van client-side. */
+  reload?: boolean
 }
 
-export function NavItem({ href, label, icon, badge, external, collapsed }: NavItemProps) {
+export function NavItem({ href, label, icon, badge, external, collapsed, reload }: NavItemProps) {
   const pathname = usePathname()
   const isActive =
     pathname === href || (pathname.startsWith(href) && href !== '/dashboard')
@@ -55,6 +57,19 @@ export function NavItem({ href, label, icon, badge, external, collapsed }: NavIt
         href={href}
         target="_blank"
         rel="noopener noreferrer"
+        className={className}
+        title={collapsed ? label : undefined}
+        aria-label={collapsed ? label : undefined}
+      >
+        {content}
+      </a>
+    )
+  }
+
+  if (reload) {
+    return (
+      <a
+        href={href}
         className={className}
         title={collapsed ? label : undefined}
         aria-label={collapsed ? label : undefined}
