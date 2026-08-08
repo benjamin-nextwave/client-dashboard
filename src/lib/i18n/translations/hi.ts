@@ -611,6 +611,8 @@ export const hi: Translations = {
     chatIntro:
       'सहायक आपके अभियान और इस डैशबोर्ड से जुड़े प्रश्नों के उत्तर देता है। अगर वह मदद न कर सके, तो वह आपको किसी सहकर्मी से जोड़ देता है।',
     videosTitle: 'मार्गदर्शन वीडियो',
+    searchPlaceholder: 'वीडियो खोजें…',
+    searchEmpty: 'कोई वीडियो नहीं मिली।',
   },
   mailVariantsPage: {
     title: 'मेल वैरिएंट',

@@ -612,6 +612,8 @@ export const en: Translations = {
     chatIntro:
       'The assistant answers questions about your campaign and this dashboard. If it cannot help, it puts you through to a colleague.',
     videosTitle: 'Walkthrough videos',
+    searchPlaceholder: 'Search a video…',
+    searchEmpty: 'No video found.',
   },
   mailVariantsPage: {
     title: 'Mail variants',

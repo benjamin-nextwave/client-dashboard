@@ -560,6 +560,8 @@ export interface Translations {
     chatTitle: string
     chatIntro: string
     videosTitle: string
+    searchPlaceholder: string
+    searchEmpty: string
   }
   mailVariantsPage: {
     title: string
@@ -1429,6 +1431,8 @@ export const nl: Translations = {
     chatIntro:
       'De assistent beantwoordt vragen over je campagne en het dashboard. Kom je er niet uit, dan verbindt hij je door met een medewerker.',
     videosTitle: 'Uitlegvideo’s',
+    searchPlaceholder: 'Zoek een video…',
+    searchEmpty: 'Geen video gevonden.',
   },
   mailVariantsPage: {
     title: 'Mailvarianten',

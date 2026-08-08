@@ -75,12 +75,15 @@ export function VoiceglowChat() {
   return <div id="VG_OVERLAY_CONTAINER" style={{ width: 0, height: 0 }} />
 }
 
-/** De bot als vast blok in de pagina, voor Hulp & uitleg. */
+/**
+ * De bot als vast blok in de pagina, voor Hulp & uitleg. De hoogte komt van de
+ * ouder, zodat de hulppagina de kolom kan bepalen.
+ */
 export function VoiceglowInline() {
   return (
     <div
       id="VG_OVERLAY_CONTAINER"
-      className="h-[520px] w-full overflow-hidden rounded-panel border border-line bg-panel"
+      className="h-full w-full overflow-hidden rounded-panel border border-line bg-panel"
     />
   )
 }
