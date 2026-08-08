@@ -54,7 +54,10 @@ export interface ClientTaskOverview {
   createdAt: string
 }
 
-const STEP_ORDER: OnboardingStep[] = ['dashboard', 'form', 'drafts', 'variants', 'preview', 'dnc']
+// 'preview' is uit de flow gehaald toen de voorvertoning-pagina verdween; de
+// klant kon die stap niet meer afronden. Dezelfde vijf stappen als deriveTasks,
+// zodat klant en operator hetzelfde aantal zien.
+const STEP_ORDER: OnboardingStep[] = ['dashboard', 'form', 'drafts', 'variants', 'dnc']
 
 export async function getManagementOverview(): Promise<ClientTaskOverview[]> {
   const supabase = createAdminClient()
@@ -99,7 +102,9 @@ export async function getManagementOverview(): Promise<ClientTaskOverview[]> {
     const step5 = !!str('campaign_preview_approved_at')
     const step6 = !!str('campaign_dnc_confirmed_at')
 
-    const steps = [step1, step2, step3, step4, step5, step6]
+    // step5 (voorvertoning) telt niet meer mee, maar blijft wel in de uitvoer
+    // staan zodat het admin dashboard de historische goedkeuring kan tonen.
+    const steps = [step1, step2, step3, step4, step6]
     const completedSteps = steps.filter(Boolean).length
     const firstIncomplete = steps.findIndex((s) => !s)
     const currentStep: OnboardingStep | null =

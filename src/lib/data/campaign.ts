@@ -10,6 +10,12 @@ export interface CampaignTask {
   assignee: TaskAssignee
   status: TaskStatus
   note?: string
+  /** Wanneer de stap is afgerond — alleen waar de bron een tijdstempel heeft. */
+  completedAt?: string | null
+  /** Mag overgeslagen worden; telt niet mee in "nog X dingen". */
+  optional?: boolean
+  /** Waar de klant de stap afhandelt. */
+  href?: string
 }
 
 export interface CampaignState {
@@ -424,20 +430,25 @@ async function fetchItemsBySubmission(
  * Task order:
  *  1. Dashboard opgeleverd (NextWave, auto-complete)
  *  2. Invulformulier invullen (Klant)
- *  3. Mailopzetjes & voorvertoning aanvullen (NextWave)
+ *  3. Mailopzetjes aanvullen (NextWave)
  *  4. Mailvarianten goedkeuren (Klant)
- *  5. Voorvertoning goedkeuren (Klant)
- *  6. DNC invullen (Klant, optioneel)
+ *  5. DNC invullen (Klant, optioneel)
+ *
+ * "Voorvertoning goedkeuren" zat hier als vijfde stap tussen. Die is vervallen
+ * met de voorvertoning-pagina: de klant kon hem niet meer afronden, waardoor de
+ * flow er permanent op bleef staan en een campagne nooit meer op afgerond kwam.
+ * De kolom campaign_preview_approved_at blijft bestaan voor de historie.
+ *
+ * Stap 1 en 3 hebben geen tijdstempel in de data; daar blijft completedAt leeg.
  */
 export function deriveTasks(state: CampaignState): CampaignTask[] {
   const task1Done = true // dashboard always delivered
   const task2Done = !!state.formSubmittedAt
   const task3Done = state.mailDraftsReady && state.previewFilled
   const task4Done = !!state.variantsApprovedAt
-  const task5Done = !!state.previewApprovedAt
-  const task6Done = !!state.dncConfirmedAt
+  const task5Done = !!state.dncConfirmedAt
 
-  const doneFlags = [task1Done, task2Done, task3Done, task4Done, task5Done, task6Done]
+  const doneFlags = [task1Done, task2Done, task3Done, task4Done, task5Done]
   // First not-done index is "current". -1 means everything is done.
   const currentIndex = doneFlags.findIndex((d) => !d)
 
@@ -459,10 +470,12 @@ export function deriveTasks(state: CampaignState): CampaignTask[] {
       label: 'Invulformulier invullen',
       assignee: 'client',
       status: statusFor(1, task2Done),
+      completedAt: state.formSubmittedAt,
+      href: '/dashboard/mijn-campagne/invulformulier',
     },
     {
       id: 'drafts',
-      label: 'Mailopzetjes & voorvertoning aanvullen',
+      label: 'Mailopzetjes aanvullen',
       assignee: 'nextwave',
       status: statusFor(2, task3Done),
       note: 'Vaak ~48u, bij drukte langer',
@@ -472,22 +485,21 @@ export function deriveTasks(state: CampaignState): CampaignTask[] {
       label: 'Mailvarianten goedkeuren',
       assignee: 'client',
       status: statusFor(3, task4Done),
-    },
-    {
-      id: 'preview',
-      label: 'Voorvertoning goedkeuren',
-      assignee: 'client',
-      status: statusFor(4, task5Done),
+      completedAt: state.variantsApprovedAt,
+      href: '/dashboard/mailvarianten',
     },
     {
       id: 'dnc',
       label: 'DNC-lijst aanvullen (optioneel)',
       assignee: 'client',
-      status: statusFor(5, task6Done),
+      status: statusFor(4, task5Done),
+      completedAt: state.dncConfirmedAt,
+      optional: true,
+      href: '/dashboard/dnc',
     },
   ]
 }
 
 export function isCampaignReadyForCompletion(state: CampaignState): boolean {
-  return !!state.previewApprovedAt && !!state.variantsApprovedAt && !state.completedAt
+  return !!state.variantsApprovedAt && !state.completedAt
 }

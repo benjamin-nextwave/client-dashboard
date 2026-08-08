@@ -496,6 +496,53 @@ export interface Translations {
     explainerTitle: string
     explainerBody: string
   }
+  onboardingPage: {
+    eyebrow: string
+    headlineDone: string
+    headlineOne: string
+    headlineMany: string
+    intro: string
+    sectionYours: string
+    sectionOurs: string
+    sectionDone: string
+    ownerClient: string
+    ownerNextwave: string
+    optional: string
+    open: string
+    view: string
+    progressTitle: string
+    stepsYours: string
+    stepsYoursSingular: string
+    stepsOurs: string
+    stepsOursSingular: string
+    deadlineLabel: string
+    daysLeft: string
+    daysLeftSingular: string
+    nextTitle: string
+    next1: string
+    next1Meta: string
+    next2: string
+    next2Meta: string
+    next3: string
+    next3Meta: string
+    next4: string
+    next4Meta: string
+    helpTitle: string
+    helpBody: string
+    helpButton: string
+    variantsReviewed: string
+    variantApproved: string
+    variantTodo: string
+    variantsPdf: string
+    stepDashboardBody: string
+    stepFormBody: string
+    stepFormAction: string
+    stepDraftsBody: string
+    stepVariantsBody: string
+    stepVariantsAction: string
+    stepDncBody: string
+    stepDncAction: string
+  }
   reportsPage: {
     title: string
     intro: string
@@ -1234,6 +1281,59 @@ export const nl: Translations = {
       'Nieuwe vermeldingen staan eerst op "In behandeling". Zodra ons team ze heeft doorgevoerd, staan ze op "Verwerkt" en worden ze uit elke verzending gehouden.',
   },
 
+  onboardingPage: {
+    eyebrow: 'Onboarding',
+    headlineDone: 'Alles is aangeleverd — wij zetten de campagne klaar',
+    headlineOne: 'Nog één ding en je campagne gaat live',
+    headlineMany: 'Nog {count} dingen en je campagne gaat live',
+    intro:
+      'Hieronder staat precies wat er nog van jou nodig is. De rest doen wij. Zodra alles is goedgekeurd, plannen we de eerste verzending in.',
+    sectionYours: 'Nu aan jou',
+    sectionOurs: 'Bij ons',
+    sectionDone: 'Al afgerond',
+    ownerClient: 'Jij',
+    ownerNextwave: 'NextWave',
+    optional: 'Optioneel',
+    open: 'Openen',
+    view: 'Bekijken',
+    progressTitle: 'Voortgang',
+    stepsYours: 'stappen van jou',
+    stepsYoursSingular: 'stap van jou',
+    stepsOurs: 'stappen van ons',
+    stepsOursSingular: 'stap van ons',
+    deadlineLabel: 'Deadline goedkeuring',
+    daysLeft: 'Nog {count} dagen',
+    daysLeftSingular: 'Nog 1 dag',
+    nextTitle: 'Wat er hierna gebeurt',
+    next1: 'Wij verwerken je feedback',
+    next1Meta: 'Binnen 1 werkdag',
+    next2: 'Testverzending naar jou',
+    next2Meta: 'Zodra alles goedgekeurd is',
+    next3: 'Eerste verzending',
+    next3Meta: 'In overleg ingepland',
+    next4: 'Wekelijks rapport',
+    next4Meta: 'Terug te vinden onder Rapporten',
+    helpTitle: 'Loop je ergens tegenaan?',
+    helpBody:
+      'Twijfel je over een variant of weet je niet wat er van je wordt verwacht? Stel je vraag aan de assistent — die verbindt je zo nodig door met een medewerker.',
+    helpButton: 'Naar Hulp & uitleg',
+    variantsReviewed: '{approved} van {total} beoordeeld',
+    variantApproved: 'Goedgekeurd',
+    variantTodo: 'Nog beoordelen',
+    variantsPdf: 'PDF downloaden',
+    stepDashboardBody: 'Je dashboard staat klaar met je eigen huisstijl en toegang.',
+    stepFormBody:
+      'Vertel ons wie je wil bereiken en wat je aanbod is. Op basis daarvan schrijven wij je mails.',
+    stepFormAction: 'Formulier invullen',
+    stepDraftsBody:
+      'Wij schrijven de mailvarianten en zetten je campagne klaar. Je krijgt bericht zodra ze klaarstaan.',
+    stepVariantsBody:
+      'Bekijk de mails die namens jou worden verstuurd. Keur ze goed of geef per variant feedback.',
+    stepVariantsAction: 'Varianten bekijken',
+    stepDncBody:
+      'Adressen en domeinen die nooit benaderd mogen worden, bijvoorbeeld bestaande klanten of concurrenten.',
+    stepDncAction: 'Uitsluitingen invullen',
+  },
   reportsPage: {
     title: 'Rapporten',
     intro: 'Alle week- en maandrapporten van je campagne, nieuwste eerst.',
