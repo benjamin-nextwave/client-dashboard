@@ -52,7 +52,7 @@ export function DncStats({ entries }: { entries: DncEntry[] }) {
         label={t('dnc.statActive')}
         value={active}
         meta={pending > 0 ? `${pending} ${t('dnc.statProcessing')}` : t('dnc.statActiveMeta')}
-        accent={pending > 0 ? 'var(--color-warn)' : 'var(--color-pos)'}
+        accent={pending > 0 ? 'var(--color-neg)' : 'var(--color-pos)'}
       />
     </div>
   )

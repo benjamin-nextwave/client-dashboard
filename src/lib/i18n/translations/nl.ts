@@ -463,6 +463,7 @@ export interface Translations {
     countDuplicates: string
     countDuplicatesSingular: string
     countInvalid: string
+    notAdded: string
     searchPlaceholder: string
     filterAll: string
     filterEmails: string
@@ -1145,19 +1146,19 @@ export const nl: Translations = {
     typeDomain: 'Domein',
     removeButton: 'Verwijderen',
     statusColumn: 'Status',
-    statusPending: 'Wordt verwerkt',
-    statusApproved: 'Actief gefilterd',
+    statusPending: 'In behandeling',
+    statusApproved: 'Verwerkt',
     intro:
       'Adressen en domeinen die nooit benaderd worden. Alles op deze lijst wordt uit elke campagne gefilterd voordat er wordt verzonden.',
     statTotal: 'Op de lijst',
     statEmails: 'Losse adressen',
     statDomains: 'Hele domeinen',
-    statActive: 'Actief gefilterd',
-    statActiveMeta: 'doorgevoerd',
-    statProcessing: 'wordt nog verwerkt',
+    statActive: 'Verwerkt',
+    statActiveMeta: 'alles doorgevoerd',
+    statProcessing: 'in behandeling',
     addTitle: 'Toevoegen',
-    addHint: 'Eén per regel. Een heel domein blokkeer je met {example}.',
-    addPlaceholder: 'info@concurrent.nl\n@partnerbedrijf.nl',
+    addHint: 'Eén per regel. Een heel domein blokkeer je door alleen {example} te typen.',
+    addPlaceholder: 'info@concurrent.nl\npartnerbedrijf.nl',
     addButton: 'Toevoegen',
     addButtonCount: '{count} toevoegen',
     addBusy: 'Bezig…',
@@ -1169,6 +1170,7 @@ export const nl: Translations = {
     countDuplicates: '{count} stonden er al op',
     countDuplicatesSingular: '1 stond er al op',
     countInvalid: '{count} onleesbaar',
+    notAdded: 'Wordt niet toegevoegd',
     searchPlaceholder: 'Zoek een adres of domein',
     filterAll: 'Alles',
     filterEmails: 'Adressen',
@@ -1197,7 +1199,7 @@ export const nl: Translations = {
     csvDropHint: 'Sleep een CSV-bestand hierheen of klik om te kiezen',
     explainerTitle: 'Hoe het werkt',
     explainerBody:
-      'Nieuwe vermeldingen krijgen eerst "Wordt verwerkt". Zodra ons team ze heeft doorgevoerd, staan ze op "Actief gefilterd" en worden ze uit elke verzending gehouden.',
+      'Nieuwe vermeldingen staan eerst op "In behandeling". Zodra ons team ze heeft doorgevoerd, staan ze op "Verwerkt" en worden ze uit elke verzending gehouden.',
   },
 
   sent: {

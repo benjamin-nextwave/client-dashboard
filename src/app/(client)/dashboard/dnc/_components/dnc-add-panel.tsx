@@ -23,12 +23,6 @@ const DOT: Record<Tone, string> = {
   warn: 'bg-warn',
 }
 
-const LINE_STYLE: Record<string, string> = {
-  email: 'text-fg',
-  domain: 'text-fg',
-  duplicate: 'text-faint line-through',
-  invalid: 'text-neg',
-}
 
 /**
  * Eén invoerveld voor adressen én domeinen, met live parse- en dedupe-preview.
@@ -116,23 +110,11 @@ export function DncAddPanel({
       <div className="px-4 pt-3.5">
         <h3 className="text-[13.5px] font-semibold tracking-[-0.01em]">{t('dnc.addTitle')}</h3>
         <p className="mt-[5px] text-[11.5px] leading-[1.5] text-muted">
-          {t('dnc.addHint', { example: '@bedrijf.nl' })}
+          {t('dnc.addHint', { example: 'bedrijf.nl' })}
         </p>
       </div>
 
-      <div className="relative px-4 pt-3">
-        {/* Gekleurde weergave onder het transparante tekstvak: nieuw in zwart,
-            al-op-de-lijst doorgestreept grijs, onleesbaar rood. */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-4 top-3 min-h-[82px] overflow-hidden rounded-[9px] border border-transparent px-3 py-2.5 font-mono text-[12.5px] leading-[1.7]"
-        >
-          {parsed.lines.map((line, i) => (
-            <div key={`${line.raw}-${i}`} className={LINE_STYLE[line.kind]}>
-              {line.raw}
-            </div>
-          ))}
-        </div>
+      <div className="px-4 pt-3">
         <textarea
           ref={areaRef}
           value={text}
@@ -141,7 +123,7 @@ export function DncAddPanel({
           spellCheck={false}
           placeholder={t('dnc.addPlaceholder')}
           aria-label={t('dnc.addTitle')}
-          className="relative block min-h-[82px] w-full resize-y rounded-[9px] border border-line bg-track px-3 py-2.5 font-mono text-[12.5px] leading-[1.7] text-transparent caret-fg outline-none placeholder:text-faint focus:ring-2 focus:ring-[var(--brand-color)]"
+          className="block min-h-[82px] w-full resize-y rounded-[9px] border border-line bg-track px-3 py-2.5 font-mono text-[12.5px] leading-[1.7] text-fg outline-none placeholder:text-faint focus:ring-2 focus:ring-[var(--brand-color)]"
         />
       </div>
 
@@ -158,6 +140,28 @@ export function DncAddPanel({
               {chip.label}
             </span>
           ))}
+        </div>
+      )}
+
+      {/* Wat er niet bij komt staat onder het veld, niet eroverheen: bij lange
+          of afgebroken regels loopt een overlay uit de pas met het tekstvak. */}
+      {(parsed.duplicates.length > 0 || parsed.invalid.length > 0) && (
+        <div className="px-4 pt-2.5">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-faint">
+            {t('dnc.notAdded')}
+          </div>
+          <ul className="mt-1.5 max-h-24 overflow-y-auto font-mono text-[11.5px] leading-[1.6]">
+            {parsed.duplicates.map((value, i) => (
+              <li key={`dup-${value}-${i}`} className="truncate text-faint line-through">
+                {value}
+              </li>
+            ))}
+            {parsed.invalid.map((raw, i) => (
+              <li key={`bad-${raw}-${i}`} className="truncate text-neg">
+                {raw}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 

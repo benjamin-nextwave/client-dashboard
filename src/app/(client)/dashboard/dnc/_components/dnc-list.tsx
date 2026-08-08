@@ -221,7 +221,8 @@ export function DncList({ entries }: { entries: DncEntry[] }) {
           pageItems.map((entry) => {
             const selected = selection.has(entry.id)
             const isDomain = entry.entry_type === 'domain'
-            const tone = entry.approved ? 'var(--color-pos)' : 'var(--color-warn)'
+            // Groen zodra het doorgevoerd is, rood zolang het nog niet filtert.
+            const tone = entry.approved ? 'var(--color-pos)' : 'var(--color-neg)'
 
             return (
               <div
