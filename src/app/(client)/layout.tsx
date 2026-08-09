@@ -2,7 +2,6 @@ import { redirect } from 'next/navigation'
 import { getClientBranding } from '@/lib/client/get-client-branding'
 import { SidebarNav } from '@/components/client/sidebar-nav'
 import { LanguageSwitcher } from '@/components/client/language-switcher'
-import { TestEnvironmentBar } from '@/components/client/test-environment-bar'
 import { VoiceglowChat } from '@/components/client/voiceglow-chat'
 import { I18nProvider } from '@/lib/i18n/client'
 import { getLocale } from '@/lib/i18n/server'
@@ -50,7 +49,6 @@ export default async function ClientLayout({
           </div>
         </main>
         <LanguageSwitcher />
-        <TestEnvironmentBar />
         <VoiceglowChat />
       </div>
     </I18nProvider>
