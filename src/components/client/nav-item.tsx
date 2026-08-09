@@ -19,7 +19,11 @@ export function NavItem({ href, label, icon, badge, external, collapsed, reload 
   const isActive =
     pathname === href || (pathname.startsWith(href) && href !== '/dashboard')
 
-  const className = `group relative flex items-center rounded-control py-[7px] text-[12.5px] transition-colors ${
+  // Vaste rijhoogte. Uitgeklapt bepaalt het tekstregelvakje (12.5px) de hoogte,
+  // ingeklapt zou dat het 16px-icoon zijn — dan zakt de hele balk per item een
+  // paar pixels in en staan de iconen niet meer op dezelfde hoogte als in de
+  // uitgeklapte stand.
+  const className = `group relative flex h-[33px] items-center rounded-control text-[12.5px] transition-colors ${
     collapsed ? 'justify-center px-0' : 'gap-3 px-3'
   } ${
     isActive

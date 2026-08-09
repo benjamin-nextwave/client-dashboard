@@ -202,31 +202,41 @@ export function SidebarNav({ signOutAction, inboxUrl, inboxVisible, leadInboxVis
         className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,var(--brand-20),transparent_320px)]"
       />
 
-      {/* Merk — Nextwave, niet het klantlogo */}
+      {/* Merk — Nextwave, niet het klantlogo. De band eromheen heeft een vaste
+          hoogte: het brede logo is ~44px hoog, het merkteken maar ~12px, en
+          zonder die band zou alles eronder bij het inklappen 32px omhoog
+          springen. */}
       <div
-        className={`relative flex items-center pb-3 pt-4 ${
+        className={`relative flex shrink-0 items-center pb-3 pt-4 ${
           collapsed ? 'justify-center px-3' : 'px-5'
         }`}
       >
-        <Image
-          src={collapsed ? '/nextwave-logo-mark.png' : '/nextwave-logo-wide.png'}
-          alt="Nextwave Solutions"
-          width={collapsed ? 96 : 560}
-          height={collapsed ? 36 : 165}
-          priority
-          className={collapsed ? 'h-auto w-8' : 'h-auto w-[150px]'}
-        />
+        <span className="flex h-11 items-center">
+          <Image
+            src={collapsed ? '/nextwave-logo-mark.png' : '/nextwave-logo-wide.png'}
+            alt="Nextwave Solutions"
+            width={collapsed ? 96 : 560}
+            height={collapsed ? 36 : 165}
+            priority
+            className={collapsed ? 'h-auto w-8' : 'h-auto w-[150px]'}
+          />
+        </span>
       </div>
 
       {/* Navigatie */}
       <nav className="relative min-h-0 flex-1 overflow-hidden px-3 py-0.5">
         {groups.map((group, i) => (
           <div key={i} className="mb-2">
+            {/* Groepskop en de haarlijn die hem ingeklapt vervangt zijn even
+                hoog (21px), zodat de iconen in beide standen op dezelfde
+                hoogte blijven staan. */}
             {group.title &&
               (collapsed ? (
-                <div className="mx-3 mb-1 mt-0.5 border-t border-white/[0.09]" aria-hidden />
+                <div className="flex h-[21px] items-center px-3" aria-hidden>
+                  <span className="h-px w-full bg-white/[0.09]" />
+                </div>
               ) : (
-                <div className="px-3 pb-1 pt-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/30">
+                <div className="h-[21px] px-3 pt-0.5 text-[10px] font-semibold uppercase leading-[15px] tracking-[0.18em] text-white/30">
                   {group.title}
                 </div>
               ))}
@@ -254,7 +264,7 @@ export function SidebarNav({ signOutAction, inboxUrl, inboxVisible, leadInboxVis
           title={collapsed ? 'Zijbalk uitklappen' : 'Zijbalk inklappen'}
           aria-label={collapsed ? 'Zijbalk uitklappen' : 'Zijbalk inklappen'}
           aria-expanded={!collapsed}
-          className={`flex w-full items-center rounded-control py-[7px] text-[12.5px] text-white/60 transition-colors hover:bg-white/5 hover:text-white/90 ${
+          className={`flex h-[33px] w-full items-center rounded-control text-[12.5px] text-white/60 transition-colors hover:bg-white/5 hover:text-white/90 ${
             collapsed ? 'justify-center px-0' : 'gap-3 px-3'
           }`}
         >
@@ -280,7 +290,7 @@ export function SidebarNav({ signOutAction, inboxUrl, inboxVisible, leadInboxVis
           <button
             type="submit"
             title={collapsed ? t('nav.signOut') : undefined}
-            className={`flex w-full items-center rounded-control py-[7px] text-[12.5px] text-white/60 transition-colors hover:bg-white/5 hover:text-white/90 ${
+            className={`flex h-[33px] w-full items-center rounded-control text-[12.5px] text-white/60 transition-colors hover:bg-white/5 hover:text-white/90 ${
               collapsed ? 'justify-center px-0' : 'gap-3 px-3'
             }`}
           >
