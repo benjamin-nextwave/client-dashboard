@@ -614,6 +614,7 @@ export const en: Translations = {
     videosTitle: 'Walkthrough videos',
     searchPlaceholder: 'Search a video…',
     searchEmpty: 'No video found.',
+    goToVideo: 'Go to video {number}',
   },
   mailVariantsPage: {
     title: 'Mail variants',

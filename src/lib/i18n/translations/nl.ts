@@ -562,6 +562,7 @@ export interface Translations {
     videosTitle: string
     searchPlaceholder: string
     searchEmpty: string
+    goToVideo: string
   }
   mailVariantsPage: {
     title: string
@@ -1433,6 +1434,7 @@ export const nl: Translations = {
     videosTitle: 'Uitlegvideo’s',
     searchPlaceholder: 'Zoek een video…',
     searchEmpty: 'Geen video gevonden.',
+    goToVideo: 'Naar video {number}',
   },
   mailVariantsPage: {
     title: 'Mailvarianten',

@@ -613,6 +613,7 @@ export const hi: Translations = {
     videosTitle: 'मार्गदर्शन वीडियो',
     searchPlaceholder: 'वीडियो खोजें…',
     searchEmpty: 'कोई वीडियो नहीं मिली।',
+    goToVideo: 'वीडियो {number} पर जाएँ',
   },
   mailVariantsPage: {
     title: 'मेल वैरिएंट',
