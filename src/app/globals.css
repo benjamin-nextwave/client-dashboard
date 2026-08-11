@@ -140,6 +140,127 @@
   border-radius: 6px;
 }
 
+/* ---------------------------------------------------------------------------
+   Inlogpagina — de donkere merkkolom met de outreach-animatie.
+
+   Alles hier is gescopet op .auth-*, zodat geen enkel dashboard er iets van
+   erft. De achtergronden staan in CSS en niet als Tailwind-utility, omdat het
+   om gradients met komma's gaat die als arbitrary value onleesbaar worden.
+--------------------------------------------------------------------------- */
+
+/* Fijn raster dat naar de randen wegvalt — geeft diepte zonder schaduw. */
+.auth-grid {
+  background-image:
+    linear-gradient(to right, rgb(255 255 255 / 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(255 255 255 / 0.05) 1px, transparent 1px);
+  background-size: 46px 46px;
+  mask-image: radial-gradient(ellipse 75% 60% at 45% 45%, #000 10%, transparent 78%);
+}
+
+.auth-glow-top {
+  background: radial-gradient(circle at center, var(--brand-40), transparent 68%);
+}
+
+.auth-glow-bottom {
+  background: radial-gradient(circle at center, var(--brand-20), transparent 70%);
+}
+
+/* Het lichtpuntje dat over een verbindingslijn loopt. De paden hebben
+   pathLength="100", dus één omloop is precies 100 ongeacht de echte lengte —
+   daardoor lopen alle lijnen even snel en sluit de lus naadloos. */
+@keyframes authFlow {
+  from {
+    stroke-dashoffset: 100;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Ontvanger licht op op het moment dat het puntje aankomt. */
+@keyframes authPing {
+  0% {
+    opacity: 0.28;
+    transform: scale(1);
+  }
+  8% {
+    opacity: 1;
+    transform: scale(1.55);
+  }
+  34% {
+    opacity: 0.28;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0.28;
+    transform: scale(1);
+  }
+}
+
+@keyframes authBreathe {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.07);
+  }
+}
+
+@keyframes authRise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.auth-flow {
+  animation: authFlow 3.2s linear infinite;
+}
+
+.auth-ping,
+.auth-breathe {
+  /* De vormen staan op cx/cy = 0 binnen een <g> die ze positioneert, dus (0,0)
+     ís hun middelpunt. Dat is betrouwbaarder dan transform-box: fill-box,
+     waarmee de ringen in Chrome naast hun contact belandden. */
+  transform-origin: 0 0;
+}
+
+.auth-ping {
+  animation: authPing 3.2s ease-out infinite;
+}
+
+.auth-breathe {
+  animation: authBreathe 9s ease-in-out infinite;
+}
+
+.auth-rise {
+  animation: authRise 0.6s ease-out both;
+}
+
+/* Focus op de invoervelden: een outline binnen de rand in plaats van een ring,
+   want het ontwerpsysteem staat geen box-shadows toe. */
+.auth-field:focus-visible {
+  outline: 2px solid var(--brand-color, #3b82f6);
+  outline-offset: -2px;
+  border-color: var(--brand-color, #3b82f6);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-flow,
+  .auth-ping,
+  .auth-breathe,
+  .auth-rise {
+    animation: none !important;
+  }
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
