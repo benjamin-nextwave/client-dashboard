@@ -4,6 +4,11 @@
 
 Zeg *"draai het dashboard terug naar fase 1"* en dan wordt onderstaande uitgevoerd.
 
+> **Stand 11 augustus 2026:** de redesign is live gezet als
+> `dpl_3yQYKVab8ANi4w7p9FiaFTp97nUK`
+> (`client-dashboard-4f07iymsj-next-wave-ais-projects-9af589b5.vercel.app`).
+> Fase 1 is daarmee de vórige deployment en blijft het terugvalpunt.
+
 ---
 
 ## Wat fase 1 precies is
