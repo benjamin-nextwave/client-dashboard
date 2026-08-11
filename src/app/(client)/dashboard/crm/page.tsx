@@ -8,11 +8,6 @@ import { CrmShell } from './_components/crm-shell'
 export const metadata: Metadata = { title: 'CRM' }
 export const dynamic = 'force-dynamic'
 
-// De feedback/klacht-knop is tijdelijk: vanaf 31 augustus 2026 (middernacht
-// Amsterdamse tijd) verdwijnt hij vanzelf. Bewust hier op de server bepaald,
-// zodat de klok van de bezoeker er geen invloed op heeft.
-const FEEDBACK_HIDDEN_FROM = new Date('2026-08-31T00:00:00+02:00')
-
 export default async function CrmPage() {
   const supabase = await createClient()
   const {
@@ -34,7 +29,6 @@ export default async function CrmPage() {
       initialEntries={entries}
       initialLabels={labels}
       initialConnections={connections}
-      showFeedback={new Date() < FEEDBACK_HIDDEN_FROM}
     />
   )
 }

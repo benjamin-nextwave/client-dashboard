@@ -40,7 +40,6 @@ import { CrmDetail } from './crm-detail'
 import { CrmStats } from './crm-stats'
 import { CrmTable, SORT_KEYS, sortLabelOf, type SortKey } from './crm-table'
 import { ExportMenu } from './export-menu'
-import { FeedbackButton } from './feedback-button'
 import { LabelManager } from './label-manager'
 import { buttonClass } from '@/components/client/ui/panel'
 
@@ -78,13 +77,10 @@ export function CrmShell({
   initialEntries,
   initialLabels,
   initialConnections,
-  showFeedback,
 }: {
   initialEntries: CrmEntry[]
   initialLabels: CrmLabel[]
   initialConnections: CrmConnectionSummary[]
-  /** Tijdelijke feedback/klacht-knop; server bepaalt of hij nog zichtbaar is. */
-  showFeedback: boolean
 }) {
   const [entries, setEntries] = useState<CrmEntry[]>(initialEntries)
   const [labels, setLabels] = useState<CrmLabel[]>(initialLabels)
@@ -362,7 +358,6 @@ export function CrmShell({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {showFeedback && <FeedbackButton />}
           <button
             type="button"
             onClick={() => setHubspotOpen(true)}
