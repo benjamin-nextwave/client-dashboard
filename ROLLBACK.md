@@ -4,10 +4,16 @@
 
 Zeg *"draai het dashboard terug naar fase 1"* en dan wordt onderstaande uitgevoerd.
 
-> **Stand 11 augustus 2026:** de redesign is live gezet als
-> `dpl_3yQYKVab8ANi4w7p9FiaFTp97nUK`
-> (`client-dashboard-4f07iymsj-next-wave-ais-projects-9af589b5.vercel.app`).
-> Fase 1 is daarmee de vórige deployment en blijft het terugvalpunt.
+> **Stand 11 augustus 2026.** Er zijn nu twee terugvalpunten:
+>
+> | Terug naar | Deployment | Wat je terugkrijgt |
+> |---|---|---|
+> | **Fase 1** | `client-dashboard-2tk3mq6ml-…` (4 aug) | alles vóór de redesign |
+> | **Redesign zonder admin-opschoning** | `client-dashboard-4f07iymsj-…` (11 aug) | de redesign mét Mailen, Feedback en Maandelijks rapport |
+>
+> Live draait nu `client-dashboard-4douoypm9-…`: de redesign plus het
+> verwijderen van die drie admin-pagina's, de goedkeuringen-banner en de
+> feedbackknop in het klant-CRM.
 
 ---
 
