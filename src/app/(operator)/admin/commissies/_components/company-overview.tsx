@@ -141,7 +141,7 @@ export function CompanyOverview({ overview }: CompanyOverviewProps) {
         </button>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <SummaryCard label="Commissies" value={formatEuroCents(totalCommissionCents)} tone="neutral" />
         <SummaryCard
           label="Uitgaven"
@@ -159,15 +159,12 @@ export function CompanyOverview({ overview }: CompanyOverviewProps) {
           tone={netCents === null ? 'muted' : netCents >= 0 ? 'positive' : 'negative'}
         />
         <SummaryCard
-          label="Salaris"
-          value={'−' + formatEuroCents(salaryCents)}
-          tone="cost"
-          note={`${salaryMonths} × ${SALARY_HEADCOUNT} × ${formatEuroCents(MONTHLY_SALARY_CENTS)}`}
-        />
-        <SummaryCard
           label="Bedrag over na salaris"
           value={afterSalaryCents === null ? 'Onbekend' : formatEuroCents(afterSalaryCents)}
           tone={afterSalaryCents === null ? 'muted' : afterSalaryCents >= 0 ? 'positive' : 'negative'}
+          // Bij één maand spreekt het bedrag voor zich; bij een langere periode
+          // niet meer, want dan gaat er meer dan één maandsalaris af.
+          note={salaryMonths > 1 ? `na ${salaryMonths} maanden salaris` : undefined}
           emphasis
         />
       </div>
