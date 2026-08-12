@@ -1,9 +1,12 @@
 'use client'
 
+import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { formatEuroCents } from '@/lib/commissions-shared'
 import type { CompanyCommissionOverview } from '@/lib/data/commissions'
 import { downloadCsv, centsToCsvAmount } from '@/lib/csv-client'
+import { refreshRompslompExpenses } from '../actions'
 
 interface CompanyOverviewProps {
   overview: CompanyCommissionOverview
@@ -24,6 +27,25 @@ export function CompanyOverview({ overview }: CompanyOverviewProps) {
     from,
     to,
   } = overview
+
+  const router = useRouter()
+  const [isRefreshing, startRefresh] = useTransition()
+  const [refreshNote, setRefreshNote] = useState<string | null>(null)
+
+  const handleRefresh = () => {
+    setRefreshNote(null)
+    startRefresh(async () => {
+      const result = await refreshRompslompExpenses(from, to)
+      if (result.error) {
+        setRefreshNote(`Mislukt: ${result.error}`)
+        return
+      }
+      setRefreshNote(
+        `Bijgewerkt · ${result.count} ${result.count === 1 ? 'boeking' : 'boekingen'}, ${formatEuroCents(result.totalCents ?? 0)}`
+      )
+      router.refresh()
+    })
+  }
 
   const rentCents = rentBookings.reduce((s, r) => s + r.amountCents, 0)
   const rentBooked = rentBookings.length > 0
@@ -82,6 +104,34 @@ export function CompanyOverview({ overview }: CompanyOverviewProps) {
           </Link>
         </div>
       )}
+
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {refreshNote && (
+          <span
+            className={`text-[11px] ${refreshNote.startsWith('Mislukt') ? 'text-rose-600' : 'text-emerald-700'}`}
+          >
+            {refreshNote}
+          </span>
+        )}
+        <button
+          type="button"
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          title="Haalt de uitgaven opnieuw op bij Rompslomp, zonder te wachten op de cache van 5 minuten"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm transition-all hover:border-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <svg
+            className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={2}
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+          </svg>
+          {isRefreshing ? 'Ophalen…' : 'Ververs uitgaven'}
+        </button>
+      </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <SummaryCard label="Commissies" value={formatEuroCents(totalCommissionCents)} tone="neutral" />

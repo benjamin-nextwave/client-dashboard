@@ -1,8 +1,10 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCommissionChartSeries, type CommissionChartSeries } from '@/lib/data/commissions'
+import { ROMPSLOMP_CACHE_TAG } from '@/lib/rompslomp/client'
+import { getExpenseTotals } from '@/lib/rompslomp/expenses'
 
 export interface CommissionLeadInput {
   leadEmail: string
@@ -208,4 +210,37 @@ export async function fetchCommissionChartSeries(
     return { from, to, points: [] }
   }
   return getCommissionChartSeries(from, to, clientIds.length > 0 ? clientIds : undefined)
+}
+
+export interface RefreshExpensesResult {
+  error?: string
+  totalCents?: number
+  count?: number
+}
+
+/**
+ * Gooit de opgeslagen Rompslomp-antwoorden weg en haalt de uitgaven direct
+ * opnieuw op. Bedoeld voor twee gevallen: je hebt zojuist iets geboekt en wilt
+ * het meteen zien, of een eerdere poging is mislukt en je wilt opnieuw
+ * proberen zonder vijf minuten te wachten.
+ *
+ * Leest alleen; er gaat niets terug naar de boekhouding.
+ */
+export async function refreshRompslompExpenses(
+  from: string,
+  to: string
+): Promise<RefreshExpensesResult> {
+  if (!DATE_RE_SERIES.test(from) || !DATE_RE_SERIES.test(to)) {
+    return { error: 'Ongeldige periode.' }
+  }
+
+  revalidateTag(ROMPSLOMP_CACHE_TAG)
+
+  // Meteen opnieuw ophalen, zodat de knop kan melden of het gelukt is in
+  // plaats van dat de gebruiker het pas na het herladen ziet.
+  const result = await getExpenseTotals(from, to)
+  revalidatePath('/admin/commissies/financieel')
+
+  if (!result.ok) return { error: result.error }
+  return { totalCents: result.value.totalCents, count: result.value.expenses.length }
 }

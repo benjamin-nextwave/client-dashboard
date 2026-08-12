@@ -27,6 +27,13 @@ const TIMEOUT_MS = 12_000
 /** Hoe lang een opgehaald antwoord hergebruikt mag worden (seconden). */
 const CACHE_SECONDS = 300
 
+/**
+ * Cachelabel op alle Rompslomp-verzoeken. Met `revalidateTag` hierop gooit de
+ * verversknop in het financieel overzicht de opgeslagen antwoorden weg, zodat
+ * een net geboekte uitgave meteen zichtbaar wordt in plaats van na vijf minuten.
+ */
+export const ROMPSLOMP_CACHE_TAG = 'rompslomp'
+
 export type RompslompResult<T> = { ok: true; value: T } | { ok: false; error: string }
 
 export function getRompslompToken(): string | null {
@@ -81,7 +88,7 @@ export async function rompslompGet<T>(
         Accept: 'application/json',
       },
       signal: controller.signal,
-      next: { revalidate: CACHE_SECONDS },
+      next: { revalidate: CACHE_SECONDS, tags: [ROMPSLOMP_CACHE_TAG] },
     })
 
     if (!response.ok) {
