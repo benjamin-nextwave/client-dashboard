@@ -61,6 +61,10 @@ export interface CompanyCommissionOverview {
   expensesError: string | null
   /** Rijen in de boekhouding waarvan bedrag of datum onleesbaar was. */
   expensesSkipped: number
+  /** Huurboekingen binnen de periode; leeg betekent: nog niet geboekt. */
+  rentBookings: Array<{ date: string; amountCents: number }>
+  /** Eerste huurboeking ooit; null als er nooit huur is geboekt. */
+  firstRentDate: string | null
   /** Commissies minus uitgaven; null zolang de uitgaven onbekend zijn. */
   netCents: number | null
   /** Eén vierde deel: per deelnemer en voor het bedrijfsaccount. */
@@ -412,6 +416,10 @@ export async function getCompanyCommissionOverview(
     expensesCount: expenses.ok ? expenses.value.expenses.length : 0,
     expensesError: expenses.ok ? null : expenses.error,
     expensesSkipped: expenses.ok ? expenses.value.skipped : 0,
+    rentBookings: expenses.ok
+      ? expenses.value.rentBookings.map((r) => ({ date: r.date, amountCents: r.amountCents }))
+      : [],
+    firstRentDate: expenses.ok ? expenses.value.firstRentDate : null,
     netCents,
     // Vier gelijke delen; afkappen zodat de delen samen nooit méér zijn dan er is.
     quarterShareCents: netCents === null ? null : Math.trunc(netCents / 4),

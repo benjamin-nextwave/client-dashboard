@@ -17,11 +17,19 @@ export function CompanyOverview({ overview }: CompanyOverviewProps) {
     expensesCount,
     expensesError,
     expensesSkipped,
+    rentBookings,
+    firstRentDate,
     netCents,
     quarterShareCents,
     from,
     to,
   } = overview
+
+  const rentCents = rentBookings.reduce((s, r) => s + r.amountCents, 0)
+  const rentBooked = rentBookings.length > 0
+  // Vóór de eerste huurfactuur was er geen kantoor; dan is "nog niet geboekt"
+  // geen ontbrekende post maar gewoon de werkelijkheid van toen.
+  const rentRelevant = firstRentDate !== null && to >= firstRentDate
 
   const handleDownload = () => {
     const header = ['Klant', 'Eerste lead', 'Leaddagen', 'Commissie (€)']
@@ -101,6 +109,37 @@ export function CompanyOverview({ overview }: CompanyOverviewProps) {
           emphasis
         />
       </div>
+
+      {expensesCents !== null && rentRelevant && (
+        <div
+          className={`flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border px-4 py-2.5 text-sm ${
+            rentBooked
+              ? 'border-gray-200 bg-white text-gray-600'
+              : 'border-amber-200 bg-amber-50 text-amber-900'
+          }`}
+        >
+          <span className="font-semibold">Huur</span>
+          {rentBooked ? (
+            <>
+              <span>
+                geboekt · {formatEuroCents(rentCents)} op{' '}
+                {rentBookings
+                  .map((r) => formatShortDate(r.date))
+                  .join(', ')}
+              </span>
+              <span className="text-gray-400">· zit in het uitgaventotaal</span>
+            </>
+          ) : (
+            <>
+              <span>staat nog niet in deze periode geboekt.</span>
+              <span className="text-xs">
+                De uitgaven zijn dus mogelijk te laag en het netto te hoog. De huur wordt meestal aan het eind van
+                de maand geboekt.
+              </span>
+            </>
+          )}
+        </div>
+      )}
 
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-gray-900">Commissie per klant</h2>

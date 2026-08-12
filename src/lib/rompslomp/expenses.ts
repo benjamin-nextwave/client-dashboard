@@ -43,6 +43,24 @@ export interface ExpenseTotals {
   totalCents: number
   /** Rijen waarvan bedrag of datum niet te lezen was. */
   skipped: number
+  /** Huisvestingsboekingen binnen de periode — zie `isRent`. */
+  rentBookings: RompslompExpense[]
+  /**
+   * Eerste huurboeking ooit, over de hele boekhouding. Nodig om te weten of
+   * "nog niet geboekt" zinnig is: vóór deze datum was er domweg geen kantoor,
+   * en dan is een waarschuwing alleen maar verwarrend.
+   */
+  firstRentDate: string | null
+}
+
+/**
+ * Herkent de kantoorhuur aan de rekening waarop geboekt is, bv.
+ * "Kosten • Huisvestingskosten • Werkruimte / huisvesting". Bewust op de
+ * rekening en niet op het bedrag of de leverancier: die veranderen eerder dan
+ * de rubriek in het rekeningschema.
+ */
+function isRent(expense: RompslompExpense): boolean {
+  return /huisvesting|werkruimte|huur/i.test(expense.category)
 }
 
 const PAGE_SIZE = 100
@@ -197,12 +215,17 @@ export async function getExpenseTotals(
 
   const expenses: RompslompExpense[] = []
   let skipped = 0
+  let firstRentDate: string | null = null
 
   for (const entry of all.value) {
     const expense = readExpense(entry)
     if (expense === null) {
       skipped += 1
       continue
+    }
+    // Buiten het datumfilter om, want dit gaat over de hele boekhouding.
+    if (isRent(expense) && (firstRentDate === null || expense.date < firstRentDate)) {
+      firstRentDate = expense.date
     }
     if (expense.date < from || expense.date > to) continue
     expenses.push(expense)
@@ -211,5 +234,16 @@ export async function getExpenseTotals(
   expenses.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
   const totalCents = expenses.reduce((sum, e) => sum + e.amountCents, 0)
 
-  return { ok: true, value: { from, to, expenses, totalCents, skipped } }
+  return {
+    ok: true,
+    value: {
+      from,
+      to,
+      expenses,
+      totalCents,
+      skipped,
+      rentBookings: expenses.filter(isRent),
+      firstRentDate,
+    },
+  }
 }
