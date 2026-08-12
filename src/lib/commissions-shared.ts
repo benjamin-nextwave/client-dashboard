@@ -7,6 +7,28 @@
 // kosten komen sinds de Rompslomp-koppeling uit de boekhouding zelf, zodat er
 // maar één plek is waar ze vandaan komen.
 
+// Salaris: een vast maandbedrag per persoon, dat na de uitgaven van het
+// resultaat af gaat. Bewust hier als constante en niet in de boekhouding
+// opgezocht — het is een afspraak over wat er maximaal uitgekeerd wordt, geen
+// geboekte kostenpost.
+export const MONTHLY_SALARY_CENTS = 100000
+
+/** Aantal personen dat salaris krijgt; het bedrijfsaccount telt niet mee. */
+export const SALARY_HEADCOUNT = 3
+
+/**
+ * Aantal kalendermaanden dat een periode aanraakt, grenzen inclusief. Een
+ * periode van 1 t/m 12 augustus raakt één maand; 15 juli t/m 3 augustus raakt
+ * er twee. Elke aangeraakte maand telt voor een vol maandsalaris.
+ */
+export function countTouchedMonths(from: string, to: string): number {
+  const [fy, fm] = from.split('-').map(Number)
+  const [ty, tm] = to.split('-').map(Number)
+  if (!fy || !fm || !ty || !tm) return 0
+  const months = (ty - fy) * 12 + (tm - fm) + 1
+  return months > 0 ? months : 0
+}
+
 /**
  * Standaard commissie-categorieën die als snelkeuze worden aangeboden bij het
  * instellen per klant. Het zijn slechts suggesties: pas wanneer de operator er

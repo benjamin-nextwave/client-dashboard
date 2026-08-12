@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { formatEuroCents } from '@/lib/commissions-shared'
+import { formatEuroCents, MONTHLY_SALARY_CENTS, SALARY_HEADCOUNT } from '@/lib/commissions-shared'
 import type { CompanyCommissionOverview } from '@/lib/data/commissions'
 import { downloadCsv, centsToCsvAmount } from '@/lib/csv-client'
 import { refreshRompslompExpenses } from '../actions'
@@ -23,7 +23,9 @@ export function CompanyOverview({ overview }: CompanyOverviewProps) {
     rentBookings,
     firstRentDate,
     netCents,
-    quarterShareCents,
+    salaryMonths,
+    salaryCents,
+    afterSalaryCents,
     from,
     to,
   } = overview
@@ -71,10 +73,16 @@ export function CompanyOverview({ overview }: CompanyOverviewProps) {
     ])
     rows.push(['Netto', '', '', netCents === null ? 'onbekend' : centsToCsvAmount(netCents)])
     rows.push([
-      'Ieder een kwart (Merlijn / KIX / jij / bedrijfsaccount)',
+      `Salaris (${salaryMonths} mnd x ${SALARY_HEADCOUNT} x ${centsToCsvAmount(MONTHLY_SALARY_CENTS)})`,
       '',
       '',
-      quarterShareCents === null ? 'onbekend' : centsToCsvAmount(quarterShareCents),
+      '-' + centsToCsvAmount(salaryCents),
+    ])
+    rows.push([
+      'Bedrag over na salaris',
+      '',
+      '',
+      afterSalaryCents === null ? 'onbekend' : centsToCsvAmount(afterSalaryCents),
     ])
     downloadCsv(`commissies-totaal-${from}_tot_${to}.csv`, header, rows)
   }
@@ -133,7 +141,7 @@ export function CompanyOverview({ overview }: CompanyOverviewProps) {
         </button>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <SummaryCard label="Commissies" value={formatEuroCents(totalCommissionCents)} tone="neutral" />
         <SummaryCard
           label="Uitgaven"
@@ -149,13 +157,17 @@ export function CompanyOverview({ overview }: CompanyOverviewProps) {
           label="Netto"
           value={netCents === null ? 'Onbekend' : formatEuroCents(netCents)}
           tone={netCents === null ? 'muted' : netCents >= 0 ? 'positive' : 'negative'}
-          emphasis
         />
         <SummaryCard
-          label="Ieder een kwart"
-          value={quarterShareCents === null ? 'Onbekend' : formatEuroCents(quarterShareCents)}
-          tone={quarterShareCents === null ? 'muted' : quarterShareCents >= 0 ? 'positive' : 'negative'}
-          note="Merlijn · KIX · jij · bedrijfsaccount"
+          label="Salaris"
+          value={'−' + formatEuroCents(salaryCents)}
+          tone="cost"
+          note={`${salaryMonths} × ${SALARY_HEADCOUNT} × ${formatEuroCents(MONTHLY_SALARY_CENTS)}`}
+        />
+        <SummaryCard
+          label="Bedrag over na salaris"
+          value={afterSalaryCents === null ? 'Onbekend' : formatEuroCents(afterSalaryCents)}
+          tone={afterSalaryCents === null ? 'muted' : afterSalaryCents >= 0 ? 'positive' : 'negative'}
           emphasis
         />
       </div>

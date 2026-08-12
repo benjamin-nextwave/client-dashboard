@@ -2,11 +2,19 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getClientList } from './admin-stats'
 import { getClientsWithLastCheck } from './controle'
 import { getExpenseTotals } from '@/lib/rompslomp/expenses'
-import type { CommissionCategory } from '@/lib/commissions-shared'
+import {
+  MONTHLY_SALARY_CENTS,
+  SALARY_HEADCOUNT,
+  countTouchedMonths,
+  type CommissionCategory,
+} from '@/lib/commissions-shared'
 
 // Herexporteer de gedeelde, client-veilige helpers/types zodat bestaande
 // server-side imports vanuit deze module blijven werken.
 export {
+  MONTHLY_SALARY_CENTS,
+  SALARY_HEADCOUNT,
+  countTouchedMonths,
   STANDARD_COMMISSION_CATEGORIES,
   amsterdamDateString,
   formatEuroCents,
@@ -67,8 +75,12 @@ export interface CompanyCommissionOverview {
   firstRentDate: string | null
   /** Commissies minus uitgaven; null zolang de uitgaven onbekend zijn. */
   netCents: number | null
-  /** Eén vierde deel: per deelnemer en voor het bedrijfsaccount. */
-  quarterShareCents: number | null
+  /** Maanden waarover salaris wordt gerekend. */
+  salaryMonths: number
+  /** Totaal salaris over de periode: maanden × personen × maandbedrag. */
+  salaryCents: number
+  /** Wat er na het salaris overblijft; null zolang de uitgaven onbekend zijn. */
+  afterSalaryCents: number | null
 }
 
 // ---------------------------------------------------------------------------
@@ -407,6 +419,11 @@ export async function getCompanyCommissionOverview(
   const expensesCents = expenses.ok ? expenses.value.totalCents : null
   const netCents = expensesCents === null ? null : totalCommissionCents - expensesCents
 
+  // Salaris gaat per aangeraakte kalendermaand van het resultaat af, net als
+  // bij een loonstrook: een halve maand werken levert geen half salaris op.
+  const salaryMonths = countTouchedMonths(from, to)
+  const salaryCents = salaryMonths * SALARY_HEADCOUNT * MONTHLY_SALARY_CENTS
+
   return {
     from,
     to,
@@ -421,8 +438,9 @@ export async function getCompanyCommissionOverview(
       : [],
     firstRentDate: expenses.ok ? expenses.value.firstRentDate : null,
     netCents,
-    // Vier gelijke delen; afkappen zodat de delen samen nooit méér zijn dan er is.
-    quarterShareCents: netCents === null ? null : Math.trunc(netCents / 4),
+    salaryMonths,
+    salaryCents,
+    afterSalaryCents: netCents === null ? null : netCents - salaryCents,
   }
 }
 
