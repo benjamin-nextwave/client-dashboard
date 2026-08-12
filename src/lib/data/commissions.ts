@@ -3,6 +3,8 @@ import { getClientList } from './admin-stats'
 import { getClientsWithLastCheck } from './controle'
 import {
   DAILY_COST_CENTS,
+  OFFICE_COST_CENTS_PER_MONTH,
+  countTouchedMonths,
   isWeekday,
   amsterdamDateString,
   type CommissionCategory,
@@ -12,6 +14,8 @@ import {
 // bestaande server-side imports vanuit deze module blijven werken.
 export {
   DAILY_COST_CENTS,
+  OFFICE_COST_CENTS_PER_MONTH,
+  countTouchedMonths,
   STANDARD_COMMISSION_CATEGORIES,
   amsterdamDateString,
   formatEuroCents,
@@ -70,6 +74,11 @@ export interface CompanyCommissionOverview {
   totalCommissionCents: number
   totalCostCents: number
   totalNetCents: number
+  /** Aantal kalendermaanden waarover kantoorkosten worden gerekend. */
+  officeMonths: number
+  officeCostCents: number
+  /** Netto na aftrek van de kantoorkosten. */
+  netAfterOfficeCents: number
 }
 
 // ---------------------------------------------------------------------------
@@ -483,6 +492,12 @@ export async function getCompanyCommissionOverview(
 
   const totalCommissionCents = rows.reduce((s, r) => s + r.commissionCents, 0)
   const totalCostCents = rows.reduce((s, r) => s + r.costCents, 0)
+  const totalNetCents = totalCommissionCents - totalCostCents
+
+  // Kantoorkosten gelden per aangeraakte kalendermaand, niet naar rato: een
+  // periode van drie dagen in augustus draagt dus de volle maandhuur.
+  const officeMonths = countTouchedMonths(from, to)
+  const officeCostCents = officeMonths * OFFICE_COST_CENTS_PER_MONTH
 
   return {
     from,
@@ -490,7 +505,10 @@ export async function getCompanyCommissionOverview(
     clients: rows,
     totalCommissionCents,
     totalCostCents,
-    totalNetCents: totalCommissionCents - totalCostCents,
+    totalNetCents,
+    officeMonths,
+    officeCostCents,
+    netAfterOfficeCents: totalNetCents - officeCostCents,
   }
 }
 

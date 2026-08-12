@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { formatEuroCents } from '@/lib/commissions-shared'
+import { formatEuroCents, OFFICE_COST_CENTS_PER_MONTH } from '@/lib/commissions-shared'
 import type { CompanyCommissionOverview } from '@/lib/data/commissions'
 import { downloadCsv, centsToCsvAmount } from '@/lib/csv-client'
 
@@ -10,7 +10,17 @@ interface CompanyOverviewProps {
 }
 
 export function CompanyOverview({ overview }: CompanyOverviewProps) {
-  const { clients, totalCommissionCents, totalCostCents, totalNetCents, from, to } = overview
+  const {
+    clients,
+    totalCommissionCents,
+    totalCostCents,
+    totalNetCents,
+    officeMonths,
+    officeCostCents,
+    netAfterOfficeCents,
+    from,
+    to,
+  } = overview
 
   const handleDownload = () => {
     const header = ['Klant', 'Eerste lead', 'Leaddagen', 'Werkdagen', 'Commissie (€)', 'Dagkosten (€)', 'Netto (€)']
@@ -33,15 +43,37 @@ export function CompanyOverview({ overview }: CompanyOverviewProps) {
       '-' + centsToCsvAmount(totalCostCents),
       centsToCsvAmount(totalNetCents),
     ])
+    rows.push([
+      `Kantoor (${officeMonths} × ${centsToCsvAmount(OFFICE_COST_CENTS_PER_MONTH)})`,
+      '',
+      '',
+      '',
+      '',
+      '-' + centsToCsvAmount(officeCostCents),
+      '',
+    ])
+    rows.push(['Netto na kantoor', '', '', '', '', '', centsToCsvAmount(netAfterOfficeCents)])
     downloadCsv(`commissies-totaal-${from}_tot_${to}.csv`, header, rows)
   }
 
   return (
     <section className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <SummaryCard label="Commissies" value={formatEuroCents(totalCommissionCents)} tone="neutral" />
         <SummaryCard label="Dagkosten" value={'−' + formatEuroCents(totalCostCents)} tone="cost" />
         <SummaryCard label="Netto winst" value={formatEuroCents(totalNetCents)} tone={totalNetCents >= 0 ? 'positive' : 'negative'} />
+        <SummaryCard
+          label="Kantoor"
+          value={'−' + formatEuroCents(officeCostCents)}
+          tone="cost"
+          note={`${officeMonths} ${officeMonths === 1 ? 'maand' : 'maanden'} × ${formatEuroCents(OFFICE_COST_CENTS_PER_MONTH)}`}
+        />
+        <SummaryCard
+          label="Netto na kantoor"
+          value={formatEuroCents(netAfterOfficeCents)}
+          tone={netAfterOfficeCents >= 0 ? 'positive' : 'negative'}
+          emphasis
+        />
       </div>
 
       <div className="flex items-center justify-between">
@@ -120,10 +152,14 @@ function SummaryCard({
   label,
   value,
   tone,
+  note,
+  emphasis = false,
 }: {
   label: string
   value: string
   tone: 'neutral' | 'cost' | 'positive' | 'negative'
+  note?: string
+  emphasis?: boolean
 }) {
   const valueClass = {
     neutral: 'text-gray-900',
@@ -132,9 +168,14 @@ function SummaryCard({
     negative: 'text-rose-700',
   }[tone]
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+    <div
+      className={`rounded-2xl border bg-white p-4 shadow-sm ${
+        emphasis ? 'border-gray-900 ring-1 ring-gray-900' : 'border-gray-200'
+      }`}
+    >
       <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{label}</div>
       <div className={`mt-1 text-2xl font-semibold ${valueClass}`}>{value}</div>
+      {note && <div className="mt-0.5 text-[11px] text-gray-400">{note}</div>}
     </div>
   )
 }
