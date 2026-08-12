@@ -18,6 +18,7 @@ export function CompanyOverview({ overview }: CompanyOverviewProps) {
     officeMonths,
     officeCostCents,
     netAfterOfficeCents,
+    quarterShareCents,
     from,
     to,
   } = overview
@@ -53,12 +54,13 @@ export function CompanyOverview({ overview }: CompanyOverviewProps) {
       '',
     ])
     rows.push(['Netto na kantoor', '', '', '', '', '', centsToCsvAmount(netAfterOfficeCents)])
+    rows.push(['Ieder een kwart (Merlijn / KIX / jij / bedrijfsaccount)', '', '', '', '', '', centsToCsvAmount(quarterShareCents)])
     downloadCsv(`commissies-totaal-${from}_tot_${to}.csv`, header, rows)
   }
 
   return (
     <section className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <SummaryCard label="Commissies" value={formatEuroCents(totalCommissionCents)} tone="neutral" />
         <SummaryCard label="Dagkosten" value={'−' + formatEuroCents(totalCostCents)} tone="cost" />
         <SummaryCard label="Netto winst" value={formatEuroCents(totalNetCents)} tone={totalNetCents >= 0 ? 'positive' : 'negative'} />
@@ -72,6 +74,13 @@ export function CompanyOverview({ overview }: CompanyOverviewProps) {
           label="Netto na kantoor"
           value={formatEuroCents(netAfterOfficeCents)}
           tone={netAfterOfficeCents >= 0 ? 'positive' : 'negative'}
+          emphasis
+        />
+        <SummaryCard
+          label="Ieder een kwart"
+          value={formatEuroCents(quarterShareCents)}
+          tone={quarterShareCents >= 0 ? 'positive' : 'negative'}
+          note="Merlijn · KIX · jij · bedrijfsaccount"
           emphasis
         />
       </div>

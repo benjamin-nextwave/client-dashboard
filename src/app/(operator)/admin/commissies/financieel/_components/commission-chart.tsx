@@ -70,25 +70,16 @@ export function CommissionChart({ clients, from, to, initialSeries }: Commission
     label: format(new Date(p.date + 'T00:00:00'), 'd MMM', { locale: nl }),
   }))
 
-  const totalTone = series.totalNetCents >= 0 ? 'text-emerald-700' : 'text-rose-700'
-
   return (
     <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-sm font-semibold text-gray-900">Netto per dag</h2>
-          <p className="mt-0.5 text-xs text-gray-500">
-            Commissie minus €20 dagkosten per klant, elke werkdag vanaf zijn eerste lead.
-          </p>
-        </div>
-        <div className="text-right">
-          <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
-            Netto {formatDay(from)} – {formatDay(to)}
-          </div>
-          <div className={`text-2xl font-semibold ${totalTone}`}>
-            {formatEuroCents(series.totalNetCents)}
-          </div>
-        </div>
+      <div>
+        <h2 className="text-sm font-semibold text-gray-900">
+          Netto per dag <span className="font-normal text-gray-400">· {formatDay(from)} – {formatDay(to)}</span>
+        </h2>
+        <p className="mt-0.5 text-xs text-gray-500">
+          Commissie minus €20 dagkosten per klant, elke werkdag vanaf zijn eerste lead. De totalen staan in de
+          blokken hieronder.
+        </p>
       </div>
 
       {/* Klantfilter */}

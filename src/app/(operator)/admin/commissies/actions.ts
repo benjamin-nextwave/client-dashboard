@@ -205,7 +205,7 @@ export async function fetchCommissionChartSeries(
   clientIds: string[]
 ): Promise<CommissionChartSeries> {
   if (!DATE_RE_SERIES.test(from) || !DATE_RE_SERIES.test(to)) {
-    return { from, to, points: [], totalNetCents: 0 }
+    return { from, to, points: [] }
   }
   return getCommissionChartSeries(from, to, clientIds.length > 0 ? clientIds : undefined)
 }

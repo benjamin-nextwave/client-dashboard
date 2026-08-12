@@ -79,6 +79,8 @@ export interface CompanyCommissionOverview {
   officeCostCents: number
   /** Netto na aftrek van de kantoorkosten. */
   netAfterOfficeCents: number
+  /** Eén vierde deel daarvan: per deelnemer en voor het bedrijfsaccount. */
+  quarterShareCents: number
 }
 
 // ---------------------------------------------------------------------------
@@ -498,6 +500,11 @@ export async function getCompanyCommissionOverview(
   // periode van drie dagen in augustus draagt dus de volle maandhuur.
   const officeMonths = countTouchedMonths(from, to)
   const officeCostCents = officeMonths * OFFICE_COST_CENTS_PER_MONTH
+  const netAfterOfficeCents = totalNetCents - officeCostCents
+
+  // Wat overblijft gaat in vier gelijke delen. Afkappen in plaats van afronden,
+  // zodat vier delen samen nooit méér zijn dan er werkelijk is.
+  const quarterShareCents = Math.trunc(netAfterOfficeCents / 4)
 
   return {
     from,
@@ -508,7 +515,8 @@ export async function getCompanyCommissionOverview(
     totalNetCents,
     officeMonths,
     officeCostCents,
-    netAfterOfficeCents: totalNetCents - officeCostCents,
+    netAfterOfficeCents,
+    quarterShareCents,
   }
 }
 
@@ -586,7 +594,6 @@ export interface CommissionChartSeries {
   from: string
   to: string
   points: CommissionChartPoint[]
-  totalNetCents: number
 }
 
 /**
@@ -649,6 +656,5 @@ export async function getCommissionChartSeries(
     })
     .filter((p) => p.commissionCents !== 0 || p.costCents !== 0)
 
-  const totalNetCents = points.reduce((s, p) => s + p.netCents, 0)
-  return { from, to, points, totalNetCents }
+  return { from, to, points }
 }
