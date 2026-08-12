@@ -1,7 +1,12 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getClientList } from './admin-stats'
 import { getClientsWithLastCheck } from './controle'
-import { DAILY_COST_CENTS, isWeekday, type CommissionCategory } from '@/lib/commissions-shared'
+import {
+  DAILY_COST_CENTS,
+  isWeekday,
+  amsterdamDateString,
+  type CommissionCategory,
+} from '@/lib/commissions-shared'
 
 // Herexporteer de gedeelde, client-veilige helpers/constanten/types zodat
 // bestaande server-side imports vanuit deze module blijven werken.
@@ -39,8 +44,12 @@ export interface ClientCommissionOverview {
   days: CommissionDaySummary[]
   totalCommissionCents: number
   recordedDays: number
+  /** Aantal werkdagen waarover dagkosten zijn gerekend. */
+  costDays: number
   totalCostCents: number
   netCents: number
+  /** Datum van de eerste lead ooit; vanaf hier lopen de dagkosten. */
+  firstLeadDate: string | null
 }
 
 export interface CompanyClientRow {
@@ -48,8 +57,10 @@ export interface CompanyClientRow {
   companyName: string
   commissionCents: number
   recordedDays: number
+  costDays: number
   costCents: number
   netCents: number
+  firstLeadDate: string | null
 }
 
 export interface CompanyCommissionOverview {
@@ -176,6 +187,92 @@ export async function getClientsWithCommissionData(): Promise<CommissionControlC
 }
 
 // ---------------------------------------------------------------------------
+// Dagkosten: startdatum en werkdag-telling
+// ---------------------------------------------------------------------------
+//
+// Dagkosten lopen per klant vanaf de dag van zijn eerste lead ooit, en daarna
+// elke werkdag — ook op dagen zonder leads. Zo betaalt een klant die net is
+// aangemeld niet met terugwerkende kracht voor de maanden dáárvoor, en telt een
+// stille week wél mee. De kostenperiode stopt uiterlijk vandaag; een gekozen
+// einddatum in de toekomst levert dus geen kosten op die nog niet gemaakt zijn.
+
+/** Kleinste van twee ISO-datums (YYYY-MM-DD sorteert lexicografisch correct). */
+function minDate(a: string, b: string): string {
+  return a < b ? a : b
+}
+
+/** Grootste van twee ISO-datums. */
+function maxDate(a: string, b: string): string {
+  return a > b ? a : b
+}
+
+/** Loopt de kalenderdagen van `from` t/m `to` af (beide grenzen inclusief). */
+function* eachDate(from: string, to: string): Generator<string> {
+  if (from > to) return
+  const [y, m, d] = from.split('-').map(Number)
+  if (!y || !m || !d) return
+  const cursor = new Date(Date.UTC(y, m - 1, d))
+  for (;;) {
+    const iso = cursor.toISOString().slice(0, 10)
+    if (iso > to) return
+    yield iso
+    cursor.setUTCDate(cursor.getUTCDate() + 1)
+  }
+}
+
+/** Aantal werkdagen (ma–vr) in [from, to], grenzen inclusief. */
+function countWeekdays(from: string, to: string): number {
+  let count = 0
+  for (const date of eachDate(from, to)) {
+    if (isWeekday(date)) count += 1
+  }
+  return count
+}
+
+/**
+ * Datum van de eerste commissie-lead per klant, over alle tijd heen. Gepagineerd
+ * omdat PostgREST een rijlimiet hanteert: zonder paginatie zou een klant die pas
+ * laat begon buiten de eerste pagina vallen en helemaal geen startdatum krijgen.
+ */
+async function getFirstLeadDateByClient(): Promise<Map<string, string>> {
+  const supabase = createAdminClient()
+  const first = new Map<string, string>()
+  const PAGE_SIZE = 1000
+
+  for (let page = 0; page < 100; page++) {
+    const { data, error } = await supabase
+      .from('operator_commission_leads')
+      .select('client_id, entry_date')
+      .order('entry_date', { ascending: true })
+      .order('id', { ascending: true })
+      .range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1)
+
+    if (error || !data || data.length === 0) break
+    for (const r of data as Array<{ client_id: string; entry_date: string }>) {
+      const current = first.get(r.client_id)
+      if (!current || r.entry_date < current) first.set(r.client_id, r.entry_date)
+    }
+    if (data.length < PAGE_SIZE) break
+  }
+
+  return first
+}
+
+/** Datum van de eerste commissie-lead van één klant, of null als die er niet is. */
+async function getFirstLeadDate(clientId: string): Promise<string | null> {
+  const supabase = createAdminClient()
+  const { data } = await supabase
+    .from('operator_commission_leads')
+    .select('entry_date')
+    .eq('client_id', clientId)
+    .order('entry_date', { ascending: true })
+    .limit(1)
+    .maybeSingle()
+
+  return (data as { entry_date: string } | null)?.entry_date ?? null
+}
+
+// ---------------------------------------------------------------------------
 // Overzicht per klant
 // ---------------------------------------------------------------------------
 
@@ -187,7 +284,13 @@ interface RawEntry {
   lead_count: number
 }
 
-function buildClientOverview(from: string, to: string, raw: RawEntry[]): ClientCommissionOverview {
+function buildClientOverview(
+  from: string,
+  to: string,
+  raw: RawEntry[],
+  firstLeadDate: string | null,
+  costEnd: string
+): ClientCommissionOverview {
   const entries: CommissionEntryRow[] = raw.map((r) => ({
     date: r.entry_date,
     campaignName: r.campaign_name,
@@ -204,6 +307,20 @@ function buildClientOverview(from: string, to: string, raw: RawEntry[]): ClientC
     list.push(e)
     byDate.set(e.date, list)
   }
+  const daysWithLeads = byDate.size
+
+  // Werkdagen vanaf de eerste lead krijgen dagkosten, ook zonder leads. Die
+  // dagen bestaan nog niet in byDate en worden hier als lege dag toegevoegd.
+  if (firstLeadDate) {
+    for (const date of eachDate(maxDate(from, firstLeadDate), minDate(to, costEnd))) {
+      if (isWeekday(date) && !byDate.has(date)) byDate.set(date, [])
+    }
+  }
+
+  const dayCostCents = (date: string): number =>
+    firstLeadDate && date >= firstLeadDate && date <= costEnd && isWeekday(date)
+      ? DAILY_COST_CENTS
+      : 0
 
   const days: CommissionDaySummary[] = Array.from(byDate.entries())
     .sort((a, b) => (a[0] < b[0] ? 1 : -1)) // nieuwste dag eerst
@@ -217,13 +334,12 @@ function buildClientOverview(from: string, to: string, raw: RawEntry[]): ClientC
         cur.subtotalCents += e.subtotalCents
         catMap.set(e.categoryName, cur)
       }
-      // Weekenddagen tellen geen dagkosten (alleen ma–vr).
-      const dayCostCents = isWeekday(date) ? DAILY_COST_CENTS : 0
+      const costCents = dayCostCents(date)
       return {
         date,
         commissionCents,
-        costCents: dayCostCents,
-        netCents: commissionCents - dayCostCents,
+        costCents,
+        netCents: commissionCents - costCents,
         byCategory: Array.from(catMap.entries()).map(([categoryName, v]) => ({
           categoryName,
           count: v.count,
@@ -233,8 +349,8 @@ function buildClientOverview(from: string, to: string, raw: RawEntry[]): ClientC
     })
 
   const totalCommissionCents = days.reduce((s, d) => s + d.commissionCents, 0)
-  const recordedDays = days.length
   const totalCostCents = days.reduce((s, d) => s + d.costCents, 0)
+  const costDays = days.filter((d) => d.costCents > 0).length
 
   return {
     from,
@@ -242,9 +358,11 @@ function buildClientOverview(from: string, to: string, raw: RawEntry[]): ClientC
     entries: entries.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : a.campaignName.localeCompare(b.campaignName))),
     days,
     totalCommissionCents,
-    recordedDays,
+    recordedDays: daysWithLeads,
+    costDays,
     totalCostCents,
     netCents: totalCommissionCents - totalCostCents,
+    firstLeadDate,
   }
 }
 
@@ -286,14 +404,18 @@ export async function getClientCommissionOverview(
   to: string
 ): Promise<ClientCommissionOverview> {
   const supabase = createAdminClient()
-  const { data } = await supabase
-    .from('operator_commission_leads')
-    .select('campaign_name, entry_date, category_name, unit_price_cents')
-    .eq('client_id', clientId)
-    .gte('entry_date', from)
-    .lte('entry_date', to)
+  const [{ data }, firstLeadDate] = await Promise.all([
+    supabase
+      .from('operator_commission_leads')
+      .select('campaign_name, entry_date, category_name, unit_price_cents')
+      .eq('client_id', clientId)
+      .gte('entry_date', from)
+      .lte('entry_date', to),
+    getFirstLeadDate(clientId),
+  ])
 
-  return buildClientOverview(from, to, leadsToRawEntries((data ?? []) as LeadRow[]))
+  const costEnd = minDate(to, amsterdamDateString())
+  return buildClientOverview(from, to, leadsToRawEntries((data ?? []) as LeadRow[]), firstLeadDate, costEnd)
 }
 
 // ---------------------------------------------------------------------------
@@ -305,16 +427,18 @@ export async function getCompanyCommissionOverview(
   to: string
 ): Promise<CompanyCommissionOverview> {
   const supabase = createAdminClient()
-  const [{ data }, clients] = await Promise.all([
+  const [{ data }, clients, firstLeadByClient] = await Promise.all([
     supabase
       .from('operator_commission_leads')
       .select('client_id, entry_date, unit_price_cents')
       .gte('entry_date', from)
       .lte('entry_date', to),
     getClientList(),
+    getFirstLeadDateByClient(),
   ])
 
   const nameById = new Map(clients.map((c) => [c.id, c.companyName]))
+  const costEnd = minDate(to, amsterdamDateString())
 
   // Per klant: commissie-som + set van dagen met leads.
   const commissionByClient = new Map<string, number>()
@@ -327,20 +451,31 @@ export async function getCompanyCommissionOverview(
     daysByClient.set(r.client_id, set)
   }
 
-  const rows: CompanyClientRow[] = Array.from(daysByClient.keys()).map((clientId) => {
+  // Een klant hoort in het overzicht zodra zijn eerste lead vóór het einde van
+  // de periode ligt — ook zonder leads ín de periode, want de dagkosten lopen
+  // dan gewoon door.
+  const clientIds = new Set<string>(daysByClient.keys())
+  for (const [clientId, firstDate] of firstLeadByClient) {
+    if (firstDate <= costEnd) clientIds.add(clientId)
+  }
+
+  const rows: CompanyClientRow[] = Array.from(clientIds).map((clientId) => {
     const commissionCents = commissionByClient.get(clientId) ?? 0
-    const days = daysByClient.get(clientId) ?? new Set<string>()
-    const recordedDays = days.size
-    // Dagkosten alleen op werkdagen (weekend telt niet mee).
-    const workdays = Array.from(days).filter((d) => isWeekday(d)).length
-    const costCents = workdays * DAILY_COST_CENTS
+    const recordedDays = daysByClient.get(clientId)?.size ?? 0
+    const firstLeadDate = firstLeadByClient.get(clientId) ?? null
+    // Dagkosten vanaf de eerste lead van deze klant, elke werkdag, tot en met
+    // het einde van de periode (uiterlijk vandaag).
+    const costDays = firstLeadDate ? countWeekdays(maxDate(from, firstLeadDate), costEnd) : 0
+    const costCents = costDays * DAILY_COST_CENTS
     return {
       clientId,
       companyName: nameById.get(clientId) ?? 'Onbekende klant',
       commissionCents,
       recordedDays,
+      costDays,
       costCents,
       netCents: commissionCents - costCents,
+      firstLeadDate,
     }
   })
 
@@ -439,8 +574,9 @@ export interface CommissionChartSeries {
 /**
  * Tijdreeks van het netto commissiebedrag per dag over [from, to], optioneel
  * gefilterd op één of meerdere klanten. Netto = commissie van die dag minus
- * €20 dagkosten per actieve klant, maar alleen op werkdagen (weekend telt
- * geen dagkosten). Alleen dagen met leads verschijnen in de reeks.
+ * €20 dagkosten per klant die op dat moment al gestart is (eerste lead gehad),
+ * en alleen op werkdagen. Werkdagen zonder leads staan dus óók in de reeks,
+ * met een negatief netto.
  */
 export async function getCommissionChartSeries(
   from: string,
@@ -458,26 +594,42 @@ export async function getCommissionChartSeries(
     query = query.in('client_id', clientIds)
   }
 
-  const { data } = await query
+  const [{ data }, firstLeadByClient] = await Promise.all([query, getFirstLeadDateByClient()])
 
-  // Per dag: commissie-som + set van actieve klanten (voor dagkosten).
+  // Per dag: commissie-som.
   const commissionByDate = new Map<string, number>()
-  const clientsByDate = new Map<string, Set<string>>()
   for (const r of (data ?? []) as Array<{ client_id: string; entry_date: string; unit_price_cents: number }>) {
     commissionByDate.set(r.entry_date, (commissionByDate.get(r.entry_date) ?? 0) + (r.unit_price_cents ?? 0))
-    const set = clientsByDate.get(r.entry_date) ?? new Set<string>()
-    set.add(r.client_id)
-    clientsByDate.set(r.entry_date, set)
   }
 
-  const points: CommissionChartPoint[] = Array.from(commissionByDate.keys())
+  // Startdatums van de klanten die in deze reeks meetellen; een klant draagt
+  // dagkosten vanaf zijn eigen startdatum, niet vanaf het begin van de periode.
+  const filter = clientIds && clientIds.length > 0 ? new Set(clientIds) : null
+  const startDates = Array.from(firstLeadByClient.entries())
+    .filter(([id]) => !filter || filter.has(id))
+    .map(([, date]) => date)
+
+  const costEnd = minDate(to, amsterdamDateString())
+  const dates = new Set<string>(commissionByDate.keys())
+  if (startDates.length > 0) {
+    const earliestStart = startDates.reduce((a, b) => minDate(a, b))
+    for (const date of eachDate(maxDate(from, earliestStart), costEnd)) {
+      if (isWeekday(date)) dates.add(date)
+    }
+  }
+
+  const points: CommissionChartPoint[] = Array.from(dates)
     .sort((a, b) => (a < b ? -1 : 1)) // oplopend op datum
     .map((date) => {
       const commissionCents = commissionByDate.get(date) ?? 0
-      const activeClients = clientsByDate.get(date)?.size ?? 0
-      const costCents = isWeekday(date) ? activeClients * DAILY_COST_CENTS : 0
+      const activeClients =
+        isWeekday(date) && date <= costEnd
+          ? startDates.filter((start) => start <= date).length
+          : 0
+      const costCents = activeClients * DAILY_COST_CENTS
       return { date, commissionCents, costCents, netCents: commissionCents - costCents }
     })
+    .filter((p) => p.commissionCents !== 0 || p.costCents !== 0)
 
   const totalNetCents = points.reduce((s, p) => s + p.netCents, 0)
   return { from, to, points, totalNetCents }

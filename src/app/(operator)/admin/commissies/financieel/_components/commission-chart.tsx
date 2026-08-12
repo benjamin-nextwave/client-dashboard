@@ -78,7 +78,7 @@ export function CommissionChart({ clients, from, to, initialSeries }: Commission
         <div>
           <h2 className="text-sm font-semibold text-gray-900">Netto per dag</h2>
           <p className="mt-0.5 text-xs text-gray-500">
-            Commissie minus €20 dagkosten per klant (alleen op werkdagen).
+            Commissie minus €20 dagkosten per klant, elke werkdag vanaf zijn eerste lead.
           </p>
         </div>
         <div className="text-right">

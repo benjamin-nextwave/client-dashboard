@@ -10,7 +10,7 @@ interface ClientOverviewProps {
 }
 
 export function ClientOverview({ companyName, overview }: ClientOverviewProps) {
-  const { entries, days, totalCommissionCents, recordedDays, totalCostCents, netCents, from, to } = overview
+  const { entries, days, totalCommissionCents, costDays, totalCostCents, netCents, from, to } = overview
 
   const handleDownload = () => {
     const header = ['Datum', 'Campagne', 'Categorie', 'Aantal', 'Prijs per lead (€)', 'Subtotaal (€)']
@@ -25,7 +25,7 @@ export function ClientOverview({ companyName, overview }: ClientOverviewProps) {
     // Samenvatting onderaan.
     rows.push([])
     rows.push(['Totaal commissies', '', '', '', '', centsToCsvAmount(totalCommissionCents)])
-    rows.push([`Dagkosten (${recordedDays} × ${centsToCsvAmount(DAILY_COST_CENTS)})`, '', '', '', '', '-' + centsToCsvAmount(totalCostCents)])
+    rows.push([`Dagkosten (${costDays} werkdagen × ${centsToCsvAmount(DAILY_COST_CENTS)})`, '', '', '', '', '-' + centsToCsvAmount(totalCostCents)])
     rows.push(['Netto', '', '', '', '', centsToCsvAmount(netCents)])
 
     const safeName = companyName.replace(/[^a-z0-9]+/gi, '-').toLowerCase()
@@ -38,7 +38,7 @@ export function ClientOverview({ companyName, overview }: ClientOverviewProps) {
       <div className="grid gap-3 sm:grid-cols-3">
         <SummaryCard label="Commissies" value={formatEuroCents(totalCommissionCents)} tone="neutral" />
         <SummaryCard
-          label={`Dagkosten (${recordedDays} ${recordedDays === 1 ? 'dag' : 'dagen'})`}
+          label={`Dagkosten (${costDays} ${costDays === 1 ? 'werkdag' : 'werkdagen'})`}
           value={'−' + formatEuroCents(totalCostCents)}
           tone="cost"
         />
@@ -66,7 +66,19 @@ export function ClientOverview({ companyName, overview }: ClientOverviewProps) {
         </div>
       ) : (
         <div className="space-y-3">
-          {days.map((day) => (
+          {days.map((day) =>
+            day.byCategory.length === 0 ? (
+              // Werkdag zonder leads: alleen de dagkosten, compact weergegeven.
+              <div
+                key={day.date}
+                className="flex items-center justify-between rounded-xl border border-dashed border-gray-200 px-4 py-2.5"
+              >
+                <div className="text-sm text-gray-500">{formatDate(day.date)}</div>
+                <div className="text-sm font-semibold text-rose-600">
+                  −{formatEuroCents(day.costCents)}
+                </div>
+              </div>
+            ) : (
             <div key={day.date} className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
               <div className="flex items-center justify-between">
                 <div className="text-sm font-semibold text-gray-900">{formatDate(day.date)}</div>
@@ -93,7 +105,8 @@ export function ClientOverview({ companyName, overview }: ClientOverviewProps) {
                 </div>
               </div>
             </div>
-          ))}
+            )
+          )}
         </div>
       )}
     </section>

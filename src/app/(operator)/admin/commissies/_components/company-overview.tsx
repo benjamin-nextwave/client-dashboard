@@ -13,10 +13,12 @@ export function CompanyOverview({ overview }: CompanyOverviewProps) {
   const { clients, totalCommissionCents, totalCostCents, totalNetCents, from, to } = overview
 
   const handleDownload = () => {
-    const header = ['Klant', 'Dagen', 'Commissie (€)', 'Dagkosten (€)', 'Netto (€)']
+    const header = ['Klant', 'Eerste lead', 'Leaddagen', 'Werkdagen', 'Commissie (€)', 'Dagkosten (€)', 'Netto (€)']
     const rows: Array<Array<string | number>> = clients.map((c) => [
       c.companyName,
+      c.firstLeadDate ?? '',
       c.recordedDays,
+      c.costDays,
       centsToCsvAmount(c.commissionCents),
       '-' + centsToCsvAmount(c.costCents),
       centsToCsvAmount(c.netCents),
@@ -24,6 +26,8 @@ export function CompanyOverview({ overview }: CompanyOverviewProps) {
     rows.push([])
     rows.push([
       'Totaal',
+      '',
+      '',
       '',
       centsToCsvAmount(totalCommissionCents),
       '-' + centsToCsvAmount(totalCostCents),
@@ -65,7 +69,7 @@ export function CompanyOverview({ overview }: CompanyOverviewProps) {
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500">
                 <th className="px-4 py-2.5">Klant</th>
-                <th className="px-4 py-2.5 text-center">Dagen</th>
+                <th className="px-4 py-2.5 text-center">Leaddagen</th>
                 <th className="px-4 py-2.5 text-right">Commissie</th>
                 <th className="px-4 py-2.5 text-right">Dagkosten</th>
                 <th className="px-4 py-2.5 text-right">Netto</th>
@@ -81,10 +85,18 @@ export function CompanyOverview({ overview }: CompanyOverviewProps) {
                     >
                       {c.companyName}
                     </Link>
+                    {c.firstLeadDate && (
+                      <div className="text-[11px] text-gray-400">vanaf {formatShortDate(c.firstLeadDate)}</div>
+                    )}
                   </td>
                   <td className="px-4 py-2.5 text-center text-gray-600">{c.recordedDays}</td>
                   <td className="px-4 py-2.5 text-right text-gray-900">{formatEuroCents(c.commissionCents)}</td>
-                  <td className="px-4 py-2.5 text-right text-rose-600">−{formatEuroCents(c.costCents)}</td>
+                  <td className="px-4 py-2.5 text-right text-rose-600">
+                    −{formatEuroCents(c.costCents)}
+                    <div className="text-[11px] font-normal text-gray-400">
+                      {c.costDays} {c.costDays === 1 ? 'werkdag' : 'werkdagen'}
+                    </div>
+                  </td>
                   <td className={`px-4 py-2.5 text-right font-semibold ${c.netCents >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
                     {formatEuroCents(c.netCents)}
                   </td>
@@ -95,6 +107,12 @@ export function CompanyOverview({ overview }: CompanyOverviewProps) {
         </div>
       )}
     </section>
+  )
+}
+
+function formatShortDate(date: string): string {
+  return new Intl.DateTimeFormat('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' }).format(
+    new Date(date + 'T00:00:00')
   )
 }
 
