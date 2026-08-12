@@ -1,17 +1,7 @@
 'use client'
 
 import { useEffect, useState, useTransition } from 'react'
-import {
-  BarChart,
-  Bar,
-  Cell,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  ResponsiveContainer,
-  ReferenceLine,
-} from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer } from 'recharts'
 import { format } from 'date-fns'
 import { nl } from 'date-fns/locale'
 import { formatEuroCents } from '@/lib/commissions-shared'
@@ -31,7 +21,6 @@ interface CommissionChartProps {
 }
 
 const POSITIVE_COLOR = '#10B981' // emerald-500
-const NEGATIVE_COLOR = '#EF4444' // red-500
 
 function formatDay(dateStr: string): string {
   return format(new Date(dateStr + 'T00:00:00'), 'd MMM', { locale: nl })
@@ -74,11 +63,11 @@ export function CommissionChart({ clients, from, to, initialSeries }: Commission
     <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
       <div>
         <h2 className="text-sm font-semibold text-gray-900">
-          Netto per dag <span className="font-normal text-gray-400">· {formatDay(from)} – {formatDay(to)}</span>
+          Commissie per dag <span className="font-normal text-gray-400">· {formatDay(from)} – {formatDay(to)}</span>
         </h2>
         <p className="mt-0.5 text-xs text-gray-500">
-          Commissie minus €20 dagkosten per klant, elke werkdag vanaf zijn eerste lead. De totalen staan in de
-          blokken hieronder.
+          Wat er per dag is verdiend. Kosten zitten hier niet in: die komen uit de boekhouding en horen bij hun
+          boekingsdag, niet bij de dag van het werk. Ze staan in de blokken hieronder.
         </p>
       </div>
 
@@ -140,7 +129,7 @@ export function CommissionChart({ clients, from, to, initialSeries }: Commission
                 width={70}
               />
               <Tooltip
-                formatter={(value) => [formatEuroCents(Number(value)), 'Netto']}
+                formatter={(value) => [formatEuroCents(Number(value)), 'Commissie']}
                 labelFormatter={(label) => label}
                 contentStyle={{
                   borderRadius: '0.5rem',
@@ -148,12 +137,7 @@ export function CommissionChart({ clients, from, to, initialSeries }: Commission
                   boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
                 }}
               />
-              <ReferenceLine y={0} stroke="#9ca3af" strokeWidth={1} />
-              <Bar dataKey="netCents" radius={[4, 4, 0, 0]}>
-                {chartData.map((d) => (
-                  <Cell key={d.date} fill={d.netCents >= 0 ? POSITIVE_COLOR : NEGATIVE_COLOR} />
-                ))}
-              </Bar>
+              <Bar dataKey="commissionCents" radius={[4, 4, 0, 0]} fill={POSITIVE_COLOR} />
             </BarChart>
           </ResponsiveContainer>
         )}

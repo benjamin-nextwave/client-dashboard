@@ -1,21 +1,12 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getClientList } from './admin-stats'
 import { getClientsWithLastCheck } from './controle'
-import {
-  DAILY_COST_CENTS,
-  OFFICE_COST_CENTS_PER_MONTH,
-  countTouchedMonths,
-  isWeekday,
-  amsterdamDateString,
-  type CommissionCategory,
-} from '@/lib/commissions-shared'
+import { getExpenseTotals } from '@/lib/rompslomp/expenses'
+import type { CommissionCategory } from '@/lib/commissions-shared'
 
-// Herexporteer de gedeelde, client-veilige helpers/constanten/types zodat
-// bestaande server-side imports vanuit deze module blijven werken.
+// Herexporteer de gedeelde, client-veilige helpers/types zodat bestaande
+// server-side imports vanuit deze module blijven werken.
 export {
-  DAILY_COST_CENTS,
-  OFFICE_COST_CENTS_PER_MONTH,
-  countTouchedMonths,
   STANDARD_COMMISSION_CATEGORIES,
   amsterdamDateString,
   formatEuroCents,
@@ -36,8 +27,6 @@ export interface CommissionEntryRow {
 export interface CommissionDaySummary {
   date: string
   commissionCents: number
-  costCents: number
-  netCents: number
   byCategory: Array<{ categoryName: string; count: number; subtotalCents: number }>
 }
 
@@ -48,11 +37,7 @@ export interface ClientCommissionOverview {
   days: CommissionDaySummary[]
   totalCommissionCents: number
   recordedDays: number
-  /** Aantal werkdagen waarover dagkosten zijn gerekend. */
-  costDays: number
-  totalCostCents: number
-  netCents: number
-  /** Datum van de eerste lead ooit; vanaf hier lopen de dagkosten. */
+  /** Datum van de eerste lead ooit. */
   firstLeadDate: string | null
 }
 
@@ -61,9 +46,6 @@ export interface CompanyClientRow {
   companyName: string
   commissionCents: number
   recordedDays: number
-  costDays: number
-  costCents: number
-  netCents: number
   firstLeadDate: string | null
 }
 
@@ -72,15 +54,17 @@ export interface CompanyCommissionOverview {
   to: string
   clients: CompanyClientRow[]
   totalCommissionCents: number
-  totalCostCents: number
-  totalNetCents: number
-  /** Aantal kalendermaanden waarover kantoorkosten worden gerekend. */
-  officeMonths: number
-  officeCostCents: number
-  /** Netto na aftrek van de kantoorkosten. */
-  netAfterOfficeCents: number
-  /** Eén vierde deel daarvan: per deelnemer en voor het bedrijfsaccount. */
-  quarterShareCents: number
+  /** Uitgaven uit de boekhouding; null als de koppeling niets kon leveren. */
+  expensesCents: number | null
+  expensesCount: number
+  /** Waarom de uitgaven ontbreken — te tonen in plaats van een nul. */
+  expensesError: string | null
+  /** Rijen in de boekhouding waarvan bedrag of datum onleesbaar was. */
+  expensesSkipped: number
+  /** Commissies minus uitgaven; null zolang de uitgaven onbekend zijn. */
+  netCents: number | null
+  /** Eén vierde deel: per deelnemer en voor het bedrijfsaccount. */
+  quarterShareCents: number | null
 }
 
 // ---------------------------------------------------------------------------
@@ -198,47 +182,8 @@ export async function getClientsWithCommissionData(): Promise<CommissionControlC
 }
 
 // ---------------------------------------------------------------------------
-// Dagkosten: startdatum en werkdag-telling
+// Startdatum per klant
 // ---------------------------------------------------------------------------
-//
-// Dagkosten lopen per klant vanaf de dag van zijn eerste lead ooit, en daarna
-// elke werkdag — ook op dagen zonder leads. Zo betaalt een klant die net is
-// aangemeld niet met terugwerkende kracht voor de maanden dáárvoor, en telt een
-// stille week wél mee. De kostenperiode stopt uiterlijk vandaag; een gekozen
-// einddatum in de toekomst levert dus geen kosten op die nog niet gemaakt zijn.
-
-/** Kleinste van twee ISO-datums (YYYY-MM-DD sorteert lexicografisch correct). */
-function minDate(a: string, b: string): string {
-  return a < b ? a : b
-}
-
-/** Grootste van twee ISO-datums. */
-function maxDate(a: string, b: string): string {
-  return a > b ? a : b
-}
-
-/** Loopt de kalenderdagen van `from` t/m `to` af (beide grenzen inclusief). */
-function* eachDate(from: string, to: string): Generator<string> {
-  if (from > to) return
-  const [y, m, d] = from.split('-').map(Number)
-  if (!y || !m || !d) return
-  const cursor = new Date(Date.UTC(y, m - 1, d))
-  for (;;) {
-    const iso = cursor.toISOString().slice(0, 10)
-    if (iso > to) return
-    yield iso
-    cursor.setUTCDate(cursor.getUTCDate() + 1)
-  }
-}
-
-/** Aantal werkdagen (ma–vr) in [from, to], grenzen inclusief. */
-function countWeekdays(from: string, to: string): number {
-  let count = 0
-  for (const date of eachDate(from, to)) {
-    if (isWeekday(date)) count += 1
-  }
-  return count
-}
 
 /**
  * Datum van de eerste commissie-lead per klant, over alle tijd heen. Gepagineerd
@@ -299,8 +244,7 @@ function buildClientOverview(
   from: string,
   to: string,
   raw: RawEntry[],
-  firstLeadDate: string | null,
-  costEnd: string
+  firstLeadDate: string | null
 ): ClientCommissionOverview {
   const entries: CommissionEntryRow[] = raw.map((r) => ({
     date: r.entry_date,
@@ -320,19 +264,6 @@ function buildClientOverview(
   }
   const daysWithLeads = byDate.size
 
-  // Werkdagen vanaf de eerste lead krijgen dagkosten, ook zonder leads. Die
-  // dagen bestaan nog niet in byDate en worden hier als lege dag toegevoegd.
-  if (firstLeadDate) {
-    for (const date of eachDate(maxDate(from, firstLeadDate), minDate(to, costEnd))) {
-      if (isWeekday(date) && !byDate.has(date)) byDate.set(date, [])
-    }
-  }
-
-  const dayCostCents = (date: string): number =>
-    firstLeadDate && date >= firstLeadDate && date <= costEnd && isWeekday(date)
-      ? DAILY_COST_CENTS
-      : 0
-
   const days: CommissionDaySummary[] = Array.from(byDate.entries())
     .sort((a, b) => (a[0] < b[0] ? 1 : -1)) // nieuwste dag eerst
     .map(([date, list]) => {
@@ -345,12 +276,9 @@ function buildClientOverview(
         cur.subtotalCents += e.subtotalCents
         catMap.set(e.categoryName, cur)
       }
-      const costCents = dayCostCents(date)
       return {
         date,
         commissionCents,
-        costCents,
-        netCents: commissionCents - costCents,
         byCategory: Array.from(catMap.entries()).map(([categoryName, v]) => ({
           categoryName,
           count: v.count,
@@ -360,8 +288,6 @@ function buildClientOverview(
     })
 
   const totalCommissionCents = days.reduce((s, d) => s + d.commissionCents, 0)
-  const totalCostCents = days.reduce((s, d) => s + d.costCents, 0)
-  const costDays = days.filter((d) => d.costCents > 0).length
 
   return {
     from,
@@ -370,9 +296,6 @@ function buildClientOverview(
     days,
     totalCommissionCents,
     recordedDays: daysWithLeads,
-    costDays,
-    totalCostCents,
-    netCents: totalCommissionCents - totalCostCents,
     firstLeadDate,
   }
 }
@@ -425,8 +348,7 @@ export async function getClientCommissionOverview(
     getFirstLeadDate(clientId),
   ])
 
-  const costEnd = minDate(to, amsterdamDateString())
-  return buildClientOverview(from, to, leadsToRawEntries((data ?? []) as LeadRow[]), firstLeadDate, costEnd)
+  return buildClientOverview(from, to, leadsToRawEntries((data ?? []) as LeadRow[]), firstLeadDate)
 }
 
 // ---------------------------------------------------------------------------
@@ -449,7 +371,6 @@ export async function getCompanyCommissionOverview(
   ])
 
   const nameById = new Map(clients.map((c) => [c.id, c.companyName]))
-  const costEnd = minDate(to, amsterdamDateString())
 
   // Per klant: commissie-som + set van dagen met leads.
   const commissionByClient = new Map<string, number>()
@@ -462,61 +383,38 @@ export async function getCompanyCommissionOverview(
     daysByClient.set(r.client_id, set)
   }
 
-  // Een klant hoort in het overzicht zodra zijn eerste lead vóór het einde van
-  // de periode ligt — ook zonder leads ín de periode, want de dagkosten lopen
-  // dan gewoon door.
-  const clientIds = new Set<string>(daysByClient.keys())
-  for (const [clientId, firstDate] of firstLeadByClient) {
-    if (firstDate <= costEnd) clientIds.add(clientId)
-  }
+  // Alleen klanten met commissie in deze periode; kosten hangen niet meer aan
+  // een klant, dus een klant zonder leads heeft hier niets te melden.
+  const rows: CompanyClientRow[] = Array.from(commissionByClient.keys()).map((clientId) => ({
+    clientId,
+    companyName: nameById.get(clientId) ?? 'Onbekende klant',
+    commissionCents: commissionByClient.get(clientId) ?? 0,
+    recordedDays: daysByClient.get(clientId)?.size ?? 0,
+    firstLeadDate: firstLeadByClient.get(clientId) ?? null,
+  }))
 
-  const rows: CompanyClientRow[] = Array.from(clientIds).map((clientId) => {
-    const commissionCents = commissionByClient.get(clientId) ?? 0
-    const recordedDays = daysByClient.get(clientId)?.size ?? 0
-    const firstLeadDate = firstLeadByClient.get(clientId) ?? null
-    // Dagkosten vanaf de eerste lead van deze klant, elke werkdag, tot en met
-    // het einde van de periode (uiterlijk vandaag).
-    const costDays = firstLeadDate ? countWeekdays(maxDate(from, firstLeadDate), costEnd) : 0
-    const costCents = costDays * DAILY_COST_CENTS
-    return {
-      clientId,
-      companyName: nameById.get(clientId) ?? 'Onbekende klant',
-      commissionCents,
-      recordedDays,
-      costDays,
-      costCents,
-      netCents: commissionCents - costCents,
-      firstLeadDate,
-    }
-  })
-
-  rows.sort((a, b) => b.netCents - a.netCents)
+  rows.sort((a, b) => b.commissionCents - a.commissionCents)
 
   const totalCommissionCents = rows.reduce((s, r) => s + r.commissionCents, 0)
-  const totalCostCents = rows.reduce((s, r) => s + r.costCents, 0)
-  const totalNetCents = totalCommissionCents - totalCostCents
 
-  // Kantoorkosten gelden per aangeraakte kalendermaand, niet naar rato: een
-  // periode van drie dagen in augustus draagt dus de volle maandhuur.
-  const officeMonths = countTouchedMonths(from, to)
-  const officeCostCents = officeMonths * OFFICE_COST_CENTS_PER_MONTH
-  const netAfterOfficeCents = totalNetCents - officeCostCents
-
-  // Wat overblijft gaat in vier gelijke delen. Afkappen in plaats van afronden,
-  // zodat vier delen samen nooit méér zijn dan er werkelijk is.
-  const quarterShareCents = Math.trunc(netAfterOfficeCents / 4)
+  // Uitgaven komen uit de boekhouding. Lukt dat niet, dan blijft het bewust
+  // leeg: nul tonen zou een winst suggereren die er niet is.
+  const expenses = await getExpenseTotals(from, to)
+  const expensesCents = expenses.ok ? expenses.value.totalCents : null
+  const netCents = expensesCents === null ? null : totalCommissionCents - expensesCents
 
   return {
     from,
     to,
     clients: rows,
     totalCommissionCents,
-    totalCostCents,
-    totalNetCents,
-    officeMonths,
-    officeCostCents,
-    netAfterOfficeCents,
-    quarterShareCents,
+    expensesCents,
+    expensesCount: expenses.ok ? expenses.value.expenses.length : 0,
+    expensesError: expenses.ok ? null : expenses.error,
+    expensesSkipped: expenses.ok ? expenses.value.skipped : 0,
+    netCents,
+    // Vier gelijke delen; afkappen zodat de delen samen nooit méér zijn dan er is.
+    quarterShareCents: netCents === null ? null : Math.trunc(netCents / 4),
   }
 }
 
@@ -586,8 +484,6 @@ export async function getAllCommissionLeads(): Promise<CommissionLeadHistoryRow[
 export interface CommissionChartPoint {
   date: string
   commissionCents: number
-  costCents: number
-  netCents: number
 }
 
 export interface CommissionChartSeries {
@@ -597,11 +493,12 @@ export interface CommissionChartSeries {
 }
 
 /**
- * Tijdreeks van het netto commissiebedrag per dag over [from, to], optioneel
- * gefilterd op één of meerdere klanten. Netto = commissie van die dag minus
- * €20 dagkosten per klant die op dat moment al gestart is (eerste lead gehad),
- * en alleen op werkdagen. Werkdagen zonder leads staan dus óók in de reeks,
- * met een negatief netto.
+ * Verdiende commissie per dag over [from, to], optioneel gefilterd op klanten.
+ *
+ * Bewust zonder kosten: die komen sinds de Rompslomp-koppeling uit de
+ * boekhouding, en een boekhoudpost hoort bij de dag waarop hij geboekt is, niet
+ * bij de dag waarop het werk gebeurde. Ze per dag aftrekken zou een grafiek vol
+ * kunstmatige pieken geven. De kosten staan in de totalen eronder.
  */
 export async function getCommissionChartSeries(
   from: string,
@@ -619,42 +516,16 @@ export async function getCommissionChartSeries(
     query = query.in('client_id', clientIds)
   }
 
-  const [{ data }, firstLeadByClient] = await Promise.all([query, getFirstLeadDateByClient()])
+  const { data } = await query
 
-  // Per dag: commissie-som.
   const commissionByDate = new Map<string, number>()
   for (const r of (data ?? []) as Array<{ client_id: string; entry_date: string; unit_price_cents: number }>) {
     commissionByDate.set(r.entry_date, (commissionByDate.get(r.entry_date) ?? 0) + (r.unit_price_cents ?? 0))
   }
 
-  // Startdatums van de klanten die in deze reeks meetellen; een klant draagt
-  // dagkosten vanaf zijn eigen startdatum, niet vanaf het begin van de periode.
-  const filter = clientIds && clientIds.length > 0 ? new Set(clientIds) : null
-  const startDates = Array.from(firstLeadByClient.entries())
-    .filter(([id]) => !filter || filter.has(id))
-    .map(([, date]) => date)
-
-  const costEnd = minDate(to, amsterdamDateString())
-  const dates = new Set<string>(commissionByDate.keys())
-  if (startDates.length > 0) {
-    const earliestStart = startDates.reduce((a, b) => minDate(a, b))
-    for (const date of eachDate(maxDate(from, earliestStart), costEnd)) {
-      if (isWeekday(date)) dates.add(date)
-    }
-  }
-
-  const points: CommissionChartPoint[] = Array.from(dates)
+  const points: CommissionChartPoint[] = Array.from(commissionByDate.keys())
     .sort((a, b) => (a < b ? -1 : 1)) // oplopend op datum
-    .map((date) => {
-      const commissionCents = commissionByDate.get(date) ?? 0
-      const activeClients =
-        isWeekday(date) && date <= costEnd
-          ? startDates.filter((start) => start <= date).length
-          : 0
-      const costCents = activeClients * DAILY_COST_CENTS
-      return { date, commissionCents, costCents, netCents: commissionCents - costCents }
-    })
-    .filter((p) => p.commissionCents !== 0 || p.costCents !== 0)
+    .map((date) => ({ date, commissionCents: commissionByDate.get(date) ?? 0 }))
 
   return { from, to, points }
 }

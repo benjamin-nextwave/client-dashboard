@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { formatEuroCents, OFFICE_COST_CENTS_PER_MONTH } from '@/lib/commissions-shared'
+import { formatEuroCents } from '@/lib/commissions-shared'
 import type { CompanyCommissionOverview } from '@/lib/data/commissions'
 import { downloadCsv, centsToCsvAmount } from '@/lib/csv-client'
 
@@ -13,80 +13,97 @@ export function CompanyOverview({ overview }: CompanyOverviewProps) {
   const {
     clients,
     totalCommissionCents,
-    totalCostCents,
-    totalNetCents,
-    officeMonths,
-    officeCostCents,
-    netAfterOfficeCents,
+    expensesCents,
+    expensesCount,
+    expensesError,
+    expensesSkipped,
+    netCents,
     quarterShareCents,
     from,
     to,
   } = overview
 
   const handleDownload = () => {
-    const header = ['Klant', 'Eerste lead', 'Leaddagen', 'Werkdagen', 'Commissie (€)', 'Dagkosten (€)', 'Netto (€)']
+    const header = ['Klant', 'Eerste lead', 'Leaddagen', 'Commissie (€)']
     const rows: Array<Array<string | number>> = clients.map((c) => [
       c.companyName,
       c.firstLeadDate ?? '',
       c.recordedDays,
-      c.costDays,
       centsToCsvAmount(c.commissionCents),
-      '-' + centsToCsvAmount(c.costCents),
-      centsToCsvAmount(c.netCents),
     ])
     rows.push([])
+    rows.push(['Totaal commissies', '', '', centsToCsvAmount(totalCommissionCents)])
     rows.push([
-      'Totaal',
+      'Uitgaven (Rompslomp)',
       '',
       '',
-      '',
-      centsToCsvAmount(totalCommissionCents),
-      '-' + centsToCsvAmount(totalCostCents),
-      centsToCsvAmount(totalNetCents),
+      expensesCents === null ? 'onbekend' : '-' + centsToCsvAmount(expensesCents),
     ])
+    rows.push(['Netto', '', '', netCents === null ? 'onbekend' : centsToCsvAmount(netCents)])
     rows.push([
-      `Kantoor (${officeMonths} × ${centsToCsvAmount(OFFICE_COST_CENTS_PER_MONTH)})`,
+      'Ieder een kwart (Merlijn / KIX / jij / bedrijfsaccount)',
       '',
       '',
-      '',
-      '',
-      '-' + centsToCsvAmount(officeCostCents),
-      '',
+      quarterShareCents === null ? 'onbekend' : centsToCsvAmount(quarterShareCents),
     ])
-    rows.push(['Netto na kantoor', '', '', '', '', '', centsToCsvAmount(netAfterOfficeCents)])
-    rows.push(['Ieder een kwart (Merlijn / KIX / jij / bedrijfsaccount)', '', '', '', '', '', centsToCsvAmount(quarterShareCents)])
     downloadCsv(`commissies-totaal-${from}_tot_${to}.csv`, header, rows)
   }
 
   return (
     <section className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      {expensesError && (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          <p className="font-semibold">Uitgaven konden niet worden opgehaald uit Rompslomp.</p>
+          <p className="mt-0.5 text-xs">{expensesError}</p>
+          <p className="mt-1.5 text-xs">
+            Netto en het kwart-aandeel staan daarom op onbekend — er wordt bewust geen nul getoond, want dan zou de
+            winst te hoog lijken.{' '}
+            <Link href="/admin/commissies/rompslomp" className="font-semibold underline">
+              Koppeling controleren
+            </Link>
+          </p>
+        </div>
+      )}
+
+      {expensesSkipped > 0 && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          {expensesSkipped} {expensesSkipped === 1 ? 'boeking is' : 'boekingen zijn'} overgeslagen omdat bedrag of
+          datum niet te lezen was. Het uitgaventotaal is dus mogelijk te laag.{' '}
+          <Link href="/admin/commissies/rompslomp" className="font-semibold underline">
+            Bekijk wat er terugkomt
+          </Link>
+        </div>
+      )}
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <SummaryCard label="Commissies" value={formatEuroCents(totalCommissionCents)} tone="neutral" />
-        <SummaryCard label="Dagkosten" value={'−' + formatEuroCents(totalCostCents)} tone="cost" />
-        <SummaryCard label="Netto winst" value={formatEuroCents(totalNetCents)} tone={totalNetCents >= 0 ? 'positive' : 'negative'} />
         <SummaryCard
-          label="Kantoor"
-          value={'−' + formatEuroCents(officeCostCents)}
-          tone="cost"
-          note={`${officeMonths} ${officeMonths === 1 ? 'maand' : 'maanden'} × ${formatEuroCents(OFFICE_COST_CENTS_PER_MONTH)}`}
+          label="Uitgaven"
+          value={expensesCents === null ? 'Onbekend' : '−' + formatEuroCents(expensesCents)}
+          tone={expensesCents === null ? 'muted' : 'cost'}
+          note={
+            expensesCents === null
+              ? 'Rompslomp niet bereikbaar'
+              : `${expensesCount} ${expensesCount === 1 ? 'boeking' : 'boekingen'} uit Rompslomp`
+          }
         />
         <SummaryCard
-          label="Netto na kantoor"
-          value={formatEuroCents(netAfterOfficeCents)}
-          tone={netAfterOfficeCents >= 0 ? 'positive' : 'negative'}
+          label="Netto"
+          value={netCents === null ? 'Onbekend' : formatEuroCents(netCents)}
+          tone={netCents === null ? 'muted' : netCents >= 0 ? 'positive' : 'negative'}
           emphasis
         />
         <SummaryCard
           label="Ieder een kwart"
-          value={formatEuroCents(quarterShareCents)}
-          tone={quarterShareCents >= 0 ? 'positive' : 'negative'}
+          value={quarterShareCents === null ? 'Onbekend' : formatEuroCents(quarterShareCents)}
+          tone={quarterShareCents === null ? 'muted' : quarterShareCents >= 0 ? 'positive' : 'negative'}
           note="Merlijn · KIX · jij · bedrijfsaccount"
           emphasis
         />
       </div>
 
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-gray-900">Per klant</h2>
+        <h2 className="text-sm font-semibold text-gray-900">Commissie per klant</h2>
         <button
           type="button"
           onClick={handleDownload}
@@ -112,8 +129,6 @@ export function CompanyOverview({ overview }: CompanyOverviewProps) {
                 <th className="px-4 py-2.5">Klant</th>
                 <th className="px-4 py-2.5 text-center">Leaddagen</th>
                 <th className="px-4 py-2.5 text-right">Commissie</th>
-                <th className="px-4 py-2.5 text-right">Dagkosten</th>
-                <th className="px-4 py-2.5 text-right">Netto</th>
               </tr>
             </thead>
             <tbody>
@@ -127,19 +142,12 @@ export function CompanyOverview({ overview }: CompanyOverviewProps) {
                       {c.companyName}
                     </Link>
                     {c.firstLeadDate && (
-                      <div className="text-[11px] text-gray-400">vanaf {formatShortDate(c.firstLeadDate)}</div>
+                      <div className="text-[11px] text-gray-400">eerste lead {formatShortDate(c.firstLeadDate)}</div>
                     )}
                   </td>
-                  <td className="px-4 py-2.5 text-center text-gray-600">{c.recordedDays}</td>
-                  <td className="px-4 py-2.5 text-right text-gray-900">{formatEuroCents(c.commissionCents)}</td>
-                  <td className="px-4 py-2.5 text-right text-rose-600">
-                    −{formatEuroCents(c.costCents)}
-                    <div className="text-[11px] font-normal text-gray-400">
-                      {c.costDays} {c.costDays === 1 ? 'werkdag' : 'werkdagen'}
-                    </div>
-                  </td>
-                  <td className={`px-4 py-2.5 text-right font-semibold ${c.netCents >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
-                    {formatEuroCents(c.netCents)}
+                  <td className="px-4 py-2.5 text-center tabular-nums text-gray-600">{c.recordedDays}</td>
+                  <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-gray-900">
+                    {formatEuroCents(c.commissionCents)}
                   </td>
                 </tr>
               ))}
@@ -147,6 +155,11 @@ export function CompanyOverview({ overview }: CompanyOverviewProps) {
           </table>
         </div>
       )}
+
+      <p className="text-[11px] leading-relaxed text-gray-400">
+        Uitgaven zijn bedrijfsbreed en horen niet bij één klant, dus deze tabel toont alleen wat een klant opbrengt.
+        Wat er onder de streep overblijft staat in de blokken hierboven.
+      </p>
     </section>
   )
 }
@@ -166,7 +179,7 @@ function SummaryCard({
 }: {
   label: string
   value: string
-  tone: 'neutral' | 'cost' | 'positive' | 'negative'
+  tone: 'neutral' | 'cost' | 'positive' | 'negative' | 'muted'
   note?: string
   emphasis?: boolean
 }) {
@@ -175,6 +188,7 @@ function SummaryCard({
     cost: 'text-rose-600',
     positive: 'text-emerald-700',
     negative: 'text-rose-700',
+    muted: 'text-gray-400',
   }[tone]
   return (
     <div

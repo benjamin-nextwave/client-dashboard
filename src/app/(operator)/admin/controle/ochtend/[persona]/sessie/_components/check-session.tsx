@@ -11,11 +11,7 @@ import {
   type SubmitCheckTask,
   type SubmitCommissionCampaign,
 } from '../../../../actions'
-import {
-  DAILY_COST_CENTS,
-  formatEuroCents,
-  type CommissionCategory,
-} from '@/lib/commissions-shared'
+import { formatEuroCents, type CommissionCategory } from '@/lib/commissions-shared'
 import {
   liveQuestionsFor,
   onboardingQuestionsFor,
@@ -185,7 +181,7 @@ export function CheckSession({ clients, persona, shift }: CheckSessionProps) {
       perCampaign[i] = campCents
       totalCents += campCents
     }
-    return { perCampaign, commissionCents: totalCents, netCents: totalCents - DAILY_COST_CENTS }
+    return { perCampaign, commissionCents: totalCents }
   }, [showCommission, state, current])
 
   const updateState = (clientId: string, patch: Partial<ClientFormState>) => {
@@ -1031,33 +1027,16 @@ function CommissionBlock({
   )
 }
 
-function CommissionDayTotal({
-  day,
-}: {
-  day: { commissionCents: number; netCents: number }
-}) {
-  const positive = day.netCents >= 0
+function CommissionDayTotal({ day }: { day: { commissionCents: number } }) {
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
       <h3 className="text-sm font-semibold text-gray-900">Dagtotaal commissies</h3>
       <p className="mt-0.5 text-xs text-gray-500">
-        Alle campagnes samen, minus de vaste dagkosten van {formatEuroCents(DAILY_COST_CENTS)}.
+        Alle campagnes samen. De kosten komen uit de boekhouding en staan in het financieel overzicht.
       </p>
-      <div className="mt-3 space-y-1.5">
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-gray-600">Commissies vandaag</span>
-          <span className="font-semibold text-gray-900">{formatEuroCents(day.commissionCents)}</span>
-        </div>
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-gray-600">Dagkosten campagne</span>
-          <span className="font-semibold text-rose-600">−{formatEuroCents(DAILY_COST_CENTS)}</span>
-        </div>
-        <div className="flex items-center justify-between border-t border-gray-200 pt-2 text-base">
-          <span className="font-semibold text-gray-900">Netto vandaag</span>
-          <span className={`font-bold ${positive ? 'text-emerald-700' : 'text-rose-700'}`}>
-            {formatEuroCents(day.netCents)}
-          </span>
-        </div>
+      <div className="mt-3 flex items-center justify-between border-t border-gray-200 pt-2 text-base">
+        <span className="font-semibold text-gray-900">Commissies vandaag</span>
+        <span className="font-bold text-emerald-700">{formatEuroCents(day.commissionCents)}</span>
       </div>
     </div>
   )

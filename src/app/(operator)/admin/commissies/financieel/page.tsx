@@ -46,9 +46,12 @@ export default async function FinancieelOverzichtPage({ searchParams }: PageProp
         </Link>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight text-gray-900">Financieel overzicht</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Opgetelde commissies per klant over de gekozen periode, minus de vaste dagkosten van €20 per werkdag. Die
-          lopen per klant vanaf zijn eerste lead, ook op dagen zonder leads. Daarna gaan de kantoorkosten er nog af:
-          €1.200 per aangeraakte maand. Klik op een klant voor het detail.
+          Opgetelde commissies per klant over de gekozen periode, minus de werkelijke uitgaven uit Rompslomp. Klik op
+          een klant voor het detail, of{' '}
+          <Link href="/admin/commissies/rompslomp" className="font-semibold text-gray-700 underline">
+            controleer de boekhoudkoppeling
+          </Link>
+          .
         </p>
       </header>
 

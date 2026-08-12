@@ -1,6 +1,6 @@
 'use client'
 
-import { formatEuroCents, DAILY_COST_CENTS } from '@/lib/commissions-shared'
+import { formatEuroCents } from '@/lib/commissions-shared'
 import type { ClientCommissionOverview } from '@/lib/data/commissions'
 import { downloadCsv, centsToCsvAmount } from '@/lib/csv-client'
 
@@ -10,7 +10,7 @@ interface ClientOverviewProps {
 }
 
 export function ClientOverview({ companyName, overview }: ClientOverviewProps) {
-  const { entries, days, totalCommissionCents, costDays, totalCostCents, netCents, from, to } = overview
+  const { entries, days, totalCommissionCents, recordedDays, from, to } = overview
 
   const handleDownload = () => {
     const header = ['Datum', 'Campagne', 'Categorie', 'Aantal', 'Prijs per lead (€)', 'Subtotaal (€)']
@@ -25,8 +25,6 @@ export function ClientOverview({ companyName, overview }: ClientOverviewProps) {
     // Samenvatting onderaan.
     rows.push([])
     rows.push(['Totaal commissies', '', '', '', '', centsToCsvAmount(totalCommissionCents)])
-    rows.push([`Dagkosten (${costDays} werkdagen × ${centsToCsvAmount(DAILY_COST_CENTS)})`, '', '', '', '', '-' + centsToCsvAmount(totalCostCents)])
-    rows.push(['Netto', '', '', '', '', centsToCsvAmount(netCents)])
 
     const safeName = companyName.replace(/[^a-z0-9]+/gi, '-').toLowerCase()
     downloadCsv(`commissies-${safeName}-${from}_tot_${to}.csv`, header, rows)
@@ -35,15 +33,18 @@ export function ClientOverview({ companyName, overview }: ClientOverviewProps) {
   return (
     <section className="space-y-4">
       {/* Samenvatting */}
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2">
         <SummaryCard label="Commissies" value={formatEuroCents(totalCommissionCents)} tone="neutral" />
         <SummaryCard
-          label={`Dagkosten (${costDays} ${costDays === 1 ? 'werkdag' : 'werkdagen'})`}
-          value={'−' + formatEuroCents(totalCostCents)}
-          tone="cost"
+          label={`Dagen met leads`}
+          value={`${recordedDays}`}
+          tone="neutral"
         />
-        <SummaryCard label="Netto" value={formatEuroCents(netCents)} tone={netCents >= 0 ? 'positive' : 'negative'} />
       </div>
+      <p className="text-[11px] text-gray-400">
+        Kosten staan niet meer per klant: die komen uit de boekhouding en zijn bedrijfsbreed. Het nettoresultaat vind
+        je in het financieel overzicht.
+      </p>
 
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-gray-900">Per dag</h2>
@@ -66,24 +67,12 @@ export function ClientOverview({ companyName, overview }: ClientOverviewProps) {
         </div>
       ) : (
         <div className="space-y-3">
-          {days.map((day) =>
-            day.byCategory.length === 0 ? (
-              // Werkdag zonder leads: alleen de dagkosten, compact weergegeven.
-              <div
-                key={day.date}
-                className="flex items-center justify-between rounded-xl border border-dashed border-gray-200 px-4 py-2.5"
-              >
-                <div className="text-sm text-gray-500">{formatDate(day.date)}</div>
-                <div className="text-sm font-semibold text-rose-600">
-                  −{formatEuroCents(day.costCents)}
-                </div>
-              </div>
-            ) : (
+          {days.map((day) => (
             <div key={day.date} className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
               <div className="flex items-center justify-between">
                 <div className="text-sm font-semibold text-gray-900">{formatDate(day.date)}</div>
-                <div className={`text-sm font-bold ${day.netCents >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
-                  Netto {formatEuroCents(day.netCents)}
+                <div className="text-sm font-bold text-emerald-700">
+                  {formatEuroCents(day.commissionCents)}
                 </div>
               </div>
               <div className="mt-2 space-y-1">
@@ -95,18 +84,9 @@ export function ClientOverview({ companyName, overview }: ClientOverviewProps) {
                     <span className="font-medium text-gray-900">{formatEuroCents(c.subtotalCents)}</span>
                   </div>
                 ))}
-                <div className="flex items-center justify-between border-t border-gray-100 pt-1 text-sm">
-                  <span className="text-gray-500">Commissie</span>
-                  <span className="font-semibold text-gray-900">{formatEuroCents(day.commissionCents)}</span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-500">Dagkosten</span>
-                  <span className="font-semibold text-rose-600">−{formatEuroCents(day.costCents)}</span>
-                </div>
               </div>
             </div>
-            )
-          )}
+          ))}
         </div>
       )}
     </section>

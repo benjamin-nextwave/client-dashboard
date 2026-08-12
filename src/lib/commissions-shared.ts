@@ -3,26 +3,9 @@
 // hieruit kunnen importeren. De server-datalaag (lib/data/commissions.ts)
 // herexporteert deze waarden voor het gemak.
 
-// Vaste dagkosten per klant per werkdag waarop een avondcontrole is ingevuld.
-export const DAILY_COST_CENTS = 2000
-
-// Vaste kantoorkosten voor het hele bedrijf, per kalendermaand. Anders dan de
-// dagkosten hangen deze niet aan een klant: ze worden één keer van het totaal
-// afgetrokken om tot de netto-netto winst te komen.
-export const OFFICE_COST_CENTS_PER_MONTH = 120000
-
-/**
- * Aantal kalendermaanden dat een periode aanraakt, grenzen inclusief. Een
- * periode van 1 t/m 12 augustus raakt één maand; 15 juli t/m 3 augustus raakt
- * er twee. Elke aangeraakte maand telt voor een volle maand kantoorkosten.
- */
-export function countTouchedMonths(from: string, to: string): number {
-  const [fy, fm] = from.split('-').map(Number)
-  const [ty, tm] = to.split('-').map(Number)
-  if (!fy || !fm || !ty || !tm) return 0
-  const months = (ty - fy) * 12 + (tm - fm) + 1
-  return months > 0 ? months : 0
-}
+// De vaste dagkosten van €20 en de losse kantoorpost van €1.200 zijn vervallen:
+// kosten komen sinds de Rompslomp-koppeling uit de boekhouding zelf, zodat er
+// maar één plek is waar ze vandaan komen.
 
 /**
  * Standaard commissie-categorieën die als snelkeuze worden aangeboden bij het
