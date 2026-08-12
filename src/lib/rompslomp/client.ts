@@ -112,33 +112,40 @@ export async function rompslompGet<T>(
   }
 }
 
-interface MeResponse {
-  companies?: Array<{ id?: number | string; name?: string }>
-  company_ids?: Array<number | string>
+interface CompaniesResponse {
+  companies?: Array<{
+    id?: number | string
+    name?: string
+    access_control?: { api_accessible?: boolean; allowed_scopes?: string[] }
+  }>
 }
 
 export interface RompslompCompany {
   id: string
   name: string
+  /** Rechten die dít token op deze administratie heeft. */
+  scopes: string[]
 }
 
-/** De administraties waar dit token bij mag. Ook de bron voor het bedrijfsnummer. */
+/**
+ * De administraties waar dit token bij mag, plus de rechten per administratie.
+ *
+ * Bewust `/companies` en niet `/me`: die tweede vereist de aparte scope
+ * `read:me`, die een token met alleen uitgaven-rechten niet heeft. `/companies`
+ * valt onder de basisscope `public` en werkt dus altijd.
+ */
 export async function getCompanies(): Promise<RompslompResult<RompslompCompany[]>> {
-  const result = await rompslompGet<MeResponse>('/me')
+  const result = await rompslompGet<CompaniesResponse>('/companies')
   if (!result.ok) return result
 
-  const raw = result.value
   const companies: RompslompCompany[] = []
-
-  for (const c of raw.companies ?? []) {
+  for (const c of result.value.companies ?? []) {
     if (c.id === undefined) continue
-    companies.push({ id: String(c.id), name: c.name ?? `Administratie ${c.id}` })
-  }
-  // Sommige antwoorden geven alleen nummers terug.
-  if (companies.length === 0) {
-    for (const id of raw.company_ids ?? []) {
-      companies.push({ id: String(id), name: `Administratie ${id}` })
-    }
+    companies.push({
+      id: String(c.id),
+      name: c.name ?? `Administratie ${c.id}`,
+      scopes: c.access_control?.allowed_scopes ?? [],
+    })
   }
 
   return { ok: true, value: companies }

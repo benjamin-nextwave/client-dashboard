@@ -68,15 +68,39 @@ export default async function RompslompStatusPage() {
 
       {configured && (
         <>
-          <Row label="Administraties (/me)">
+          <Row label="Administraties en tokenrechten">
             {companies?.ok ? (
               companies.value.length > 0 ? (
-                <ul className="space-y-0.5">
-                  {companies.value.map((c) => (
-                    <li key={c.id} className="text-sm text-gray-700">
-                      {c.name} <span className="font-mono text-xs text-gray-400">#{c.id}</span>
-                    </li>
-                  ))}
+                <ul className="space-y-2">
+                  {companies.value.map((c) => {
+                    const canWrite = c.scopes.some((s) => s.startsWith('manage:'))
+                    return (
+                      <li key={c.id} className="text-sm text-gray-700">
+                        {c.name} <span className="font-mono text-xs text-gray-400">#{c.id}</span>
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {c.scopes.map((s) => (
+                            <span
+                              key={s}
+                              className={`rounded px-1.5 py-0.5 font-mono text-[10px] ${
+                                s.startsWith('manage:')
+                                  ? 'bg-amber-100 text-amber-900'
+                                  : 'bg-gray-100 text-gray-600'
+                              }`}
+                            >
+                              {s}
+                            </span>
+                          ))}
+                        </div>
+                        {canWrite && (
+                          <p className="mt-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                            Dit token heeft een <code className="font-mono">manage:</code>-recht en mag in Rompslomp
+                            dus méér dan lezen. Dit dashboard doet uitsluitend GET-verzoeken, maar als Rompslomp een
+                            leesvariant aanbiedt, is een token met alleen die rechten veiliger.
+                          </p>
+                        )}
+                      </li>
+                    )
+                  })}
                 </ul>
               ) : (
                 <Badge tone="warn">Geen administraties gevonden</Badge>

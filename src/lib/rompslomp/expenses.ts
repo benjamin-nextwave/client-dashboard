@@ -2,18 +2,37 @@ import { rompslompGet, resolveCompanyId, type RompslompResult } from './client'
 
 // Uitgaven ophalen uit Rompslomp. Alleen lezen — zie de toelichting in client.ts.
 //
-// De Swagger-spec van Rompslomp beschrijft wél een Expense-object, maar was te
-// groot om er de exacte veldnamen van bedrag en datum uit te bevestigen. Daarom
-// leest `readExpense` hieronder tolerant: het probeert een aantal gangbare
-// namen en telt anders de factuurregels op. Herkent hij een bedrag niet, dan
-// levert hij null en telt die uitgave níét stilzwijgend als nul mee — de
-// aanroeper krijgt te horen hoeveel rijen zijn overgeslagen.
+// De vorm hieronder is afgeleid uit de echte API-respons (geverifieerd
+// 12 aug 2026 op de administratie Nextwave Solutions, 625 boekingen):
+//
+//   { "expenses": [ { id, date, state, currency, invoice_number,
+//                     type_account: { path_name, type },
+//                     cached_contact: { name },
+//                     invoice_lines: [ { description, price_per_unit,
+//                                        price_with_vat, price_without_vat,
+//                                        vat_amount, quantity } ] } ] }
+//
+// Twee dingen om te weten:
+//
+//   * Een uitgave heeft GEEN totaalveld. Het bedrag komt altijd uit de
+//     factuurregels. Bedragen zijn strings ("39.53").
+//   * Er wordt gerekend met het bedrag EXCLUSIEF btw. Nextwave is btw-plichtig,
+//     dus de btw op inkopen wordt teruggevorderd en is geen kostenpost. De
+//     commissies aan de opbrengstenkant zijn eveneens exclusief btw, dus de
+//     twee kanten zijn vergelijkbaar. Wil je toch inclusief rekenen, dan is
+//     `AMOUNT_FIELD` hieronder de enige plek die verandert.
+//
+// Herkent de uitlezer een bedrag of datum niet, dan telt die boeking níét
+// stilzwijgend als nul mee: hij wordt overgeslagen en geteld, zodat het
+// overzicht kan waarschuwen dat het totaal onvolledig is.
 
 export interface RompslompExpense {
   id: string
   date: string
   description: string
   supplier: string
+  /** Rekening waarop geboekt is, bv. "Kosten • Overige kosten • Abonnementen". */
+  category: string
   amountCents: number
 }
 
@@ -27,7 +46,16 @@ export interface ExpenseTotals {
 }
 
 const PAGE_SIZE = 100
-const MAX_PAGES = 25
+const MAX_PAGES = 60
+
+/**
+ * Welk regelbedrag telt als kosten. 'price_without_vat' = exclusief btw; zet
+ * dit op 'price_with_vat' om inclusief te rekenen.
+ */
+const AMOUNT_FIELD = 'price_without_vat' as const
+
+/** Alleen definitieve boekingen tellen mee; een concept is nog geen uitgave. */
+const COUNTED_STATES = new Set(['published'])
 
 function asRecord(value: unknown): Record<string, unknown> {
   return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {}
@@ -45,19 +73,11 @@ function toCents(value: unknown): number | null {
   return null
 }
 
-const AMOUNT_FIELDS = [
-  'total_including_vat',
-  'total_incl_vat',
-  'amount_including_vat',
-  'total_amount',
-  'total',
-  'amount',
-  'price_including_vat',
-]
-
-const DATE_FIELDS = ['date', 'invoice_date', 'booked_at', 'created_at']
-
-/** Telt de factuurregels op als er geen totaalveld herkend wordt. */
+/**
+ * Telt de factuurregels op. Het regelbedrag staat in `price_without_vat` /
+ * `price_with_vat`; dat is het totaal van de regel, niet de stukprijs. Alleen
+ * als beide ontbreken wordt teruggevallen op stukprijs × aantal.
+ */
 function sumInvoiceLines(raw: Record<string, unknown>): number | null {
   const lines = raw.invoice_lines
   if (!Array.isArray(lines) || lines.length === 0) return null
@@ -66,21 +86,18 @@ function sumInvoiceLines(raw: Record<string, unknown>): number | null {
   let found = false
   for (const entry of lines) {
     const line = asRecord(entry)
-    const lineTotal =
-      toCents(line.total_including_vat) ??
-      toCents(line.total_incl_vat) ??
-      toCents(line.total) ??
-      toCents(line.amount)
+
+    const lineTotal = toCents(line[AMOUNT_FIELD])
     if (lineTotal !== null) {
       total += lineTotal
       found = true
       continue
     }
-    // Geen regeltotaal: dan zelf prijs × aantal.
-    const price = toCents(line.price) ?? toCents(line.unit_price)
-    const quantity = typeof line.quantity === 'number' ? line.quantity : 1
-    if (price !== null) {
-      total += Math.round(price * quantity)
+
+    const perUnit = toCents(line.price_per_unit)
+    if (perUnit !== null) {
+      const quantity = Number(line.quantity)
+      total += Math.round(perUnit * (Number.isFinite(quantity) && quantity !== 0 ? quantity : 1))
       found = true
     }
   }
@@ -90,45 +107,39 @@ function sumInvoiceLines(raw: Record<string, unknown>): number | null {
 function readExpense(entry: unknown): RompslompExpense | null {
   const raw = asRecord(entry)
 
-  let amountCents: number | null = null
-  for (const field of AMOUNT_FIELDS) {
-    amountCents = toCents(raw[field])
-    if (amountCents !== null) break
-  }
-  if (amountCents === null) amountCents = sumInvoiceLines(raw)
+  // Concepten zijn nog geen uitgave.
+  const state = typeof raw.state === 'string' ? raw.state : ''
+  if (state.length > 0 && !COUNTED_STATES.has(state)) return null
+
+  // Een uitgave heeft geen totaalveld; het bedrag komt uit de regels.
+  const amountCents = sumInvoiceLines(raw)
   if (amountCents === null) return null
 
-  let date: string | null = null
-  for (const field of DATE_FIELDS) {
-    const value = raw[field]
-    if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value)) {
-      date = value.slice(0, 10)
-      break
-    }
-  }
-  if (date === null) return null
+  const rawDate = raw.date
+  if (typeof rawDate !== 'string' || !/^\d{4}-\d{2}-\d{2}/.test(rawDate)) return null
+  const date = rawDate.slice(0, 10)
 
   const contact = asRecord(raw.cached_contact ?? raw.contact)
-  const supplier =
-    typeof contact.name === 'string'
-      ? contact.name
-      : typeof contact.company_name === 'string'
-        ? contact.company_name
-        : ''
+  const supplier = typeof contact.name === 'string' ? contact.name.trim() : ''
 
+  const firstLine = Array.isArray(raw.invoice_lines) ? asRecord(raw.invoice_lines[0]) : {}
   const description =
-    typeof raw.description === 'string' && raw.description.trim().length > 0
-      ? raw.description
+    typeof firstLine.description === 'string' && firstLine.description.trim().length > 0
+      ? firstLine.description.trim()
       : typeof raw.invoice_number === 'string'
         ? raw.invoice_number
         : ''
+
+  const account = asRecord(raw.type_account)
+  const category = typeof account.path_name === 'string' ? account.path_name : ''
 
   return {
     id: String(raw.id ?? `${date}-${amountCents}`),
     date,
     description,
     supplier,
-    // Een creditnota kan negatief binnenkomen; die hoort het totaal te drukken.
+    category,
+    // Een creditnota komt negatief binnen en drukt zo het totaal.
     amountCents,
   }
 }
