@@ -59,6 +59,7 @@ export function LeadHistory({
   const [campaignFilter, setCampaignFilter] = useState('')
   const [fromDate, setFromDate] = useState('')
   const [toDate, setToDate] = useState('')
+  const [rejectedOnly, setRejectedOnly] = useState(false)
 
   const clientOptions = useMemo(
     () => Array.from(new Set(leads.map((l) => l.companyName))).sort((a, b) => a.localeCompare(b)),
@@ -85,9 +86,10 @@ export function LeadHistory({
       if (campaignFilter && l.campaignName !== campaignFilter) return false
       if (fromDate && l.entryDate < fromDate) return false
       if (toDate && l.entryDate > toDate) return false
+      if (rejectedOnly && !l.isRejected) return false
       return true
     })
-  }, [leads, search, clientFilter, categoryFilter, campaignFilter, fromDate, toDate])
+  }, [leads, search, clientFilter, categoryFilter, campaignFilter, fromDate, toDate, rejectedOnly])
 
   const toggleChecked = (id: string) => {
     const current = leads.find((l) => l.id === id)
@@ -228,6 +230,7 @@ export function LeadHistory({
 
   const notCheckedCount = leads.filter((l) => !l.isChecked).length
   const visibleNotDoneCount = filtered.filter((l) => !l.isChecked).length
+  const rejectedCount = leads.filter((l) => l.isRejected).length
 
   const resetFilters = () => {
     setSearch('')
@@ -236,6 +239,7 @@ export function LeadHistory({
     setCampaignFilter('')
     setFromDate('')
     setToDate('')
+    setRejectedOnly(false)
   }
 
   return (
@@ -290,6 +294,22 @@ export function LeadHistory({
         </div>
         <button
           type="button"
+          onClick={() => setRejectedOnly((v) => !v)}
+          aria-pressed={rejectedOnly}
+          title="Toon alleen leads met een rood kruis"
+          className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${
+            rejectedOnly
+              ? 'border-rose-500 bg-rose-500 text-white'
+              : 'border-gray-200 bg-white text-gray-600 hover:border-rose-300 hover:text-rose-600'
+          }`}
+        >
+          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+          </svg>
+          Alleen afgekeurd ({rejectedCount})
+        </button>
+        <button
+          type="button"
           onClick={resetFilters}
           className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-600 transition-colors hover:border-gray-300 hover:text-gray-900"
         >
@@ -299,12 +319,15 @@ export function LeadHistory({
 
       <div className="text-xs text-gray-500">
         {filtered.length} van {leads.length} leads
+        {rejectedOnly && <span className="ml-1 font-semibold text-rose-600">· alleen afgekeurd</span>}
       </div>
 
       {/* Lijst */}
       {filtered.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-gray-200 px-4 py-12 text-center text-sm text-gray-400">
-          Geen leads gevonden.
+          {rejectedOnly && rejectedCount === 0
+            ? 'Er staat geen enkele lead met een rood kruis.'
+            : 'Geen leads gevonden.'}
         </div>
       ) : (
         <div className="space-y-2">
