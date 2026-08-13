@@ -9,12 +9,12 @@ import {
   canSubmitCampaignForm,
 } from '@/lib/data/campaign'
 import { buildOnboardingModel } from './_lib/onboarding-model'
+import { stepActionKey } from './_lib/step-keys'
 import {
   ActiveStepCard,
   CompletedList,
   QuietStepCard,
   SectionHead,
-  stepActionKey,
 } from './_components/onboarding-steps'
 import { DeadlineCard, HelpCard, ProgressCard, WhatHappensNext } from './_components/onboarding-aside'
 import { VariantPreviewGrid } from './_components/variant-preview-grid'

@@ -2,32 +2,8 @@
 
 import Link from 'next/link'
 import { useT } from '@/lib/i18n/client'
-import type { TranslationKey } from '@/lib/i18n'
 import type { OnboardingStep, StepOwner } from '../_lib/onboarding-model'
-
-/** Uitleg per stap. Vaste begeleidende tekst, geen data uit de database. */
-const BODY_KEY: Record<string, TranslationKey> = {
-  dashboard: 'onboardingPage.stepDashboardBody',
-  form: 'onboardingPage.stepFormBody',
-  drafts: 'onboardingPage.stepDraftsBody',
-  variants: 'onboardingPage.stepVariantsBody',
-  dnc: 'onboardingPage.stepDncBody',
-}
-
-/** Wat de knop op de actieve kaart zegt — hangt af van de stap, niet vast. */
-const ACTION_KEY: Record<string, TranslationKey> = {
-  form: 'onboardingPage.stepFormAction',
-  variants: 'onboardingPage.stepVariantsAction',
-  dnc: 'onboardingPage.stepDncAction',
-}
-
-export function stepBodyKey(id: string): TranslationKey | undefined {
-  return BODY_KEY[id]
-}
-
-export function stepActionKey(id: string): TranslationKey | undefined {
-  return ACTION_KEY[id]
-}
+import { stepBodyKey } from '../_lib/step-keys'
 
 function OwnerTag({ owner }: { owner: StepOwner }) {
   const t = useT()
