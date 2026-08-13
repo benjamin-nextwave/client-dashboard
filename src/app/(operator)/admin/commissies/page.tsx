@@ -1,8 +1,19 @@
 import Link from 'next/link'
+import { getClientList } from '@/lib/data/admin-stats'
+import { getEarliestLeadDate } from '@/lib/data/export-data'
+import { DataExportDialog } from '@/components/admin/data-export-dialog'
 
 export const dynamic = 'force-dynamic'
 
-export default function CommissiesPage() {
+export default async function CommissiesPage() {
+  const [allClients, earliestDate] = await Promise.all([getClientList(), getEarliestLeadDate()])
+
+  const exportClients = allClients.map((c) => ({
+    id: c.id,
+    companyName: c.companyName,
+    isHidden: c.isHidden,
+  }))
+
   return (
     <div className="mx-auto max-w-4xl">
       <header className="mb-8">
@@ -38,6 +49,7 @@ export default function CommissiesPage() {
             </svg>
           }
         />
+        <DataExportDialog clients={exportClients} earliestDate={earliestDate} variant="card" />
       </div>
     </div>
   )

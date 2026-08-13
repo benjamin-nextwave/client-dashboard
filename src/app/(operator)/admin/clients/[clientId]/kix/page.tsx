@@ -2,6 +2,9 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getKixPages } from '@/lib/data/kix'
+import { getClientList } from '@/lib/data/admin-stats'
+import { getEarliestLeadDate } from '@/lib/data/export-data'
+import { DataExportDialog } from '@/components/admin/data-export-dialog'
 import { KixPageList } from './_components/kix-page-list'
 
 export const dynamic = 'force-dynamic'
@@ -22,7 +25,17 @@ export default async function KixOverviewPage({ params }: PageProps) {
 
   if (!client) notFound()
 
-  const pages = await getKixPages(clientId)
+  const [pages, allClients, earliestDate] = await Promise.all([
+    getKixPages(clientId),
+    getClientList(),
+    getEarliestLeadDate(),
+  ])
+
+  const exportClients = allClients.map((c) => ({
+    id: c.id,
+    companyName: c.companyName,
+    isHidden: c.isHidden,
+  }))
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -46,6 +59,11 @@ export default async function KixOverviewPage({ params }: PageProps) {
           tekeningen. Alleen zichtbaar in het admin dashboard.
         </p>
       </header>
+
+      {/* Staat bewust los van de pagina's hieronder: dit exporteert bedrijfsbrede
+          commissiedata, niet de KIX-inhoud van deze klant. Hier omdat het hier
+          altijd terug te vinden is. */}
+      <DataExportDialog clients={exportClients} earliestDate={earliestDate} variant="hero" />
 
       <KixPageList clientId={clientId} pages={pages} />
     </div>
