@@ -38,6 +38,25 @@ interface EditDraft {
 const FILTER_CLASS =
   'rounded-lg border border-gray-200 bg-gray-50/40 px-3 py-2 text-sm text-gray-900 focus:border-indigo-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-indigo-100'
 
+/**
+ * Copytalent apart kunnen zetten is een terugkerende vraag, daarom een eigen
+ * schakelaar naast de klant-dropdown. De herkenning negeert hoofdletters en
+ * spaties, zodat "Copytalent", "CopyTalent" en "Copy Talent" allemaal matchen.
+ */
+const COPYTALENT_KEY = 'copytalent'
+
+type CopytalentMode = 'all' | 'only' | 'except'
+
+const COPYTALENT_MODES: Array<{ id: CopytalentMode; label: string }> = [
+  { id: 'all', label: 'Iedereen' },
+  { id: 'only', label: 'Enkel Copytalent' },
+  { id: 'except', label: 'Behalve Copytalent' },
+]
+
+function isCopytalent(companyName: string): boolean {
+  return companyName.toLowerCase().replace(/[^a-z]/g, '').includes(COPYTALENT_KEY)
+}
+
 export function LeadHistory({
   leads: initialLeads,
   clients,
@@ -60,6 +79,7 @@ export function LeadHistory({
   const [fromDate, setFromDate] = useState('')
   const [toDate, setToDate] = useState('')
   const [rejectedOnly, setRejectedOnly] = useState(false)
+  const [copytalentMode, setCopytalentMode] = useState<CopytalentMode>('all')
 
   const clientOptions = useMemo(
     () => Array.from(new Set(leads.map((l) => l.companyName))).sort((a, b) => a.localeCompare(b)),
@@ -87,9 +107,21 @@ export function LeadHistory({
       if (fromDate && l.entryDate < fromDate) return false
       if (toDate && l.entryDate > toDate) return false
       if (rejectedOnly && !l.isRejected) return false
+      if (copytalentMode === 'only' && !isCopytalent(l.companyName)) return false
+      if (copytalentMode === 'except' && isCopytalent(l.companyName)) return false
       return true
     })
-  }, [leads, search, clientFilter, categoryFilter, campaignFilter, fromDate, toDate, rejectedOnly])
+  }, [
+    leads,
+    search,
+    clientFilter,
+    categoryFilter,
+    campaignFilter,
+    fromDate,
+    toDate,
+    rejectedOnly,
+    copytalentMode,
+  ])
 
   const toggleChecked = (id: string) => {
     const current = leads.find((l) => l.id === id)
@@ -231,6 +263,7 @@ export function LeadHistory({
   const notCheckedCount = leads.filter((l) => !l.isChecked).length
   const visibleNotDoneCount = filtered.filter((l) => !l.isChecked).length
   const rejectedCount = leads.filter((l) => l.isRejected).length
+  const copytalentCount = leads.filter((l) => isCopytalent(l.companyName)).length
 
   const resetFilters = () => {
     setSearch('')
@@ -240,6 +273,7 @@ export function LeadHistory({
     setFromDate('')
     setToDate('')
     setRejectedOnly(false)
+    setCopytalentMode('all')
   }
 
   return (
@@ -292,6 +326,35 @@ export function LeadHistory({
           <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-gray-500">Tot en met</label>
           <input type="date" value={toDate} min={fromDate || undefined} onChange={(e) => setToDate(e.target.value)} className={FILTER_CLASS} />
         </div>
+        <div>
+          <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+            Copytalent
+          </label>
+          <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50/40 p-0.5">
+            {COPYTALENT_MODES.map((mode) => (
+              <button
+                key={mode.id}
+                type="button"
+                onClick={() => setCopytalentMode(mode.id)}
+                aria-pressed={copytalentMode === mode.id}
+                className={`rounded-md px-2.5 py-1.5 text-xs font-semibold transition-colors ${
+                  copytalentMode === mode.id
+                    ? 'bg-gray-900 text-white'
+                    : 'text-gray-600 hover:bg-white hover:text-gray-900'
+                }`}
+              >
+                {mode.label}
+                {mode.id === 'only' && (
+                  <span className={copytalentMode === 'only' ? 'text-gray-300' : 'text-gray-400'}>
+                    {' '}
+                    ({copytalentCount})
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <button
           type="button"
           onClick={() => setRejectedOnly((v) => !v)}
@@ -319,6 +382,11 @@ export function LeadHistory({
 
       <div className="text-xs text-gray-500">
         {filtered.length} van {leads.length} leads
+        {copytalentMode !== 'all' && (
+          <span className="ml-1 font-semibold text-gray-700">
+            · {copytalentMode === 'only' ? 'enkel Copytalent' : 'behalve Copytalent'}
+          </span>
+        )}
         {rejectedOnly && <span className="ml-1 font-semibold text-rose-600">· alleen afgekeurd</span>}
       </div>
 
