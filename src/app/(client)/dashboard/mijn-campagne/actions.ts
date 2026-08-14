@@ -947,7 +947,13 @@ export async function submitCampaignForm(
 
   const allowed = client.campaign_form_allowed_count ?? 1
   if ((existingCount ?? 0) >= allowed) {
-    return { error: 'Je hebt geen ruimte om het formulier opnieuw in te dienen' }
+    // Komt ook voor wanneer het indienen wél lukte maar de vervolgpagina een
+    // fout gaf: de klant denkt dan dat het misging en probeert het opnieuw.
+    // Zeggen dat het al binnen is, is dan geruststellender dan "geen ruimte".
+    return {
+      error:
+        'Je formulier is al bij ons binnengekomen — je hoeft niets opnieuw in te dienen. Klopt er iets niet? Neem dan even contact met ons op.',
+    }
   }
 
   const isSkipped = (field: string) => formData.get(`skip_${field}`) === '1'

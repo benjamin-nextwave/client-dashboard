@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { useActionState, useCallback, useEffect, useRef, useState } from 'react'
 import {
   COMPANY_SIZES,
   COMPANY_SIZE_LABELS,
@@ -9,6 +9,30 @@ import {
   type GeoRadius,
   type LocationEntry,
 } from '@/lib/validations/campaign-form'
+
+// Het formulier bewaart zichzelf in de browser terwijl je typt. Dat is nodig
+// omdat de tekstvelden ongecontroleerd zijn: hun waarde leeft alleen in de DOM,
+// dus een mislukte verzending, een dichtgeklapte laptop of een misklik kostte
+// de klant zijn hele ingevulde formulier. Er is geen serverkant om op terug te
+// vallen — pas bij een geslaagde verzending wordt er iets opgeslagen.
+const DRAFT_KEY = 'nextwave.campagneformulier.concept'
+
+interface FormDraft {
+  /** De ongecontroleerde tekstvelden, op naam. */
+  fields: Record<string, string>
+  skipped: string[]
+  sectors: string[]
+  locations: LocationEntry[]
+  sizes: string[]
+  domainsChoice: 'user' | 'nextwave'
+}
+
+/**
+ * Velden die hun waarde uit React-state krijgen in plaats van uit de DOM. Ze
+ * worden apart bewaard, dus uit de FormData-ronde gelaten om te voorkomen dat
+ * er twee bronnen voor dezelfde waarde ontstaan.
+ */
+const STATE_DRIVEN_FIELDS = new Set(['sectors', 'locations', 'companySizes', 'domainsChoice'])
 
 interface Props {
   action: (
@@ -71,11 +95,122 @@ export function CampaignForm({ action, companyName }: Props) {
 
   const [domainsChoice, setDomainsChoice] = useState<'user' | 'nextwave'>('user')
 
+  const formRef = useRef<HTMLFormElement>(null)
+  // Pas bewaren nadat een eventueel bestaand concept is teruggezet; anders
+  // overschrijft de eerste render het concept met lege velden.
+  const [draftLoaded, setDraftLoaded] = useState(false)
+  const [draftRestored, setDraftRestored] = useState(false)
+
+  useEffect(() => {
+    let raw: string | null = null
+    try {
+      raw = window.localStorage.getItem(DRAFT_KEY)
+    } catch {
+      // Opslag geblokkeerd (privémodus): dan werkt het formulier gewoon zonder concept.
+    }
+
+    if (raw) {
+      try {
+        const draft = JSON.parse(raw) as Partial<FormDraft>
+        if (Array.isArray(draft.skipped)) setSkipped(new Set(draft.skipped as SkipName[]))
+        if (Array.isArray(draft.sectors) && draft.sectors.length > 0) setSectors(draft.sectors)
+        if (Array.isArray(draft.locations) && draft.locations.length > 0) setLocations(draft.locations)
+        if (Array.isArray(draft.sizes)) setSizes(draft.sizes)
+        if (draft.domainsChoice === 'user' || draft.domainsChoice === 'nextwave') {
+          setDomainsChoice(draft.domainsChoice)
+        }
+
+        const fields = draft.fields
+        if (fields && typeof fields === 'object') {
+          // De tekstvelden staan er pas ná deze render; vandaar een frame wachten.
+          requestAnimationFrame(() => {
+            const form = formRef.current
+            if (!form) return
+            for (const [name, value] of Object.entries(fields)) {
+              const element = form.elements.namedItem(name)
+              if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+                element.value = value
+              }
+            }
+          })
+        }
+        setDraftRestored(true)
+      } catch {
+        // Onleesbaar concept: negeren en met een leeg formulier beginnen.
+      }
+    }
+    setDraftLoaded(true)
+  }, [])
+
+  const saveDraft = useCallback(() => {
+    const form = formRef.current
+    if (!form) return
+
+    const fields: Record<string, string> = {}
+    for (const [name, value] of new FormData(form).entries()) {
+      if (typeof value !== 'string') continue
+      if (STATE_DRIVEN_FIELDS.has(name) || name.startsWith('skip_')) continue
+      fields[name] = value
+    }
+
+    const draft: FormDraft = {
+      fields,
+      skipped: Array.from(skipped),
+      sectors,
+      locations,
+      sizes,
+      domainsChoice,
+    }
+
+    try {
+      window.localStorage.setItem(DRAFT_KEY, JSON.stringify(draft))
+    } catch {
+      // Opslag vol of geblokkeerd — het formulier zelf blijft gewoon werken.
+    }
+  }, [skipped, sectors, locations, sizes, domainsChoice])
+
+  // De keuzes die in React-state leven (sectoren, locaties, groottes, domeinen)
+  // lopen niet via een invoergebeurtenis op het formulier, dus die worden hier
+  // bewaard zodra ze wijzigen.
+  useEffect(() => {
+    if (!draftLoaded) return
+    saveDraft()
+  }, [draftLoaded, saveDraft])
+
+  const discardDraft = () => {
+    try {
+      window.localStorage.removeItem(DRAFT_KEY)
+    } catch {
+      // Niets aan te doen; de herlaadactie hieronder wist het scherm alsnog.
+    }
+    window.location.reload()
+  }
+
   return (
-    <form action={formAction} className="space-y-6">
+    <form ref={formRef} action={formAction} onInput={saveDraft} className="space-y-6">
+      {draftRestored && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+          <span>
+            Je eerder ingevulde antwoorden zijn teruggezet. Ze worden bewaard in deze browser tot je het
+            formulier indient.
+          </span>
+          <button
+            type="button"
+            onClick={discardDraft}
+            className="shrink-0 rounded-lg border border-emerald-300 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-800 transition-colors hover:bg-emerald-100"
+          >
+            Opnieuw beginnen
+          </button>
+        </div>
+      )}
       {state.error && (
         <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          {state.error}
+          <p className="font-semibold">Het indienen is niet gelukt</p>
+          <p className="mt-1">{state.error}</p>
+          <p className="mt-2 text-red-600">
+            Je antwoorden staan nog gewoon hieronder en zijn in deze browser bewaard. Probeer het over
+            een minuut nog eens; lukt het dan nog niet, neem dan contact met ons op.
+          </p>
         </div>
       )}
 
