@@ -204,7 +204,13 @@ export default async function OnboardingPage() {
             />
           )}
 
-          {onboardingDone && canSubmitCampaignForm(state) && (
+          {/* Een vrijgegeven invulformulier moet zichtbaar zijn zodra het er is,
+              ook als de onboarding nog loopt. Zodra de klant één keer heeft
+              ingediend telt stap 2 als afgerond en verdwijnt de knop uit de
+              stappenlijst; zonder deze kaart heeft hij dan geen enkele ingang
+              meer naar een extra formulier. Vóór de eerste inzending staat die
+              stap nog wél actief in de lijst, dus dan zou de kaart dubbelop zijn. */}
+          {canSubmitCampaignForm(state) && (state.formSubmissionCount > 0 || onboardingDone) && (
             <AvailableFormCard isFirst={state.formSubmissionCount === 0} />
           )}
 
