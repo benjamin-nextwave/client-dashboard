@@ -65,6 +65,11 @@ export async function createClient(
       email_signature: emailSignature || null,
       instantly_api_key: instantlyApiKey || null,
       password,
+      // Een net aangemaakte klant zit per definitie in de onboarding. Zonder dit
+      // viel de kolom terug op de databasestandaard 'live', waardoor de klant
+      // meteen als afgerond gold: geen stappenlijst in het admin dashboard en
+      // geen toegang tot de onboardingpagina.
+      onboarding_status: 'onboarding',
     })
     .select('id')
     .single()
@@ -105,7 +110,17 @@ export async function createClient(
     return { error: `Profiel aanmaken mislukt: ${profileError.message}` }
   }
 
-  // Step 4: Handle logo upload (non-fatal)
+  // Step 4: Default onboarding steps (non-fatal). Zonder deze staat de klant wel
+  // op 'onboarding' maar is de stappenlijst leeg; dezelfde RPC die
+  // setOnboardingStatus gebruikt, zodat beide wegen dezelfde stappen opleveren.
+  const { error: stepsError } = await supabase.rpc('insert_default_onboarding_steps', {
+    p_client_id: client.id,
+  })
+  if (stepsError) {
+    console.warn(`[admin:createClient] standaard onboardingstappen mislukt voor ${client.id}: ${stepsError.message}`)
+  }
+
+  // Step 5: Handle logo upload (non-fatal)
   const logo = formData.get('logo') as File | null
   if (logo && logo.size > 0) {
     const uploadResult = await uploadClientLogo(client.id, logo)
