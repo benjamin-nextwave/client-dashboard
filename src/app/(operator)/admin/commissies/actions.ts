@@ -13,6 +13,8 @@ export interface CommissionLeadInput {
   campaignName: string
   date: string
   note: string
+  /** Twijfelachtig in zijn categorie: commissie telt voor de helft mee. */
+  isHalfPrice: boolean
 }
 
 type ActionResult = { error?: string; inserted?: number }
@@ -60,6 +62,7 @@ export async function addCommissionLeads(rows: CommissionLeadInput[]): Promise<A
       category_id: cat.id,
       category_name: cat.name,
       unit_price_cents: cat.price_cents ?? 0,
+      is_half_price: r.isHalfPrice,
       note: r.note.trim(),
     })
   }
@@ -182,6 +185,27 @@ export async function setCommissionLeadRejected(id: string, value: boolean): Pro
     .update({ is_rejected: value, updated_at: new Date().toISOString() })
     .eq('id', id)
   if (error) return { error: error.message }
+  revalidatePath('/admin/commissies/leads')
+  return {}
+}
+
+/**
+ * Zet de 50%-korting van een lead aan of uit. De bedragen worden nergens
+ * herschreven: de volle categorieprijs blijft staan en de halvering wordt in de
+ * overzichten afgeleid, zodat dit altijd terug te draaien is.
+ *
+ * Raakt ook het financieel overzicht en de grafiek, vandaar dat die paden
+ * meegenomen worden in de revalidatie.
+ */
+export async function setCommissionLeadHalfPrice(id: string, value: boolean): Promise<ActionResult> {
+  const supabase = createAdminClient()
+  const { error } = await supabase
+    .from('operator_commission_leads')
+    .update({ is_half_price: value, updated_at: new Date().toISOString() })
+    .eq('id', id)
+  if (error) return { error: error.message }
+  revalidatePath('/admin/commissies')
+  revalidatePath('/admin/commissies/financieel')
   revalidatePath('/admin/commissies/leads')
   return {}
 }

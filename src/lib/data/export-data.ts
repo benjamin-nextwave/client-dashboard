@@ -5,6 +5,7 @@ import {
   MONTHLY_SALARY_CENTS,
   SALARY_HEADCOUNT,
   countTouchedMonths,
+  effectiveLeadPriceCents,
 } from '@/lib/commissions-shared'
 
 // Verzamelt in één keer alle commissie-data van een periode, klaar om naar
@@ -32,6 +33,8 @@ export interface ExportLead {
   categoryName: string
   /** Prijs van de categorie op het moment van invoeren. */
   unitPriceCents: number
+  /** Twijfelachtig in zijn categorie: telt voor de helft mee. */
+  isHalfPrice: boolean
   /**
    * Wat deze lead bijdraagt aan de omzet: gelijk aan de prijs, of nul als het
    * een afgekeurde lead is en die niet meetellen. Zonder deze splitsing zou de
@@ -144,6 +147,7 @@ interface LeadRecord {
   unit_price_cents: number | null
   is_checked: boolean | null
   is_rejected: boolean | null
+  is_half_price: boolean | null
   note: string | null
   created_at: string | null
 }
@@ -165,7 +169,7 @@ async function fetchLeads(options: ExportOptions): Promise<LeadRecord[]> {
     let query = supabase
       .from('operator_commission_leads')
       .select(
-        'id, client_id, lead_email, campaign_name, category_name, entry_date, unit_price_cents, is_checked, is_rejected, note, created_at'
+        'id, client_id, lead_email, campaign_name, category_name, entry_date, unit_price_cents, is_checked, is_rejected, is_half_price, note, created_at'
       )
       .gte('entry_date', options.from)
       .lte('entry_date', options.to)
@@ -241,7 +245,9 @@ export async function getExportData(options: ExportOptions): Promise<ExportData>
   // rekent het financieel overzicht ook.
   const leads: ExportLead[] = leadRecords.map((r) => {
     const isRejected = r.is_rejected ?? false
+    const isHalfPrice = r.is_half_price ?? false
     const unitPriceCents = r.unit_price_cents ?? 0
+    const priceAfterDiscount = effectiveLeadPriceCents(unitPriceCents, isHalfPrice)
     return {
       id: r.id,
       entryDate: r.entry_date,
@@ -251,7 +257,8 @@ export async function getExportData(options: ExportOptions): Promise<ExportData>
       campaignName: r.campaign_name ?? '',
       categoryName: r.category_name ?? '',
       unitPriceCents,
-      revenueCents: !isRejected || options.includeRejected ? unitPriceCents : 0,
+      isHalfPrice,
+      revenueCents: !isRejected || options.includeRejected ? priceAfterDiscount : 0,
       isChecked: r.is_checked ?? false,
       isRejected,
       note: r.note ?? '',
@@ -348,7 +355,9 @@ export async function getExportData(options: ExportOptions): Promise<ExportData>
   // --- Per klant, categorie en campagne ----------------------------------
   const categoryMap = new Map<string, ExportCategoryRow>()
   for (const lead of leads) {
-    const key = `${lead.entryDate}|${lead.clientId}|${lead.categoryName}|${lead.campaignName}|${lead.unitPriceCents}`
+    // Leads met halve prijs vormen een eigen regel: samenvoegen zou een
+    // stukprijs tonen die voor geen van beide klopt.
+    const key = `${lead.entryDate}|${lead.clientId}|${lead.categoryName}|${lead.campaignName}|${lead.unitPriceCents}|${lead.isHalfPrice}`
     const current = categoryMap.get(key)
     if (current) {
       current.leadCount += 1
@@ -362,7 +371,7 @@ export async function getExportData(options: ExportOptions): Promise<ExportData>
       categoryName: lead.categoryName,
       campaignName: lead.campaignName,
       leadCount: 1,
-      unitPriceCents: lead.unitPriceCents,
+      unitPriceCents: effectiveLeadPriceCents(lead.unitPriceCents, lead.isHalfPrice),
       revenueCents: lead.revenueCents,
     })
   }
@@ -462,7 +471,10 @@ export async function getExportData(options: ExportOptions): Promise<ExportData>
     totals: {
       leadCount: leads.length,
       rejectedCount: rejected.length,
-      rejectedRevenueCents: rejected.reduce((s, l) => s + l.unitPriceCents, 0),
+      rejectedRevenueCents: rejected.reduce(
+        (s, l) => s + effectiveLeadPriceCents(l.unitPriceCents, l.isHalfPrice),
+        0
+      ),
       revenueCents: totalRevenueCents,
       expensesCents,
       netCents,

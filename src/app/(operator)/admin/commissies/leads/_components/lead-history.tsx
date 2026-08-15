@@ -4,11 +4,16 @@ import { useMemo, useState, useTransition } from 'react'
 import { format } from 'date-fns'
 import { nl } from 'date-fns/locale'
 import { downloadCsv } from '@/lib/csv-client'
-import { formatEuroCents, type CommissionCategory } from '@/lib/commissions-shared'
+import {
+  effectiveLeadPriceCents,
+  formatEuroCents,
+  type CommissionCategory,
+} from '@/lib/commissions-shared'
 import type { CommissionLeadHistoryRow } from '@/lib/data/commissions'
 import {
   setCommissionLeadChecked,
   setCommissionLeadsChecked,
+  setCommissionLeadHalfPrice,
   setCommissionLeadRejected,
   setCommissionLeadNote,
   updateCommissionLead,
@@ -140,6 +145,26 @@ export function LeadHistory({
     setLeads((prev) => prev.map((l) => (l.id === id ? { ...l, isRejected: next } : l)))
     startTransition(async () => {
       await setCommissionLeadRejected(id, next)
+    })
+  }
+
+  const toggleHalfPrice = (id: string) => {
+    const current = leads.find((l) => l.id === id)
+    if (!current) return
+    const next = !current.isHalfPrice
+    setLeads((prev) =>
+      prev.map((l) =>
+        l.id === id
+          ? {
+              ...l,
+              isHalfPrice: next,
+              effectivePriceCents: effectiveLeadPriceCents(l.unitPriceCents, next),
+            }
+          : l
+      )
+    )
+    startTransition(async () => {
+      await setCommissionLeadHalfPrice(id, next)
     })
   }
 
@@ -420,6 +445,20 @@ export function LeadHistory({
                   <span className="rounded-full bg-gray-100 px-2 py-0.5 font-medium text-gray-600">{lead.categoryName}</span>
                   <span className="text-gray-300">·</span>
                   <span>{format(new Date(lead.entryDate + 'T00:00:00'), 'd MMM yyyy', { locale: nl })}</span>
+                  <span className="text-gray-300">·</span>
+                  <span className="tabular-nums font-medium text-gray-700">
+                    {formatEuroCents(lead.effectivePriceCents)}
+                  </span>
+                  {lead.isHalfPrice && (
+                    <>
+                      <span className="tabular-nums text-gray-400 line-through">
+                        {formatEuroCents(lead.unitPriceCents)}
+                      </span>
+                      <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700">
+                        50% korting
+                      </span>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -462,6 +501,19 @@ export function LeadHistory({
                   title="Afgekeurd (rood kruis)"
                   activeClass="bg-rose-500 text-white ring-rose-500"
                   icon={<path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />}
+                />
+                <ToggleButton
+                  active={lead.isHalfPrice}
+                  onClick={() => toggleHalfPrice(lead.id)}
+                  title="50% korting — lead valt twijfelachtig in zijn categorie"
+                  activeClass="bg-amber-500 text-white ring-amber-500"
+                  icon={
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M9 14.25 20.25 3m0 0h-5.25m5.25 0v5.25M3.75 20.25 15 9m0 0h-5.25M15 9v5.25"
+                    />
+                  }
                 />
                 <ToggleButton
                   active={editingId === lead.id}

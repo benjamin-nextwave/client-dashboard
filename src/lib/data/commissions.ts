@@ -6,6 +6,7 @@ import {
   MONTHLY_SALARY_CENTS,
   SALARY_HEADCOUNT,
   countTouchedMonths,
+  effectiveLeadPriceCents,
   type CommissionCategory,
 } from '@/lib/commissions-shared'
 
@@ -15,6 +16,7 @@ export {
   MONTHLY_SALARY_CENTS,
   SALARY_HEADCOUNT,
   countTouchedMonths,
+  effectiveLeadPriceCents,
   STANDARD_COMMISSION_CATEGORIES,
   amsterdamDateString,
   formatEuroCents,
@@ -321,17 +323,22 @@ interface LeadRow {
   entry_date: string
   category_name: string
   unit_price_cents: number
+  is_half_price: boolean | null
 }
 
 /**
  * Groepeert losse lead-rijen tot geaggregeerde entries (één per campagne +
  * categorie + dag), zodat de bestaande overzicht-opbouw ongewijzigd blijft
  * werken. Elke lead telt als 1.
+ *
+ * Leads met halve prijs vormen een eigen groep: ze hebben een andere stukprijs,
+ * en samenvoegen zou het overzicht een prijs laten tonen die niemand betaalt.
  */
 function leadsToRawEntries(leads: LeadRow[]): RawEntry[] {
   const byKey = new Map<string, RawEntry>()
   for (const l of leads) {
-    const key = `${l.entry_date}|${l.campaign_name}|${l.category_name}|${l.unit_price_cents ?? 0}`
+    const price = effectiveLeadPriceCents(l.unit_price_cents ?? 0, l.is_half_price ?? false)
+    const key = `${l.entry_date}|${l.campaign_name}|${l.category_name}|${price}`
     const existing = byKey.get(key)
     if (existing) {
       existing.lead_count += 1
@@ -340,7 +347,7 @@ function leadsToRawEntries(leads: LeadRow[]): RawEntry[] {
         campaign_name: l.campaign_name,
         entry_date: l.entry_date,
         category_name: l.category_name,
-        unit_price_cents: l.unit_price_cents ?? 0,
+        unit_price_cents: price,
         lead_count: 1,
       })
     }
@@ -357,7 +364,7 @@ export async function getClientCommissionOverview(
   const [{ data }, firstLeadDate] = await Promise.all([
     supabase
       .from('operator_commission_leads')
-      .select('campaign_name, entry_date, category_name, unit_price_cents')
+      .select('campaign_name, entry_date, category_name, unit_price_cents, is_half_price')
       .eq('client_id', clientId)
       .gte('entry_date', from)
       .lte('entry_date', to),
@@ -379,7 +386,7 @@ export async function getCompanyCommissionOverview(
   const [{ data }, clients, firstLeadByClient] = await Promise.all([
     supabase
       .from('operator_commission_leads')
-      .select('client_id, entry_date, unit_price_cents')
+      .select('client_id, entry_date, unit_price_cents, is_half_price')
       .gte('entry_date', from)
       .lte('entry_date', to),
     getClientList(),
@@ -391,8 +398,13 @@ export async function getCompanyCommissionOverview(
   // Per klant: commissie-som + set van dagen met leads.
   const commissionByClient = new Map<string, number>()
   const daysByClient = new Map<string, Set<string>>()
-  for (const r of (data ?? []) as Array<{ client_id: string; entry_date: string; unit_price_cents: number }>) {
-    const sub = r.unit_price_cents ?? 0
+  for (const r of (data ?? []) as Array<{
+    client_id: string
+    entry_date: string
+    unit_price_cents: number
+    is_half_price: boolean | null
+  }>) {
+    const sub = effectiveLeadPriceCents(r.unit_price_cents ?? 0, r.is_half_price ?? false)
     commissionByClient.set(r.client_id, (commissionByClient.get(r.client_id) ?? 0) + sub)
     const set = daysByClient.get(r.client_id) ?? new Set<string>()
     set.add(r.entry_date)
@@ -459,6 +471,12 @@ export interface CommissionLeadHistoryRow {
   entryDate: string
   isChecked: boolean
   isRejected: boolean
+  /** Twijfelachtig in zijn categorie: telt voor de helft mee. */
+  isHalfPrice: boolean
+  /** Volle categorieprijs, ongeacht de korting. */
+  unitPriceCents: number
+  /** Wat de lead werkelijk opbrengt, korting verrekend. */
+  effectivePriceCents: number
   note: string
 }
 
@@ -468,7 +486,7 @@ export async function getAllCommissionLeads(): Promise<CommissionLeadHistoryRow[
   const [{ data }, clients] = await Promise.all([
     supabase
       .from('operator_commission_leads')
-      .select('id, client_id, lead_email, campaign_name, category_id, category_name, entry_date, is_checked, is_rejected, note')
+      .select('id, client_id, lead_email, campaign_name, category_id, category_name, entry_date, unit_price_cents, is_checked, is_rejected, is_half_price, note')
       .order('entry_date', { ascending: false })
       .order('created_at', { ascending: false })
       .limit(5000),
@@ -484,23 +502,32 @@ export async function getAllCommissionLeads(): Promise<CommissionLeadHistoryRow[
       category_id: string | null
       category_name: string
       entry_date: string
+      unit_price_cents: number | null
       is_checked: boolean
       is_rejected: boolean
+      is_half_price: boolean | null
       note: string | null
     }>
-  ).map((r) => ({
-    id: r.id,
-    clientId: r.client_id,
-    companyName: nameById.get(r.client_id) ?? 'Onbekende klant',
-    leadEmail: r.lead_email,
-    campaignName: r.campaign_name,
-    categoryId: r.category_id ?? '',
-    categoryName: r.category_name,
-    entryDate: r.entry_date,
-    isChecked: r.is_checked,
-    isRejected: r.is_rejected,
-    note: r.note ?? '',
-  }))
+  ).map((r) => {
+    const unitPriceCents = r.unit_price_cents ?? 0
+    const isHalfPrice = r.is_half_price ?? false
+    return {
+      id: r.id,
+      clientId: r.client_id,
+      companyName: nameById.get(r.client_id) ?? 'Onbekende klant',
+      leadEmail: r.lead_email,
+      campaignName: r.campaign_name,
+      categoryId: r.category_id ?? '',
+      categoryName: r.category_name,
+      entryDate: r.entry_date,
+      isChecked: r.is_checked,
+      isRejected: r.is_rejected,
+      isHalfPrice,
+      unitPriceCents,
+      effectivePriceCents: effectiveLeadPriceCents(unitPriceCents, isHalfPrice),
+      note: r.note ?? '',
+    }
+  })
 }
 
 // ---------------------------------------------------------------------------
@@ -534,7 +561,7 @@ export async function getCommissionChartSeries(
   const supabase = createAdminClient()
   let query = supabase
     .from('operator_commission_leads')
-    .select('client_id, entry_date, unit_price_cents')
+    .select('client_id, entry_date, unit_price_cents, is_half_price')
     .gte('entry_date', from)
     .lte('entry_date', to)
 
@@ -545,8 +572,14 @@ export async function getCommissionChartSeries(
   const { data } = await query
 
   const commissionByDate = new Map<string, number>()
-  for (const r of (data ?? []) as Array<{ client_id: string; entry_date: string; unit_price_cents: number }>) {
-    commissionByDate.set(r.entry_date, (commissionByDate.get(r.entry_date) ?? 0) + (r.unit_price_cents ?? 0))
+  for (const r of (data ?? []) as Array<{
+    client_id: string
+    entry_date: string
+    unit_price_cents: number
+    is_half_price: boolean | null
+  }>) {
+    const price = effectiveLeadPriceCents(r.unit_price_cents ?? 0, r.is_half_price ?? false)
+    commissionByDate.set(r.entry_date, (commissionByDate.get(r.entry_date) ?? 0) + price)
   }
 
   const points: CommissionChartPoint[] = Array.from(commissionByDate.keys())

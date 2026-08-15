@@ -73,6 +73,20 @@ export function isWeekday(dateStr: string): boolean {
   return day !== 0 && day !== 6
 }
 
+/**
+ * Wat een lead werkelijk opbrengt. `unitPriceCents` blijft de volle
+ * categorieprijs; valt de lead twijfelachtig in zijn categorie, dan telt hij
+ * voor de helft mee. Eén plek voor deze regel, zodat het financieel overzicht,
+ * de grafiek, de lead-geschiedenis en de export nooit uit elkaar lopen.
+ *
+ * Afronding op hele centen naar boven bij een halve cent: een categorie van
+ * € 0,05 levert zo € 0,03 in plaats van € 0,02.
+ */
+export function effectiveLeadPriceCents(unitPriceCents: number, isHalfPrice: boolean): number {
+  const price = unitPriceCents ?? 0
+  return isHalfPrice ? Math.round(price / 2) : price
+}
+
 /** Formatteert centen als euro-bedrag, bv. 1250 → "€ 12,50". */
 export function formatEuroCents(cents: number): string {
   return new Intl.NumberFormat('nl-NL', {

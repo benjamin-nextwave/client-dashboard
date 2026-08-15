@@ -472,6 +472,7 @@ export function buildExportWorkbook(
           excludeFromTotal: true,
           value: (r) => euros(r.unitPriceCents),
         },
+        { header: '50% korting', width: 13, value: (r) => (r.isHalfPrice ? 'ja' : 'nee') },
         { header: 'Meegeteld in omzet', width: 20, kind: 'euro', value: (r) => euros(r.revenueCents) },
         { header: 'Afgerond', width: 12, value: (r) => (r.isChecked ? 'ja' : 'nee') },
         { header: 'Afgekeurd', width: 12, value: (r) => (r.isRejected ? 'ja' : 'nee') },

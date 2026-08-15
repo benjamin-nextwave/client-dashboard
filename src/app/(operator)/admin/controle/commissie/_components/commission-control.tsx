@@ -1,7 +1,12 @@
 'use client'
 
 import { useRef, useState, useTransition } from 'react'
-import { amsterdamDateString, formatEuroCents, type CommissionCategory } from '@/lib/commissions-shared'
+import {
+  amsterdamDateString,
+  effectiveLeadPriceCents,
+  formatEuroCents,
+  type CommissionCategory,
+} from '@/lib/commissions-shared'
 import { addCommissionLeads, type CommissionLeadInput } from '@/app/(operator)/admin/commissies/actions'
 
 interface CommissionControlClient {
@@ -24,6 +29,8 @@ interface Block {
   date: string
   note: string
   noteOpen: boolean
+  /** Twijfelachtig in zijn categorie: commissie telt voor de helft mee. */
+  isHalfPrice: boolean
 }
 
 const FIELD_CLASS =
@@ -41,6 +48,7 @@ export function CommissionControl({ clients, categoriesByClient, campaignNames }
     date: amsterdamDateString(),
     note: '',
     noteOpen: false,
+    isHalfPrice: false,
   })
 
   const [blocks, setBlocks] = useState<Block[]>(() => [makeBlock()])
@@ -86,6 +94,7 @@ export function CommissionControl({ clients, categoriesByClient, campaignNames }
       campaignName: b.campaignName,
       date: b.date,
       note: b.note,
+      isHalfPrice: b.isHalfPrice,
     }))
     startTransition(async () => {
       const result = await addCommissionLeads(rows)
@@ -215,11 +224,37 @@ export function CommissionControl({ clients, categoriesByClient, campaignNames }
                 </div>
               </div>
 
-              {selectedCat && (
-                <p className="mt-2 text-xs text-gray-500">
-                  Commissie voor deze lead: <span className="font-semibold text-gray-700">{formatEuroCents(selectedCat.priceCents)}</span>
-                </p>
-              )}
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
+                {selectedCat && (
+                  <p className="text-xs text-gray-500">
+                    Commissie voor deze lead:{' '}
+                    <span className="font-semibold text-gray-700">
+                      {formatEuroCents(effectiveLeadPriceCents(selectedCat.priceCents, block.isHalfPrice))}
+                    </span>
+                    {block.isHalfPrice && (
+                      <span className="ml-1.5 text-gray-400 line-through">
+                        {formatEuroCents(selectedCat.priceCents)}
+                      </span>
+                    )}
+                  </p>
+                )}
+                <button
+                  type="button"
+                  onClick={() => updateBlock(block.key, { isHalfPrice: !block.isHalfPrice })}
+                  aria-pressed={block.isHalfPrice}
+                  title="De lead valt twijfelachtig in zijn categorie; de commissie telt dan voor de helft mee"
+                  className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold transition-colors ${
+                    block.isHalfPrice
+                      ? 'border-amber-500 bg-amber-500 text-white'
+                      : 'border-gray-200 bg-white text-gray-600 hover:border-amber-300 hover:text-amber-700'
+                  }`}
+                >
+                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 14.25 20.25 3m0 0h-5.25m5.25 0v5.25M3.75 20.25 15 9m0 0h-5.25M15 9v5.25" />
+                  </svg>
+                  50% korting
+                </button>
+              </div>
 
               <div className="mt-3">
                 <button
