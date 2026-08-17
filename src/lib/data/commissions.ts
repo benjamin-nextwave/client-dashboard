@@ -7,6 +7,9 @@ import {
   SALARY_HEADCOUNT,
   countTouchedMonths,
   effectiveLeadPriceCents,
+  isUnpaidLeadCategoryName,
+  withUnpaidLeadCategory,
+  UNPAID_LEAD_CATEGORY_ID,
   type CommissionCategory,
 } from '@/lib/commissions-shared'
 
@@ -18,6 +21,11 @@ export {
   countTouchedMonths,
   effectiveLeadPriceCents,
   STANDARD_COMMISSION_CATEGORIES,
+  UNPAID_LEAD_CATEGORY_ID,
+  UNPAID_LEAD_CATEGORY_NAME,
+  isUnpaidLeadCategoryId,
+  isUnpaidLeadCategoryName,
+  withUnpaidLeadCategory,
   amsterdamDateString,
   formatEuroCents,
   parseEuroToCents,
@@ -89,6 +97,15 @@ export interface CompanyCommissionOverview {
 // Categorieën
 // ---------------------------------------------------------------------------
 
+/**
+ * De eigen categorieën van een klant, precies zoals ze in de database staan.
+ *
+ * Bewust zónder de onbetaalde categorie: de avondcontrole schrijft de gekozen
+ * `categoryId` door naar `operator_commission_entries.category_id`, een
+ * UUID-kolom waar de vaste sleutel niet in past. Wie de keuzelijst voor de
+ * leadinvoer nodig heeft, gebruikt `getCategoriesForClients` of wikkelt het
+ * resultaat zelf in `withUnpaidLeadCategory`.
+ */
 export async function getClientCommissionCategories(
   clientId: string
 ): Promise<CommissionCategory[]> {
@@ -129,8 +146,7 @@ export async function getCategoriesForClients(
     .order('position', { ascending: true })
     .order('name', { ascending: true })
 
-  if (error || !data) return result
-  for (const r of data) {
+  for (const r of error || !data ? [] : data) {
     const list = result[r.client_id] ?? []
     list.push({
       id: r.id,
@@ -140,6 +156,13 @@ export async function getCategoriesForClients(
       position: r.position ?? 0,
     })
     result[r.client_id] = list
+  }
+
+  // Over álle gevraagde klanten lopen, niet alleen over wie categorieën heeft:
+  // een klant zonder eigen categorieën komt niet in de query terug maar moet de
+  // onbetaalde categorie wél krijgen.
+  for (const clientId of clientIds) {
+    result[clientId] = withUnpaidLeadCategory(clientId, result[clientId] ?? [])
   }
   return result
 }
@@ -517,7 +540,13 @@ export async function getAllCommissionLeads(): Promise<CommissionLeadHistoryRow[
       companyName: nameById.get(r.client_id) ?? 'Onbekende klant',
       leadEmail: r.lead_email,
       campaignName: r.campaign_name,
-      categoryId: r.category_id ?? '',
+      // De onbetaalde categorie heeft geen rij en dus geen category_id; hem
+      // terugvertalen naar de vaste sleutel houdt hem gekozen in de bewerk-
+      // dropdown. Een lege category_id bij een andere naam betekent dat de
+      // categorie ooit verwijderd is — die valt terug op de opgeslagen naam.
+      categoryId:
+        r.category_id ??
+        (isUnpaidLeadCategoryName(r.category_name) ? UNPAID_LEAD_CATEGORY_ID : ''),
       categoryName: r.category_name,
       entryDate: r.entry_date,
       isChecked: r.is_checked,

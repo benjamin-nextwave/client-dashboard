@@ -7,6 +7,7 @@ import { downloadCsv } from '@/lib/csv-client'
 import {
   effectiveLeadPriceCents,
   formatEuroCents,
+  isUnpaidLeadCategoryId,
   type CommissionCategory,
 } from '@/lib/commissions-shared'
 import type { CommissionLeadHistoryRow } from '@/lib/data/commissions'
@@ -502,6 +503,7 @@ export function LeadHistory({
                   activeClass="bg-rose-500 text-white ring-rose-500"
                   icon={<path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />}
                 />
+                {!isUnpaidLeadCategoryId(lead.categoryId) && (
                 <ToggleButton
                   active={lead.isHalfPrice}
                   onClick={() => toggleHalfPrice(lead.id)}
@@ -515,6 +517,7 @@ export function LeadHistory({
                     />
                   }
                 />
+                )}
                 <ToggleButton
                   active={editingId === lead.id}
                   onClick={() => (editingId === lead.id ? cancelEdit() : startEdit(lead))}

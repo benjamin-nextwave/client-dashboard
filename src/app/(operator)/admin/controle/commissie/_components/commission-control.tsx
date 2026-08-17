@@ -5,6 +5,7 @@ import {
   amsterdamDateString,
   effectiveLeadPriceCents,
   formatEuroCents,
+  isUnpaidLeadCategoryId,
   type CommissionCategory,
 } from '@/lib/commissions-shared'
 import { addCommissionLeads, type CommissionLeadInput } from '@/app/(operator)/admin/commissies/actions'
@@ -75,6 +76,11 @@ export function CommissionControl({ clients, categoriesByClient, campaignNames }
         // Als de klant verandert, is de gekozen categorie niet meer geldig.
         if (patch.clientId !== undefined && patch.clientId !== b.clientId) {
           next.categoryId = ''
+        }
+        // Een onbetaalde lead levert niets op; een halvering daarvan is
+        // betekenisloos en zou als "korting gegeven" blijven staan.
+        if (isUnpaidLeadCategoryId(next.categoryId)) {
+          next.isHalfPrice = false
         }
         return next
       })
@@ -238,6 +244,7 @@ export function CommissionControl({ clients, categoriesByClient, campaignNames }
                     )}
                   </p>
                 )}
+                {!isUnpaidLeadCategoryId(block.categoryId) && (
                 <button
                   type="button"
                   onClick={() => updateBlock(block.key, { isHalfPrice: !block.isHalfPrice })}
@@ -254,6 +261,7 @@ export function CommissionControl({ clients, categoriesByClient, campaignNames }
                   </svg>
                   50% korting
                 </button>
+                )}
               </div>
 
               <div className="mt-3">

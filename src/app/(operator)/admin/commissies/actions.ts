@@ -3,6 +3,10 @@
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCommissionChartSeries, type CommissionChartSeries } from '@/lib/data/commissions'
+import {
+  isUnpaidLeadCategoryId,
+  UNPAID_LEAD_CATEGORY_NAME,
+} from '@/lib/commissions-shared'
 import { ROMPSLOMP_CACHE_TAG } from '@/lib/rompslomp/client'
 import { getExpenseTotals } from '@/lib/rompslomp/expenses'
 
@@ -42,16 +46,37 @@ export async function addCommissionLeads(rows: CommissionLeadInput[]): Promise<A
     return { error: 'Vul minstens één volledig blok in (mailadres, klant en categorie).' }
   }
 
-  const categoryIds = Array.from(new Set(valid.map((r) => r.categoryId)))
-  const { data: cats, error: catErr } = await supabase
-    .from('operator_client_commission_categories')
-    .select('id, name, price_cents')
-    .in('id', categoryIds)
+  // De onbetaalde categorie bestaat alleen in code en heeft dus geen rij om op
+  // te zoeken; hem meesturen zou een lege resultaatset opleveren.
+  const categoryIds = Array.from(
+    new Set(valid.map((r) => r.categoryId).filter((id) => !isUnpaidLeadCategoryId(id)))
+  )
+  const { data: cats, error: catErr } =
+    categoryIds.length > 0
+      ? await supabase
+          .from('operator_client_commission_categories')
+          .select('id, name, price_cents')
+          .in('id', categoryIds)
+      : { data: [], error: null }
   if (catErr) return { error: catErr.message }
   const catById = new Map((cats ?? []).map((c) => [c.id, c]))
 
   const insertRows = []
   for (const r of valid) {
+    if (isUnpaidLeadCategoryId(r.categoryId)) {
+      insertRows.push({
+        client_id: r.clientId,
+        lead_email: r.leadEmail.trim(),
+        campaign_name: r.campaignName.trim(),
+        entry_date: r.date,
+        category_id: null,
+        category_name: UNPAID_LEAD_CATEGORY_NAME,
+        unit_price_cents: 0,
+        is_half_price: false,
+        note: r.note.trim(),
+      })
+      continue
+    }
     const cat = catById.get(r.categoryId)
     if (!cat) return { error: 'Onbekende categorie geselecteerd.' }
     insertRows.push({
@@ -102,12 +127,16 @@ export async function updateCommissionLead(
     return { error: 'Vul mailadres, klant, categorie en een geldige datum in.' }
   }
 
+  const isUnpaid = isUnpaidLeadCategoryId(patch.categoryId)
+
   const [{ data: cat, error: catErr }, { data: existing }] = await Promise.all([
-    supabase
-      .from('operator_client_commission_categories')
-      .select('id, name, price_cents')
-      .eq('id', patch.categoryId)
-      .maybeSingle(),
+    isUnpaid
+      ? Promise.resolve({ data: null, error: null })
+      : supabase
+          .from('operator_client_commission_categories')
+          .select('id, name, price_cents')
+          .eq('id', patch.categoryId)
+          .maybeSingle(),
     supabase
       .from('operator_commission_leads')
       .select('category_id, unit_price_cents')
@@ -115,12 +144,15 @@ export async function updateCommissionLead(
       .maybeSingle(),
   ])
   if (catErr) return { error: catErr.message }
-  if (!cat) return { error: 'Onbekende categorie geselecteerd.' }
+  if (!isUnpaid && !cat) return { error: 'Onbekende categorie geselecteerd.' }
 
-  const unitPriceCents =
-    existing && existing.category_id === patch.categoryId
+  // Een onbetaalde lead is per definitie € 0,00 en heeft geen categorierij; de
+  // korting gaat mee uit, want de helft van niets zegt niets.
+  const unitPriceCents = isUnpaid
+    ? 0
+    : existing && existing.category_id === patch.categoryId
       ? existing.unit_price_cents ?? 0
-      : cat.price_cents ?? 0
+      : cat?.price_cents ?? 0
 
   const { error } = await supabase
     .from('operator_commission_leads')
@@ -129,9 +161,10 @@ export async function updateCommissionLead(
       client_id: patch.clientId,
       campaign_name: patch.campaignName.trim(),
       entry_date: patch.date,
-      category_id: cat.id,
-      category_name: cat.name,
+      category_id: isUnpaid ? null : cat?.id,
+      category_name: isUnpaid ? UNPAID_LEAD_CATEGORY_NAME : cat?.name,
       unit_price_cents: unitPriceCents,
+      ...(isUnpaid ? { is_half_price: false } : {}),
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)

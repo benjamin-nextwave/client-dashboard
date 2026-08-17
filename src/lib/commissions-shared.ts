@@ -51,6 +51,57 @@ export interface CommissionCategory {
   position: number
 }
 
+/**
+ * De vaste categorie die bij iedere klant hoort: een lead die interessant kán
+ * zijn maar in geen enkele betaalde categorie valt, en waarvoor dus geen
+ * commissie gerekend wordt. Altijd € 0,00.
+ *
+ * Bewust géén rij per klant in operator_client_commission_categories. Zou hij
+ * daar staan, dan kon hij per klant hernoemd, geprijsd of verwijderd worden en
+ * moest elke nieuwe klant hem er opnieuw bij krijgen — dan is "iedereen heeft
+ * hem altijd" niet meer waar. Nu bestaat hij in code en geldt hij overal.
+ *
+ * Leads in deze categorie krijgen `category_id = NULL` in de database (er is
+ * geen rij om naar te verwijzen) en deze naam als snapshot in `category_name`.
+ * De kolom is nullable en dat geval bestond al, dus dat vraagt geen migratie.
+ */
+export const UNPAID_LEAD_CATEGORY_ID = '__onbetaald__'
+export const UNPAID_LEAD_CATEGORY_NAME = 'Onbetaalde lead, mogelijk potentie'
+
+export function isUnpaidLeadCategoryId(id: string): boolean {
+  return id === UNPAID_LEAD_CATEGORY_ID
+}
+
+export function isUnpaidLeadCategoryName(name: string): boolean {
+  return name.trim().toLowerCase() === UNPAID_LEAD_CATEGORY_NAME.toLowerCase()
+}
+
+export function unpaidLeadCategory(clientId: string): CommissionCategory {
+  return {
+    id: UNPAID_LEAD_CATEGORY_ID,
+    clientId,
+    name: UNPAID_LEAD_CATEGORY_NAME,
+    priceCents: 0,
+    position: Number.MAX_SAFE_INTEGER,
+  }
+}
+
+/**
+ * De categorieën van een klant met de onbetaalde categorie er onderaan bij.
+ * Eén plek waar dat gebeurt, zodat de commissiecontrole, de lead-geschiedenis
+ * en de instellingen per klant nooit een andere lijst tonen.
+ *
+ * Een gelijknamige eigen categorie wordt eruit gefilterd: anders zou dezelfde
+ * naam twee keer in de keuzelijst staan.
+ */
+export function withUnpaidLeadCategory(
+  clientId: string,
+  categories: CommissionCategory[]
+): CommissionCategory[] {
+  const own = categories.filter((c) => !isUnpaidLeadCategoryName(c.name))
+  return [...own, unpaidLeadCategory(clientId)]
+}
+
 /** Huidige datum (YYYY-MM-DD) in de Amsterdamse tijdzone. */
 export function amsterdamDateString(date: Date = new Date()): string {
   return new Intl.DateTimeFormat('en-CA', {

@@ -2,8 +2,14 @@
 
 import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { isUnpaidLeadCategoryName, UNPAID_LEAD_CATEGORY_NAME } from '@/lib/commissions-shared'
 
 type ActionResult = { error?: string }
+
+// De onbetaalde categorie hoort al bij elke klant. Zou je hem ook als eigen
+// categorie kunnen aanmaken, dan stonden er twee gelijknamige opties in de
+// keuzelijst waarvan er één wél een prijs kon krijgen.
+const RESERVED_NAME_ERROR = `"${UNPAID_LEAD_CATEGORY_NAME}" hoort al standaard bij elke klant en hoeft niet toegevoegd te worden.`
 
 function sanitizePriceCents(value: number): number | null {
   if (!Number.isFinite(value)) return null
@@ -20,6 +26,7 @@ export async function addCommissionCategory(
   const trimmed = name.trim()
   if (trimmed.length === 0) return { error: 'Geef de categorie een naam.' }
   if (trimmed.length > 120) return { error: 'De naam is te lang.' }
+  if (isUnpaidLeadCategoryName(trimmed)) return { error: RESERVED_NAME_ERROR }
   const cents = sanitizePriceCents(priceCents)
   if (cents === null) return { error: 'Ongeldige prijs.' }
 
@@ -60,6 +67,7 @@ export async function updateCommissionCategory(
   const trimmed = name.trim()
   if (trimmed.length === 0) return { error: 'Geef de categorie een naam.' }
   if (trimmed.length > 120) return { error: 'De naam is te lang.' }
+  if (isUnpaidLeadCategoryName(trimmed)) return { error: RESERVED_NAME_ERROR }
   const cents = sanitizePriceCents(priceCents)
   if (cents === null) return { error: 'Ongeldige prijs.' }
 

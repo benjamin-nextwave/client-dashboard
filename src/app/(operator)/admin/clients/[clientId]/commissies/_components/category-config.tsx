@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import {
   formatEuroCents,
   parseEuroToCents,
+  UNPAID_LEAD_CATEGORY_NAME,
   type CommissionCategory,
 } from '@/lib/commissions-shared'
 import {
@@ -58,13 +59,14 @@ export function CategoryConfig({ clientId, categories, standardCategories }: Cat
       <div className="mt-4 space-y-2">
         {categories.length === 0 ? (
           <div className="rounded-lg border border-dashed border-gray-200 px-4 py-6 text-center text-sm text-gray-400">
-            Nog geen categorieën ingesteld voor deze klant.
+            Nog geen eigen categorieën ingesteld voor deze klant.
           </div>
         ) : (
           categories.map((cat) => (
             <CategoryRow key={cat.id} clientId={clientId} category={cat} onError={setError} />
           ))
         )}
+        <UnpaidCategoryRow />
       </div>
 
       {/* Standaard snelkeuzes */}
@@ -132,6 +134,31 @@ export function CategoryConfig({ clientId, categories, standardCategories }: Cat
         </div>
       </div>
     </section>
+  )
+}
+
+/**
+ * De onbetaalde categorie hoort bij iedere klant en staat niet in de database,
+ * dus hij is hier alleen te zien — niet te hernoemen, te beprijzen of te
+ * verwijderen. Zonder deze regel zou de operator denken dat de categorie voor
+ * deze klant ontbreekt, terwijl hij gewoon in de leadinvoer staat.
+ */
+function UnpaidCategoryRow() {
+  return (
+    <div className="flex flex-wrap items-center gap-2 rounded-xl border border-dashed border-gray-200 bg-gray-50/40 px-3 py-2">
+      <div className="min-w-[180px] flex-1 px-2 py-1.5">
+        <div className="text-sm font-medium text-gray-900">{UNPAID_LEAD_CATEGORY_NAME}</div>
+        <div className="mt-0.5 text-[11px] text-gray-400">
+          Staat vast bij elke klant — geen commissie, niet te wijzigen
+        </div>
+      </div>
+      <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[11px] font-semibold text-gray-500">
+        Altijd inbegrepen
+      </span>
+      <span className="w-24 text-right text-xs text-gray-400">
+        {formatEuroCents(0)}/lead
+      </span>
+    </div>
   )
 }
 
