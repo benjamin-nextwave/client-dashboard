@@ -17,7 +17,7 @@ export const getClientBranding = cache(async () => {
     .eq('id', clientId)
     .single()
 
-  if (!error) return client
+  if (!error) return { ...client, user_email: user.email ?? null }
 
   // Fallback: kolom inbox_url bestaat mogelijk nog niet
   const { data: fallback } = await supabase
@@ -26,5 +26,5 @@ export const getClientBranding = cache(async () => {
     .eq('id', clientId)
     .single()
 
-  return fallback ? { ...fallback, inbox_url: null, inbox_visible: false, chat_inbox_visible: true, lead_inbox_visible: false, lead_inbox_customer_id: null, email_signature: null } : null
+  return fallback ? { ...fallback, user_email: user.email ?? null, inbox_url: null, inbox_visible: false, chat_inbox_visible: true, lead_inbox_visible: false, lead_inbox_customer_id: null, email_signature: null } : null
 })

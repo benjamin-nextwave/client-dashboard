@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { NavItem } from '@/components/client/nav-item'
+import { SidebarAccount } from '@/components/client/sidebar-account'
 import { useT } from '@/lib/i18n/client'
 
 const STORAGE_KEY = 'nw-sidebar-collapsed'
@@ -24,6 +25,9 @@ interface SidebarNavProps {
   inboxUrl?: string
   inboxVisible?: boolean
   leadInboxVisible?: boolean
+  accountEmail?: string | null
+  accountLogoUrl?: string | null
+  accountCompanyName?: string | null
 }
 
 interface NavItemData {
@@ -37,7 +41,15 @@ interface NavGroup {
   items: NavItemData[]
 }
 
-export function SidebarNav({ signOutAction, inboxUrl, inboxVisible, leadInboxVisible }: SidebarNavProps) {
+export function SidebarNav({
+  signOutAction,
+  inboxUrl,
+  inboxVisible,
+  leadInboxVisible,
+  accountEmail,
+  accountLogoUrl,
+  accountCompanyName,
+}: SidebarNavProps) {
   const t = useT()
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(false)
@@ -286,23 +298,15 @@ export function SidebarNav({ signOutAction, inboxUrl, inboxVisible, leadInboxVis
         </button>
       </div>
 
-      {/* Uitloggen */}
-      <div className="relative shrink-0 border-t border-white/[0.09] p-2">
-        <form action={signOutAction}>
-          <button
-            type="submit"
-            title={collapsed ? t('nav.signOut') : undefined}
-            className={`flex h-[33px] w-full items-center rounded-control text-[12.5px] text-white/60 transition-colors hover:bg-white/5 hover:text-white/90 ${
-              collapsed ? 'justify-center px-0' : 'gap-3 px-3'
-            }`}
-          >
-            <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={1.6} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
-            </svg>
-            {!collapsed && t('nav.signOut')}
-          </button>
-        </form>
-      </div>
+      {/* Account — klik opent Uitloggen */}
+      <SidebarAccount
+        signOutAction={signOutAction}
+        email={accountEmail ?? null}
+        logoUrl={accountLogoUrl ?? null}
+        companyName={accountCompanyName ?? null}
+        collapsed={collapsed}
+      />
+
     </aside>
   )
 }
