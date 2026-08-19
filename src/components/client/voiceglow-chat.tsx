@@ -36,7 +36,7 @@ declare global {
  * Het user-blok uit de originele snippet is weggelaten — dat zou naam, e-mail
  * en telefoonnummer van de klant naar een externe dienst sturen.
  */
-function useVoiceglow(render: string, modalMode: boolean) {
+function useVoiceglow(render: string) {
   useEffect(() => {
     // React draait effects twee keer in development; zonder deze check zou de
     // bundle dan dubbel geladen worden.
@@ -46,7 +46,9 @@ function useVoiceglow(render: string, modalMode: boolean) {
       ID: AGENT_ID,
       region: 'eu',
       render,
-      modalMode,
+      // false = het gewone chatvenster naast de knop. Op true opent VoiceGlow
+      // schermvullend over het dashboard heen; dat willen we niet.
+      modalMode: false,
       stylesheets: [STYLESHEET],
     }
 
@@ -55,7 +57,7 @@ function useVoiceglow(render: string, modalMode: boolean) {
     script.src = BUNDLE_SRC
     script.defer = true
     document.body.appendChild(script)
-  }, [render, modalMode])
+  }, [render])
 }
 
 /**
@@ -69,7 +71,7 @@ export function VoiceglowChat() {
   const pathname = usePathname()
   const inline = pathname === INLINE_ROUTE
 
-  useVoiceglow(inline ? 'full-width' : 'bottom-right', !inline)
+  useVoiceglow(inline ? 'full-width' : 'bottom-right')
 
   if (inline) return null
   return <div id="VG_OVERLAY_CONTAINER" style={{ width: 0, height: 0 }} />
