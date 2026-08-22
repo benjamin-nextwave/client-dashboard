@@ -43,17 +43,17 @@ export interface MailGroup {
  * juist de enige status is die om een reactie van de klant vraagt.
  */
 export const STATUS_COLOR: Record<MailVariantStatus, string> = {
-  approved: 'var(--color-pos)',
-  feedback_pending: 'var(--color-brand)',
-  open: 'var(--color-warn)',
+  approved: 'var(--c-pos)',
+  feedback_pending: 'var(--brand-color)',
+  open: 'var(--c-warn)',
 }
 
 /** Achtergrond + tekst voor de statuschip. Dezelfde drie betekenissen. */
 export const STATUS_CHIP_CLASS: Record<MailVariantStatus, string> = {
   approved:
-    'bg-[color-mix(in_oklab,var(--color-pos)_13%,transparent)] text-pos',
+    'bg-[color-mix(in_oklab,var(--c-pos)_13%,transparent)] text-pos',
   feedback_pending: 'bg-[var(--brand-12)] text-brand-ink',
-  open: 'bg-[color-mix(in_oklab,var(--color-warn)_15%,transparent)] text-warn',
+  open: 'bg-[color-mix(in_oklab,var(--c-warn)_15%,transparent)] text-warn',
 }
 
 export const STATUS_LABEL_KEY: Record<MailVariantStatus, TranslationKey> = {
@@ -105,7 +105,7 @@ export const ACTION_LABEL_KEY: Record<MailVariantFeedbackActionType, Translation
 export function actionTagClass(action: MailVariantFeedbackActionType): string {
   if (action === 'replace_with') return 'bg-[var(--brand-12)] text-brand-ink'
   if (action === 'remove') {
-    return 'bg-[color-mix(in_oklab,var(--color-neg)_12%,transparent)] text-neg'
+    return 'bg-[color-mix(in_oklab,var(--c-neg)_12%,transparent)] text-neg'
   }
   return 'bg-track text-muted'
 }

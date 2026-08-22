@@ -86,7 +86,7 @@ export function VariantRail({ groups, selectedId, onSelect, newSince, newCount }
       )}
 
       {newSince && newCount > 0 && (
-        <div className="shrink-0 rounded-[11px] border border-[color-mix(in_oklab,var(--color-brand)_30%,var(--color-line))] bg-[var(--brand-06)] px-3.5 py-[13px]">
+        <div className="shrink-0 rounded-[11px] border border-[color-mix(in_oklab,var(--brand-color)_30%,var(--c-line))] bg-[var(--brand-06)] px-3.5 py-[13px]">
           <div className="flex items-center gap-2">
             <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />
             <span className="text-[10px] font-semibold uppercase tracking-[0.13em] text-brand-ink">
@@ -127,7 +127,7 @@ export function VariantRail({ groups, selectedId, onSelect, newSince, newCount }
                   nog op de klant wacht. */}
               {groupDone ? (
                 <span
-                  className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--color-pos)_15%,transparent)] text-pos"
+                  className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--c-pos)_15%,transparent)] text-pos"
                   aria-label={t('mailVariantsPage.statusApproved')}
                 >
                   <svg
@@ -143,7 +143,7 @@ export function VariantRail({ groups, selectedId, onSelect, newSince, newCount }
                   </svg>
                 </span>
               ) : groupOpen > 0 ? (
-                <span className="shrink-0 rounded-[5px] bg-[color-mix(in_oklab,var(--color-warn)_15%,transparent)] px-[6px] py-[2px] text-[10px] font-bold tabular-nums text-warn">
+                <span className="shrink-0 rounded-[5px] bg-[color-mix(in_oklab,var(--c-warn)_15%,transparent)] px-[6px] py-[2px] text-[10px] font-bold tabular-nums text-warn">
                   {groupOpen}
                 </span>
               ) : null}
@@ -165,7 +165,7 @@ export function VariantRail({ groups, selectedId, onSelect, newSince, newCount }
                     i > 0 ? 'border-t border-line' : ''
                   } ${
                     active
-                      ? 'bg-[var(--brand-08)] shadow-[inset_2px_0_0_var(--color-brand)]'
+                      ? 'bg-[var(--brand-08)] shadow-[inset_2px_0_0_var(--brand-color)]'
                       : 'hover:bg-[var(--brand-05)]'
                   }`}
                 >

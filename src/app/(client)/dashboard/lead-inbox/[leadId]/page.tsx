@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { getClientBranding } from '@/lib/client/get-client-branding'
 import { AdminContactBox } from '@/components/admin-contact-box'
 import { getAdminContactByEmail, hasAdminContact } from '@/lib/data/lead-admin-contacts'
+import { AssistantDraft } from '../_components/assistant-draft'
 import { LeadWorkspace } from '../_components/lead-workspace'
 import { RepliesThread } from '../_components/replies-thread'
 import { requireLeadInboxCustomerId } from '../_lib/customer'
@@ -95,6 +96,17 @@ export default async function LeadDetailPage({
           <AdminContactBox data={adminContact} />
         </div>
       )}
+
+      <div className="mt-5">
+        <AssistantDraft
+          leadId={lead.id}
+          canReply={!!lastInbound}
+          isTrashed={isTrashed}
+          replyToSubject={lastInbound?.subject ?? ''}
+          sendingAccount={lead.sending_account}
+          toEmail={lead.email}
+        />
+      </div>
 
       <section className="mt-5">
         <RepliesThread items={thread} />

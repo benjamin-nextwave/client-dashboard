@@ -531,7 +531,7 @@ export function VariantDetail({
                   type="button"
                   onClick={approve}
                   disabled={pending}
-                  className="flex h-[34px] shrink-0 cursor-pointer items-center gap-[7px] whitespace-nowrap rounded-control border border-[color-mix(in_oklab,var(--color-pos)_40%,var(--color-line))] bg-[color-mix(in_oklab,var(--color-pos)_9%,transparent)] px-[13px] text-[12.5px] font-semibold text-pos transition-colors hover:bg-[color-mix(in_oklab,var(--color-pos)_16%,transparent)] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex h-[34px] shrink-0 cursor-pointer items-center gap-[7px] whitespace-nowrap rounded-control border border-[color-mix(in_oklab,var(--c-pos)_40%,var(--c-line))] bg-[color-mix(in_oklab,var(--c-pos)_9%,transparent)] px-[13px] text-[12.5px] font-semibold text-pos transition-colors hover:bg-[color-mix(in_oklab,var(--c-pos)_16%,transparent)] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <svg
                     viewBox="0 0 24 24"
