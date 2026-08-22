@@ -434,7 +434,7 @@ export const ASSISTANT_TRAITS: AssistantTrait[] = [
     id: 'agendalink',
     label: 'Verwijs naar de agendalink',
     instruction:
-      'Verwijs naar de agendalink om zelf een moment te kiezen, maar alleen als die link hieronder is meegegeven.',
+      'Staat er in de kennisbank een agendalink, verwijs daar dan naar zodat de lead zelf een moment kan kiezen. Staat die er niet, noem dan geen link en vraag de lead om zelf een moment voor te stellen.',
     group: 'vervolgstap',
   },
   {

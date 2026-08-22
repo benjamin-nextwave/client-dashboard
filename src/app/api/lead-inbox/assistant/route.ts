@@ -36,6 +36,7 @@ Vaste regels:
 - Lever alleen de tekst van de e-mail. Geen onderwerpregel, geen uitleg vooraf, geen aanhalingstekens om het geheel.
 - Gebruik platte tekst. Geen markdown, geen sterretjes, geen kopjes.
 - Verzin nooit feiten, cijfers, prijzen, namen of afspraken. Wat je niet uit de gegevens hieronder kunt halen, laat je weg.
+- Noem nooit een agendalink, boekingslink of webadres, tenzij dat adres letterlijk in de kennisbank hieronder staat. Staat er geen link, stel dan voor dat de lead zelf een moment noemt.
 - Schrijf als de afzender zelf. Vermeld nooit dat dit bericht met hulp van een assistent is opgesteld.
 - Schrijf standaard in het Nederlands, tenzij hieronder anders staat.`
 
@@ -125,12 +126,15 @@ export async function POST(req: Request) {
       ...traitInstructions(settings.traits, settings.customTraits),
     ]
 
+    // clients.meeting_url gaat hier bewust NIET in mee. Die kolom bevat bij
+    // alle klanten dezelfde NextWave-agenda, dus een lead zou een link krijgen
+    // die niet van het bedrijf is waarmee hij denkt te mailen. Wie wél een
+    // eigen boekingslink heeft, zet die in zijn kennisbank.
     const context = [
       `Bedrijf van de afzender: ${branding.company_name ?? 'onbekend'}`,
       lead.name ? `Naam van de lead: ${lead.name}` : null,
       `E-mailadres van de lead: ${lead.email}`,
       `Hoe deze reactie is ingedeeld: ${CLASSIFICATION_LABEL[lead.classification]}`,
-      branding.meeting_url ? `Agendalink: ${branding.meeting_url}` : null,
     ]
       .filter(Boolean)
       .join('\n')
