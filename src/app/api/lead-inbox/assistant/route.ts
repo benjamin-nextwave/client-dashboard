@@ -152,12 +152,12 @@ export async function POST(req: Request) {
 
     const prompt = `Dit is het gesprek tot nu toe, oudste bericht eerst:\n\n${conversation}\n\nSchrijf nu het antwoord op het laatste bericht van de lead. Geef alleen de tekst van de e-mail.`
 
+    // Geen temperature meegeven: Sonnet 5 weigert het verzoek met een 400.
     const result = await generateText({
       model: anthropic(MODEL),
       system,
       prompt,
       maxOutputTokens: 1200,
-      temperature: 0.4,
     })
 
     const draft = result.text.trim()
@@ -169,6 +169,21 @@ export async function POST(req: Request) {
     })
   } catch (error) {
     console.error('[lead-inbox assistant] mislukt:', error)
-    return jsonError('Het opstellen is niet gelukt. Probeer het nog eens.', 500)
+
+    // Een drukke of tijdelijk onbereikbare API is iets anders dan een verzoek
+    // dat nooit gaat lukken. Zonder dat onderscheid blijft een gebruiker op
+    // "opnieuw proberen" drukken bij een fout die zichzelf niet oplost.
+    const retryable =
+      typeof error === 'object' &&
+      error !== null &&
+      'isRetryable' in error &&
+      (error as { isRetryable?: unknown }).isRetryable === true
+
+    return jsonError(
+      retryable
+        ? 'Het is even te druk. Probeer het zo nog eens.'
+        : 'Het opstellen is niet gelukt. Blijft dit gebeuren, laat het ons dan weten.',
+      500
+    )
   }
 }
