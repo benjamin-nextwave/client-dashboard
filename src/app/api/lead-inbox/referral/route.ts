@@ -11,6 +11,7 @@ import {
 } from '@/app/(client)/dashboard/lead-inbox/_lib/queries'
 import { unescapeLiteralNewlines } from '@/app/(client)/dashboard/lead-inbox/_lib/text'
 import { getAssistantSettings } from '@/app/(client)/dashboard/lead-inbox/_lib/assistant'
+import { getMailVariants } from '@/lib/data/campaign'
 import { sliderInstructions } from '@/lib/lead-inbox/assistant-sliders'
 import { traitInstructions } from '@/lib/lead-inbox/assistant-traits'
 import {
@@ -132,10 +133,16 @@ const COMPOSE_PROMPT = `Je schrijft namens een bedrijf een eerste mail aan ieman
 
 Iemand anders bij dat bedrijf kreeg onze koude mail en zei: hier moet je bij die persoon zijn. Jij schrijft nu die persoon aan.
 
+Waar de inhoud vandaan komt — dit is het belangrijkste:
+- De campagne bestaat uit meerdere mails. De eerste bevat de pitch; de mails daarna zijn korte herinneringen in de trant van "ik wilde nog één keer opvolgen". Reageerde de lead op zo'n herinnering, dan staat in de thread dus géén inhoud.
+- Staat hieronder een blok "De pitch uit de campagne", gebruik dan díe tekst als inhoud van je mail. Dat is waar het bedrijf de ontvanger mee wil bereiken.
+- Staat dat blok er niet, zoek dan in het mailverkeer het oudste en meest inhoudelijke bericht van ons op — niet de laatste. Een herinnering van twee zinnen is geen pitch.
+- Vind je nergens inhoud, schrijf dan een korte mail die alleen de doorverwijzing benoemt en vraagt of dit de juiste persoon is. Verzin de propositie niet.
+- Neem tijdelijke aanduidingen als {voornaam}, {bedrijfsnaam} of [naam] nooit letterlijk over. Vul ze in met wat je weet, of schrijf de zin anders.
+
 Vaste regels:
 - Benoem altijd, in de eerste twee zinnen, dat de ander is doorverwezen en door wie. Noem de naam van degene die doorverwees als die bekend is, anders zijn functie of "een collega".
-- Verwerk daarna waar de oorspronkelijke mail over ging, zodat de lezer meteen begrijpt waar het om gaat. Je mag die tekst herschrijven zodat het één lopend geheel wordt — het hoeft geen letterlijk citaat te zijn.
-- Is de oorspronkelijke mail niet teruggevonden, schrijf dan alleen wat je zeker weet en verzin de inhoud niet.
+- Verwerk de inhoud daarna in lopende tekst, zodat de lezer meteen begrijpt waar het om gaat. Je mag herschrijven zodat het één geheel wordt — het hoeft geen letterlijk citaat te zijn.
 - Sluit altijd af met een groet en de handtekening van de afzender zoals die hieronder staat. Alleen wanneer bij de schrijfvoorkeuren uitdrukkelijk staat dat er geen handtekening onder moet, laat je die weg — maar een groet blijft dan wel staan.
 - Lever alleen de tekst van de e-mail. Geen onderwerpregel, geen uitleg vooraf, geen aanhalingstekens om het geheel.
 - Platte tekst. Geen markdown, geen sterretjes, geen kopjes.
@@ -269,11 +276,19 @@ export async function POST(req: Request) {
       )
     }
 
-    const settings = await getAssistantSettings(branding.id)
-    const outbounds = await getOutboundRepliesForLead(
-      branding.lead_inbox_customer_id,
-      leadId
-    )
+    // De pitch staat in mail 1 van de campagne. De thread bevat alleen de mail
+    // waarop deze lead toevallig reageerde, en dat is vaak een herinnering
+    // zonder inhoud — vandaar dat we mail 1 er apart bij geven.
+    const [settings, variants, outbounds] = await Promise.all([
+      getAssistantSettings(branding.id),
+      getMailVariants(branding.id),
+      getOutboundRepliesForLead(branding.lead_inbox_customer_id, leadId),
+    ])
+
+    const pitch =
+      variants
+        .filter((v) => v.isPublished && v.mailNumber === 1 && v.body.trim())
+        .sort((a, b) => a.position - b.position)[0] ?? null
     const thread = buildThreadItems(lead, outbounds)
       .map(
         (item) =>
@@ -296,6 +311,10 @@ export async function POST(req: Request) {
       ? `\n\nKennisbank van het bedrijf. Dit is de enige bron voor inhoudelijke feiten:\n---\n${settings.knowledge.trim()}\n---`
       : '\n\nEr is geen kennisbank ingevuld. Doe daarom geen inhoudelijke beweringen over prijzen, voorwaarden of resultaten.'
 
+    const pitchBlock = pitch
+      ? `\n\nDe pitch uit de campagne (mail 1, "${pitch.variantLabel}"). Dit is de inhoud waar het om gaat:\n---\nOnderwerp: ${pitch.subject}\n\n${pitch.body.trim()}\n---`
+      : ''
+
     const system =
       `${COMPOSE_PROMPT}\n\nGegevens:\n` +
       [
@@ -304,6 +323,7 @@ export async function POST(req: Request) {
         `Naar wie wordt doorverwezen: ${naam ?? 'naam onbekend'}${functie ? ` (${functie})` : ''}`,
         `E-mailadres van die persoon: ${email}`,
       ].join('\n') +
+      pitchBlock +
       signatureBlock +
       knowledgeBlock +
       `\n\nZo wil de afzender dat je schrijft:\n${instructions.map((l) => `- ${l}`).join('\n')}`
@@ -312,7 +332,7 @@ export async function POST(req: Request) {
       generateText({
         model: anthropic(MODEL),
         system,
-        prompt: `Hieronder staat het hele mailverkeer met degene die doorverwees. De oorspronkelijke mail van ons staat er meestal onderaan geciteerd in.\n\n${thread}\n\nSchrijf nu de mail aan ${naam ?? 'de doorverwezen persoon'}. Geef alleen de tekst van de e-mail.`,
+        prompt: `Hieronder staat het hele mailverkeer met degene die doorverwees, zodat je ziet wat er speelde. Let op: dit kan een herinnering zijn in plaats van de pitch.\n\n${thread}\n\nSchrijf nu de mail aan ${naam ?? 'de doorverwezen persoon'}. Geef alleen de tekst van de e-mail.`,
         maxOutputTokens: 1200,
       }),
       generateText({
@@ -333,6 +353,8 @@ export async function POST(req: Request) {
       source: bron,
       referredName: naam,
       referredRole: functie,
+      pitchSource: pitch ? 'mail1' : 'thread',
+      pitchLabel: pitch ? pitch.subject : null,
       fromEmail: lead.sending_account,
       subject: subject.text.trim().replace(/^["']|["']$/g, '') || `Doorverwezen door ${lead.name || lead.email}`,
       body: bodyText,

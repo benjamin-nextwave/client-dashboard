@@ -13,6 +13,9 @@ export interface ReferralDraft {
   referredName: string | null
   referredRole: string | null
   source: 'nextwave' | 'mail' | null
+  /** Waar de inhoud van de mail vandaan komt. */
+  pitchSource: 'mail1' | 'thread'
+  pitchLabel: string | null
 }
 
 /**
@@ -173,6 +176,29 @@ export function ReferralModal({
               placeholder="Onderwerp van de mail"
               className="min-w-0 flex-1 border-0 bg-transparent text-[12.5px] text-fg outline-none placeholder:text-faint disabled:opacity-60"
             />
+          </div>
+
+          {/* Waar de inhoud vandaan komt. Bij een reactie op een herinnering
+              staat er in de thread geen pitch; dan is dit de waarschuwing om
+              de tekst extra na te lezen. */}
+          <div
+            className={`border-b border-line px-5 py-2 text-[11px] ${
+              draft.pitchSource === 'mail1'
+                ? 'text-muted'
+                : 'bg-[color-mix(in_oklab,var(--c-warn)_9%,transparent)] text-warn'
+            }`}
+          >
+            {draft.pitchSource === 'mail1' ? (
+              <>
+                Inhoud gebaseerd op de eerste campagnemail
+                {draft.pitchLabel ? ` — “${draft.pitchLabel}”` : ''}.
+              </>
+            ) : (
+              <>
+                Er staat geen campagnemail klaar bij Mailvarianten, dus de inhoud komt uit
+                het mailverkeer met {leadName || leadEmail}. Lees hem extra goed na.
+              </>
+            )}
           </div>
 
           {/* Bericht */}

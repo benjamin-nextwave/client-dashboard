@@ -110,6 +110,8 @@ export function ReferralOutreach({
         referredName: (p.referredName as string | null) ?? null,
         referredRole: (p.referredRole as string | null) ?? null,
         source: (p.source as 'nextwave' | 'mail' | null) ?? null,
+        pitchSource: p.pitchSource === 'mail1' ? 'mail1' : 'thread',
+        pitchLabel: (p.pitchLabel as string | null) ?? null,
       })
     } catch (err) {
       setComposeError(err instanceof Error ? err.message : 'Er ging iets mis.')
