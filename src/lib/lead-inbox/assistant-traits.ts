@@ -6,9 +6,13 @@
  * wordt geplakt. Alleen de `id` gaat de database in, zodat de formulering hier
  * kan wijzigen zonder migratie of herberekening van opgeslagen instellingen.
  *
- * `exclusive` zet elkaar uitsluitende keuzes bij elkaar: kies je "u/uw", dan
- * gaat "je/jij" vanzelf uit. Zonder die groepering zou de assistent twee
- * tegenstrijdige instructies krijgen.
+ * `exclusive` zet elkaar uitsluitende keuzes bij elkaar: kies je "Geen
+ * aanhef", dan gaat "Bedank voor de reactie" vanzelf uit. Zonder die
+ * groepering zou de assistent twee tegenstrijdige instructies krijgen.
+ *
+ * Wat een spectrum is en geen keuze — formeel/informeel, kort/lang,
+ * oppervlakkig/inhoudelijk, vrolijk/serieus — staat niet hier maar in
+ * assistant-sliders.ts.
  */
 
 export type TraitGroupId =
@@ -56,24 +60,10 @@ export const TRAIT_GROUPS: TraitGroup[] = [
 export const ASSISTANT_TRAITS: AssistantTrait[] = [
   // ── Aanspreekvorm ────────────────────────────────────────────────────────
   {
-    id: 'formeel-u',
-    label: 'Formeel (u/uw)',
-    instruction: 'Spreek de lead aan met "u" en "uw". Houd dat consequent vol.',
-    group: 'aanspreekvorm',
-    exclusive: 'aanspreekvorm',
-  },
-  {
-    id: 'informeel-je',
-    label: 'Informeel (je/jij)',
-    instruction: 'Spreek de lead aan met "je" en "jij". Houd dat consequent vol.',
-    group: 'aanspreekvorm',
-    exclusive: 'aanspreekvorm',
-  },
-  {
     id: 'spiegel-aanspreekvorm',
     label: 'Spiegel de lead',
     instruction:
-      'Neem de aanspreekvorm over die de lead zelf gebruikt: schrijft hij "u", schrijf dan "u"; schrijft hij "je", schrijf dan "je".',
+      'Neem de aanspreekvorm over die de lead zelf gebruikt: schrijft hij "u", schrijf dan "u"; schrijft hij "je", schrijf dan "je". Dit gaat vóór de stand van de schuifregelaar Aanspreekvorm.',
     group: 'aanspreekvorm',
     exclusive: 'aanspreekvorm',
   },
@@ -114,30 +104,6 @@ export const ASSISTANT_TRAITS: AssistantTrait[] = [
     id: 'zakelijk',
     label: 'Zakelijk',
     instruction: 'Schrijf zakelijk en to the point.',
-    group: 'toon',
-  },
-  {
-    id: 'serieus',
-    label: 'Serieus',
-    instruction: 'Houd de toon serieus; geen grapjes of luchtigheid.',
-    group: 'toon',
-  },
-  {
-    id: 'speels',
-    label: 'Speels',
-    instruction: 'Mag speels en licht van toon zijn, met af en toe een knipoog.',
-    group: 'toon',
-  },
-  {
-    id: 'enthousiast',
-    label: 'Enthousiast',
-    instruction: 'Laat oprecht enthousiasme doorklinken over de samenwerking.',
-    group: 'toon',
-  },
-  {
-    id: 'rustig',
-    label: 'Rustig en kalm',
-    instruction: 'Schrijf rustig en beheerst. Geen uitroeptekens, geen opgewonden taal.',
     group: 'toon',
   },
   {
@@ -235,39 +201,10 @@ export const ASSISTANT_TRAITS: AssistantTrait[] = [
 
   // ── Lengte ───────────────────────────────────────────────────────────────
   {
-    id: 'zeer-kort',
-    label: 'Heel kort (2-3 zinnen)',
-    instruction: 'Houd het antwoord op twee tot drie zinnen.',
-    group: 'lengte',
-    exclusive: 'lengte',
-  },
-  {
-    id: 'kort',
-    label: 'Kort (max 5 zinnen)',
-    instruction: 'Houd het antwoord op maximaal vijf zinnen.',
-    group: 'lengte',
-    exclusive: 'lengte',
-  },
-  {
-    id: 'gemiddeld',
-    label: 'Gemiddeld (5-10 zinnen)',
-    instruction: 'Schrijf een antwoord van vijf tot tien zinnen.',
-    group: 'lengte',
-    exclusive: 'lengte',
-  },
-  {
-    id: 'uitgebreid',
-    label: 'Uitgebreid',
-    instruction:
-      'Neem de ruimte om het volledig uit te leggen, ook als dat een langer bericht oplevert.',
-    group: 'lengte',
-    exclusive: 'lengte',
-  },
-  {
     id: 'lengte-spiegelen',
     label: 'Even lang als de lead',
     instruction:
-      'Stem de lengte af op het bericht van de lead: kort bericht, kort antwoord.',
+      'Stem de lengte af op het bericht van de lead: kort bericht, kort antwoord. Dit gaat vóór de stand van de schuifregelaar Lengte.',
     group: 'lengte',
     exclusive: 'lengte',
   },
@@ -345,20 +282,6 @@ export const ASSISTANT_TRAITS: AssistantTrait[] = [
   },
 
   // ── Inhoud ───────────────────────────────────────────────────────────────
-  {
-    id: 'vragen-beantwoorden',
-    label: 'Beantwoord vragen inhoudelijk',
-    instruction:
-      'Geef inhoudelijk antwoord op elke vraag die de lead stelt. Ontwijk niets.',
-    group: 'inhoud',
-  },
-  {
-    id: 'niet-inhoudelijk',
-    label: 'Bewaar de details voor het gesprek',
-    instruction:
-      'Geef alleen een antwoord op hoofdlijnen en verwijs voor de details naar een gesprek.',
-    group: 'inhoud',
-  },
   {
     id: 'concreet',
     label: 'Concreet',

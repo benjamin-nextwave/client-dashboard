@@ -1,12 +1,18 @@
 import { createClient } from '@/lib/supabase/server'
 import type { CustomTrait } from '@/lib/lead-inbox/assistant-traits'
-import { isMissingAssistantTable } from './assistant-errors'
+import {
+  defaultSliderValues,
+  normalizeSliderValues,
+  type SliderValues,
+} from '@/lib/lead-inbox/assistant-sliders'
+import { isMissingAssistantTable, isMissingSlidersColumn } from './assistant-errors'
 
 export interface AssistantSettings {
   enabled: boolean
   knowledge: string
   traits: string[]
   customTraits: CustomTrait[]
+  sliders: SliderValues
   /**
    * False wanneer de tabel er nog niet is. De schakelaar blijft dan zichtbaar
    * maar meldt dat de migratie nog moet draaien, in plaats van de hele inbox
@@ -20,10 +26,12 @@ export const DEFAULT_ASSISTANT_SETTINGS: AssistantSettings = {
   knowledge: '',
   traits: [],
   customTraits: [],
+  sliders: defaultSliderValues(),
   available: true,
 }
 
-const COLUMNS = 'enabled, knowledge, traits, custom_traits'
+const COLUMNS_WITHOUT_SLIDERS = 'enabled, knowledge, traits, custom_traits'
+const COLUMNS = `${COLUMNS_WITHOUT_SLIDERS}, sliders`
 
 function asStringArray(value: unknown): string[] {
   if (!Array.isArray(value)) return []
@@ -46,11 +54,22 @@ function asCustomTraits(value: unknown): CustomTrait[] {
  */
 export async function getAssistantSettings(clientId: string): Promise<AssistantSettings> {
   const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('lead_inbox_ai_settings')
-    .select(COLUMNS)
-    .eq('client_id', clientId)
-    .maybeSingle()
+
+  const read = (columns: string) =>
+    supabase
+      .from('lead_inbox_ai_settings')
+      .select(columns)
+      .eq('client_id', clientId)
+      .maybeSingle()
+
+  let { data, error } = await read(COLUMNS)
+
+  // De schuifregelaars kwamen er in een tweede migratie bij. Draait die nog
+  // niet, dan blijft de rest van de instellingen gewoon werken en staan de
+  // regelaars op hun middenstand.
+  if (error && isMissingSlidersColumn(error)) {
+    ;({ data, error } = await read(COLUMNS_WITHOUT_SLIDERS))
+  }
 
   if (error) {
     if (isMissingAssistantTable(error)) {
@@ -67,6 +86,7 @@ export async function getAssistantSettings(clientId: string): Promise<AssistantS
     knowledge: string | null
     traits: unknown
     custom_traits: unknown
+    sliders: unknown
   }
 
   return {
@@ -74,6 +94,7 @@ export async function getAssistantSettings(clientId: string): Promise<AssistantS
     knowledge: row.knowledge ?? '',
     traits: asStringArray(row.traits),
     customTraits: asCustomTraits(row.custom_traits),
+    sliders: normalizeSliderValues(row.sliders),
     available: true,
   }
 }

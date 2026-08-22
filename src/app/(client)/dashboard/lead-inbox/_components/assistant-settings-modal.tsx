@@ -7,10 +7,19 @@ import {
   toggleTrait,
   type CustomTrait,
 } from '@/lib/lead-inbox/assistant-traits'
+import {
+  ASSISTANT_SLIDERS,
+  SLIDER_DEFAULT,
+  SLIDER_STEPS,
+  bandFor,
+  defaultSliderValues,
+  type AssistantSlider,
+  type SliderValues,
+} from '@/lib/lead-inbox/assistant-sliders'
 import { saveAssistantSettings } from '../_lib/assistant-actions'
 import { useAssistant } from './assistant-context'
 
-type Tab = 'prompt' | 'kennisbank'
+type Tab = 'stijl' | 'prompt' | 'kennisbank'
 
 const KNOWLEDGE_LIMIT = 8000
 
@@ -44,10 +53,11 @@ export function AssistantSettingsModal({
 }) {
   const { settings, applySettings } = useAssistant()
 
-  const [tab, setTab] = useState<Tab>('prompt')
+  const [tab, setTab] = useState<Tab>('stijl')
   const [search, setSearch] = useState('')
   const [traits, setTraits] = useState<string[]>(settings.traits)
   const [customTraits, setCustomTraits] = useState<CustomTrait[]>(settings.customTraits)
+  const [sliders, setSliders] = useState<SliderValues>(settings.sliders)
   const [knowledge, setKnowledge] = useState(settings.knowledge)
   const [newTrait, setNewTrait] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -98,15 +108,20 @@ export function AssistantSettingsModal({
         knowledge,
         traits,
         customTraits,
+        sliders,
       })
       if (!res.ok) {
         setError(res.error)
         return
       }
-      applySettings({ knowledge, traits, customTraits })
+      applySettings({ knowledge, traits, customTraits, sliders })
       setSaved(true)
     })
   }
+
+  const slidersAtDefault = ASSISTANT_SLIDERS.every(
+    (s) => (sliders[s.id] ?? SLIDER_DEFAULT) === SLIDER_DEFAULT
+  )
 
   return (
     <div
@@ -155,6 +170,7 @@ export function AssistantSettingsModal({
         <div className="flex shrink-0 gap-0.5 border-b border-line px-5 pt-3">
           {(
             [
+              ['stijl', 'Stijl'],
               ['prompt', 'Prompt'],
               ['kennisbank', 'Kennisbank'],
             ] as const
@@ -182,7 +198,41 @@ export function AssistantSettingsModal({
         </div>
 
         {/* Inhoud */}
-        {tab === 'prompt' ? (
+        {tab === 'stijl' ? (
+          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+            <div className="flex items-start justify-between gap-4">
+              <p className="max-w-[440px] text-[11.5px] leading-[1.55] text-muted">
+                Deze vier zijn geen aan of uit, maar een schaal. Sleep de stip of gebruik de
+                pijltjestoetsen; elke stand verschuift de schrijfstijl een klein stukje.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setSliders(defaultSliderValues())
+                  setSaved(false)
+                }}
+                disabled={slidersAtDefault}
+                className="shrink-0 rounded-control px-2.5 py-1 text-[11.5px] font-medium text-muted transition-colors hover:bg-[var(--brand-05)] hover:text-fg disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Alles naar het midden
+              </button>
+            </div>
+
+            <div className="mt-3.5 flex flex-col gap-2.5">
+              {ASSISTANT_SLIDERS.map((slider) => (
+                <SliderRow
+                  key={slider.id}
+                  slider={slider}
+                  value={sliders[slider.id] ?? SLIDER_DEFAULT}
+                  onChange={(value) => {
+                    setSliders((prev) => ({ ...prev, [slider.id]: value }))
+                    setSaved(false)
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        ) : tab === 'prompt' ? (
           <div className="flex min-h-0 flex-1 flex-col">
             <div className="shrink-0 space-y-2.5 border-b border-line px-5 py-3">
               <div className="relative">
@@ -393,6 +443,79 @@ export function AssistantSettingsModal({
             </button>
           </div>
         </div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Eén schuifregelaar met 21 standen. Onder de streep ligt een echte
+ * <input type="range">, zodat slepen, klikken én de pijltjestoetsen werken en
+ * de waarde vanzelf op een hele stap uitkomt. De stippen en de gevulde balk
+ * erboven zijn puur decoratie en vangen geen muisklikken.
+ *
+ * De stip staat bij stand 0 een halve duimbreedte van de rand; daarom rekenen
+ * de posities met calc(8px + (100% - 16px) * deel).
+ */
+function SliderRow({
+  slider,
+  value,
+  onChange,
+}: {
+  slider: AssistantSlider
+  value: number
+  onChange: (value: number) => void
+}) {
+  const fraction = value / SLIDER_STEPS
+  const inputId = `assistant-slider-${slider.id}`
+
+  return (
+    <div className="rounded-[9px] border border-line bg-panel px-4 py-3.5">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <label htmlFor={inputId} className="text-[12.5px] font-semibold tracking-[-0.01em]">
+          {slider.title}
+        </label>
+        <span className="text-[11px] font-semibold text-brand-ink">
+          {bandFor(slider, value)}
+          <span className="ml-1.5 tabular-nums font-normal text-faint">
+            {value}/{SLIDER_STEPS}
+          </span>
+        </span>
+      </div>
+      <p className="mt-0.5 text-[11.5px] leading-[1.5] text-muted">{slider.hint}</p>
+
+      <div className="relative mt-3 h-4">
+        <div className="pointer-events-none absolute inset-x-2 top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-track" />
+        <div
+          className="pointer-events-none absolute left-2 top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-[var(--brand-color)]"
+          style={{ width: `calc((100% - 16px) * ${fraction})` }}
+        />
+        {Array.from({ length: SLIDER_STEPS + 1 }, (_, i) => (
+          <span
+            key={i}
+            aria-hidden
+            className={`pointer-events-none absolute top-1/2 h-[5px] w-[5px] -translate-x-1/2 -translate-y-1/2 rounded-full ${
+              i <= value ? 'bg-[var(--brand-color)]' : 'bg-line'
+            }`}
+            style={{ left: `calc(8px + (100% - 16px) * ${i / SLIDER_STEPS})` }}
+          />
+        ))}
+        <input
+          id={inputId}
+          type="range"
+          min={0}
+          max={SLIDER_STEPS}
+          step={1}
+          value={value}
+          onChange={(e) => onChange(Number(e.target.value))}
+          aria-valuetext={`${value} van ${SLIDER_STEPS} — ${bandFor(slider, value)}`}
+          className="absolute inset-0 w-full cursor-pointer appearance-none bg-transparent [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-[var(--brand-color)] [&::-moz-range-thumb]:bg-panel [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-[var(--brand-color)] [&::-webkit-slider-thumb]:bg-panel"
+        />
+      </div>
+
+      <div className="mt-1 flex items-center justify-between text-[11px] text-faint">
+        <span>{slider.leftLabel}</span>
+        <span>{slider.rightLabel}</span>
       </div>
     </div>
   )

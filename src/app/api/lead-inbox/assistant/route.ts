@@ -10,6 +10,7 @@ import {
 } from '@/app/(client)/dashboard/lead-inbox/_lib/queries'
 import { unescapeLiteralNewlines } from '@/app/(client)/dashboard/lead-inbox/_lib/text'
 import { traitInstructions } from '@/lib/lead-inbox/assistant-traits'
+import { sliderInstructions } from '@/lib/lead-inbox/assistant-sliders'
 import { CLASSIFICATION_LABEL } from '@/app/(client)/dashboard/lead-inbox/_lib/labels'
 
 /**
@@ -117,7 +118,12 @@ export async function POST(req: Request) {
       return jsonError('Er is geen bericht van deze lead om op te antwoorden.', 400)
     }
 
-    const instructions = traitInstructions(settings.traits, settings.customTraits)
+    // Eerst de schuifregelaars, dan de losse eigenschappen: een eigenschap is
+    // specifieker en mag de stand van een regelaar bijsturen.
+    const instructions = [
+      ...sliderInstructions(settings.sliders),
+      ...traitInstructions(settings.traits, settings.customTraits),
+    ]
 
     const context = [
       `Bedrijf van de afzender: ${branding.company_name ?? 'onbekend'}`,
@@ -137,9 +143,10 @@ export async function POST(req: Request) {
       ? `\n\nKennisbank van het bedrijf. Dit is de enige bron voor inhoudelijke feiten:\n---\n${settings.knowledge.trim()}\n---`
       : '\n\nEr is geen kennisbank ingevuld. Doe daarom geen inhoudelijke beweringen over prijzen, voorwaarden of resultaten.'
 
-    const styleBlock = instructions.length
-      ? `\n\nZo wil de afzender dat je schrijft:\n${instructions.map((line) => `- ${line}`).join('\n')}`
-      : ''
+    // Altijd gevuld: de schuifregelaars leveren sowieso vier regels.
+    const styleBlock = `\n\nZo wil de afzender dat je schrijft:\n${instructions
+      .map((line) => `- ${line}`)
+      .join('\n')}`
 
     const system = `${BASE_PROMPT}\n\nGegevens:\n${context}${signatureBlock}${knowledgeBlock}${styleBlock}`
 

@@ -12,6 +12,7 @@ import {
 import type { AssistantSettings } from '../_lib/assistant'
 import { setAssistantEnabled } from '../_lib/assistant-actions'
 import type { CustomTrait } from '@/lib/lead-inbox/assistant-traits'
+import type { SliderValues } from '@/lib/lead-inbox/assistant-sliders'
 
 /**
  * De schakelaar staat in de zijkolom (layout) en het conceptantwoord op de
@@ -40,6 +41,7 @@ interface AssistantContextValue {
     knowledge: string
     traits: string[]
     customTraits: CustomTrait[]
+    sliders: SliderValues
   }) => void
   draftFor: (leadId: string) => DraftState
   requestDraft: (leadId: string) => void
@@ -89,7 +91,12 @@ export function AssistantProvider({
   }, [])
 
   const applySettings = useCallback(
-    (next: { knowledge: string; traits: string[]; customTraits: CustomTrait[] }) => {
+    (next: {
+      knowledge: string
+      traits: string[]
+      customTraits: CustomTrait[]
+      sliders: SliderValues
+    }) => {
       setSettings((prev) => ({ ...prev, ...next }))
       // Andere instellingen betekent andere antwoorden; wat er nog staat is
       // geschreven met de oude voorkeuren.
