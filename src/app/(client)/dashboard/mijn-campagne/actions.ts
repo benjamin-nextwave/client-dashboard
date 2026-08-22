@@ -1,7 +1,6 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import {
@@ -923,10 +922,16 @@ export async function approveVariants(): Promise<{ error?: string }> {
  * Submit the campaign onboarding form. Can only be done once.
  * Returns a field-error map on validation failure.
  */
+/**
+ * Geeft `{ ok: true }` terug in plaats van zelf door te sturen. Het doorsturen
+ * gebeurt in de browser, zodat het formulier eerst zijn opgeslagen concept kan
+ * opruimen — zou de server hier redirecten, dan bleef dat concept staan en
+ * kreeg de klant bij een volgend formulier zijn oude antwoorden weer voorgezet.
+ */
 export async function submitCampaignForm(
-  prevState: { fieldErrors?: Record<string, string>; error?: string },
+  prevState: { fieldErrors?: Record<string, string>; error?: string; ok?: true },
   formData: FormData
-): Promise<{ fieldErrors?: Record<string, string>; error?: string }> {
+): Promise<{ fieldErrors?: Record<string, string>; error?: string; ok?: true }> {
   const clientId = await getClientIdForCurrentUser()
   if (!clientId) return { error: 'Niet geautoriseerd' }
 
@@ -1118,7 +1123,8 @@ export async function submitCampaignForm(
   }
 
   revalidatePath('/dashboard/mijn-campagne')
-  redirect('/dashboard/mijn-campagne')
+  revalidatePath('/dashboard/mijn-campagne/antwoorden')
+  return { ok: true }
 }
 
 /**

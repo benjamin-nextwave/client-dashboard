@@ -1,6 +1,7 @@
 'use client'
 
 import { useActionState, useCallback, useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   COMPANY_SIZES,
   COMPANY_SIZE_LABELS,
@@ -16,6 +17,25 @@ import {
 // de klant zijn hele ingevulde formulier. Er is geen serverkant om op terug te
 // vallen — pas bij een geslaagde verzending wordt er iets opgeslagen.
 const DRAFT_KEY = 'nextwave.campagneformulier.concept'
+
+/**
+ * React 19 maakt een <form action={…}> leeg zodra de actie klaar is — ook als
+ * die actie een fout teruggaf. Voor ongecontroleerde velden betekent dat: de
+ * klant klikt op "Indienen", krijgt een foutmelding, en het hele formulier is
+ * leeg. Daarom wordt er vlak vóór het versturen een momentopname gemaakt die
+ * na een mislukking teruggezet wordt. Dat gebeurt in het geheugen én in
+ * localStorage, zodat een geblokkeerde opslag (privémodus) niet alsnog alles
+ * kost.
+ */
+function readTextFields(formData: FormData): Record<string, string> {
+  const fields: Record<string, string> = {}
+  for (const [name, value] of formData.entries()) {
+    if (typeof value !== 'string') continue
+    if (STATE_DRIVEN_FIELDS.has(name) || name.startsWith('skip_')) continue
+    fields[name] = value
+  }
+  return fields
+}
 
 interface FormDraft {
   /** De ongecontroleerde tekstvelden, op naam. */
@@ -34,11 +54,15 @@ interface FormDraft {
  */
 const STATE_DRIVEN_FIELDS = new Set(['sectors', 'locations', 'companySizes', 'domainsChoice'])
 
+type FormState = {
+  fieldErrors?: Record<string, string>
+  error?: string
+  /** Alleen gezet na een geslaagde inzending. */
+  ok?: true
+}
+
 interface Props {
-  action: (
-    prevState: { fieldErrors?: Record<string, string>; error?: string },
-    formData: FormData
-  ) => Promise<{ fieldErrors?: Record<string, string>; error?: string }>
+  action: (prevState: FormState, formData: FormData) => Promise<FormState>
   companyName: string
 }
 
@@ -58,7 +82,23 @@ type SkipName =
   | 'domains'
 
 export function CampaignForm({ action, companyName }: Props) {
-  const [state, formAction, pending] = useActionState(action, {})
+  const router = useRouter()
+
+  // Laatst bekende inhoud van de tekstvelden. Wordt bijgewerkt bij elke
+  // toetsaanslag en vlak vóór het versturen, en dient als bron om na een
+  // mislukte inzending het formulier weer te vullen.
+  const fieldsRef = useRef<Record<string, string>>({})
+  const errorBoxRef = useRef<HTMLDivElement | null>(null)
+
+  const submitAction = useCallback(
+    async (prevState: FormState, formData: FormData): Promise<FormState> => {
+      fieldsRef.current = { ...fieldsRef.current, ...readTextFields(formData) }
+      return action(prevState, formData)
+    },
+    [action]
+  )
+
+  const [state, formAction, pending] = useActionState(submitAction, {})
   const errors = state.fieldErrors ?? {}
 
   const [skipped, setSkipped] = useState<Set<SkipName>>(new Set())
@@ -101,6 +141,18 @@ export function CampaignForm({ action, companyName }: Props) {
   const [draftLoaded, setDraftLoaded] = useState(false)
   const [draftRestored, setDraftRestored] = useState(false)
 
+  /** Zet opgeslagen waardes terug in de ongecontroleerde velden. */
+  const applyFields = useCallback((fields: Record<string, string>) => {
+    const form = formRef.current
+    if (!form) return
+    for (const [name, value] of Object.entries(fields)) {
+      const element = form.elements.namedItem(name)
+      if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+        element.value = value
+      }
+    }
+  }, [])
+
   useEffect(() => {
     let raw: string | null = null
     try {
@@ -122,17 +174,9 @@ export function CampaignForm({ action, companyName }: Props) {
 
         const fields = draft.fields
         if (fields && typeof fields === 'object') {
+          fieldsRef.current = { ...fields }
           // De tekstvelden staan er pas ná deze render; vandaar een frame wachten.
-          requestAnimationFrame(() => {
-            const form = formRef.current
-            if (!form) return
-            for (const [name, value] of Object.entries(fields)) {
-              const element = form.elements.namedItem(name)
-              if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
-                element.value = value
-              }
-            }
-          })
+          requestAnimationFrame(() => applyFields(fields))
         }
         setDraftRestored(true)
       } catch {
@@ -140,18 +184,17 @@ export function CampaignForm({ action, companyName }: Props) {
       }
     }
     setDraftLoaded(true)
-  }, [])
+  }, [applyFields])
 
   const saveDraft = useCallback(() => {
     const form = formRef.current
     if (!form) return
 
-    const fields: Record<string, string> = {}
-    for (const [name, value] of new FormData(form).entries()) {
-      if (typeof value !== 'string') continue
-      if (STATE_DRIVEN_FIELDS.has(name) || name.startsWith('skip_')) continue
-      fields[name] = value
-    }
+    // Samenvoegen in plaats van vervangen: een overgeslagen vraag staat niet
+    // meer in de DOM, dus die zou anders uit het concept verdwijnen — en met
+    // "Herstel" kwam de tekst dan niet terug.
+    const fields = { ...fieldsRef.current, ...readTextFields(new FormData(form)) }
+    fieldsRef.current = fields
 
     const draft: FormDraft = {
       fields,
@@ -176,6 +219,32 @@ export function CampaignForm({ action, companyName }: Props) {
     if (!draftLoaded) return
     saveDraft()
   }, [draftLoaded, saveDraft])
+
+  // Nazorg van een inzending. Bij succes: concept opruimen en doorsturen. Bij
+  // een fout: de velden die React zojuist heeft leeggemaakt weer vullen en de
+  // melding in beeld brengen — de knop staat onderaan, de melding bovenaan.
+  useEffect(() => {
+    if (state.ok) {
+      try {
+        window.localStorage.removeItem(DRAFT_KEY)
+      } catch {
+        // Niets aan te doen; de inzending is hoe dan ook binnen.
+      }
+      router.push('/dashboard/mijn-campagne')
+      return
+    }
+
+    if (!state.error && !state.fieldErrors) return
+
+    applyFields(fieldsRef.current)
+    // React maakt het formulier leeg ná deze render, dus nog een keer zodra
+    // het scherm getekend is.
+    const frame = requestAnimationFrame(() => {
+      applyFields(fieldsRef.current)
+      errorBoxRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [state, applyFields, router])
 
   const discardDraft = () => {
     try {
@@ -203,13 +272,25 @@ export function CampaignForm({ action, companyName }: Props) {
           </button>
         </div>
       )}
-      {state.error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+      {(state.error || Object.keys(errors).length > 0) && (
+        <div
+          ref={errorBoxRef}
+          className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+        >
           <p className="font-semibold">Het indienen is niet gelukt</p>
-          <p className="mt-1">{state.error}</p>
+          {state.error ? (
+            <p className="mt-1">{state.error}</p>
+          ) : (
+            <p className="mt-1">
+              {Object.keys(errors).length === 1
+                ? 'Eén vraag is nog niet compleet. Hieronder staat bij die vraag wat eraan mankeert.'
+                : `${Object.keys(errors).length} vragen zijn nog niet compleet. Hieronder staat bij elke vraag wat eraan mankeert.`}{' '}
+              Weet je het antwoord niet? Gebruik dan &quot;Overslaan&quot; bij die vraag.
+            </p>
+          )}
           <p className="mt-2 text-red-600">
-            Je antwoorden staan nog gewoon hieronder en zijn in deze browser bewaard. Probeer het over
-            een minuut nog eens; lukt het dan nog niet, neem dan contact met ons op.
+            Je antwoorden staan nog gewoon hieronder en zijn in deze browser bewaard. Er is niets
+            verloren gegaan.
           </p>
         </div>
       )}
@@ -529,10 +610,10 @@ export function CampaignForm({ action, companyName }: Props) {
         </p>
         <button
           type="submit"
-          disabled={pending}
+          disabled={pending || state.ok === true}
           className="group inline-flex items-center gap-2 rounded-xl bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-violet-600/30 transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-violet-600/40 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
         >
-          {pending ? (
+          {pending || state.ok ? (
             <>
               <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
