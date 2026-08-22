@@ -4,9 +4,11 @@ import { getClientBranding } from '@/lib/client/get-client-branding'
 import { AdminContactBox } from '@/components/admin-contact-box'
 import { getAdminContactByEmail, hasAdminContact } from '@/lib/data/lead-admin-contacts'
 import { AssistantDraft } from '../_components/assistant-draft'
+import { ReferralOutreach } from '../_components/referral-outreach'
 import { LeadWorkspace } from '../_components/lead-workspace'
 import { RepliesThread } from '../_components/replies-thread'
 import { requireLeadInboxCustomerId } from '../_lib/customer'
+import { getReferralOutreach } from '../_lib/referral'
 import { CLASSIFICATION_DOT, CLASSIFICATION_LABEL } from '../_lib/labels'
 import {
   buildThreadItems,
@@ -39,9 +41,12 @@ export default async function LeadDetailPage({
 
   if (!lead) notFound()
 
-  const adminContact = branding
-    ? await getAdminContactByEmail(branding.id, lead.email)
-    : null
+  const isReferral = lead.classification === 'referral'
+
+  const [adminContact, referralSent] = await Promise.all([
+    branding ? getAdminContactByEmail(branding.id, lead.email) : null,
+    isReferral ? getReferralOutreach(lead.id) : null,
+  ])
 
   const thread = buildThreadItems(lead, outbounds)
   const lastInbound = [...lead.replies]
@@ -90,6 +95,20 @@ export default async function LeadDetailPage({
           />
         </div>
       </header>
+
+      {/* Boven de rode contactbox: eerst wat je kunt dóén, dan de gegevens
+          waar dat op gebaseerd is. */}
+      {isReferral && !isTrashed && (
+        <div className="mt-5">
+          <ReferralOutreach
+            leadId={lead.id}
+            leadEmail={lead.email}
+            leadName={lead.name}
+            sendingAccount={lead.sending_account}
+            alreadySentTo={referralSent?.toEmail ?? null}
+          />
+        </div>
+      )}
 
       {hasAdminContact(adminContact) && adminContact && (
         <div className="mt-5">
