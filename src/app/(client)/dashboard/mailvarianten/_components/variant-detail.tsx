@@ -11,7 +11,9 @@ import { useT } from '@/lib/i18n/client'
 import {
   ACTION_LABEL_KEY,
   actionTagClass,
+  STATUS_CHIP_CLASS,
   STATUS_COLOR,
+  STATUS_HINT_KEY,
   STATUS_LABEL_KEY,
   type VariantView,
 } from '../_lib/variant-groups'
@@ -223,8 +225,7 @@ export function VariantDetail({
                 </span>
               )}
               <span
-                className="inline-flex items-center gap-[5px] text-[10px] font-semibold uppercase tracking-[0.06em]"
-                style={{ color: STATUS_COLOR[status] }}
+                className={`inline-flex items-center gap-[5px] rounded-[5px] px-[7px] py-[3px] text-[10px] font-bold uppercase tracking-[0.06em] ${STATUS_CHIP_CLASS[status]}`}
               >
                 <span
                   className="h-[6px] w-[6px] rounded-full"
@@ -236,6 +237,9 @@ export function VariantDetail({
             <h2 className="mt-[9px] text-[17px] font-semibold tracking-[-0.022em]">
               {variant.subject}
             </h2>
+            <p className="mt-[5px] text-[11.5px] leading-[1.5] text-muted">
+              {t(STATUS_HINT_KEY[status])}
+            </p>
             <div className="mt-[7px] flex flex-wrap items-center gap-2.5 text-[11.5px] text-faint">
               <span>
                 {t('mailVariantsPage.updatedOn', {
@@ -294,27 +298,56 @@ export function VariantDetail({
               {variant.exampleBody}
             </div>
           ) : (
-            <div
-              ref={bodyRef}
-              onMouseUp={captureSelection}
-              className="max-w-[600px] select-text whitespace-pre-wrap text-[13.5px] leading-[1.75]"
-            >
-              {segments.map((seg) =>
-                seg.kind ? (
-                  <span
-                    key={seg.key}
-                    className={
-                      seg.kind === 'note'
-                        ? 'rounded-[3px] bg-[var(--brand-12)] shadow-[0_0_0_1px_var(--brand-20)]'
-                        : 'rounded-[3px] bg-[var(--brand-06)]'
-                    }
+            // Dat je hier tekst kunt selecteren is niet vanzelfsprekend, dus
+            // krijgt het tekstvlak bij hover een markeerstift-randje en een
+            // hint. De selectie zelf kleurt geel via .marker-select in
+            // globals.css, in plaats van het blauw van het besturingssysteem.
+            <div className="group/body relative max-w-[600px]">
+              {canEdit && (
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute -top-7 left-0 flex items-center gap-1.5 rounded-[6px] bg-[var(--c-marker)] px-2 py-[3px] text-[10.5px] font-semibold text-[#3f3000] opacity-0 transition-opacity duration-150 group-hover/body:opacity-100"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={1.8}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="h-3 w-3"
                   >
-                    {seg.text}
-                  </span>
-                ) : (
-                  <span key={seg.key}>{seg.text}</span>
-                )
+                    <path d="M15.232 5.232 18.768 8.768M16.732 3.732a2.5 2.5 0 1 1 3.536 3.536L7.5 20.036 3 21l.964-4.5L16.732 3.732Z" />
+                  </svg>
+                  {t('mailVariantsPage.selectHint')}
+                </div>
               )}
+              <div
+                ref={bodyRef}
+                onMouseUp={captureSelection}
+                className={`marker-select -mx-2 rounded-control px-2 py-1 select-text whitespace-pre-wrap text-[13.5px] leading-[1.75] transition-colors ${
+                  canEdit
+                    ? 'cursor-text ring-1 ring-transparent group-hover/body:bg-[var(--brand-04)] group-hover/body:ring-[var(--brand-20)]'
+                    : ''
+                }`}
+              >
+                {segments.map((seg) =>
+                  seg.kind ? (
+                    <span
+                      key={seg.key}
+                      className={
+                        seg.kind === 'note'
+                          ? 'rounded-[3px] bg-[var(--brand-12)] shadow-[0_0_0_1px_var(--brand-20)]'
+                          : 'rounded-[3px] bg-[var(--brand-06)]'
+                      }
+                    >
+                      {seg.text}
+                    </span>
+                  ) : (
+                    <span key={seg.key}>{seg.text}</span>
+                  )
+                )}
+              </div>
             </div>
           )}
 

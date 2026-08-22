@@ -1,4 +1,5 @@
 import type { OutboundReplyStatus, ThreadItem } from '../_lib/types'
+import { unescapeLiteralNewlines } from '../_lib/text'
 
 function formatDateTime(iso: string): string {
   const d = new Date(iso)
@@ -29,7 +30,10 @@ const STATUS_BADGE: Record<
  */
 const CID_PATTERN = /\[?cid:[^\]\s>"']+\]?/gi
 
-function renderBody(body: string) {
+function renderBody(raw: string) {
+  // Letterlijke \n omzetten vóór het splitsen, zodat de <pre> ze als echte
+  // regeleindes toont in plaats van als tekst.
+  const body = unescapeLiteralNewlines(raw)
   const parts: React.ReactNode[] = []
   let last = 0
   let i = 0

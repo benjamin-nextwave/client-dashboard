@@ -573,6 +573,17 @@ export interface Translations {
     statusOpen: string
     statusApproved: string
     statusFeedback: string
+    statusOpenHint: string
+    statusApprovedHint: string
+    statusFeedbackHint: string
+    progressTitle: string
+    progressCounter: string
+    progressAllDone: string
+    progressOpenOne: string
+    progressOpenMany: string
+    progressWaitingOne: string
+    progressWaitingMany: string
+    selectHint: string
     mailTitle1: string
     mailTitle2: string
     mailTitle3: string
@@ -1443,9 +1454,20 @@ export const nl: Translations = {
     tabVariants: 'Varianten',
     tabFlow: 'Campagneflow',
     tabHistory: 'Geschiedenis',
-    statusOpen: 'Open',
+    statusOpen: 'Wacht op jou',
     statusApproved: 'Goedgekeurd',
-    statusFeedback: 'Feedback',
+    statusFeedback: 'Bij NextWave',
+    statusOpenHint: 'Lees de mail en keur hem goed, of geef feedback.',
+    statusApprovedHint: 'Klaar — deze variant gaat zo de campagne in.',
+    statusFeedbackHint: 'Je feedback is binnen. Wij herschrijven de mail.',
+    progressTitle: 'Voortgang',
+    progressCounter: '{done} van {total} goedgekeurd',
+    progressAllDone: 'Alles is goedgekeurd. Je hoeft niets meer te doen.',
+    progressOpenOne: '1 variant wacht op jouw goedkeuring.',
+    progressOpenMany: '{count} varianten wachten op jouw goedkeuring.',
+    progressWaitingOne: '1 variant wordt door ons herschreven.',
+    progressWaitingMany: '{count} varianten worden door ons herschreven.',
+    selectHint: 'Selecteer tekst om er feedback op te geven',
     mailTitle1: 'Eerste aanschrijving',
     mailTitle2: 'Opvolging',
     mailTitle3: 'Laatste herinnering',

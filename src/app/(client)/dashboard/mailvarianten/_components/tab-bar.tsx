@@ -11,7 +11,7 @@ export function isMailVariantsTab(value: string | undefined): value is MailVaria
 interface Props {
   active: MailVariantsTab
   /** Label + optioneel telbolletje per tab, in de volgorde van MAIL_VARIANTS_TABS. */
-  tabs: { key: MailVariantsTab; label: string; count?: number }[]
+  tabs: { key: MailVariantsTab; label: string; count?: number; countMeansAction?: boolean }[]
 }
 
 /**
@@ -37,9 +37,15 @@ export function TabBar({ active, tabs }: Props) {
           >
             {tab.label}
             {tab.count !== undefined && tab.count > 0 && (
+              // Amber zodra het telbolletje betekent dat de klant zelf nog iets
+              // moet doen — dezelfde kleurtaal als de statuschips.
               <span
                 className={`flex h-[17px] min-w-[17px] items-center justify-center rounded-full px-1 text-[10px] font-bold tabular-nums ${
-                  isActive ? 'bg-brand text-white' : 'bg-track text-muted'
+                  tab.countMeansAction
+                    ? 'bg-warn text-white'
+                    : isActive
+                      ? 'bg-brand text-white'
+                      : 'bg-track text-muted'
                 }`}
               >
                 {tab.count}

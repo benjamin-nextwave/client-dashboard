@@ -5,6 +5,7 @@ import { useSearchParams, useSelectedLayoutSegment } from 'next/navigation'
 import { useMemo } from 'react'
 import type { LeadWithStatus, LeadClassification } from '../_lib/types'
 import { CLASSIFICATION_DOT, CLASSIFICATION_LABEL } from '../_lib/labels'
+import { unescapeLiteralNewlines } from '../_lib/text'
 
 function formatRelative(iso: string): string {
   const date = new Date(iso)
@@ -38,7 +39,9 @@ function snippetFromLead(lead: LeadWithStatus): string {
     )
   const last = inbound[0]
   if (!last?.body) return ''
-  const cleaned = stripCidTokens(last.body).replace(/\s+/g, ' ').trim()
+  const cleaned = stripCidTokens(unescapeLiteralNewlines(last.body))
+    .replace(/\s+/g, ' ')
+    .trim()
   return cleaned.length > 140 ? `${cleaned.slice(0, 140)}…` : cleaned
 }
 

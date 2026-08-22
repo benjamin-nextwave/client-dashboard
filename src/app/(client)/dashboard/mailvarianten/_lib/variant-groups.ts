@@ -33,16 +33,57 @@ export interface MailGroup {
   approvedCount: number
 }
 
+/**
+ * Drie kleuren met één betekenis, zodat je in één oogopslag ziet waar je zelf
+ * nog iets moet doen:
+ *   amber  — jij bent aan zet
+ *   merk   — wij zijn aan zet
+ *   groen  — afgerond
+ * "open" stond eerder op grijs; dat las als "niets aan de hand", terwijl het
+ * juist de enige status is die om een reactie van de klant vraagt.
+ */
 export const STATUS_COLOR: Record<MailVariantStatus, string> = {
   approved: 'var(--color-pos)',
-  feedback_pending: 'var(--color-warn)',
-  open: 'var(--color-faint)',
+  feedback_pending: 'var(--color-brand)',
+  open: 'var(--color-warn)',
+}
+
+/** Achtergrond + tekst voor de statuschip. Dezelfde drie betekenissen. */
+export const STATUS_CHIP_CLASS: Record<MailVariantStatus, string> = {
+  approved:
+    'bg-[color-mix(in_oklab,var(--color-pos)_13%,transparent)] text-pos',
+  feedback_pending: 'bg-[var(--brand-12)] text-brand-ink',
+  open: 'bg-[color-mix(in_oklab,var(--color-warn)_15%,transparent)] text-warn',
 }
 
 export const STATUS_LABEL_KEY: Record<MailVariantStatus, TranslationKey> = {
   approved: 'mailVariantsPage.statusApproved',
   feedback_pending: 'mailVariantsPage.statusFeedback',
   open: 'mailVariantsPage.statusOpen',
+}
+
+/** Uitleg van één regel onder de chip in het detailpaneel. */
+export const STATUS_HINT_KEY: Record<MailVariantStatus, TranslationKey> = {
+  approved: 'mailVariantsPage.statusApprovedHint',
+  feedback_pending: 'mailVariantsPage.statusFeedbackHint',
+  open: 'mailVariantsPage.statusOpenHint',
+}
+
+export interface VariantProgress {
+  total: number
+  approved: number
+  open: number
+  feedbackPending: number
+}
+
+export function summarizeProgress(groups: MailGroup[]): VariantProgress {
+  const all = flattenGroups(groups)
+  return {
+    total: all.length,
+    approved: all.filter((v) => v.status === 'approved').length,
+    open: all.filter((v) => v.status === 'open').length,
+    feedbackPending: all.filter((v) => v.status === 'feedback_pending').length,
+  }
 }
 
 /**

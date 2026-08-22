@@ -97,6 +97,11 @@
   /* accent voor notities van Nextwave op de leads-pagina */
   --c-note: #d9a441;
 
+  /* Markeerstift. Staat bewust los van de merkkleur: het moet lezen als een
+     stift over papier, en bij een gele of oranje klantkleur zou de selectie
+     anders wegvallen tegen de achtergrond. */
+  --c-marker: #fde68a;
+
   /* Merkkleur van HubSpot. Staat bewust los van het palet: hij hoort bij de
      koppeling en moet herkenbaar blijven, niet meebewegen met de klantkleur. */
   --c-hubspot: #e8590c;
@@ -129,7 +134,17 @@
   --c-cat-later: #8a929f;
   --c-cat-none: #fb7185;
   --c-note: #f5c15e;
+  --c-marker: #f2c94c;
   --c-hubspot: #ff7a59;
+}
+
+/* Markeerstift in plaats van het blauw van het besturingssysteem. Alleen op de
+   mailtekst waar de feedback-selectie werkt, zodat een gewone tekstselectie
+   elders in het dashboard normaal blijft. */
+.client-theme .marker-select ::selection,
+.client-theme .marker-select::selection {
+  background: var(--c-marker);
+  color: #24303f;
 }
 
 /* Focus-styling centraal in plaats van per component. Bewust binnen

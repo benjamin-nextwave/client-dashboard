@@ -93,7 +93,12 @@ export default async function MailvariantenPage({ searchParams }: PageProps) {
           <TabBar
             active={tab}
             tabs={[
-              { key: 'varianten', label: t('mailVariantsPage.tabVariants'), count: openCount },
+              {
+                key: 'varianten',
+                label: t('mailVariantsPage.tabVariants'),
+                count: openCount,
+                countMeansAction: true,
+              },
               { key: 'flow', label: t('mailVariantsPage.tabFlow') },
               { key: 'geschiedenis', label: t('mailVariantsPage.tabHistory') },
             ]}
