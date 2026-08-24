@@ -59,7 +59,13 @@ function maxIso(...candidates: Array<string | null | undefined>): string | null 
 
 function deriveStatus(
   lead: Lead,
-  outbounds: OutboundReply[]
+  outbounds: OutboundReply[],
+  /**
+   * Wanneer we de doorverwezen collega hebben aangeschreven, is er op deze
+   * lead gehandeld. Zonder dit zou hij bij "wacht op antwoord" blijven staan
+   * en nooit in zijn eigen categoriemap belanden.
+   */
+  referralSentAt: string | null
 ): Pick<
   LeadWithStatus,
   'lastInboundAt' | 'lastOutboundAt' | 'awaitingOurReply' | 'pendingOutboundCount'
@@ -83,7 +89,7 @@ function deriveStatus(
       null
     )
 
-  const lastOutboundAt = maxIso(outboundFromJsonb, outboundFromTable)
+  const lastOutboundAt = maxIso(outboundFromJsonb, outboundFromTable, referralSentAt)
 
   const awaitingOurReply =
     !lastOutboundAt || (lastInboundAt !== null && lastInboundAt > lastOutboundAt)
@@ -103,7 +109,14 @@ export async function getLeadsWithStatusForCustomer(
 ): Promise<LeadWithStatus[]> {
   const supabase = await createClient()
   const adminContacts = await getAdminContactsMap(clientId)
-  const [leadsResult, outboundResult, labelsResult, assignmentsResult, notesResult] =
+  const [
+    leadsResult,
+    outboundResult,
+    labelsResult,
+    assignmentsResult,
+    notesResult,
+    referralResult,
+  ] =
     await Promise.all([
       supabase
         .from('leads')
@@ -122,6 +135,10 @@ export async function getLeadsWithStatusForCustomer(
         .from('lead_inbox_lead_label_assignments')
         .select('lead_id, label_id'),
       supabase.from('lead_inbox_lead_notes').select('lead_id'),
+      supabase
+        .from('lead_referral_outreach')
+        .select('lead_id, sent_at')
+        .eq('client_id', clientId),
     ])
 
   if (leadsResult.error) {
@@ -151,11 +168,22 @@ export async function getLeadsWithStatusForCustomer(
     noteCountByLead.set(n.lead_id, (noteCountByLead.get(n.lead_id) ?? 0) + 1)
   }
 
+  // Bestaat de tabel nog niet, dan levert de query een fout en blijft de map
+  // leeg — dat mag de rest van de inbox niet raken.
+  const referralSentByLead = new Map<string, string>()
+  for (const r of (referralResult.data ?? []) as unknown as {
+    lead_id: string
+    sent_at: string
+  }[]) {
+    const current = referralSentByLead.get(r.lead_id)
+    if (!current || r.sent_at > current) referralSentByLead.set(r.lead_id, r.sent_at)
+  }
+
   return leads.map((lead) => {
     const leadOutbounds = outbounds.filter((o) => o.lead_id === lead.id)
     return {
       ...lead,
-      ...deriveStatus(lead, leadOutbounds),
+      ...deriveStatus(lead, leadOutbounds, referralSentByLead.get(lead.id) ?? null),
       labels: labelsByLead.get(lead.id) ?? [],
       noteCount: noteCountByLead.get(lead.id) ?? 0,
       hasReferral: hasAdminContact(adminContacts.get(lead.email.toLowerCase())),

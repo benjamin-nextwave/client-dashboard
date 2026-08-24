@@ -74,6 +74,8 @@ export function RepliesThread({ items }: { items: ThreadItem[] }) {
     <div className="overflow-hidden rounded-panel border border-line bg-panel">
       {ordered.map((item, index) => {
         const isOutbound = item.kind === 'outbound'
+        // Deze ging naar de doorverwezen collega, niet naar de lead zelf.
+        const isReferral = item.kind === 'outbound' && item.isReferral === true
         const statusBadge =
           item.kind === 'outbound' ? STATUS_BADGE[item.status] : null
         return (
@@ -81,7 +83,11 @@ export function RepliesThread({ items }: { items: ThreadItem[] }) {
             key={item.id}
             className={[
               index !== 0 ? 'border-t border-line' : '',
-              isOutbound ? 'bg-[var(--brand-04)]' : '',
+              isReferral
+                ? 'bg-[color-mix(in_oklab,var(--c-warn)_6%,transparent)]'
+                : isOutbound
+                  ? 'bg-[var(--brand-04)]'
+                  : '',
             ].join(' ')}
           >
             <header className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 px-5 pb-2 pt-4">
@@ -93,6 +99,11 @@ export function RepliesThread({ items }: { items: ThreadItem[] }) {
                   {isOutbound && (
                     <span className="rounded-[4px] bg-[var(--brand-12)] px-1.5 py-0.5 text-[9.5px] font-semibold uppercase tracking-[0.08em] text-brand-ink">
                       Verzonden door jou
+                    </span>
+                  )}
+                  {isReferral && (
+                    <span className="rounded-[4px] bg-[color-mix(in_oklab,var(--c-warn)_15%,transparent)] px-1.5 py-0.5 text-[9.5px] font-semibold uppercase tracking-[0.08em] text-warn">
+                      Naar de doorverwijzing
                     </span>
                   )}
                   {item.kind === 'outbound' && statusBadge && (

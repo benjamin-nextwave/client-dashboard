@@ -113,4 +113,6 @@ export type ThreadItem =
       occurred_at: string // sent_at ?? created_at
       status: OutboundReplyStatus
       error_message: string | null
+      /** Ging niet naar de lead zelf maar naar de doorverwezen collega. */
+      isReferral?: boolean
     }

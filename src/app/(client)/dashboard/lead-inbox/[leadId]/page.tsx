@@ -48,7 +48,31 @@ export default async function LeadDetailPage({
     isReferral ? getReferralOutreach(lead.id) : null,
   ])
 
-  const thread = buildThreadItems(lead, outbounds)
+  // De mail aan de doorverwezen collega staat in een eigen tabel en dus niet
+  // in buildThreadItems. Hem er hier bij zetten is de enige manier om te zien
+  // wat er verstuurd is — er komt geen antwoord in deze thread terug.
+  const thread = [
+    ...buildThreadItems(lead, outbounds),
+    ...(referralSent
+      ? [
+          {
+            kind: 'outbound' as const,
+            id: referralSent.id,
+            from_email: referralSent.fromEmail,
+            sending_account: referralSent.fromEmail,
+            to_email: referralSent.toEmail,
+            subject: referralSent.subject,
+            body: referralSent.body,
+            occurred_at: referralSent.sentAt,
+            status: 'sent' as const,
+            error_message: null,
+            isReferral: true,
+          },
+        ]
+      : []),
+  ].sort(
+    (a, b) => new Date(a.occurred_at).getTime() - new Date(b.occurred_at).getTime()
+  )
   const lastInbound = [...lead.replies]
     .filter((r) => r.direction !== 'outbound')
     .sort(

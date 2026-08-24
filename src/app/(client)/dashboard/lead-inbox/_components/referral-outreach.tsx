@@ -44,6 +44,7 @@ export function ReferralOutreach({
   const [composing, setComposing] = useState(false)
   const [composeError, setComposeError] = useState<string | null>(null)
   const [justSent, setJustSent] = useState<string | null>(null)
+  const [modalOpen, setModalOpen] = useState(false)
   const started = useRef(false)
 
   const run = useCallback(
@@ -100,6 +101,7 @@ export function ReferralOutreach({
     if (analyse.status !== 'ready') return
     setComposeError(null)
     setComposing(true)
+    setModalOpen(true)
     try {
       const p = await run('compose')
       setDraft({
@@ -209,7 +211,7 @@ export function ReferralOutreach({
             {composing ? (
               <>
                 <Spinner />
-                De mail wordt geschreven…
+                Bezig…
               </>
             ) : (
               <>
@@ -222,18 +224,28 @@ export function ReferralOutreach({
           </button>
         </div>
 
-        {composeError && <p className="mt-2.5 text-[11.5px] text-neg">{composeError}</p>}
       </div>
 
-      {draft && (
+      {modalOpen && (
         <ReferralModal
           leadId={leadId}
           leadEmail={leadEmail}
           leadName={leadName}
           draft={draft}
-          onClose={() => setDraft(null)}
+          pending={composing}
+          composeError={composeError}
+          fallback={{
+            toEmail: analyse.toEmail,
+            fromEmail: sendingAccount,
+            referredName: analyse.referredName,
+          }}
+          onClose={() => {
+            setModalOpen(false)
+            setDraft(null)
+          }}
           onSent={() => {
-            setJustSent(draft.toEmail)
+            setJustSent(draft?.toEmail ?? analyse.toEmail)
+            setModalOpen(false)
             setDraft(null)
           }}
         />

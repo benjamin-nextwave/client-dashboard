@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useTransition } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { checkReferralEmail, REJECTION_TEXT } from '@/lib/lead-inbox/referral'
 import { sendReferralOutreach } from '../_lib/referral-actions'
@@ -30,24 +30,43 @@ export function ReferralModal({
   leadEmail,
   leadName,
   draft,
+  pending: composing,
+  composeError,
+  fallback,
   onClose,
   onSent,
 }: {
   leadId: string
   leadEmail: string
   leadName: string | null
-  draft: ReferralDraft
+  /** Leeg zolang de assistent nog schrijft. */
+  draft: ReferralDraft | null
+  pending: boolean
+  composeError: string | null
+  /** Wat al bekend is uit de ontleedstap, om de kop meteen te kunnen vullen. */
+  fallback: { toEmail: string; fromEmail: string; referredName: string | null }
   onClose: () => void
   onSent: () => void
 }) {
   const router = useRouter()
 
   const [editing, setEditing] = useState(false)
-  const [toEmail, setToEmail] = useState(draft.toEmail)
-  const [subject, setSubject] = useState(draft.subject)
-  const [body, setBody] = useState(draft.body)
+  const [toEmail, setToEmail] = useState(fallback.toEmail)
+  const [subject, setSubject] = useState('')
+  const [body, setBody] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
+
+  // Het overlay gaat meteen open, de tekst komt later binnen. Alleen de eerste
+  // keer overnemen, anders overschrijft een herrender wat de gebruiker typt.
+  const filled = useRef(false)
+  useEffect(() => {
+    if (!draft || filled.current) return
+    filled.current = true
+    setToEmail(draft.toEmail)
+    setSubject(draft.subject)
+    setBody(draft.body)
+  }, [draft])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -57,11 +76,14 @@ export function ReferralModal({
     return () => document.removeEventListener('keydown', onKey)
   }, [onClose, pending])
 
+  const referredName = draft?.referredName ?? fallback.referredName
+
   const check = checkReferralEmail(toEmail, {
     leadEmail,
-    sendingAccount: draft.fromEmail,
+    sendingAccount: fallback.fromEmail,
   })
-  const canSend = check.ok && subject.trim().length > 0 && body.trim().length > 0
+  const canSend =
+    !composing && check.ok && subject.trim().length > 0 && body.trim().length > 0
 
   function send() {
     if (!check.ok) {
@@ -105,13 +127,13 @@ export function ReferralModal({
             </h2>
             <p className="mt-1 text-[12.5px] leading-[1.5] text-muted">
               Dit is een <strong className="font-semibold text-fg">nieuwe mail</strong> aan{' '}
-              {draft.referredName ? (
-                <strong className="font-semibold text-fg">{draft.referredName}</strong>
+              {referredName ? (
+                <strong className="font-semibold text-fg">{referredName}</strong>
               ) : (
                 'de doorverwezen persoon'
               )}
-              {draft.referredRole ? ` (${draft.referredRole})` : ''} — geen antwoord aan{' '}
-              {draft.referrerName || leadName || leadEmail}.
+              {draft?.referredRole ? ` (${draft.referredRole})` : ''} — geen antwoord aan{' '}
+              {draft?.referrerName || leadName || leadEmail}.
             </p>
           </div>
           <button
@@ -131,11 +153,11 @@ export function ReferralModal({
           {/* Adressen */}
           <div className="border-b border-line px-5 py-3 text-[11.5px]">
             <div className="flex items-baseline gap-2">
-              <span className="w-[52px] shrink-0 font-semibold text-fg">Van</span>
-              <span className="min-w-0 truncate text-muted">{draft.fromEmail}</span>
+              <span className="w-[78px] shrink-0 font-semibold text-fg">Van</span>
+              <span className="min-w-0 truncate text-muted">{fallback.fromEmail}</span>
             </div>
             <div className="mt-1.5 flex items-baseline gap-2">
-              <span className="w-[52px] shrink-0 font-semibold text-fg">Aan</span>
+              <span className="w-[78px] shrink-0 font-semibold text-fg">Aan</span>
               {editing ? (
                 <input
                   type="email"
@@ -148,14 +170,14 @@ export function ReferralModal({
               ) : (
                 <span className="min-w-0 truncate font-semibold text-fg">{toEmail}</span>
               )}
-              {draft.source && !editing && (
+              {draft?.source && !editing && (
                 <span className="shrink-0 rounded-[5px] bg-track px-1.5 py-0.5 text-[10px] font-medium text-muted">
                   {draft.source === 'nextwave' ? 'door NextWave opgezocht' : 'uit de reactie'}
                 </span>
               )}
             </div>
             {!check.ok && (
-              <p className="mt-1.5 pl-[60px] text-[11.5px] text-neg">
+              <p className="mt-1.5 pl-[86px] text-[11.5px] text-neg">
                 {REJECTION_TEXT[check.reason]}
               </p>
             )}
@@ -165,7 +187,7 @@ export function ReferralModal({
           <div className="flex items-center gap-2 border-b border-line px-5 py-2">
             <label
               htmlFor="referral-subject"
-              className="w-[52px] shrink-0 text-[11.5px] font-semibold text-fg"
+              className="w-[78px] shrink-0 text-[11.5px] font-semibold text-fg"
             >
               Onderwerp
             </label>
@@ -183,28 +205,35 @@ export function ReferralModal({
           {/* Waar de inhoud vandaan komt. Bij een reactie op een herinnering
               staat er in de thread geen pitch; dan is dit de waarschuwing om
               de tekst extra na te lezen. */}
-          <div
-            className={`border-b border-line px-5 py-2 text-[11px] ${
-              draft.pitchSource === 'mail1'
-                ? 'text-muted'
-                : 'bg-[color-mix(in_oklab,var(--c-warn)_9%,transparent)] text-warn'
-            }`}
-          >
-            {draft.pitchSource === 'mail1' ? (
-              <>
-                Inhoud gebaseerd op de campagnemail
-                {draft.pitchLabel ? ` — ${draft.pitchLabel}` : ''}.
-              </>
-            ) : (
-              <>
-                Er staat geen campagnemail klaar bij Mailvarianten, dus de inhoud komt uit
-                het mailverkeer met {draft.referrerName || leadName || leadEmail}. Lees hem extra goed na.
-              </>
-            )}
-          </div>
+          {draft && (
+            <div
+              className={`border-b border-line px-5 py-2 text-[11px] ${
+                draft.pitchSource === 'mail1'
+                  ? 'text-muted'
+                  : 'bg-[color-mix(in_oklab,var(--c-warn)_9%,transparent)] text-warn'
+              }`}
+            >
+              {draft.pitchSource === 'mail1' ? (
+                <>
+                  Inhoud gebaseerd op de campagnemail
+                  {draft.pitchLabel ? ` — ${draft.pitchLabel}` : ''}.
+                </>
+              ) : (
+                <>
+                  Er staat geen campagnemail klaar bij Mailvarianten, dus de inhoud komt uit
+                  het mailverkeer met {draft.referrerName || leadName || leadEmail}. Lees hem
+                  extra goed na.
+                </>
+              )}
+            </div>
+          )}
 
           {/* Bericht */}
-          {editing ? (
+          {composing ? (
+            <TypingPlaceholder />
+          ) : composeError ? (
+            <p className="px-5 py-6 text-[12.5px] text-neg">{composeError}</p>
+          ) : editing ? (
             <textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
@@ -267,6 +296,45 @@ export function ReferralModal({
           </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+/**
+ * Wat je ziet terwijl de assistent schrijft. Regels die na elkaar verschijnen
+ * met een knipperende cursor erachter — de wachttijd is een paar seconden en
+ * dat voelt korter als er iets gebeurt dan als er een balkje draait.
+ */
+function TypingPlaceholder() {
+  // Wisselende breedtes, anders leest het als een blokkendoos in plaats van
+  // als tekst.
+  const lines = [92, 78, 96, 64, 0, 88, 71, 45]
+
+  return (
+    <div className="px-5 py-4" aria-live="polite" aria-busy="true">
+      <span className="sr-only">De assistent schrijft de mail.</span>
+      <div className="flex flex-col gap-2.5">
+        {lines.map((width, i) =>
+          width === 0 ? (
+            <div key={i} className="h-1" />
+          ) : (
+            <div key={i} className="flex items-center gap-1.5">
+              <div
+                className="h-[9px] animate-pulse rounded-full bg-track"
+                style={{ width: `${width}%`, animationDelay: `${i * 140}ms` }}
+              />
+              {i === lines.length - 1 && (
+                <span
+                  aria-hidden
+                  className="h-[13px] w-[2px] animate-pulse bg-[var(--brand-color)]"
+                  style={{ animationDuration: '900ms' }}
+                />
+              )}
+            </div>
+          )
+        )}
+      </div>
+      <p className="mt-4 text-[11.5px] text-muted">De assistent schrijft de mail…</p>
     </div>
   )
 }
