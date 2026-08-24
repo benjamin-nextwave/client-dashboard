@@ -628,7 +628,7 @@ export const en: Translations = {
     statusFeedback: 'With NextWave',
     statusOpenHint: 'Read the email and approve it, or leave feedback.',
     statusApprovedHint: 'Done — this variant is ready for the campaign.',
-    statusFeedbackHint: 'We have your feedback. We are rewriting the email.',
+    statusFeedbackHint: 'We have your feedback. You can still add to it or approve.',
     progressTitle: 'Progress',
     progressCounter: '{done} of {total} approved',
     progressAllDone: 'Everything is approved. Nothing left for you to do.',
@@ -668,6 +668,9 @@ export const en: Translations = {
     awaitingTitle: 'Feedback sent',
     awaitingBody:
       'NextWave is updating this variant. As soon as a new version is ready, you can respond again.',
+    awaitingEditableBody:
+      'Your feedback is with us. You can still add to it, or approve the email after all.',
+    sendMoreFeedback: 'Add feedback',
     errorEmpty: 'Add a comment or approve the variant.',
     errorNoteText: 'Describe what should happen to the selected text.',
     errorOverlap: 'This selection overlaps with a comment you already made.',

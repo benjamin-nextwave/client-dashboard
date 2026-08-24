@@ -613,6 +613,8 @@ export interface Translations {
     approvedBody: string
     awaitingTitle: string
     awaitingBody: string
+    awaitingEditableBody: string
+    sendMoreFeedback: string
     errorEmpty: string
     errorNoteText: string
     errorOverlap: string
@@ -1459,7 +1461,7 @@ export const nl: Translations = {
     statusFeedback: 'Bij NextWave',
     statusOpenHint: 'Lees de mail en keur hem goed, of geef feedback.',
     statusApprovedHint: 'Klaar — deze variant gaat zo de campagne in.',
-    statusFeedbackHint: 'Je feedback is binnen. Wij herschrijven de mail.',
+    statusFeedbackHint: 'Je feedback is binnen. Aanvullen of alsnog goedkeuren kan nog.',
     progressTitle: 'Voortgang',
     progressCounter: '{done} van {total} goedgekeurd',
     progressAllDone: 'Alles is goedgekeurd. Je hoeft niets meer te doen.',
@@ -1499,6 +1501,9 @@ export const nl: Translations = {
     awaitingTitle: 'Feedback verstuurd',
     awaitingBody:
       'NextWave werkt deze variant bij. Zodra er een nieuwe versie klaarstaat, kun je opnieuw reageren.',
+    awaitingEditableBody:
+      'Je feedback staat bij ons. Je kunt hem nog aanvullen of de mail alsnog goedkeuren.',
+    sendMoreFeedback: 'Feedback aanvullen',
     errorEmpty: 'Voeg een opmerking toe of keur de variant goed.',
     errorNoteText: 'Vul in wat er met de geselecteerde tekst moet gebeuren.',
     errorOverlap: 'Deze selectie overlapt met een opmerking die je al hebt gemaakt.',

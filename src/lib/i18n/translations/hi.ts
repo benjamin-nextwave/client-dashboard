@@ -627,7 +627,7 @@ export const hi: Translations = {
     statusFeedback: 'NextWave के पास',
     statusOpenHint: 'मेल पढ़ें और उसे स्वीकृत करें, या फ़ीडबैक दें।',
     statusApprovedHint: 'हो गया — यह वैरिएंट अभियान के लिए तैयार है।',
-    statusFeedbackHint: 'आपका फ़ीडबैक मिल गया है। हम मेल दोबारा लिख रहे हैं।',
+    statusFeedbackHint: 'आपका फ़ीडबैक मिल गया है। आप उसमें जोड़ सकते हैं या अब भी स्वीकृत कर सकते हैं।',
     progressTitle: 'प्रगति',
     progressCounter: '{total} में से {done} स्वीकृत',
     progressAllDone: 'सब कुछ स्वीकृत है। अब आपको कुछ नहीं करना है।',
@@ -667,6 +667,9 @@ export const hi: Translations = {
     awaitingTitle: 'फ़ीडबैक भेजा गया',
     awaitingBody:
       'NextWave इस वैरिएंट को अपडेट कर रहा है। नया संस्करण तैयार होते ही आप फिर से प्रतिक्रिया दे सकते हैं।',
+    awaitingEditableBody:
+      'आपका फ़ीडबैक हमारे पास है। आप उसमें और जोड़ सकते हैं, या मेल को अब भी स्वीकृत कर सकते हैं।',
+    sendMoreFeedback: 'फ़ीडबैक जोड़ें',
     errorEmpty: 'कोई टिप्पणी जोड़ें या वैरिएंट को स्वीकृत करें।',
     errorNoteText: 'बताएँ कि चुने गए पाठ के साथ क्या होना चाहिए।',
     errorOverlap: 'यह चयन पहले से बनाई गई टिप्पणी से टकराता है।',

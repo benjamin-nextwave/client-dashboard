@@ -74,7 +74,12 @@ export function VariantDetail({
   const [pending, startTransition] = useTransition()
 
   const bodyRef = useRef<HTMLDivElement | null>(null)
-  const canEdit = status === 'open'
+  // Ook met feedback onderweg blijft het paneel bruikbaar. Stond dit op
+  // `status === 'open'`, dan verdween na het versturen elke knop en kwam de
+  // variant pas weer vrij als de operator de tekst opnieuw opsloeg — klanten
+  // konden maandenlang niets meer goedkeuren of aanvullen.
+  const canEdit = status !== 'approved'
+  const awaitingRewrite = status === 'feedback_pending'
   const hasExample = variant.exampleBody.trim().length > 0
   const showingExample = hasExample && showExample
 
@@ -101,14 +106,21 @@ export function VariantDetail({
   }, [submissions, variant.body])
 
   const segments = useMemo(() => {
+    const noteMarks: Mark[] = notes.map((n) => ({
+      key: n.key,
+      start: n.selectionStart,
+      end: n.selectionEnd,
+      kind: 'note' as const,
+    }))
+
+    // Een verse opmerking mag over een passage uit de vorige ronde heen vallen.
+    // De lus hieronder slaat elke overlap over, dus zonder deze filter zou juist
+    // de nieuwe selectie onzichtbaar blijven — precies de markering die telt.
     const marks: Mark[] = [
-      ...notes.map((n) => ({
-        key: n.key,
-        start: n.selectionStart,
-        end: n.selectionEnd,
-        kind: 'note' as const,
-      })),
-      ...previousMarks,
+      ...noteMarks,
+      ...previousMarks.filter((p) =>
+        noteMarks.every((n) => p.end <= n.start || p.start >= n.end)
+      ),
     ].sort((a, b) => a.start - b.start)
 
     const out: Array<{ key: string; text: string; kind?: Mark['kind'] }> = []
@@ -371,12 +383,12 @@ export function VariantDetail({
             </h3>
             <p className="mt-1.5 text-[11.5px] leading-[1.5] text-muted">
               {!canEdit
-                ? status === 'approved'
-                  ? t('mailVariantsPage.approvedBody')
-                  : t('mailVariantsPage.awaitingBody')
+                ? t('mailVariantsPage.approvedBody')
                 : showingExample
                   ? t('mailVariantsPage.feedbackHintExample')
-                  : t('mailVariantsPage.feedbackHint')}
+                  : awaitingRewrite
+                    ? t('mailVariantsPage.awaitingEditableBody')
+                    : t('mailVariantsPage.feedbackHint')}
             </p>
           </div>
 
@@ -512,6 +524,18 @@ export function VariantDetail({
           {canEdit ? (
             <div className="flex shrink-0 flex-col gap-2 border-t border-line px-4 py-3">
               {error && <p className="text-[11.5px] leading-[1.5] text-neg">{error}</p>}
+              {awaitingRewrite && (
+                <div
+                  className="flex items-center gap-[7px] text-[11.5px] font-semibold"
+                  style={{ color: STATUS_COLOR[status] }}
+                >
+                  <span
+                    className="h-[7px] w-[7px] shrink-0 rounded-full"
+                    style={{ background: STATUS_COLOR[status] }}
+                  />
+                  {t('mailVariantsPage.awaitingTitle')}
+                </div>
+              )}
               <textarea
                 value={general}
                 onChange={(e) => setGeneral(e.target.value)}
@@ -525,7 +549,11 @@ export function VariantDetail({
                   disabled={pending}
                   className="h-[34px] flex-1 cursor-pointer whitespace-nowrap rounded-control bg-brand text-[12.5px] font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {pending ? t('mailVariantsPage.sending') : t('mailVariantsPage.sendFeedback')}
+                  {pending
+                    ? t('mailVariantsPage.sending')
+                    : awaitingRewrite
+                      ? t('mailVariantsPage.sendMoreFeedback')
+                      : t('mailVariantsPage.sendFeedback')}
                 </button>
                 <button
                   type="button"
@@ -559,9 +587,7 @@ export function VariantDetail({
                   className="h-[7px] w-[7px] shrink-0 rounded-full"
                   style={{ background: STATUS_COLOR[status] }}
                 />
-                {status === 'approved'
-                  ? t('mailVariantsPage.approvedTitle')
-                  : t('mailVariantsPage.awaitingTitle')}
+                {t('mailVariantsPage.approvedTitle')}
               </div>
             </div>
           )}
