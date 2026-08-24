@@ -60,6 +60,8 @@ export interface MailVariant {
   explanation: string
   position: number
   isPublished: boolean
+  /** Aangehouden als pitch voor de doorverwijzingsmail. Hooguit één per klant. */
+  useForReferral: boolean
   createdAt: string
   updatedAt: string
   clientApprovedAt: string | null
@@ -286,6 +288,7 @@ export async function getMailVariants(clientId: string): Promise<MailVariant[]> 
     explanation: row.explanation,
     position: row.position,
     isPublished: Boolean(row.is_published),
+    useForReferral: Boolean(row.use_for_referral),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     clientApprovedAt: row.client_approved_at ?? null,

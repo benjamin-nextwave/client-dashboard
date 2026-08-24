@@ -192,8 +192,8 @@ export function ReferralModal({
           >
             {draft.pitchSource === 'mail1' ? (
               <>
-                Inhoud gebaseerd op de eerste campagnemail
-                {draft.pitchLabel ? ` — “${draft.pitchLabel}”` : ''}.
+                Inhoud gebaseerd op de campagnemail
+                {draft.pitchLabel ? ` — ${draft.pitchLabel}` : ''}.
               </>
             ) : (
               <>

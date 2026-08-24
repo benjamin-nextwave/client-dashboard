@@ -134,6 +134,41 @@ export async function setMailVariantPublished(
   return {}
 }
 
+/**
+ * Wijst aan welke variant de assistent gebruikt als pitch in de mail naar een
+ * doorverwezen contactpersoon. Er kan er maar één per klant aan staan, dus
+ * eerst alles uit en dan deze aan. Nog een keer op dezelfde variant klikt hem
+ * weer uit; dan valt de assistent terug op de eerste gepubliceerde mail 1.
+ */
+export async function setMailVariantForReferral(
+  variantId: string,
+  clientId: string,
+  use: boolean
+): Promise<{ error?: string }> {
+  const supabase = createAdminClient()
+
+  const { error: clearError } = await supabase
+    .from('mail_variants')
+    .update({ use_for_referral: false })
+    .eq('client_id', clientId)
+    .eq('use_for_referral', true)
+
+  if (clearError) return { error: clearError.message }
+
+  if (use) {
+    const { error } = await supabase
+      .from('mail_variants')
+      .update({ use_for_referral: true })
+      .eq('id', variantId)
+      .eq('client_id', clientId)
+
+    if (error) return { error: error.message }
+  }
+
+  for (const p of adminPaths(clientId)) revalidatePath(p)
+  return {}
+}
+
 export async function withdrawPreviewApproval(clientId: string): Promise<{ error?: string }> {
   const supabase = createAdminClient()
   const { error } = await supabase

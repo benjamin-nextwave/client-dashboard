@@ -13,6 +13,7 @@ import {
   updateMailVariant,
   deleteMailVariant,
   setMailVariantPublished,
+  setMailVariantForReferral,
   requestVariantsApproval,
   mailClientAboutVariants,
 } from '../actions'
@@ -70,6 +71,16 @@ export function MailVariantsEditor({
   const alreadyPublished = !!variantsApprovalRequestedAt
   const allPublished = variants.length > 0 && variants.every((v) => v.isPublished)
   const hasHidden = variants.some((v) => !v.isPublished)
+
+  // Dezelfde keuze als de assistent maakt wanneer niemand een variant heeft
+  // aangewezen: de eerste gepubliceerde mail 1. Alleen om te tonen, zodat de
+  // kaart kan melden dat er wel degelijk een pitch gebruikt wordt.
+  const referralFallbackId =
+    variants.some((v) => v.useForReferral)
+      ? null
+      : (variants
+          .filter((v) => v.isPublished && v.mailNumber === 1 && v.body.trim())
+          .sort((a, b) => a.position - b.position)[0]?.id ?? null)
 
   const handleAdd = (mailNumber: 1 | 2 | 3) => {
     setError(null)
@@ -223,6 +234,7 @@ export function MailVariantsEditor({
                       disabled={pending}
                       feedback={feedbackByVariant[variant.id] ?? null}
                       allSubmissions={allFeedbackByVariant[variant.id] ?? []}
+                      referralFallbackId={referralFallbackId}
                     />
                   ))}
                 </div>
@@ -243,6 +255,7 @@ function VariantCard({
   disabled,
   feedback,
   allSubmissions,
+  referralFallbackId,
 }: {
   variant: MailVariant
   clientId: string
@@ -251,6 +264,8 @@ function VariantCard({
   disabled?: boolean
   feedback: MailVariantFeedbackSubmission | null
   allSubmissions: MailVariantFeedbackSubmission[]
+  /** Variant die de assistent zou pakken als niemand iets aanwijst. */
+  referralFallbackId: string | null
 }) {
   const status = deriveVariantStatus(variant)
   // Feedback is only relevant when the current variant version still matches
@@ -303,6 +318,23 @@ function VariantCard({
   }
 
   const [togglingPublish, startTogglePublish] = useTransition()
+  const [togglingReferral, startToggleReferral] = useTransition()
+
+  // Niemand heeft iets aangewezen, maar deze variant is wel degene waar de
+  // assistent op terugvalt. Dat moet zichtbaar zijn, anders lijkt het alsof er
+  // niets is ingesteld terwijl er wel degelijk een pitch wordt gebruikt.
+  const isReferralFallback = !variant.useForReferral && referralFallbackId === variant.id
+
+  const handleToggleReferral = () => {
+    startToggleReferral(async () => {
+      const result = await setMailVariantForReferral(
+        variant.id,
+        clientId,
+        !variant.useForReferral
+      )
+      if (!result.error) router.refresh()
+    })
+  }
   const [timelineOpen, setTimelineOpen] = useState(false)
 
   const handleTogglePublish = () => {
@@ -453,6 +485,54 @@ function VariantCard({
               }`}
             >
               {variant.isPublished ? 'Haal weg' : 'Toevoegen'}
+            </span>
+          </button>
+
+          {/* Doorverwijzing — welke pitch de assistent aanhoudt in de mail naar
+              een doorverwezen contactpersoon. */}
+          <button
+            type="button"
+            onClick={handleToggleReferral}
+            disabled={togglingReferral}
+            className={`group flex w-full items-center justify-between gap-3 rounded-xl border-2 px-4 py-3 text-left transition-all disabled:opacity-60 ${
+              variant.useForReferral
+                ? 'border-amber-300 bg-amber-50 hover:bg-amber-100'
+                : 'border-dashed border-gray-300 bg-white hover:border-amber-300 hover:bg-amber-50/60'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className={`flex h-8 w-8 items-center justify-center rounded-lg ${
+                  variant.useForReferral ? 'bg-amber-500 text-white' : 'bg-gray-200 text-gray-500'
+                }`}
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+                </svg>
+              </div>
+              <div>
+                <div className={`text-sm font-semibold ${variant.useForReferral ? 'text-amber-900' : 'text-gray-900'}`}>
+                  Aanhouden voor de doorverwijzing
+                </div>
+                <div className="mt-0.5 text-xs text-gray-500">
+                  {variant.useForReferral
+                    ? 'De assistent gebruikt deze tekst als pitch in de mail naar een doorverwezen contactpersoon.'
+                    : isReferralFallback
+                      ? 'Niets aangewezen, dus de assistent valt automatisch op deze variant terug.'
+                      : 'Klik om deze variant als pitch te gebruiken in de doorverwijzingsmail.'}
+                </div>
+              </div>
+            </div>
+            <span
+              className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide ${
+                variant.useForReferral
+                  ? 'bg-amber-500 text-white'
+                  : isReferralFallback
+                    ? 'bg-amber-100 text-amber-700'
+                    : 'bg-gray-100 text-gray-500'
+              }`}
+            >
+              {variant.useForReferral ? 'Aan' : isReferralFallback ? 'Standaard' : 'Uit'}
             </span>
           </button>
 

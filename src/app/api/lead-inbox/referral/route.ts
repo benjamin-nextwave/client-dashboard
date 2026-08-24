@@ -346,10 +346,15 @@ export async function POST(req: Request) {
       getOutboundRepliesForLead(branding.lead_inbox_customer_id, leadId),
     ])
 
+    // Heeft de operator een variant aangewezen, dan die. Anders de eerste
+    // gepubliceerde mail 1, zodat het ook werkt als niemand iets instelt.
+    const usable = variants.filter((v) => v.isPublished && v.body.trim())
     const pitch =
-      variants
-        .filter((v) => v.isPublished && v.mailNumber === 1 && v.body.trim())
-        .sort((a, b) => a.position - b.position)[0] ?? null
+      usable.find((v) => v.useForReferral) ??
+      usable
+        .filter((v) => v.mailNumber === 1)
+        .sort((a, b) => a.position - b.position)[0] ??
+      null
     const thread = buildThreadItems(lead, outbounds)
       .map(
         (item) =>
@@ -391,7 +396,7 @@ export async function POST(req: Request) {
       : '\n\nEr is geen kennisbank ingevuld. Doe daarom geen inhoudelijke beweringen over prijzen, voorwaarden of resultaten.'
 
     const pitchBlock = pitch
-      ? `\n\nDe pitch uit de campagne (mail 1, "${pitch.variantLabel}"). Dit is de inhoud waar het om gaat:\n---\nOnderwerp: ${pitch.subject}\n\n${pitch.body.trim()}\n---`
+      ? `\n\nDe pitch uit de campagne (mail ${pitch.mailNumber}, "${pitch.variantLabel}"). Dit is de inhoud waar het om gaat:\n---\nOnderwerp: ${pitch.subject}\n\n${pitch.body.trim()}\n---`
       : ''
 
     const system =
@@ -438,7 +443,7 @@ export async function POST(req: Request) {
       referredRole: functie,
       referrerName,
       pitchSource: pitch ? 'mail1' : 'thread',
-      pitchLabel: pitch ? pitch.subject : null,
+      pitchLabel: pitch ? `mail ${pitch.mailNumber}, ${pitch.variantLabel}: ${pitch.subject}` : null,
       fromEmail: lead.sending_account,
       subject: subject.text.trim().replace(/^["']|["']$/g, '') || `Doorverwezen door ${lead.name || lead.email}`,
       body: bodyText,
