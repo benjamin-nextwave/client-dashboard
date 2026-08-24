@@ -109,6 +109,7 @@ export function ReferralOutreach({
         body: String(p.body ?? ''),
         referredName: (p.referredName as string | null) ?? null,
         referredRole: (p.referredRole as string | null) ?? null,
+        referrerName: (p.referrerName as string | null) ?? null,
         source: (p.source as 'nextwave' | 'mail' | null) ?? null,
         pitchSource: p.pitchSource === 'mail1' ? 'mail1' : 'thread',
         pitchLabel: (p.pitchLabel as string | null) ?? null,

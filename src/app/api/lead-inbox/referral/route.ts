@@ -104,6 +104,62 @@ Let op het verschil: hetzelfde algemene adres kan in de ene mail een doorverwijz
 
 Twijfel je écht, geef dan null. Een gemist adres kost ons een dag; een verkeerd adres kost een lead.`
 
+/**
+ * Beide namen uit de thread. Nodig omdat leads.name in de praktijk altijd
+ * leeg is: van 569 doorverwijzingen had er geen enkele een naam staan. De
+ * namen staan wél in de tekst — in de ondertekening en in de kopregels van
+ * geciteerde berichten ("Van: ... Aan: ...").
+ */
+const namesSchema = z.object({
+  doorverwijzerNaam: z
+    .string()
+    .nullable()
+    .describe('Volledige naam van degene die de doorverwijzing schreef, of null.'),
+  doorverwijzerVoornaam: z.string().nullable(),
+  doorverwezenNaam: z
+    .string()
+    .nullable()
+    .describe('Volledige naam van de persoon naar wie wordt doorverwezen, of null.'),
+  doorverwezenVoornaam: z.string().nullable(),
+})
+
+const NAMES_PROMPT = `Je krijgt het mailverkeer rond een doorverwijzing uit een koude B2B-campagne.
+
+Haal er twee namen uit:
+1. de schrijver van de doorverwijzing — de persoon die wij hadden gemaild en die zegt dat iemand anders erover gaat;
+2. de persoon naar wie hij doorverwijst.
+
+Waar je mag kijken: de ondertekening van de schrijver, de aanhef, de zin waarin hij doorverwijst, en de kopregels van geciteerde berichten ("Van: ... Aan: ...").
+
+Regels:
+- Geef alleen echte persoonsnamen. Een afdeling ("P&O", "HR"), een functie ("de facilitair manager") of een bedrijfsnaam is geen naam; geef dan null.
+- Haal de twee niet door elkaar. De schrijver is degene die ons antwoordde.
+- Weet je het niet zeker, geef null.
+- De voornaam is het eerste woord van de naam, zonder aanhef als "dhr." of "mevr.".`
+
+async function extractNames(thread: string) {
+  const result = await generateObject({
+    model: anthropic(MODEL),
+    schema: namesSchema,
+    system: NAMES_PROMPT,
+    prompt: `Mailverkeer:\n---\n${thread}\n---`,
+    maxOutputTokens: 300,
+  })
+  return result.object
+}
+
+/** Eerste woord van een naam, zonder aanhef. */
+function firstNameOf(value: string | null | undefined): string | null {
+  if (!value) return null
+  const parts = value
+    .trim()
+    .split(/\s+/)
+    // Alleen echte aanhefwoorden weghalen. Bewust niet "de": een losse D.
+    // is een initiaal en die hoort te blijven staan.
+    .filter((p) => !/^(dhr|dhr\.|mevr|mw|mr|drs|ir|dr|heer|mevrouw)\.?$/i.test(p))
+  return parts[0] ?? null
+}
+
 /** Slaat de gevonden naam op die van de lead zelf? */
 function isSelf(
   found: string | null,
@@ -140,8 +196,13 @@ Waar de inhoud vandaan komt — dit is het belangrijkste:
 - Vind je nergens inhoud, schrijf dan een korte mail die alleen de doorverwijzing benoemt en vraagt of dit de juiste persoon is. Verzin de propositie niet.
 - Neem tijdelijke aanduidingen als {voornaam}, {bedrijfsnaam} of [naam] nooit letterlijk over. Vul ze in met wat je weet, of schrijf de zin anders.
 
+De opening ligt vast:
+- Begin met een aanhef gericht aan de doorverwezen persoon bij zijn voornaam, als die hieronder staat. Welke aanhef past ("Beste", "Hoi", "Goedemiddag") volgt uit de schrijfvoorkeuren verderop.
+- Noem in de eerste zin de voornaam van degene die doorverwees en dat hij ons naar deze persoon heeft gestuurd. Dus in de trant van: "Hoi Tim, Sander gaf aan dat ik hierover bij jou moet zijn."
+- Is een voornaam onbekend, gebruik dan géén e-mailadres als naam. Schrijf dan "een collega" of laat de aanhef algemeen.
+
 Vaste regels:
-- Benoem altijd, in de eerste twee zinnen, dat de ander is doorverwezen en door wie. Noem de naam van degene die doorverwees als die bekend is, anders zijn functie of "een collega".
+- Benoem altijd in de eerste twee zinnen dat de ander is doorverwezen en door wie.
 - Verwerk de inhoud daarna in lopende tekst, zodat de lezer meteen begrijpt waar het om gaat. Je mag herschrijven zodat het één geheel wordt — het hoeft geen letterlijk citaat te zijn.
 - Sluit altijd af met een groet en de handtekening van de afzender zoals die hieronder staat. Alleen wanneer bij de schrijfvoorkeuren uitdrukkelijk staat dat er geen handtekening onder moet, laat je die weg — maar een groet blijft dan wel staan.
 - Lever alleen de tekst van de e-mail. Geen onderwerpregel, geen uitleg vooraf, geen aanhalingstekens om het geheel.
@@ -298,6 +359,24 @@ export async function POST(req: Request) {
       )
       .join('\n\n---\n\n')
 
+    // Namen eerst: de mail opent ermee, dus die moeten er zijn voordat er
+    // geschreven wordt.
+    const names = await extractNames(thread)
+
+    const referrerName = lead.name?.trim() || names.doorverwijzerNaam
+    const referrerFirst = firstNameOf(lead.name) ?? names.doorverwijzerVoornaam
+
+    // Wat NextWave opzocht gaat voor; anders wat er uit de tekst komt. Nooit
+    // de doorverwijzer zelf als doorverwezen persoon opvoeren.
+    const sameAsReferrer =
+      !!names.doorverwezenNaam &&
+      !!referrerName &&
+      names.doorverwezenNaam.toLowerCase() === referrerName.toLowerCase()
+
+    const referredName = naam ?? (sameAsReferrer ? null : names.doorverwezenNaam)
+    const referredFirst =
+      firstNameOf(naam) ?? (sameAsReferrer ? null : names.doorverwezenVoornaam)
+
     const instructions = [
       ...sliderInstructions(settings.sliders),
       ...traitInstructions(settings.traits, settings.customTraits),
@@ -319,8 +398,12 @@ export async function POST(req: Request) {
       `${COMPOSE_PROMPT}\n\nGegevens:\n` +
       [
         `Bedrijf van de afzender: ${branding.company_name ?? 'onbekend'}`,
-        `Degene die doorverwees: ${lead.name || lead.email}`,
-        `Naar wie wordt doorverwezen: ${naam ?? 'naam onbekend'}${functie ? ` (${functie})` : ''}`,
+        `Degene die doorverwees: ${referrerName ?? 'naam onbekend'}${
+          referrerFirst ? ` — voornaam: ${referrerFirst}` : ''
+        }`,
+        `Naar wie wordt doorverwezen: ${referredName ?? 'naam onbekend'}${
+          referredFirst ? ` — voornaam: ${referredFirst}` : ''
+        }${functie ? ` — functie of afdeling: ${functie}` : ''}`,
         `E-mailadres van die persoon: ${email}`,
       ].join('\n') +
       pitchBlock +
@@ -332,14 +415,14 @@ export async function POST(req: Request) {
       generateText({
         model: anthropic(MODEL),
         system,
-        prompt: `Hieronder staat het hele mailverkeer met degene die doorverwees, zodat je ziet wat er speelde. Let op: dit kan een herinnering zijn in plaats van de pitch.\n\n${thread}\n\nSchrijf nu de mail aan ${naam ?? 'de doorverwezen persoon'}. Geef alleen de tekst van de e-mail.`,
+        prompt: `Hieronder staat het hele mailverkeer met degene die doorverwees, zodat je ziet wat er speelde. Let op: dit kan een herinnering zijn in plaats van de pitch.\n\n${thread}\n\nSchrijf nu de mail aan ${referredFirst ?? referredName ?? 'de doorverwezen persoon'}. Geef alleen de tekst van de e-mail.`,
         maxOutputTokens: 1200,
       }),
       generateText({
         model: anthropic(MODEL),
         system:
           'Je bedenkt een onderwerpregel voor een zakelijke e-mail. Lever alleen de onderwerpregel, zonder aanhalingstekens, zonder "Onderwerp:", maximaal acht woorden, in het Nederlands.',
-        prompt: `De mail gaat over dit onderwerp: "${first.subject}". Het is een eerste mail aan iemand naar wie is doorverwezen door ${lead.name || lead.email}. Bedenk de onderwerpregel.`,
+        prompt: `De mail gaat over dit onderwerp: "${first.subject}". Het is een eerste mail aan iemand naar wie is doorverwezen door ${referrerName ?? 'een collega'}. Bedenk de onderwerpregel.`,
         maxOutputTokens: 60,
       }),
     ])
@@ -351,8 +434,9 @@ export async function POST(req: Request) {
       status: 'ready',
       toEmail: email,
       source: bron,
-      referredName: naam,
+      referredName: referredName,
       referredRole: functie,
+      referrerName,
       pitchSource: pitch ? 'mail1' : 'thread',
       pitchLabel: pitch ? pitch.subject : null,
       fromEmail: lead.sending_account,

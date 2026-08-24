@@ -12,6 +12,8 @@ export interface ReferralDraft {
   body: string
   referredName: string | null
   referredRole: string | null
+  /** Naam van degene die doorverwees, uit de mailtekst gehaald. */
+  referrerName: string | null
   source: 'nextwave' | 'mail' | null
   /** Waar de inhoud van de mail vandaan komt. */
   pitchSource: 'mail1' | 'thread'
@@ -109,7 +111,7 @@ export function ReferralModal({
                 'de doorverwezen persoon'
               )}
               {draft.referredRole ? ` (${draft.referredRole})` : ''} — geen antwoord aan{' '}
-              {leadName || leadEmail}.
+              {draft.referrerName || leadName || leadEmail}.
             </p>
           </div>
           <button
@@ -196,7 +198,7 @@ export function ReferralModal({
             ) : (
               <>
                 Er staat geen campagnemail klaar bij Mailvarianten, dus de inhoud komt uit
-                het mailverkeer met {leadName || leadEmail}. Lees hem extra goed na.
+                het mailverkeer met {draft.referrerName || leadName || leadEmail}. Lees hem extra goed na.
               </>
             )}
           </div>
