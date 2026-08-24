@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ReferralModal, type ReferralDraft } from './referral-modal'
+import { useAssistant } from './assistant-context'
 
 /**
  * Het blok op een doorverwijzing-lead. Zodra de lead geopend wordt, kijkt de
@@ -39,6 +40,7 @@ export function ReferralOutreach({
   /** Adres waar al naartoe gemaild is, of null. */
   alreadySentTo: string | null
 }) {
+  const { enabled } = useAssistant()
   const [analyse, setAnalyse] = useState<Analyse>({ status: 'loading' })
   const [draft, setDraft] = useState<ReferralDraft | null>(null)
   const [composing, setComposing] = useState(false)
@@ -66,6 +68,7 @@ export function ReferralOutreach({
   )
 
   useEffect(() => {
+    if (!enabled) return
     if (alreadySentTo) return
     if (started.current) return
     started.current = true
@@ -95,7 +98,7 @@ export function ReferralOutreach({
         })
       }
     })()
-  }, [alreadySentTo, run])
+  }, [enabled, alreadySentTo, run])
 
   async function openModal() {
     if (analyse.status !== 'ready') return
@@ -139,6 +142,10 @@ export function ReferralOutreach({
       </Frame>
     )
   }
+
+  // Assistent uit betekent ook geen doorverwijzingsmail. Wat al verstuurd is
+  // blijft hierboven wel staan: dat is een feit, geen assistentfunctie.
+  if (!enabled) return null
 
   if (analyse.status === 'loading') {
     return (

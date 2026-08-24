@@ -276,6 +276,25 @@
   }
 }
 
+/* Voortgangsbalk zonder bekende voortgang: een streep die heen en weer
+   schuift terwijl de assistent een mail schrijft. Er valt niets te tellen —
+   je weet vooraf niet hoe lang het model erover doet — dus toont hij dat er
+   gewerkt wordt, niet hoe ver het is. */
+@keyframes nwIndeterminate {
+  0% {
+    left: -35%;
+    right: 100%;
+  }
+  60% {
+    left: 100%;
+    right: -35%;
+  }
+  100% {
+    left: 100%;
+    right: -35%;
+  }
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;

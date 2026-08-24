@@ -230,7 +230,10 @@ export function ReferralModal({
 
           {/* Bericht */}
           {composing ? (
-            <TypingPlaceholder />
+            <>
+              <ProgressBar />
+              <TypingPlaceholder />
+            </>
           ) : composeError ? (
             <p className="px-5 py-6 text-[12.5px] text-neg">{composeError}</p>
           ) : editing ? (
@@ -335,6 +338,26 @@ function TypingPlaceholder() {
         )}
       </div>
       <p className="mt-4 text-[11.5px] text-muted">De assistent schrijft de mail…</p>
+    </div>
+  )
+}
+
+/**
+ * Voortgangsbalk zonder percentage. Hoe lang het model erover doet is vooraf
+ * niet te zeggen, dus een echte teller zou een verzinsel zijn; deze laat
+ * alleen zien dat er gewerkt wordt.
+ */
+function ProgressBar() {
+  return (
+    <div
+      role="progressbar"
+      aria-label="De mail wordt opgesteld"
+      className="relative h-[3px] w-full overflow-hidden bg-track"
+    >
+      <div
+        className="absolute inset-y-0 bg-[var(--brand-color)]"
+        style={{ animation: 'nwIndeterminate 1.5s ease-in-out infinite' }}
+      />
     </div>
   )
 }

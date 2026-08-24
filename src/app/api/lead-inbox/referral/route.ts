@@ -229,6 +229,14 @@ export async function POST(req: Request) {
     const step = payload.step === 'compose' ? 'compose' : 'analyse'
     if (!leadId) return jsonError('Geen lead opgegeven.', 400)
 
+    // Eén schakelaar voor alles wat de assistent doet. Staat hij uit, dan ook
+    // geen doorverwijzingsmail — het scherm verbergt de knop al, maar wie de
+    // route rechtstreeks aanroept komt hier niet langs.
+    const settings = await getAssistantSettings(branding.id)
+    if (!settings.enabled) {
+      return jsonError('De antwoord assistent staat uit.', 400)
+    }
+
     const lead = await getLeadById(branding.lead_inbox_customer_id, leadId)
     if (!lead) return jsonError('Lead niet gevonden.', 404)
     if (lead.classification !== 'referral') {
@@ -340,8 +348,7 @@ export async function POST(req: Request) {
     // De pitch staat in mail 1 van de campagne. De thread bevat alleen de mail
     // waarop deze lead toevallig reageerde, en dat is vaak een herinnering
     // zonder inhoud — vandaar dat we mail 1 er apart bij geven.
-    const [settings, variants, outbounds] = await Promise.all([
-      getAssistantSettings(branding.id),
+    const [variants, outbounds] = await Promise.all([
       getMailVariants(branding.id),
       getOutboundRepliesForLead(branding.lead_inbox_customer_id, leadId),
     ])
