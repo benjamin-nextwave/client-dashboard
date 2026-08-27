@@ -22,6 +22,7 @@ export const hi: Translations = {
     onboarding: 'ऑनबोर्डिंग',
     reports: 'रिपोर्ट',
     mailVariants: 'मेल वैरिएंट',
+    mailVariantsAlert: 'कुछ मेल वैरिएंट आपकी मंज़ूरी या प्रतिक्रिया का इंतज़ार कर रहे हैं',
     help: 'मदद और मार्गदर्शन',
     groupCampaign: 'कैम्पेन',
     groupSupport: 'सहायता',

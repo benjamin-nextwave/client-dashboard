@@ -22,6 +22,7 @@ export const en: Translations = {
     onboarding: 'Onboarding',
     reports: 'Reports',
     mailVariants: 'Mail variants',
+    mailVariantsAlert: 'Mail variants are waiting for your approval or feedback',
     help: 'Help & guides',
     groupCampaign: 'Campaign',
     groupSupport: 'Support',

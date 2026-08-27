@@ -30,6 +30,7 @@
 
   --color-brand-ink: var(--c-brand-ink);
   --color-warn: var(--c-warn);
+  --color-warn-ink: var(--c-warn-ink);
 
   --radius-panel: 12px;
   --radius-control: 8px;
@@ -70,6 +71,11 @@
   /* sidebar-inkt en de lichte variant voor de actieve indicator */
   --c-ink: color-mix(in oklab, var(--brand-color, #3b82f6) 26%, #080b11);
   --c-brand-lift: color-mix(in oklab, var(--brand-color, #3b82f6) 45%, #ffffff);
+
+  /* Waarschuwingsoranje op de donkere zijbalk. Staat los van --c-warn: die is
+     afgestemd op een wit vlak en zou hier veel te donker uitvallen. De zijbalk
+     is altijd donker, dus deze waarde verandert niet mee met het thema. */
+  --c-warn-ink: #f0a868;
 
   /* licht */
   --c-canvas: #f7f8fa;

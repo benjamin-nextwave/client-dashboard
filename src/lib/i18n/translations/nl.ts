@@ -17,6 +17,7 @@ export interface Translations {
     onboarding: string
     reports: string
     mailVariants: string
+    mailVariantsAlert: string
     help: string
     groupCampaign: string
     groupSupport: string
@@ -847,6 +848,7 @@ export const nl: Translations = {
     onboarding: 'Onboarding',
     reports: 'Rapporten',
     mailVariants: 'Mailvarianten',
+    mailVariantsAlert: 'Er wachten mailvarianten op je goedkeuring of feedback',
     help: 'Hulp & uitleg',
     groupCampaign: 'Campagne',
     groupSupport: 'Ondersteuning',

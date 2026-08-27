@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { getClientBranding } from '@/lib/client/get-client-branding'
+import { deriveVariantStatus, getMailVariants } from '@/lib/data/campaign'
 import { SidebarNav } from '@/components/client/sidebar-nav'
 import { LanguageSwitcher } from '@/components/client/language-switcher'
 import { VoiceglowChat } from '@/components/client/voiceglow-chat'
@@ -28,6 +29,14 @@ export default async function ClientLayout({
   const locale = await getLocale()
   const brandColor = client.primary_color || '#3B82F6'
 
+  // Zelfde telling als de mailvarianten-pagina zelf: alleen gepubliceerde
+  // varianten waarop nog niet is gereageerd sinds de laatste wijziging. Zodra
+  // alles is goedgekeurd of van feedback voorzien, valt het teken weg.
+  const mailVariants = await getMailVariants(client.id)
+  const mailVariantsNeedAction = mailVariants.some(
+    (v) => v.isPublished && deriveVariantStatus(v) === 'open'
+  )
+
   return (
     <I18nProvider locale={locale}>
       {/* client-theme draagt alle ontwerptokens én de merk-tinten. Die moeten op
@@ -39,6 +48,7 @@ export default async function ClientLayout({
       >
         <SidebarNav
           signOutAction={signOut}
+          mailVariantsNeedAction={mailVariantsNeedAction}
           inboxUrl={client.inbox_url ?? undefined}
           inboxVisible={client.inbox_visible ?? false}
           leadInboxVisible={(client.lead_inbox_visible ?? false) && !!client.lead_inbox_customer_id}

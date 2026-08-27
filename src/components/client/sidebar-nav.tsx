@@ -22,6 +22,8 @@ const HELP_ROUTE = '/dashboard/hulp'
 
 interface SidebarNavProps {
   signOutAction: () => Promise<void>
+  /** Er staan mailvarianten open die nog goedkeuring of feedback nodig hebben. */
+  mailVariantsNeedAction?: boolean
   inboxUrl?: string
   inboxVisible?: boolean
   leadInboxVisible?: boolean
@@ -34,6 +36,8 @@ interface NavItemData {
   href: string
   label: string
   icon: React.ReactNode
+  alert?: boolean
+  alertLabel?: string
 }
 
 interface NavGroup {
@@ -43,6 +47,7 @@ interface NavGroup {
 
 export function SidebarNav({
   signOutAction,
+  mailVariantsNeedAction,
   inboxUrl,
   inboxVisible,
   leadInboxVisible,
@@ -175,6 +180,8 @@ export function SidebarNav({
     {
       href: '/dashboard/mailvarianten',
       label: t('nav.mailVariants'),
+      alert: mailVariantsNeedAction,
+      alertLabel: t('nav.mailVariantsAlert'),
       icon: (
         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.6} stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
@@ -262,6 +269,8 @@ export function SidebarNav({
                   label={item.label}
                   icon={item.icon}
                   collapsed={collapsed}
+                  alert={item.alert}
+                  alertLabel={item.alertLabel}
                   reload={item.href === HELP_ROUTE || pathname === HELP_ROUTE}
                 />
               ))}
