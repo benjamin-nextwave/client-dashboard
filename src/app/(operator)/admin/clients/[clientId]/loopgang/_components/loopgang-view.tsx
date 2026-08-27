@@ -46,6 +46,12 @@ export function LoopgangView({ clientId, accent, data, goLiveDate }: Props) {
   const selectedDay = selected ? dayMap.get(selected) ?? null : null
   const anyPaused = data.campaigns.some((c) => c.isPaused)
 
+  // Geen enkele campagne geeft een status terug: Instantly kent deze campagnes
+  // niet onder de sleutels die we voor deze klant hebben. Pauzeren loopt dan
+  // tegen dezelfde muur, dus bied de knop niet aan.
+  const statusUnreachable =
+    data.campaigns.length > 0 && data.campaigns.every((c) => c.status === null)
+
   function shiftMonth(delta: number) {
     setCursor((prev) => {
       const next = new Date(Date.UTC(prev.year, prev.month - 1 + delta, 1))
@@ -208,7 +214,7 @@ export function LoopgangView({ clientId, accent, data, goLiveDate }: Props) {
           <div className="flex shrink-0 flex-col items-end gap-2">
             <button
               type="button"
-              disabled={pending || data.campaigns.length === 0}
+              disabled={pending || data.campaigns.length === 0 || statusUnreachable}
               onClick={() => runPauseAction(!anyPaused)}
               className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-colors disabled:opacity-50 ${
                 anyPaused
@@ -223,8 +229,10 @@ export function LoopgangView({ clientId, accent, data, goLiveDate }: Props) {
                   ? 'Alle campagnes hervatten'
                   : 'Alle campagnes pauzeren'}
             </button>
-            <span className="text-[10px] text-gray-400">
-              Werkt alleen op de live omgeving
+            <span className="max-w-[15rem] text-right text-[10px] leading-snug text-gray-400">
+              {statusUnreachable
+                ? 'Instantly kent deze campagnes niet onder de API-sleutel van deze klant. Werk de sleutel bij op de bewerken-pagina.'
+                : 'Werkt alleen op de live omgeving'}
             </span>
           </div>
         </div>

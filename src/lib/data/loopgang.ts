@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCampaign, getCampaignDailyAnalytics } from '@/lib/instantly/client'
 import { describeCampaignStatus, INSTANTLY_CAMPAIGN_STATUS } from '@/lib/instantly/types'
+import { isOutboundBlocked } from '@/lib/safety/write-guard'
 
 /**
  * Loopgang — hoe lang draait een klant al, en wanneer stond hij stil?
@@ -96,12 +97,15 @@ function daysBetween(fromIso: string, toIso: string): number {
 }
 
 /**
- * De Instantly-sleutel van deze klant, met de gedeelde workspace-sleutel als
- * terugval. Niet elke klant heeft een eigen workspace.
+ * De sleutels die deze klant kunnen ontsluiten, in volgorde van waarschijnlijkheid.
+ *
+ * Er is geen enkele sleutel die het overal doet. Klanten met een eigen workspace
+ * zijn alléén met hun eigen sleutel te lezen; bij een flink deel van de klanten
+ * is die eigen sleutel verlopen (401) of hoort hij bij een workspace die de
+ * campagne niet meer bevat (404), en werkt juist de gedeelde sleutel. Daarom
+ * proberen we ze allebei in plaats van er één te kiezen.
  */
-export async function resolveInstantlyApiKey(
-  clientId: string
-): Promise<string | undefined> {
+export async function resolveInstantlyApiKeys(clientId: string): Promise<string[]> {
   const supabase = createAdminClient()
   const { data } = await supabase
     .from('clients')
@@ -109,7 +113,41 @@ export async function resolveInstantlyApiKey(
     .eq('id', clientId)
     .single()
 
-  return (data?.instantly_api_key as string | null) || process.env.INSTANTLY_API_KEY
+  const own = (data?.instantly_api_key as string | null) || null
+  const shared = process.env.INSTANTLY_API_KEY || null
+
+  return [...new Set([own, shared].filter((k): k is string => !!k && k.length > 0))]
+}
+
+/**
+ * Voert een Instantly-aanroep uit met elke sleutel tot er één bruikbaar
+ * antwoord geeft. Een lege uitkomst telt niet als bruikbaar maar wordt wel
+ * bewaard: geeft geen enkele sleutel iets, dan is "leeg" nog altijd een beter
+ * antwoord dan een fout.
+ *
+ * De testgrendel is geen sleutelprobleem — die gooit meteen door, want met een
+ * andere sleutel gaat het net zo min lukken.
+ */
+export async function tryInstantlyKeys<T>(
+  keys: string[],
+  call: (apiKey: string) => Promise<T>,
+  isUseful: (value: T) => boolean
+): Promise<{ value: T | null; error: unknown }> {
+  let fallback: T | null = null
+  let lastError: unknown = null
+
+  for (const key of keys) {
+    try {
+      const value = await call(key)
+      if (isUseful(value)) return { value, error: null }
+      if (fallback === null) fallback = value
+    } catch (err) {
+      if (isOutboundBlocked(err)) throw err
+      lastError = err
+    }
+  }
+
+  return { value: fallback, error: fallback === null ? lastError : null }
 }
 
 /**
@@ -171,44 +209,59 @@ export async function getLoopgangData(clientId: string): Promise<LoopgangData> {
   const rangeEnd = isoDay(new Date())
   const rangeStart = addDays(rangeEnd, -WINDOW_DAYS)
 
-  const [refs, apiKey, pauseEvents, invoiceMarks] = await Promise.all([
+  const [refs, apiKeys, pauseEvents, invoiceMarks] = await Promise.all([
     getLinkedCampaignRefs(clientId),
-    resolveInstantlyApiKey(clientId),
+    resolveInstantlyApiKeys(clientId),
     getPauseEvents(clientId),
     getInvoiceMarks(clientId),
   ])
 
-  let analyticsError: string | null = null
+  const analyticsErrors: string[] = []
 
   // Statussen en dagcijfers per campagne naast elkaar ophalen; bij één klant
   // gaat het om een handvol campagnes.
   const perCampaign = await Promise.all(
     refs.map(async (ref) => {
-      const [status, daily] = await Promise.all([
-        getCampaign(ref.instantlyCampaignId, apiKey)
-          .then((c) => c.status)
-          .catch((err: unknown) => {
-            console.error(
-              `[loopgang] status ophalen mislukt campagne=${ref.instantlyCampaignId}:`,
-              err
-            )
-            return null
-          }),
-        getCampaignDailyAnalytics(ref.instantlyCampaignId, rangeStart, rangeEnd, apiKey).catch(
-          (err: unknown) => {
-            console.error(
-              `[loopgang] dagcijfers ophalen mislukt campagne=${ref.instantlyCampaignId}:`,
-              err
-            )
-            analyticsError =
-              err instanceof Error ? err.message : 'Onbekende fout bij Instantly'
-            return []
-          }
+      const [statusResult, dailyResult] = await Promise.all([
+        tryInstantlyKeys(
+          apiKeys,
+          (key) => getCampaign(ref.instantlyCampaignId, key).then((c) => c.status),
+          (status) => typeof status === 'number'
+        ),
+        tryInstantlyKeys(
+          apiKeys,
+          (key) =>
+            getCampaignDailyAnalytics(ref.instantlyCampaignId, rangeStart, rangeEnd, key),
+          (days) => days.length > 0
         ),
       ])
-      return { ref, status, daily }
+
+      if (statusResult.error) {
+        console.error(
+          `[loopgang] status ophalen mislukt campagne=${ref.instantlyCampaignId}:`,
+          statusResult.error
+        )
+      }
+      if (dailyResult.error) {
+        console.error(
+          `[loopgang] dagcijfers ophalen mislukt campagne=${ref.instantlyCampaignId}:`,
+          dailyResult.error
+        )
+        analyticsErrors.push(ref.name)
+      }
+
+      return {
+        ref,
+        status: statusResult.value,
+        daily: dailyResult.value ?? [],
+      }
     })
   )
+
+  const analyticsError =
+    analyticsErrors.length > 0
+      ? `Geen dagcijfers voor: ${analyticsErrors.join(', ')}`
+      : null
 
   const campaigns: LoopgangCampaign[] = perCampaign.map(({ ref, status }) => ({
     instantlyCampaignId: ref.instantlyCampaignId,

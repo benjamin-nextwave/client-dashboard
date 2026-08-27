@@ -3,7 +3,11 @@
 import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { activateCampaign, pauseCampaign } from '@/lib/instantly/client'
-import { getLinkedCampaignRefs, resolveInstantlyApiKey } from '@/lib/data/loopgang'
+import {
+  getLinkedCampaignRefs,
+  resolveInstantlyApiKeys,
+  tryInstantlyKeys,
+} from '@/lib/data/loopgang'
 import { isOutboundBlocked } from '@/lib/safety/write-guard'
 
 // Auth volgt het bestaande admin-patroon: middleware (src/middleware.ts) gate't
@@ -34,8 +38,8 @@ export async function setClientCampaignsPaused(
     return { error: 'Deze klant heeft geen gekoppelde campagnes.' }
   }
 
-  const apiKey = await resolveInstantlyApiKey(clientId)
-  if (!apiKey) {
+  const apiKeys = await resolveInstantlyApiKeys(clientId)
+  if (apiKeys.length === 0) {
     return { error: 'Geen Instantly API-sleutel gevonden voor deze klant.' }
   }
 
@@ -44,11 +48,32 @@ export async function setClientCampaignsPaused(
 
   for (const ref of refs) {
     try {
-      if (paused) {
-        await pauseCampaign(ref.instantlyCampaignId, apiKey)
-      } else {
-        await activateCampaign(ref.instantlyCampaignId, apiKey)
+      // Een campagne-id bestaat maar in één workspace; de verkeerde sleutel
+      // geeft 401/404 zonder iets aan te raken, dus doorvallen is veilig.
+      const outcome = await tryInstantlyKeys(
+        apiKeys,
+        (key) =>
+          paused
+            ? pauseCampaign(ref.instantlyCampaignId, key)
+            : activateCampaign(ref.instantlyCampaignId, key),
+        () => true
+      )
+
+      if (outcome.value === null) {
+        const message =
+          outcome.error instanceof Error ? outcome.error.message : 'Onbekende fout'
+        results.push({
+          id: ref.instantlyCampaignId,
+          name: ref.name,
+          ok: false,
+          error: message,
+        })
+        console.error(
+          `[loopgang] actie mislukt client=${clientId} campaign=${ref.instantlyCampaignId}: ${message}`
+        )
+        continue
       }
+
       results.push({ id: ref.instantlyCampaignId, name: ref.name, ok: true })
       console.log(
         `[loopgang] campagne ${paused ? 'gepauzeerd' : 'hervat'} client=${clientId} campaign=${ref.instantlyCampaignId}`
@@ -58,16 +83,7 @@ export async function setClientCampaignsPaused(
         blockedMessage = err.message
         break
       }
-      const message = err instanceof Error ? err.message : 'Onbekende fout'
-      results.push({
-        id: ref.instantlyCampaignId,
-        name: ref.name,
-        ok: false,
-        error: message,
-      })
-      console.error(
-        `[loopgang] actie mislukt client=${clientId} campaign=${ref.instantlyCampaignId}: ${message}`
-      )
+      throw err
     }
   }
 
