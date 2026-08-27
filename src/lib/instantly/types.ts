@@ -4,6 +4,46 @@ export interface InstantlyCampaign {
   status: number
 }
 
+/**
+ * Statuswaarden zoals Instantly ze teruggeeft op een campagne. De negatieve
+ * waarden zijn storingen aan hun kant (accounts opgeschort of ongezond); die
+ * betekenen óók dat er niets uitgaat, maar het is geen pauze die wij hebben
+ * gezet.
+ */
+export const INSTANTLY_CAMPAIGN_STATUS = {
+  draft: 0,
+  active: 1,
+  paused: 2,
+  completed: 3,
+  runningSubsequences: 4,
+  accountSuspended: -99,
+  accountsUnhealthy: -1,
+  bounceProtect: -2,
+} as const
+
+export function describeCampaignStatus(status: number): string {
+  switch (status) {
+    case INSTANTLY_CAMPAIGN_STATUS.draft:
+      return 'Concept'
+    case INSTANTLY_CAMPAIGN_STATUS.active:
+      return 'Actief'
+    case INSTANTLY_CAMPAIGN_STATUS.paused:
+      return 'Gepauzeerd'
+    case INSTANTLY_CAMPAIGN_STATUS.completed:
+      return 'Afgerond'
+    case INSTANTLY_CAMPAIGN_STATUS.runningSubsequences:
+      return 'Subsequences'
+    case INSTANTLY_CAMPAIGN_STATUS.accountSuspended:
+      return 'Account opgeschort'
+    case INSTANTLY_CAMPAIGN_STATUS.accountsUnhealthy:
+      return 'Accounts ongezond'
+    case INSTANTLY_CAMPAIGN_STATUS.bounceProtect:
+      return 'Bounce protect'
+    default:
+      return `Onbekend (${status})`
+  }
+}
+
 export interface InstantlyListResponse<T> {
   items: T[]
   next_starting_after?: string

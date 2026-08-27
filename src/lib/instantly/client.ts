@@ -53,6 +53,67 @@ export async function listCampaigns(
   return response.json()
 }
 
+/** Eén campagne opvragen — vooral om de actuele status (actief/gepauzeerd) te lezen. */
+export async function getCampaign(
+  campaignId: string,
+  apiKey?: string
+): Promise<InstantlyCampaign> {
+  const response = await fetch(`${BASE_URL}/campaigns/${campaignId}`, {
+    headers: getHeaders(apiKey),
+    cache: 'no-store',
+  })
+
+  if (!response.ok) {
+    throw new Error(
+      `Instantly API error: ${response.status} ${response.statusText}`
+    )
+  }
+
+  return response.json()
+}
+
+/**
+ * Zet een campagne stil in Instantly. Dit verandert de staat van een echte,
+ * draaiende campagne en valt daarom onder dezelfde grendel als het versturen
+ * van mail: lokaal geblokkeerd, alleen live toegestaan.
+ */
+export async function pauseCampaign(
+  campaignId: string,
+  apiKey?: string
+): Promise<InstantlyCampaign> {
+  assertOutboundAllowed('campagne pauzeren in Instantly')
+  return postCampaignAction(campaignId, 'pause', apiKey)
+}
+
+/** Zet een gepauzeerde campagne weer aan. Zelfde grendel als pauzeren. */
+export async function activateCampaign(
+  campaignId: string,
+  apiKey?: string
+): Promise<InstantlyCampaign> {
+  assertOutboundAllowed('campagne hervatten in Instantly')
+  return postCampaignAction(campaignId, 'activate', apiKey)
+}
+
+async function postCampaignAction(
+  campaignId: string,
+  action: 'pause' | 'activate',
+  apiKey?: string
+): Promise<InstantlyCampaign> {
+  const response = await fetch(`${BASE_URL}/campaigns/${campaignId}/${action}`, {
+    method: 'POST',
+    headers: getHeaders(apiKey),
+    cache: 'no-store',
+  })
+
+  if (!response.ok) {
+    throw new Error(
+      `Instantly API error: ${response.status} ${response.statusText}`
+    )
+  }
+
+  return response.json()
+}
+
 export async function getCampaignAnalyticsOverview(
   campaignIds: string[],
   startDate: string,
