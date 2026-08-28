@@ -54,8 +54,12 @@ function allowRequest(clientId: string): boolean {
   return true
 }
 
-function clip(text: string, max: number): string {
+function clip(text: string | null, max: number): string {
   const cleaned = unescapeLiteralNewlines(text).trim()
+  // Zeg het met zoveel woorden in plaats van een lege regel door te geven:
+  // anders leest het model "De lead schreef:" met niets erachter en gaat het
+  // gissen naar inhoud die er nooit was.
+  if (!cleaned) return '[dit bericht kwam zonder tekst binnen]'
   return cleaned.length > max ? `${cleaned.slice(0, max)}\n[…ingekort…]` : cleaned
 }
 

@@ -30,10 +30,21 @@ const STATUS_BADGE: Record<
  */
 const CID_PATTERN = /\[?cid:[^\]\s>"']+\]?/gi
 
-function renderBody(raw: string) {
+function renderBody(raw: string | null) {
   // Letterlijke \n omzetten vóór het splitsen, zodat de <pre> ze als echte
   // regeleindes toont in plaats van als tekst.
   const body = unescapeLiteralNewlines(raw)
+
+  // Een leeg vlak leest als een storing. Zeg liever wat er aan de hand is: de
+  // mail is er wel, alleen de tekst is bij het binnenhalen niet meegekomen.
+  if (!body.trim()) {
+    return (
+      <span className="italic text-faint">
+        Dit bericht kwam zonder tekst binnen.
+      </span>
+    )
+  }
+
   const parts: React.ReactNode[] = []
   let last = 0
   let i = 0

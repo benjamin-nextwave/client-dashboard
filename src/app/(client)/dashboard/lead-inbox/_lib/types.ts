@@ -15,7 +15,13 @@ export type LeadReply = {
   sending_account: string
   from_email: string
   subject: string
-  body: string
+  /**
+   * Kan leeg zijn. Leads die via Make binnenkomen worden met losse velden
+   * aangemaakt (zie create_lead) en daar is de mailtekst niet verplicht; bij
+   * een handvol replies is hij nooit meegekomen. Elke plek die deze tekst
+   * gebruikt moet dat opvangen.
+   */
+  body: string | null
   received_at: string
   ai_interest_value: number | null
   classification: LeadClassification
@@ -98,7 +104,7 @@ export type ThreadItem =
       from_email: string
       sending_account: string
       subject: string
-      body: string
+      body: string | null
       occurred_at: string
       ai_interest_value: number | null
     }
@@ -109,7 +115,7 @@ export type ThreadItem =
       sending_account: string
       to_email: string
       subject: string
-      body: string
+      body: string | null
       occurred_at: string // sent_at ?? created_at
       status: OutboundReplyStatus
       error_message: string | null
