@@ -4,6 +4,26 @@ import { getClientList, type ClientListItem } from './admin-stats'
 export type ControlePersona = 'benjamin' | 'merlijn'
 export type ControleShift = 'ochtend' | 'avond' | 'wekelijks'
 
+/**
+ * Wie een taak kan krijgen of aanvragen. Bewust een eigen type en geen
+ * uitbreiding van ControlePersona: de controlerondes (ochtend/avond) worden
+ * alleen door Benjamin en Merlijn gelopen, en die verdeling moet niet
+ * meebewegen met de takenlijst.
+ */
+export type TaskPerson = ControlePersona | 'kix'
+
+export const TASK_PERSONS: TaskPerson[] = ['benjamin', 'merlijn', 'kix']
+
+export const TASK_PERSON_LABEL: Record<TaskPerson, string> = {
+  benjamin: 'Benjamin',
+  merlijn: 'Merlijn',
+  kix: 'Kix',
+}
+
+export function isTaskPerson(value: unknown): value is TaskPerson {
+  return typeof value === 'string' && (TASK_PERSONS as string[]).includes(value)
+}
+
 export interface ControleClientListItem extends ClientListItem {
   lastCheckedAt: string | null
 }
@@ -132,7 +152,11 @@ export interface ControleTaskRow {
   isCompleted: boolean
   completedAt: string | null
   createdAt: string
-  assignee: ControlePersona | null
+  assignee: TaskPerson | null
+  /** Namens wie de taak is aangemaakt. Leeg bij taken van vóór de takenpagina. */
+  requestedBy: TaskPerson | null
+  /** Door het model opgeschoonde toelichting. De ingetypte tekst wordt niet bewaard. */
+  details: string | null
 }
 
 /**
@@ -145,13 +169,13 @@ export interface ControleTaskRow {
  * and is no longer applied.
  */
 export async function getAllTasks(
-  persona?: ControlePersona
+  persona?: TaskPerson
 ): Promise<ControleTaskRow[]> {
   const supabase = createAdminClient()
 
   let query = supabase
     .from('operator_check_tasks')
-    .select('id, client_id, description, campaign_names, is_completed, completed_at, created_at, assignee')
+    .select('id, client_id, description, campaign_names, is_completed, completed_at, created_at, assignee, requested_by, details')
     .order('created_at', { ascending: false })
 
   if (persona) query = query.eq('assignee', persona)
@@ -178,7 +202,9 @@ export async function getAllTasks(
     isCompleted: t.is_completed,
     completedAt: t.completed_at,
     createdAt: t.created_at,
-    assignee: (t.assignee ?? null) as ControlePersona | null,
+    assignee: (t.assignee ?? null) as TaskPerson | null,
+    requestedBy: (t.requested_by ?? null) as TaskPerson | null,
+    details: (t.details ?? null) as string | null,
   }))
 }
 

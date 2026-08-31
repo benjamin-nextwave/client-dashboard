@@ -1,7 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getActivityTimeline, type TimelineEvent } from './activity-timeline'
 import { getClientList, type ClientListItem } from './admin-stats'
-import { getClientMonthlyData, type ControlePersona } from './controle'
+import { getClientMonthlyData, type TaskPerson } from './controle'
 
 /** Eén item op de kalender. Op één dag kunnen er meerdere zijn. */
 export interface CalendarItem {
@@ -17,7 +17,7 @@ export interface CalendarItem {
   description: string
   /** task-only */
   taskId?: string
-  taskAssignee?: ControlePersona | null
+  taskAssignee?: TaskPerson | null
   taskCompletedAt?: string | null
   /** note-only */
   noteId?: string
@@ -115,7 +115,7 @@ export async function getCalendarData(input: GetCalendarDataInput): Promise<Cale
         ? `Campagnes: ${(t.campaign_names as string[]).join(', ')}`
         : '',
       taskId: t.id,
-      taskAssignee: (t.assignee ?? null) as ControlePersona | null,
+      taskAssignee: (t.assignee ?? null) as TaskPerson | null,
       taskCompletedAt: t.completed_at,
       sortKey: t.created_at,
     })

@@ -140,9 +140,8 @@ export async function submitCheck(input: SubmitCheckInput): Promise<{ error?: st
 
   revalidatePath('/admin/controle')
   revalidatePath('/admin/controle/ochtend')
+  revalidatePath('/admin/taken')
   revalidatePath('/admin/controle/middag')
-  revalidatePath('/admin/controle/middag/benjamin')
-  revalidatePath('/admin/controle/middag/merlijn')
   return {}
 }
 
@@ -160,9 +159,8 @@ export async function toggleTaskCompleted(
     .eq('id', taskId)
 
   if (error) return { error: error.message }
+  revalidatePath('/admin/taken')
   revalidatePath('/admin/controle/middag')
-  revalidatePath('/admin/controle/middag/benjamin')
-  revalidatePath('/admin/controle/middag/merlijn')
   return {}
 }
 
@@ -170,9 +168,8 @@ export async function deleteTask(taskId: string): Promise<{ error?: string }> {
   const admin = createAdminClient()
   const { error } = await admin.from('operator_check_tasks').delete().eq('id', taskId)
   if (error) return { error: error.message }
+  revalidatePath('/admin/taken')
   revalidatePath('/admin/controle/middag')
-  revalidatePath('/admin/controle/middag/benjamin')
-  revalidatePath('/admin/controle/middag/merlijn')
   return {}
 }
 
@@ -226,9 +223,8 @@ export async function addManualTask(input: AddManualTaskInput): Promise<{ error?
   })
 
   if (error) return { error: error.message }
+  revalidatePath('/admin/taken')
   revalidatePath('/admin/controle/middag')
-  revalidatePath('/admin/controle/middag/benjamin')
-  revalidatePath('/admin/controle/middag/merlijn')
   return {}
 }
 

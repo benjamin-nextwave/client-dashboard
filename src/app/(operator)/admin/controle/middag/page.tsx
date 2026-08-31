@@ -1,14 +1,10 @@
-import { PersonaPicker } from '../_components/persona-picker'
+import { redirect } from 'next/navigation'
 
-export const dynamic = 'force-dynamic'
-
+/**
+ * De takenlijst is verhuisd naar /admin/taken en toont daar alle taken bij
+ * elkaar, zonder splitsing per persoon. Deze route blijft bestaan zodat
+ * bestaande bladwijzers en links uit de controle-flow niet doodlopen.
+ */
 export default function MiddagPage() {
-  return (
-    <PersonaPicker
-      basePath="/admin/controle/middag"
-      title="Takenlijst"
-      subtitle="Wiens takenlijst wil je openen? Je ziet daarna alleen taken die aan die persoon zijn toegewezen."
-      backHref="/admin/controle"
-    />
-  )
+  redirect('/admin/taken')
 }

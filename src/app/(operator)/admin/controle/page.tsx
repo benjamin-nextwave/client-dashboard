@@ -7,7 +7,7 @@ export default function ControlePage() {
     <div className="flex min-h-[calc(100vh-200px)] items-center justify-center">
       <div className="grid w-full max-w-5xl grid-cols-1 gap-6 md:grid-cols-2">
         <BigButton
-          href="/admin/controle/middag"
+          href="/admin/taken"
           gradient="from-amber-500 via-orange-500 to-rose-500"
           shadowColor="shadow-orange-500/30"
           ringColor="hover:shadow-orange-500/40"
@@ -16,9 +16,9 @@ export default function ControlePage() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 0 1-1.043 3.296 3.745 3.745 0 0 1-3.296 1.043A3.745 3.745 0 0 1 12 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 0 1-3.296-1.043 3.745 3.745 0 0 1-1.043-3.296A3.745 3.745 0 0 1 3 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 0 1 1.043-3.296 3.746 3.746 0 0 1 3.296-1.043A3.746 3.746 0 0 1 12 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 0 1 3.296 1.043 3.746 3.746 0 0 1 1.043 3.296A3.745 3.745 0 0 1 21 12Z" />
             </svg>
           }
-          subtitle="Middag"
+          subtitle="Alle taken"
           title="Takenlijst"
-          description="Bekijk en vink de taken af die je vanochtend hebt aangemaakt."
+          description="Alle taken van iedereen bij elkaar. Hier maak je ook nieuwe taken aan."
         />
         <BigButton
           href="/admin/controle/ochtend"
