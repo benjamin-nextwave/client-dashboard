@@ -265,6 +265,41 @@ export function TaskBoard({ tasks, clientOptions }: Props) {
   )
 }
 
+/**
+ * De beschrijving komt als platte tekst met twee kopregels binnen: "Taken" en
+ * "Mededelingen", met streepjes eronder. Alles wat niet met een streepje begint
+ * is dus een kopje en krijgt nadruk — zonder dat onderscheid loopt de lijst als
+ * één brij door.
+ */
+function TaskDetails({ text, completed }: { text: string; completed: boolean }) {
+  const lines = text.split('\n')
+  return (
+    <div className="space-y-0.5">
+      {lines.map((line, i) => {
+        if (line.trim().length === 0) return <div key={i} className="h-1.5" />
+        if (line.startsWith('- ')) {
+          return (
+            <div key={i} className="flex gap-1.5">
+              <span aria-hidden className="select-none opacity-50">–</span>
+              <span className="min-w-0 flex-1">{line.slice(2)}</span>
+            </div>
+          )
+        }
+        return (
+          <div
+            key={i}
+            className={`text-[10px] font-bold uppercase tracking-wide ${
+              completed ? 'text-gray-400' : 'text-gray-500'
+            }`}
+          >
+            {line}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 function ClientTaskGroup({
   companyName,
   tasks,
@@ -356,8 +391,8 @@ function TaskRow({
         </div>
 
         {task.details && (
-          <div className={`mt-2 whitespace-pre-wrap rounded-lg border-l-2 border-gray-200 bg-gray-50/70 py-2 pl-3 pr-2 text-xs leading-relaxed ${task.isCompleted ? 'text-gray-400' : 'text-gray-600'}`}>
-            {task.details}
+          <div className={`mt-2 rounded-lg border-l-2 border-gray-200 bg-gray-50/70 py-2 pl-3 pr-2 text-xs leading-relaxed ${task.isCompleted ? 'text-gray-400' : 'text-gray-600'}`}>
+            <TaskDetails text={task.details} completed={task.isCompleted} />
           </div>
         )}
 

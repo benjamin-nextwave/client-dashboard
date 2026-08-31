@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { isTaskPerson, TASK_PERSON_LABEL } from '@/lib/data/controle'
 import { cleanupTaskDescription } from '@/lib/taken/beschrijving'
 
 /**
@@ -25,9 +26,17 @@ export async function POST(req: Request) {
   }
 
   let raw: unknown
+  let assignee: unknown
+  let requestedBy: unknown
   try {
-    const body = (await req.json()) as { text?: unknown }
+    const body = (await req.json()) as {
+      text?: unknown
+      assignee?: unknown
+      requestedBy?: unknown
+    }
     raw = body.text
+    assignee = body.assignee
+    requestedBy = body.requestedBy
   } catch {
     return NextResponse.json({ error: 'Ongeldig verzoek.' }, { status: 400 })
   }
@@ -36,7 +45,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Ongeldig verzoek.' }, { status: 400 })
   }
 
-  const result = await cleanupTaskDescription(raw)
+  // De namen sturen alleen het onderscheid tussen taak en mededeling; zonder
+  // keuze werkt het generiek, met keuze weet het model wie "ik" is.
+  const result = await cleanupTaskDescription(raw, {
+    assignee: isTaskPerson(assignee) ? TASK_PERSON_LABEL[assignee] : undefined,
+    requestedBy: isTaskPerson(requestedBy) ? TASK_PERSON_LABEL[requestedBy] : undefined,
+  })
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: 422 })
   }

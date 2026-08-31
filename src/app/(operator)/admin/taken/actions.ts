@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { isTaskPerson, type TaskPerson } from '@/lib/data/controle'
+import { isTaskPerson, TASK_PERSON_LABEL, type TaskPerson } from '@/lib/data/controle'
 import { cleanupTaskDescription } from '@/lib/taken/beschrijving'
 
 // Auth volgt het bestaande admin-patroon: middleware (src/middleware.ts) gate't
@@ -43,7 +43,10 @@ export async function addTask(input: AddTaskInput): Promise<AddTaskResult> {
   let details: string | null = null
   const raw = input.rawDescription.trim()
   if (raw.length > 0) {
-    const cleaned = await cleanupTaskDescription(raw)
+    const cleaned = await cleanupTaskDescription(raw, {
+      assignee: TASK_PERSON_LABEL[input.assignee],
+      requestedBy: TASK_PERSON_LABEL[input.requestedBy],
+    })
     if (!cleaned.ok) return { error: cleaned.error }
     details = cleaned.text.length > 0 ? cleaned.text : null
   }
