@@ -65,6 +65,7 @@ Vorm van een mededeling:
 - Korte zin, in de woorden van de aanvrager. De ik-vorm mag blijven staan: "Ik geef door dat hij bezwaar kan maken".
 
 Voor allebei geldt:
+- Elk punt moet op zichzelf te lezen zijn. Wie het punt leest heeft de oorspronkelijke tekst er niet bij, dus benoem waar het over gaat. Vervang verwijzende woorden als "dit", "dat", "hier", "daar", "ermee" en "hierover" door het onderwerp zelf. Schrijf dus niet "we houden hier rekening mee" maar "we houden rekening met de input van de klant"; niet "ik geef dit door" maar "ik geef de feedback van de klant door". Is uit de invoer niet op te maken waar zo'n woord naar verwijst, laat het punt dan weg — verzin het onderwerp nooit.
 - Houd het kort. Twee rake punten zijn beter dan vijf halve. Hooguit ${MAX_PER_SECTION} per lijst.
 - Neem de woorden uit de invoer over. Staat er "de klant", schrijf dan "de klant" en niet "de betrokkene". Verzin geen abstractere omschrijving dan er staat.
 - Nederlands, ook als de invoer een andere taal gebruikt.
