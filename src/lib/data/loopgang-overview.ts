@@ -1,14 +1,17 @@
 /**
  * Loopgang voor álle klanten tegelijk — de bron van /admin/loopgang.
  *
- * De klantpagina haalt 365 dagen dagcijfers op. Dat kan daar, want het gaat om
- * één klant. Hier vragen we per campagne maar 14 dagen op: het overzicht toont
- * het volume van vandaag en een strookje van de afgelopen twee weken, meer niet.
- * De volledige historie blijft op /admin/clients/[id]/loopgang staan.
+ * De pagina is een maandkalender: per dag welke klant wat moet doen, en wat er
+ * die dag is gebeurd. Alles wat een datum heeft komt hier vandaan als losse
+ * gebeurtenis (zie lib/loopgang/events.ts); wat geen datum heeft — draait de
+ * klant, hoeveel is er vandaag verstuurd — staat in de kopregel en in het
+ * dagpaneel.
  *
  * Instantly wordt per klant benaderd, met een handvol klanten tegelijk. Alles in
- * één keer parallel afvuren levert bij vijftien klanten al tientallen gelijktijdige
- * aanroepen op, en dan begint Instantly te knijpen.
+ * één keer parallel afvuren levert bij vijftien klanten al tientallen
+ * gelijktijdige aanroepen op, en dan begint Instantly te knijpen. De lengte van
+ * het datumbereik kost níéts extra: dagcijfers gaan per campagne in één aanroep,
+ * of dat nu twee weken of een half jaar beslaat.
  *
  * Alles wat uit onze eigen database komt (facturen, rapportages, pauzes,
  * meetings, commissies) wordt in één query per soort opgehaald en daarna per
@@ -34,15 +37,13 @@ import {
 import {
   addDays,
   buildCycle,
-  daysBetween,
   lastWorkdayOnOrBefore,
   type CycleMeeting,
   type LoopgangCycle,
   type MeetingOutcome,
 } from '@/lib/loopgang/cycle'
+import { buildEvents, type LoopgangEvent } from '@/lib/loopgang/events'
 
-/** Hoeveel dagen dagcijfers het overzicht ophaalt. Zie de toelichting boven. */
-const STRIP_DAYS = 14
 /** Hoeveel klanten tegelijk bij Instantly worden opgehaald. */
 const CLIENT_CONCURRENCY = 5
 /**
@@ -51,14 +52,6 @@ const CLIENT_CONCURRENCY = 5
  * zonder de hele geschiedenis binnen te trekken.
  */
 const COMMISSION_LOOKBACK_DAYS = 120
-
-export type DayState = 'live' | 'paused' | 'weekend' | 'quiet'
-
-export interface OverviewDay {
-  date: string
-  sent: number
-  state: DayState
-}
 
 export interface OverviewCampaign {
   id: string
@@ -105,7 +98,6 @@ export interface LoopgangOverviewClient {
   id: string
   companyName: string
   primaryColor: string
-  logoUrl: string | null
   goLiveDate: string | null
   dailySendTarget: number
   isOnboarding: boolean
@@ -115,12 +107,11 @@ export interface LoopgangOverviewClient {
   volumeDate: string
   volumeDateIsToday: boolean
   sentOnVolumeDate: number
-  sentPreviousWorkday: number
-  /** Campagnes die op de volumedag daadwerkelijk iets hebben verstuurd. */
-  sendingCampaigns: number
-  recentDays: OverviewDay[]
+  /** Verstuurde mails per dag binnen het opgehaalde bereik. */
+  sentByDate: Record<string, number>
+  /** Dagen waarop de campagnes bewust stilstonden, binnen het opgehaalde bereik. */
+  pausedDates: string[]
 
-  /** Staat er een pauze open die nooit is hervat? */
   isPaused: boolean
   pausedSince: string | null
   lastPause: OverviewPause | null
@@ -135,6 +126,7 @@ export interface LoopgangOverviewClient {
   commissionLeadsSinceAnchor: number
 
   cycle: LoopgangCycle
+  events: LoopgangEvent[]
   /** Instantly gaf een fout; de cijfers van deze klant kunnen onvolledig zijn. */
   analyticsError: string | null
 }
@@ -142,11 +134,14 @@ export interface LoopgangOverviewClient {
 export interface LoopgangOverview {
   today: string
   todayIsWorkday: boolean
+  /** De getoonde maand, als YYYY-MM. */
+  month: string
   rangeStart: string
+  rangeEnd: string
   clients: LoopgangOverviewClient[]
   totals: {
     running: number
-    paused: number
+    stalled: number
     invoicesDue: number
     paymentsOverdue: number
     meetingsToPlan: number
@@ -183,49 +178,67 @@ interface ClientRow {
   id: string
   company_name: string
   primary_color: string | null
-  logo_url: string | null
   go_live_date: string | null
   daily_send_target: number | null
   is_hidden: boolean | null
   onboarding_status: string | null
 }
 
-export async function getLoopgangOverview(): Promise<LoopgangOverview> {
+/** Eerste en laatste dag van een maand die als YYYY-MM binnenkomt. */
+export function monthBounds(month: string): { start: string; end: string } {
+  const [y, m] = month.split('-').map(Number)
+  const start = `${String(y).padStart(4, '0')}-${String(m).padStart(2, '0')}-01`
+  const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate()
+  return { start, end: `${start.slice(0, 8)}${String(lastDay).padStart(2, '0')}` }
+}
+
+function emptyOverview(today: string, month: string): LoopgangOverview {
+  const { start, end } = monthBounds(month)
+  return {
+    today,
+    todayIsWorkday: isWeekday(today),
+    month,
+    rangeStart: start,
+    rangeEnd: end,
+    clients: [],
+    totals: {
+      running: 0,
+      stalled: 0,
+      invoicesDue: 0,
+      paymentsOverdue: 0,
+      meetingsToPlan: 0,
+      callsToday: 0,
+      openInvoiceCents: 0,
+    },
+  }
+}
+
+export async function getLoopgangOverview(monthInput?: string): Promise<LoopgangOverview> {
   const supabase = createAdminClient()
 
   const today = amsterdamDateString()
   const todayIsWorkday = isWeekday(today)
-  const rangeStart = addDays(today, -(STRIP_DAYS - 1))
+  const month = /^\d{4}-\d{2}$/.test(monthInput ?? '') ? (monthInput as string) : today.slice(0, 7)
+  const bounds = monthBounds(month)
+
+  // Eén bereik dat zowel de getoonde maand als vandaag dekt: de kalender heeft de
+  // maand nodig, de kopregel het volume van vandaag. Toekomstige dagen leveren
+  // niets op, dus daar stopt het bereik.
+  const analyticsStart = bounds.start < today ? bounds.start : today
+  const analyticsEnd = bounds.end > today ? today : bounds.end
   const volumeDate = todayIsWorkday ? today : lastWorkdayOnOrBefore(today)
-  const previousWorkday = lastWorkdayOnOrBefore(addDays(volumeDate, -1))
 
   const { data: clientRows } = await supabase
     .from('clients')
     .select(
-      'id, company_name, primary_color, logo_url, go_live_date, daily_send_target, is_hidden, onboarding_status'
+      'id, company_name, primary_color, go_live_date, daily_send_target, is_hidden, onboarding_status'
     )
     .order('company_name', { ascending: true })
 
   // Verborgen klanten horen niet in een operationeel overzicht: die draaien niet
   // en hoeven niet gefactureerd te worden.
   const clients = ((clientRows ?? []) as ClientRow[]).filter((c) => !c.is_hidden)
-  if (clients.length === 0) {
-    return {
-      today,
-      todayIsWorkday,
-      rangeStart,
-      clients: [],
-      totals: {
-        running: 0,
-        paused: 0,
-        invoicesDue: 0,
-        paymentsOverdue: 0,
-        meetingsToPlan: 0,
-        callsToday: 0,
-        openInvoiceCents: 0,
-      },
-    }
-  }
+  if (clients.length === 0) return emptyOverview(today, month)
 
   const clientIds = clients.map((c) => c.id)
   const commissionSince = addDays(today, -COMMISSION_LOOKBACK_DAYS)
@@ -258,26 +271,12 @@ export async function getLoopgangOverview(): Promise<LoopgangOverview> {
         .gte('entry_date', commissionSince),
     ])
 
-  const invoicesByClient = groupBy(
-    (invoicesResult.data ?? []) as Array<Record<string, unknown>>,
-    (r) => String(r.client_id)
-  )
-  const reportsByClient = groupBy(
-    (reportsResult.data ?? []) as Array<Record<string, unknown>>,
-    (r) => String(r.client_id)
-  )
-  const meetingsByClient = groupBy(
-    (meetingsResult.data ?? []) as Array<Record<string, unknown>>,
-    (r) => String(r.client_id)
-  )
-  const pausesByClient = groupBy(
-    (pausesResult.data ?? []) as Array<Record<string, unknown>>,
-    (r) => String(r.client_id)
-  )
-  const leadsByClient = groupBy(
-    (leadsResult.data ?? []) as Array<Record<string, unknown>>,
-    (r) => String(r.client_id)
-  )
+  type Row = Record<string, unknown>
+  const invoicesByClient = groupBy((invoicesResult.data ?? []) as Row[], (r) => String(r.client_id))
+  const reportsByClient = groupBy((reportsResult.data ?? []) as Row[], (r) => String(r.client_id))
+  const meetingsByClient = groupBy((meetingsResult.data ?? []) as Row[], (r) => String(r.client_id))
+  const pausesByClient = groupBy((pausesResult.data ?? []) as Row[], (r) => String(r.client_id))
+  const leadsByClient = groupBy((leadsResult.data ?? []) as Row[], (r) => String(r.client_id))
 
   const built = await mapWithLimit(clients, CLIENT_CONCURRENCY, async (client) => {
     const invoices: OverviewInvoice[] = (invoicesByClient.get(client.id) ?? []).map((r) => ({
@@ -360,29 +359,24 @@ export async function getLoopgangOverview(): Promise<LoopgangOverview> {
     const pausedRanges = buildPausedRanges(pauseEvents)
     const openPause = pausedRanges.find((r) => r.to === null) ?? null
 
-    const instantly = await getInstantlySnapshot(client.id, rangeStart, today)
+    const instantly = await getInstantlySnapshot(client.id, analyticsStart, analyticsEnd)
 
-    const recentDays: OverviewDay[] = []
-    for (let date = rangeStart; date <= today; date = addDays(date, 1)) {
-      const sent = instantly.sentPerDay.get(date)?.sent ?? 0
-      const state: DayState =
-        sent > 0
-          ? 'live'
-          : isInPausedRange(date, pausedRanges)
-            ? 'paused'
-            : isWeekday(date)
-              ? 'quiet'
-              : 'weekend'
-      recentDays.push({ date, sent, state })
+    const sentByDate: Record<string, number> = {}
+    const pausedDates: string[] = []
+    for (let date = bounds.start; date <= bounds.end; date = addDays(date, 1)) {
+      const sent = instantly.sentPerDay.get(date) ?? 0
+      if (sent > 0) sentByDate[date] = sent
+      else if (isInPausedRange(date, pausedRanges)) pausedDates.push(date)
     }
-
-    const volumeBucket = instantly.sentPerDay.get(volumeDate)
+    // Vandaag valt buiten de getoonde maand zodra je terugbladert, maar de
+    // kopregel heeft het cijfer wel nodig.
+    const sentOnVolumeDate = instantly.sentPerDay.get(volumeDate) ?? 0
+    if (sentOnVolumeDate > 0) sentByDate[volumeDate] = sentOnVolumeDate
 
     const result: LoopgangOverviewClient = {
       id: client.id,
       companyName: client.company_name,
       primaryColor: client.primary_color ?? '#6366f1',
-      logoUrl: client.logo_url ?? null,
       goLiveDate,
       dailySendTarget: client.daily_send_target ?? 900,
       isOnboarding: (client.onboarding_status ?? 'live') === 'onboarding',
@@ -390,10 +384,9 @@ export async function getLoopgangOverview(): Promise<LoopgangOverview> {
       campaigns: instantly.campaigns,
       volumeDate,
       volumeDateIsToday: volumeDate === today,
-      sentOnVolumeDate: volumeBucket?.sent ?? 0,
-      sentPreviousWorkday: instantly.sentPerDay.get(previousWorkday)?.sent ?? 0,
-      sendingCampaigns: volumeBucket?.campaigns ?? 0,
-      recentDays,
+      sentOnVolumeDate,
+      sentByDate,
+      pausedDates,
 
       isPaused: openPause !== null,
       pausedSince: openPause?.from ?? null,
@@ -415,13 +408,26 @@ export async function getLoopgangOverview(): Promise<LoopgangOverview> {
       commissionLeadsSinceAnchor: commissionLeads,
 
       cycle,
+      events: buildEvents({
+        today,
+        cycle,
+        invoices: invoices.map((i) => ({
+          invoiceDate: i.invoiceDate,
+          amountCents: i.amountCents,
+          paidAt: i.paidAt,
+        })),
+        reports: leadReports.map((r) => ({ reportDate: r.reportDate })),
+        pauses: pauseEvents.map((p) => ({ action: p.action, occurredAt: p.occurredAt })),
+        meeting: cycleMeeting,
+      }),
       analyticsError: instantly.error,
     }
 
     return result
   })
 
-  // Dringendste bovenaan. Bij gelijke urgentie op naam, zodat de volgorde niet
+  // Dringendste bovenaan; die volgorde bepaalt ook waar een klant in een
+  // volle kalenderdag terechtkomt. Bij gelijke urgentie op naam, zodat het niet
   // per verversing verspringt.
   const sorted = [...built].sort((a, b) => {
     if (b.cycle.urgency !== a.cycle.urgency) return b.cycle.urgency - a.cycle.urgency
@@ -430,7 +436,7 @@ export async function getLoopgangOverview(): Promise<LoopgangOverview> {
 
   const totals = {
     running: sorted.filter((c) => c.sentOnVolumeDate > 0).length,
-    paused: sorted.filter((c) => c.sentOnVolumeDate === 0).length,
+    stalled: sorted.filter((c) => c.sentOnVolumeDate === 0).length,
     invoicesDue: sorted.filter((c) => c.cycle.reminders.some((r) => r.kind === 'invoice-due'))
       .length,
     paymentsOverdue: sorted.filter((c) =>
@@ -442,20 +448,25 @@ export async function getLoopgangOverview(): Promise<LoopgangOverview> {
     callsToday: sorted.filter((c) => c.cycle.callDueToday).length,
     openInvoiceCents: sorted.reduce(
       (sum, c) =>
-        sum +
-        c.invoices
-          .filter((i) => !i.paidAt)
-          .reduce((s, i) => s + (i.amountCents ?? 0), 0),
+        sum + c.invoices.filter((i) => !i.paidAt).reduce((s, i) => s + (i.amountCents ?? 0), 0),
       0
     ),
   }
 
-  return { today, todayIsWorkday, rangeStart, clients: sorted, totals }
+  return {
+    today,
+    todayIsWorkday,
+    month,
+    rangeStart: bounds.start,
+    rangeEnd: bounds.end,
+    clients: sorted,
+    totals,
+  }
 }
 
 interface InstantlySnapshot {
   campaigns: OverviewCampaign[]
-  sentPerDay: Map<string, { sent: number; campaigns: number }>
+  sentPerDay: Map<string, number>
   error: string | null
 }
 
@@ -506,16 +517,12 @@ async function getInstantlySnapshot(
     })
   )
 
-  const sentPerDay = new Map<string, { sent: number; campaigns: number }>()
+  const sentPerDay = new Map<string, number>()
   for (const { daily } of perCampaign) {
     for (const day of daily) {
       const date = String(day.date).slice(0, 10)
       if (!date) continue
-      const sent = Number(day.sent) || 0
-      const bucket = sentPerDay.get(date) ?? { sent: 0, campaigns: 0 }
-      bucket.sent += sent
-      if (sent > 0) bucket.campaigns += 1
-      sentPerDay.set(date, bucket)
+      sentPerDay.set(date, (sentPerDay.get(date) ?? 0) + (Number(day.sent) || 0))
     }
   }
 
@@ -540,10 +547,4 @@ function groupBy<T>(rows: T[], key: (row: T) => string): Map<string, T[]> {
     else map.set(k, [row])
   }
   return map
-}
-
-/** Dagen dat een pauze al loopt; null als er geen open pauze is. */
-export function pausedDayCount(pausedSince: string | null, today: string): number | null {
-  if (!pausedSince) return null
-  return Math.max(0, daysBetween(pausedSince, today))
 }
