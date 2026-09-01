@@ -219,3 +219,43 @@ export async function deleteNewsImage(newsItemId: string): Promise<void> {
     await supabase.storage.from(NEWS_BUCKET).remove(paths)
   }
 }
+
+// --- Loopgang: facturen en leadrapportages ---
+
+// Eén bucket voor beide soorten, gescheiden op map. Twee buckets zou twee keer
+// dezelfde policies betekenen zonder dat er iets mee opgelost wordt.
+const LOOPGANG_BUCKET = 'loopgang-docs'
+
+export type LoopgangDocKind = 'invoices' | 'lead-reports'
+
+export async function uploadLoopgangPdf(
+  kind: LoopgangDocKind,
+  clientId: string,
+  file: File
+): Promise<{ url: string; path: string } | { error: string }> {
+  if (file.type !== 'application/pdf') {
+    return { error: `Alleen PDF-bestanden toegestaan (ontvangen: ${file.type || 'onbekend'}).` }
+  }
+  if (file.size > MAX_PDF_SIZE) {
+    return { error: 'Bestand is te groot. Maximaal 20MB.' }
+  }
+
+  const path = `${kind}/${clientId}/${randomUUID()}.pdf`
+
+  const supabase = createAdminClient()
+  const { error } = await supabase.storage
+    .from(LOOPGANG_BUCKET)
+    .upload(path, file, { upsert: true, contentType: 'application/pdf' })
+
+  if (error) {
+    return { error: `Upload mislukt: ${error.message}` }
+  }
+
+  const { data } = supabase.storage.from(LOOPGANG_BUCKET).getPublicUrl(path)
+  return { url: data.publicUrl, path }
+}
+
+export async function deleteLoopgangPdf(path: string): Promise<void> {
+  const supabase = createAdminClient()
+  await supabase.storage.from(LOOPGANG_BUCKET).remove([path])
+}

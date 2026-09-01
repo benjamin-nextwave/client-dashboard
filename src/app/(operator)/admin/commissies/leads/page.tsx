@@ -23,7 +23,31 @@ async function getExistingCampaignNames(): Promise<string[]> {
   return Array.from(names).sort((a, b) => a.localeCompare(b))
 }
 
-export default async function LeadGeschiedenisPage() {
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
+
+function readParam(value: string | string[] | undefined): string | undefined {
+  return typeof value === 'string' && value.trim() !== '' ? value : undefined
+}
+
+function readDateParam(value: string | string[] | undefined): string | undefined {
+  const raw = readParam(value)
+  return raw && ISO_DATE.test(raw) ? raw : undefined
+}
+
+interface PageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}
+
+export default async function LeadGeschiedenisPage({ searchParams }: PageProps) {
+  // De loopgang linkt hierheen met ?klant=&van=&tot= om meteen op de juiste
+  // klant en periode uit te komen. Zonder parameters verandert er niets.
+  const params = await searchParams
+  const initialFilters = {
+    client: readParam(params.klant),
+    from: readDateParam(params.van),
+    to: readDateParam(params.tot),
+  }
+
   const [leads, clientList, campaignNames] = await Promise.all([
     getAllCommissionLeads(),
     getClientList(),
@@ -61,6 +85,7 @@ export default async function LeadGeschiedenisPage() {
         clients={clients}
         categoriesByClient={categoriesByClient}
         campaignNames={campaignNames}
+        initialFilters={initialFilters}
       />
     </div>
   )

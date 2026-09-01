@@ -22,6 +22,9 @@ export function OperatorHeader({ signOutAction }: OperatorHeaderProps) {
     { href: '/admin', label: 'Klanten', match: (p: string) => p === '/admin' || p.startsWith('/admin/clients') },
     { href: '/admin/controle', label: 'Controle', match: (p: string) => p.startsWith('/admin/controle') },
     { href: '/admin/taken', label: 'Taken', match: (p: string) => p.startsWith('/admin/taken') },
+    // Alleen het centrale overzicht; de loopgang per klant zit onder /admin/clients
+    // en hoort bij de tab Klanten.
+    { href: '/admin/loopgang', label: 'Loopgang', match: (p: string) => p === '/admin/loopgang' },
     { href: '/admin/commissies', label: 'Commissies', match: (p: string) => p.startsWith('/admin/commissies') },
     { href: '/admin/overzicht', label: 'Overzicht', match: (p: string) => p.startsWith('/admin/overzicht') },
     { href: '/admin/news', label: t('operator.nav.news'), match: (p: string) => p.startsWith('/admin/news') },

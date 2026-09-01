@@ -378,7 +378,7 @@ async function getInvoiceMarks(clientId: string): Promise<LoopgangInvoiceMark[]>
   }))
 }
 
-interface PausedRange {
+export interface PausedRange {
   from: string
   /** null = nog steeds gepauzeerd. */
   to: string | null
@@ -388,7 +388,7 @@ interface PausedRange {
  * Zet de pauzelog om in aaneengesloten periodes. Meerdere pauzes achter elkaar
  * zonder hervatting tellen als één periode; een hervatting sluit hem af.
  */
-function buildPausedRanges(events: LoopgangPauseEvent[]): PausedRange[] {
+export function buildPausedRanges(events: LoopgangPauseEvent[]): PausedRange[] {
   const chronological = [...events].sort((a, b) =>
     a.occurredAt.localeCompare(b.occurredAt)
   )
@@ -414,6 +414,6 @@ function buildPausedRanges(events: LoopgangPauseEvent[]): PausedRange[] {
   return ranges
 }
 
-function isInPausedRange(date: string, ranges: PausedRange[]): boolean {
+export function isInPausedRange(date: string, ranges: PausedRange[]): boolean {
   return ranges.some((r) => date >= r.from && (r.to === null || date <= r.to))
 }

@@ -31,6 +31,16 @@ interface LeadHistoryProps {
   clients: LeadClient[]
   categoriesByClient: Record<string, CommissionCategory[]>
   campaignNames: string[]
+  /**
+   * Beginstand van de filters, uit de URL. De loopgang linkt hierheen met een
+   * klant en de periode sinds de laatste factuur. Zonder deze prop staat de
+   * pagina precies zoals hij altijd stond: alle leads, geen filters.
+   */
+  initialFilters?: {
+    client?: string
+    from?: string
+    to?: string
+  }
 }
 
 interface EditDraft {
@@ -68,6 +78,7 @@ export function LeadHistory({
   clients,
   categoriesByClient,
   campaignNames,
+  initialFilters,
 }: LeadHistoryProps) {
   const [leads, setLeads] = useState<CommissionLeadHistoryRow[]>(initialLeads)
   const [, startTransition] = useTransition()
@@ -79,11 +90,11 @@ export function LeadHistory({
   const [isSaving, setIsSaving] = useState(false)
 
   const [search, setSearch] = useState('')
-  const [clientFilter, setClientFilter] = useState('')
+  const [clientFilter, setClientFilter] = useState(initialFilters?.client ?? '')
   const [categoryFilter, setCategoryFilter] = useState('')
   const [campaignFilter, setCampaignFilter] = useState('')
-  const [fromDate, setFromDate] = useState('')
-  const [toDate, setToDate] = useState('')
+  const [fromDate, setFromDate] = useState(initialFilters?.from ?? '')
+  const [toDate, setToDate] = useState(initialFilters?.to ?? '')
   const [rejectedOnly, setRejectedOnly] = useState(false)
   const [copytalentMode, setCopytalentMode] = useState<CopytalentMode>('all')
 
