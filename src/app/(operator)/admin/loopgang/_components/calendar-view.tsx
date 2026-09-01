@@ -5,8 +5,17 @@ import Link from 'next/link'
 import { formatEuroCents, isWeekday } from '@/lib/commissions-shared'
 import type { LoopgangOverview } from '@/lib/data/loopgang-overview'
 import { addDays } from '@/lib/loopgang/cycle'
+import { buildTasks } from '@/lib/loopgang/tasks'
+import { ClientStrip } from './client-strip'
 import { DayPanel } from './day-panel'
+import { TaskDialog } from './task-dialog'
 import { MonthGrid, type DayCell, type DayEntry } from './month-grid'
+import {
+  ClientListDialog,
+  ClientPickerDialog,
+  InvoiceDialog,
+  LeadReportDialog,
+} from './dialogs'
 
 interface Props {
   overview: LoopgangOverview
@@ -30,11 +39,31 @@ const FOCUS_LABELS: Record<Focus, string> = {
   stalled: 'Staat stil',
 }
 
+/**
+ * Een factuur of rapportage toevoegen begint met het kiezen van een klant. Pas
+ * daarna gaat de echte dialoog open; `clientId` is dus null zolang de keuze nog
+ * gemaakt moet worden.
+ */
+interface QuickAction {
+  kind: 'invoice' | 'report'
+  clientId: string | null
+}
+
 export function CalendarView({ overview }: Props) {
   const [selectedClients, setSelectedClients] = useState<string[]>([])
   const [focus, setFocus] = useState<Focus>('all')
   const [selectedDate, setSelectedDate] = useState<string>(() =>
     overview.today.slice(0, 7) === overview.month ? overview.today : overview.rangeStart
+  )
+  const [quick, setQuick] = useState<QuickAction | null>(null)
+  const [managingList, setManagingList] = useState(false)
+  const [showTasks, setShowTasks] = useState(false)
+
+  // Uit alle zichtbare klanten, niet uit de gefilterde: "taken van vandaag" hoort
+  // compleet te zijn, ook als het filter net op één klant staat.
+  const tasks = useMemo(
+    () => buildTasks(overview.clients, overview.today),
+    [overview.clients, overview.today]
   )
 
   const clients = useMemo(() => {
@@ -68,6 +97,12 @@ export function CalendarView({ overview }: Props) {
     () => cells.find((c) => c.date === selectedDate)?.entries ?? [],
     [cells, selectedDate]
   )
+
+  // Uit de volledige lijst, niet uit de gefilterde: de knop bovenaan moet elke
+  // klant kunnen bereiken, ook als het filter hem net wegdrukt.
+  const quickClient = quick?.clientId
+    ? overview.clients.find((c) => c.id === quick.clientId)
+    : undefined
 
   function toggleClient(id: string) {
     setSelectedClients((prev) =>
@@ -106,7 +141,47 @@ export function CalendarView({ overview }: Props) {
           </div>
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-2 border-t border-gray-100 pt-4 text-[11px]">
+        {/* Vastleggen kan altijd, zonder eerst een dag of klant te hoeven
+            zoeken. De datum in de dialoog volgt de dag die in de kalender
+            geselecteerd staat. */}
+        <div className="mt-4 flex flex-wrap gap-2 border-t border-gray-100 pt-4">
+          <button
+            type="button"
+            onClick={() => setShowTasks(true)}
+            className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-[11px] font-semibold transition-colors ${
+              tasks.length > 0
+                ? 'bg-rose-600 text-white hover:bg-rose-700'
+                : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+            </svg>
+            Taken van vandaag ({tasks.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setQuick({ kind: 'invoice', clientId: null })}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-gray-900 px-3.5 py-2 text-[11px] font-semibold text-white transition-colors hover:bg-gray-800"
+          >
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            Factuur toevoegen
+          </button>
+          <button
+            type="button"
+            onClick={() => setQuick({ kind: 'report', clientId: null })}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3.5 py-2 text-[11px] font-semibold text-gray-700 transition-colors hover:border-gray-300 hover:bg-gray-50"
+          >
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            Leadrapportage toevoegen
+          </button>
+        </div>
+
+        <div className="mt-3 flex flex-wrap gap-2 border-t border-gray-100 pt-3 text-[11px]">
           <Pill
             tone={overview.totals.callsToday > 0 ? 'warn' : 'muted'}
             text={`${overview.totals.callsToday} klant(en) vandaag bellen voor een meeting`}
@@ -145,6 +220,22 @@ export function CalendarView({ overview }: Props) {
           <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
             Klanten
           </span>
+
+          {/* Geen selectie betekent iedereen; die knop maakt dat zichtbaar in
+              plaats van dat je moet raden wat er gebeurt als je alles uitzet. */}
+          <button
+            type="button"
+            onClick={() => setSelectedClients([])}
+            aria-pressed={selectedClients.length === 0}
+            className={`rounded-full px-3 py-1 text-[11px] font-semibold transition-colors ${
+              selectedClients.length === 0
+                ? 'bg-gray-900 text-white'
+                : 'border border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            Iedereen
+          </button>
+
           {overview.clients.map((client) => {
             const active = selectedClients.includes(client.id)
             return (
@@ -163,15 +254,14 @@ export function CalendarView({ overview }: Props) {
               </button>
             )
           })}
-          {selectedClients.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setSelectedClients([])}
-              className="ml-1 text-[11px] font-semibold text-gray-400 hover:text-gray-900"
-            >
-              wis selectie
-            </button>
-          )}
+
+          <button
+            type="button"
+            onClick={() => setManagingList(true)}
+            className="ml-1 text-[11px] font-semibold text-gray-400 underline-offset-2 hover:text-gray-900 hover:underline"
+          >
+            lijst beheren ({overview.clients.length}/{overview.clientOptions.length})
+          </button>
         </div>
       </section>
 
@@ -187,7 +277,7 @@ export function CalendarView({ overview }: Props) {
         </div>
       </div>
 
-      {/* Kalender + dagpaneel */}
+      {/* Kalender + wat er die dag speelt */}
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
         <MonthGrid cells={cells} selected={selectedDate} onSelect={setSelectedDate} />
         <div className="lg:sticky lg:top-20 lg:self-start">
@@ -199,6 +289,42 @@ export function CalendarView({ overview }: Props) {
           />
         </div>
       </div>
+
+      {/* De klanten liggen over de volle breedte onder de kalender: naast de
+          kalender werd het een lange kolom die je moest scrollen. */}
+      <ClientStrip date={selectedDate} today={overview.today} clients={clients} />
+
+      {quick && quick.clientId === null && (
+        <ClientPickerDialog
+          clients={overview.clients}
+          title={quick.kind === 'invoice' ? 'Factuur toevoegen' : 'Leadrapportage toevoegen'}
+          subtitle={
+            quick.kind === 'invoice'
+              ? 'Kies de klant en leg daarna de factuur vast.'
+              : 'Kies de klant en leg daarna de leadrapportage vast.'
+          }
+          onPick={(clientId) => setQuick({ ...quick, clientId })}
+          onClose={() => setQuick(null)}
+        />
+      )}
+
+      {quick?.clientId && quickClient && quick.kind === 'invoice' && (
+        <InvoiceDialog client={quickClient} today={selectedDate} onClose={() => setQuick(null)} />
+      )}
+      {quick?.clientId && quickClient && quick.kind === 'report' && (
+        <LeadReportDialog client={quickClient} today={selectedDate} onClose={() => setQuick(null)} />
+      )}
+
+      {managingList && (
+        <ClientListDialog
+          options={overview.clientOptions}
+          onClose={() => setManagingList(false)}
+        />
+      )}
+
+      {showTasks && (
+        <TaskDialog tasks={tasks} today={overview.today} onClose={() => setShowTasks(false)} />
+      )}
     </div>
   )
 }

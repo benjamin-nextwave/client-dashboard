@@ -158,7 +158,10 @@ export function buildEvents(input: BuildEventsInput): LoopgangEvent[] {
 
   // --- Wat er moet gebeuren -------------------------------------------------
 
-  if (!cycle.anchor) return dedupe(events)
+  // Zonder startpunt valt er niets te berekenen. En zolang er een pauze loopt
+  // staat de cyclus stil: dan hoort er niets te vervallen en niets afgevinkt te
+  // worden, dus komt er ook niets in de kalender of in de takenlijst.
+  if (!cycle.anchor || cycle.paused) return dedupe(events)
 
   // Het startpunt zelf, zodat je in de kalender ziet waar de cyclus vandaan telt.
   // Bij een factuur staat er al een 'factuur verstuurd' op dezelfde dag; dan is

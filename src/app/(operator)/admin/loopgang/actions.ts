@@ -4,6 +4,12 @@ import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { deleteLoopgangPdf, uploadLoopgangPdf } from '@/lib/supabase/storage'
 import type { MeetingOutcome } from '@/lib/loopgang/cycle'
+import {
+  describeTiming,
+  formatTasksHtml,
+  formatTasksText,
+  type LoopgangTask,
+} from '@/lib/loopgang/tasks'
 
 // Auth volgt het bestaande admin-patroon: middleware (src/middleware.ts) gate't
 // /admin op user_role='operator'. Acties draaien met service_role (RLS bypass).
@@ -334,6 +340,55 @@ export async function resetMeetingAction(
 // -----------------------------------------------------------------------------
 
 /**
+ * Zet de klant administratief stil, of haalt hem er weer af.
+ *
+ * Raakt Instantly níét. De knop op de loopgangpagina van de klant doet dat wel;
+ * die zet de campagnes daadwerkelijk op pauze. Deze is bedoeld voor het
+ * omgekeerde geval: er is buiten dit dashboard om iets stil komen te liggen, en
+ * die periode moet overbrugd worden zodat de cyclus niet doortelt over dagen
+ * waarop er niets is verstuurd.
+ *
+ * Beide acties landen in dezelfde log als de Instantly-pauze, want voor de
+ * kalender en de tellers betekenen ze hetzelfde: de klant stond stil.
+ */
+export async function setAdminPauseAction(
+  clientId: string,
+  paused: boolean,
+  note: string | null
+): Promise<ActionResult> {
+  const supabase = createAdminClient()
+
+  // Twee pauzes achter elkaar zonder hervatting zouden de log onleesbaar maken,
+  // en hervatten wat niet stilstaat verschuift de cyclus zonder reden.
+  const { data: last } = await supabase
+    .from('client_campaign_pause_events')
+    .select('action')
+    .eq('client_id', clientId)
+    .order('occurred_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  const currentlyPaused = last?.action === 'pause'
+  if (paused && currentlyPaused) return { error: 'Deze klant staat al op pauze.' }
+  if (!paused && !currentlyPaused) return { error: 'Er loopt geen pauze om te beëindigen.' }
+
+  const { error } = await supabase.from('client_campaign_pause_events').insert({
+    client_id: clientId,
+    action: paused ? 'pause' : 'resume',
+    campaigns: [],
+    note: note?.trim() ? note.trim().slice(0, 2000) : null,
+  })
+
+  if (error) return { error: error.message }
+
+  console.log(
+    `[loopgang] administratieve pauze ${paused ? 'gestart' : 'beëindigd'} client=${clientId}`
+  )
+  revalidate(clientId)
+  return {}
+}
+
+/**
  * Werkt de toelichting bij een pauzemoment bij. De pauze zelf wordt hier niet
  * gezet: pauzeren en hervatten raakt Instantly en blijft op de klantpagina
  * staan, zodat er maar één plek is die campagnes stilzet.
@@ -354,6 +409,156 @@ export async function savePauseNoteAction(
 
   revalidate(clientId)
   return {}
+}
+
+/**
+ * Bepaalt welke klanten in de loopgangkalender staan. Komt binnen als de
+ * volledige lijst, niet als losse wijzigingen: het beheerscherm laat alle
+ * klanten tegelijk zien en slaat in één keer op, en dan is de hele lijst de
+ * waarheid.
+ *
+ * Raakt alleen dit overzicht — een uitgevinkte klant blijft overal elders
+ * gewoon zichtbaar.
+ */
+export async function setLoopgangVisibilityAction(
+  visibility: Array<{ clientId: string; visible: boolean }>
+): Promise<ActionResult> {
+  if (visibility.length === 0) return {}
+
+  const supabase = createAdminClient()
+
+  const visible = visibility.filter((v) => v.visible).map((v) => v.clientId)
+  const hidden = visibility.filter((v) => !v.visible).map((v) => v.clientId)
+
+  // Twee updates in plaats van één per klant; bij vijftien klanten scheelt dat
+  // dertien aanroepen.
+  for (const [ids, value] of [
+    [visible, true],
+    [hidden, false],
+  ] as const) {
+    if (ids.length === 0) continue
+    const { error } = await supabase
+      .from('clients')
+      .update({ loopgang_visible: value })
+      .in('id', ids)
+    if (error) return { error: error.message }
+  }
+
+  console.log(
+    `[loopgang] klantenlijst bijgewerkt zichtbaar=${visible.length} verborgen=${hidden.length}`
+  )
+  revalidatePath(OVERVIEW_PATH)
+  return {}
+}
+
+// -----------------------------------------------------------------------------
+// Taken naar Kix
+// -----------------------------------------------------------------------------
+
+/**
+ * De Make-webhook die de takenmail verstuurt.
+ *
+ * LET OP — deze zit NIET achter assertOutboundAllowed(). Die grendel beschermt
+ * alleen replyToEmail() in de Instantly-koppeling. Vanaf een lokale omgeving
+ * gaat dit dus echt de deur uit zodra het scenario in Make aanstaat.
+ */
+const TASKS_WEBHOOK_URL =
+  process.env.MAKE_LOOPGANG_TASKS_WEBHOOK_URL ||
+  'https://hook.eu2.make.com/9dek7vd2mlihk7itgtfp4w3ak6totg2f'
+
+const WEBHOOK_TIMEOUT_MS = 15_000
+
+export interface SendTasksResult {
+  error?: string
+  sent?: number
+}
+
+/**
+ * Stuurt de aangevinkte taken naar Make.
+ *
+ * Elk veld gaat altijd mee, ook als het leeg is — óók binnen de taken zelf.
+ * Make legt de datastructuur van een webhook vast op basis van het eerste
+ * bericht dat binnenkomt; een veld dat daar ontbrak wordt later wel geaccepteerd
+ * maar is niet te mappen. Weglaten van een leeg veld zou dus stilletjes een
+ * kolom in het scenario kosten.
+ */
+export async function sendTasksToWebhookAction(
+  tasks: LoopgangTask[],
+  options: { date: string; note: string | null }
+): Promise<SendTasksResult> {
+  if (tasks.length === 0) return { error: 'Er zijn geen taken aangevinkt.' }
+  if (!ISO_DATE.test(options.date)) return { error: 'Ongeldige datum.' }
+
+  const payload = {
+    verzonden_op: new Date().toISOString(),
+    datum: options.date,
+    datum_tekst: formatDateLong(options.date),
+    aantal_taken: tasks.length,
+    notitie: options.note?.trim() ? options.note.trim().slice(0, 2000) : '',
+    taken_tekst: formatTasksText(tasks),
+    taken_html: formatTasksHtml(tasks),
+    taken: tasks.map((task) => ({
+      klant: task.clientName,
+      klant_id: task.clientId,
+      taak: task.label,
+      toelichting: task.detail ?? '',
+      soort: task.kind,
+      status: task.status === 'overdue' ? 'te laat' : 'vandaag',
+      timing: describeTiming(task),
+      vervaldatum: task.date,
+      dagen_te_laat: task.daysLate,
+      werkdag_cyclus: task.workday,
+    })),
+  }
+
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), WEBHOOK_TIMEOUT_MS)
+
+  try {
+    const response = await fetch(TASKS_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    })
+
+    if (!response.ok) {
+      const body = await response.text().catch(() => '')
+      console.error(
+        `[loopgang:taken] webhook gaf ${response.status}: ${body.slice(0, 200)}`
+      )
+      return { error: `Make gaf een fout terug (${response.status}).` }
+    }
+
+    console.log(`[loopgang:taken] ${tasks.length} taken verstuurd datum=${options.date}`)
+    return { sent: tasks.length }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'onbekende fout'
+    console.error(`[loopgang:taken] webhook mislukt: ${message}`)
+    return {
+      error:
+        err instanceof Error && err.name === 'AbortError'
+          ? 'Make reageerde niet binnen 15 seconden.'
+          : `Versturen mislukt: ${message}`,
+    }
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
+const WEEKDAY_NAMES = [
+  'zondag', 'maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag',
+]
+const MONTH_NAMES = [
+  'januari', 'februari', 'maart', 'april', 'mei', 'juni',
+  'juli', 'augustus', 'september', 'oktober', 'november', 'december',
+]
+
+function formatDateLong(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number)
+  if (!y || !m || !d) return iso
+  const date = new Date(Date.UTC(y, m - 1, d))
+  return `${WEEKDAY_NAMES[date.getUTCDay()]} ${d} ${MONTH_NAMES[m - 1]} ${y}`
 }
 
 /** Het gewenste aantal mails per werkdag voor deze klant. */

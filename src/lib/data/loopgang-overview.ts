@@ -131,6 +131,13 @@ export interface LoopgangOverviewClient {
   analyticsError: string | null
 }
 
+/** Eén regel in het beheerscherm van de klantenlijst. */
+export interface LoopgangClientOption {
+  id: string
+  companyName: string
+  visible: boolean
+}
+
 export interface LoopgangOverview {
   today: string
   todayIsWorkday: boolean
@@ -139,6 +146,8 @@ export interface LoopgangOverview {
   rangeStart: string
   rangeEnd: string
   clients: LoopgangOverviewClient[]
+  /** Alle klanten die in de kalender gezet kúnnen worden, ook de uitgevinkte. */
+  clientOptions: LoopgangClientOption[]
   totals: {
     running: number
     stalled: number
@@ -180,6 +189,7 @@ interface ClientRow {
   primary_color: string | null
   go_live_date: string | null
   daily_send_target: number | null
+  loopgang_visible: boolean | null
   is_hidden: boolean | null
   onboarding_status: string | null
 }
@@ -192,7 +202,11 @@ export function monthBounds(month: string): { start: string; end: string } {
   return { start, end: `${start.slice(0, 8)}${String(lastDay).padStart(2, '0')}` }
 }
 
-function emptyOverview(today: string, month: string): LoopgangOverview {
+function emptyOverview(
+  today: string,
+  month: string,
+  clientOptions: LoopgangClientOption[] = []
+): LoopgangOverview {
   const { start, end } = monthBounds(month)
   return {
     today,
@@ -201,6 +215,7 @@ function emptyOverview(today: string, month: string): LoopgangOverview {
     rangeStart: start,
     rangeEnd: end,
     clients: [],
+    clientOptions,
     totals: {
       running: 0,
       stalled: 0,
@@ -231,14 +246,23 @@ export async function getLoopgangOverview(monthInput?: string): Promise<Loopgang
   const { data: clientRows } = await supabase
     .from('clients')
     .select(
-      'id, company_name, primary_color, go_live_date, daily_send_target, is_hidden, onboarding_status'
+      'id, company_name, primary_color, go_live_date, daily_send_target, loopgang_visible, is_hidden, onboarding_status'
     )
     .order('company_name', { ascending: true })
 
   // Verborgen klanten horen niet in een operationeel overzicht: die draaien niet
   // en hoeven niet gefactureerd te worden.
-  const clients = ((clientRows ?? []) as ClientRow[]).filter((c) => !c.is_hidden)
-  if (clients.length === 0) return emptyOverview(today, month)
+  const selectable = ((clientRows ?? []) as ClientRow[]).filter((c) => !c.is_hidden)
+
+  const clientOptions: LoopgangClientOption[] = selectable.map((c) => ({
+    id: c.id,
+    companyName: c.company_name,
+    visible: c.loopgang_visible !== false,
+  }))
+
+  // Uitgevinkte klanten worden niet eens bij Instantly opgevraagd.
+  const clients = selectable.filter((c) => c.loopgang_visible !== false)
+  if (clients.length === 0) return emptyOverview(today, month, clientOptions)
 
   const clientIds = clients.map((c) => c.id)
   const commissionSince = addDays(today, -COMMISSION_LOOKBACK_DAYS)
@@ -326,6 +350,12 @@ export async function getLoopgangOverview(monthInput?: string): Promise<Loopgang
       ? { outcome: meeting.outcome, meetingDate: meeting.meetingDate }
       : null
 
+    // De pauzes moeten vóór de cyclus bekend zijn: gepauzeerde dagen tellen niet
+    // mee in de werkdagteller, dus ze bepalen mede wanneer er gefactureerd moet
+    // worden.
+    const pausedRanges = buildPausedRanges(pauseEvents)
+    const openPause = pausedRanges.find((r) => r.to === null) ?? null
+
     const cycle = buildCycle({
       today,
       lastInvoice: lastInvoice
@@ -337,6 +367,9 @@ export async function getLoopgangOverview(monthInput?: string): Promise<Loopgang
         : null,
       goLiveDate,
       meeting: cycleMeeting,
+      isPaused: (date) => isInPausedRange(date, pausedRanges),
+      pausedNow: openPause !== null,
+      pausedSince: openPause?.from ?? null,
     })
 
     // Commissies vanaf het anker. Afgewezen leads tellen niet mee; een lead die
@@ -355,9 +388,6 @@ export async function getLoopgangOverview(monthInput?: string): Promise<Loopgang
         commissionLeads += 1
       }
     }
-
-    const pausedRanges = buildPausedRanges(pauseEvents)
-    const openPause = pausedRanges.find((r) => r.to === null) ?? null
 
     const instantly = await getInstantlySnapshot(client.id, analyticsStart, analyticsEnd)
 
@@ -460,6 +490,7 @@ export async function getLoopgangOverview(monthInput?: string): Promise<Loopgang
     rangeStart: bounds.start,
     rangeEnd: bounds.end,
     clients: sorted,
+    clientOptions,
     totals,
   }
 }

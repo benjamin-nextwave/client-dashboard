@@ -4,6 +4,7 @@ import { useState, useTransition, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatEuroCents } from '@/lib/commissions-shared'
 import type {
+  LoopgangClientOption,
   LoopgangOverviewClient,
   OverviewInvoice,
 } from '@/lib/data/loopgang-overview'
@@ -14,10 +15,12 @@ import {
   handleMeetingAction,
   resetMeetingAction,
   savePauseNoteAction,
+  setAdminPauseAction,
   saveInvoiceAction,
   saveLeadReportAction,
   setDailySendTargetAction,
   setInvoicePaidAction,
+  setLoopgangVisibilityAction,
 } from '../actions'
 
 // -----------------------------------------------------------------------------
@@ -564,15 +567,36 @@ export function MeetingDialog({ client, today, onClose }: DialogProps) {
 // Pauzereden
 // -----------------------------------------------------------------------------
 
-export function PauseNoteDialog({ client, onClose }: Omit<DialogProps, 'today'>) {
+/**
+ * Pauze starten, beëindigen, of de reden van de laatste pauze bijstellen.
+ *
+ * Deze pauze raakt Instantly niet — hij bevriest de loopgang. Zolang hij loopt
+ * telt de cyclus niet door en komen er geen herinneringen. Wil je de campagnes
+ * zelf stilzetten, dan is dat de knop op de loopgangpagina van de klant.
+ */
+export function PauseDialog({ client, today, onClose }: DialogProps) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
-  const [note, setNote] = useState(client.lastPause?.note ?? '')
+  const [note, setNote] = useState(client.isPaused ? (client.lastPause?.note ?? '') : '')
 
   const pause = client.lastPause
+  const pausedDays = client.pausedSince ? countDaysBetween(client.pausedSince, today) : 0
 
-  function save() {
+  function toggle(paused: boolean) {
+    setError(null)
+    startTransition(async () => {
+      const result = await setAdminPauseAction(client.id, paused, note)
+      if (result.error) {
+        setError(result.error)
+        return
+      }
+      router.refresh()
+      onClose()
+    })
+  }
+
+  function saveNote() {
     if (!pause) return
     setError(null)
     startTransition(async () => {
@@ -588,48 +612,96 @@ export function PauseNoteDialog({ client, onClose }: Omit<DialogProps, 'today'>)
 
   return (
     <Modal
-      title="Reden voor de pauze"
-      subtitle={
-        pause
-          ? `${client.companyName} — ${pause.action === 'pause' ? 'gepauzeerd' : 'hervat'} op ${formatDayShort(pause.occurredAt.slice(0, 10))}`
-          : client.companyName
-      }
+      title={client.isPaused ? 'Pauze loopt' : 'Pauze starten'}
+      subtitle={`${client.companyName} — bevriest de loopgang, raakt Instantly niet`}
       onClose={onClose}
     >
-      {!pause ? (
-        <div className="space-y-3">
-          <p className="text-xs text-gray-600">
-            Er is voor deze klant nog nooit gepauzeerd of hervat, dus er is geen moment om een
-            toelichting aan te hangen. Pauzeren doe je op de loopgangpagina van de klant zelf.
+      <div className="space-y-3">
+        {client.isPaused ? (
+          <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-[11px] text-amber-900">
+            <span className="font-semibold">
+              Staat stil sinds {client.pausedSince ? formatDayShort(client.pausedSince) : 'onbekend'}
+            </span>
+            {pausedDays > 0 && ` · ${pausedDays} ${pausedDays === 1 ? 'dag' : 'dagen'}`}. De
+            werkdagteller loopt zolang niet door en er komen geen herinneringen.
           </p>
-          <div className="flex justify-end">
-            <button type="button" onClick={onClose} className={ghostButton}>
-              Sluiten
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-3">
+        ) : (
+          <p className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-[11px] text-gray-600">
+            Zolang de pauze loopt telt de cyclus niet door. Dagen in de pauze tellen niet mee voor
+            werkdag 10 en werkdag 20, dus alle herinneringen schuiven mee op.
+            {pause && (
+              <>
+                {' '}
+                Laatste actie: {pause.action === 'pause' ? 'gepauzeerd' : 'hervat'} op{' '}
+                {formatDayShort(pause.occurredAt.slice(0, 10))}.
+              </>
+            )}
+          </p>
+        )}
+
+        <div>
+          <label className={labelClass} htmlFor="pauseNote">
+            Reden
+          </label>
           <textarea
+            id="pauseNote"
             rows={3}
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="Waarom stond deze klant stil?"
-            className={fieldClass}
+            placeholder="Waarom staat deze klant stil?"
+            className={`mt-1 ${fieldClass}`}
           />
-          <ErrorLine text={error} />
-          <div className="flex justify-end gap-2">
+        </div>
+
+        <ErrorLine text={error} />
+
+        <div className="flex items-center justify-between gap-2">
+          {client.isPaused && pause ? (
+            <button
+              type="button"
+              onClick={saveNote}
+              disabled={pending}
+              className="text-[11px] font-semibold text-gray-400 hover:text-gray-900 disabled:opacity-50"
+            >
+              Alleen de reden opslaan
+            </button>
+          ) : (
+            <span />
+          )}
+          <div className="flex gap-2">
             <button type="button" onClick={onClose} className={ghostButton}>
               Annuleren
             </button>
-            <button type="button" onClick={save} disabled={pending} className={primaryButton}>
-              {pending ? 'Opslaan…' : 'Opslaan'}
-            </button>
+            {client.isPaused ? (
+              <button
+                type="button"
+                onClick={() => toggle(false)}
+                disabled={pending}
+                className="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
+              >
+                {pending ? 'Bezig…' : 'Beëindig pauze'}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => toggle(true)}
+                disabled={pending}
+                className="inline-flex items-center justify-center rounded-lg bg-amber-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-amber-700 disabled:opacity-50"
+              >
+                {pending ? 'Bezig…' : 'Pauze start'}
+              </button>
+            )}
           </div>
         </div>
-      )}
+      </div>
     </Modal>
   )
+}
+
+function countDaysBetween(fromIso: string, toIso: string): number {
+  const from = Date.parse(`${fromIso}T00:00:00Z`)
+  const to = Date.parse(`${toIso}T00:00:00Z`)
+  return Math.max(0, Math.round((to - from) / 86_400_000))
 }
 
 // -----------------------------------------------------------------------------
@@ -686,6 +758,168 @@ export function TargetDialog({ client, onClose }: Omit<DialogProps, 'today'>) {
             {pending ? 'Opslaan…' : 'Opslaan'}
           </button>
         </div>
+      </div>
+    </Modal>
+  )
+}
+
+// -----------------------------------------------------------------------------
+// Welke klanten in de kalender staan
+// -----------------------------------------------------------------------------
+
+export function ClientListDialog({
+  options,
+  onClose,
+}: {
+  options: LoopgangClientOption[]
+  onClose: () => void
+}) {
+  const router = useRouter()
+  const [pending, startTransition] = useTransition()
+  const [error, setError] = useState<string | null>(null)
+  const [checked, setChecked] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(options.map((o) => [o.id, o.visible]))
+  )
+
+  const selectedCount = options.filter((o) => checked[o.id]).length
+
+  function save() {
+    setError(null)
+    startTransition(async () => {
+      const result = await setLoopgangVisibilityAction(
+        options.map((o) => ({ clientId: o.id, visible: checked[o.id] ?? true }))
+      )
+      if (result.error) {
+        setError(result.error)
+        return
+      }
+      router.refresh()
+      onClose()
+    })
+  }
+
+  return (
+    <Modal
+      title="Klantenlijst beheren"
+      subtitle="Welke klanten in de loopgangkalender staan. Raakt alleen dit overzicht."
+      onClose={onClose}
+    >
+      <div className="space-y-3">
+        <div className="flex items-center justify-between text-[11px]">
+          <span className="font-semibold tabular-nums text-gray-500">
+            {selectedCount} van {options.length} aangevinkt
+          </span>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                setChecked(Object.fromEntries(options.map((o) => [o.id, true])))
+              }
+              className="font-semibold text-gray-500 hover:text-gray-900"
+            >
+              alles aan
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                setChecked(Object.fromEntries(options.map((o) => [o.id, false])))
+              }
+              className="font-semibold text-gray-400 hover:text-gray-900"
+            >
+              alles uit
+            </button>
+          </div>
+        </div>
+
+        <ul className="max-h-72 space-y-0.5 overflow-y-auto rounded-xl border border-gray-100 p-1">
+          {options.map((option) => (
+            <li key={option.id}>
+              <label className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-xs text-gray-800 hover:bg-gray-50">
+                <input
+                  type="checkbox"
+                  checked={checked[option.id] ?? true}
+                  onChange={(e) =>
+                    setChecked((prev) => ({ ...prev, [option.id]: e.target.checked }))
+                  }
+                  className="h-3.5 w-3.5 rounded border-gray-300 text-gray-900 focus:ring-gray-900"
+                />
+                {option.companyName}
+              </label>
+            </li>
+          ))}
+        </ul>
+
+        <ErrorLine text={error} />
+
+        <div className="flex justify-end gap-2">
+          <button type="button" onClick={onClose} className={ghostButton}>
+            Annuleren
+          </button>
+          <button type="button" onClick={save} disabled={pending} className={primaryButton}>
+            {pending ? 'Opslaan…' : 'Opslaan'}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  )
+}
+
+// -----------------------------------------------------------------------------
+// Klant kiezen, als opstap naar een andere dialoog
+// -----------------------------------------------------------------------------
+
+export function ClientPickerDialog({
+  clients,
+  title,
+  subtitle,
+  onPick,
+  onClose,
+}: {
+  clients: LoopgangOverviewClient[]
+  title: string
+  subtitle: string
+  onPick: (clientId: string) => void
+  onClose: () => void
+}) {
+  const [search, setSearch] = useState('')
+
+  const matches = clients.filter((c) =>
+    c.companyName.toLowerCase().includes(search.trim().toLowerCase())
+  )
+
+  return (
+    <Modal title={title} subtitle={subtitle} onClose={onClose}>
+      <div className="space-y-3">
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Zoek een klant…"
+          className={fieldClass}
+        />
+
+        {matches.length === 0 ? (
+          <p className="px-1 py-4 text-center text-xs text-gray-500">Geen klant gevonden.</p>
+        ) : (
+          <ul className="max-h-72 space-y-0.5 overflow-y-auto">
+            {matches.map((client) => (
+              <li key={client.id}>
+                <button
+                  type="button"
+                  onClick={() => onPick(client.id)}
+                  className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-gray-50"
+                >
+                  <span className="text-xs font-medium text-gray-900">{client.companyName}</span>
+                  <span className="shrink-0 text-[10px] tabular-nums text-gray-400">
+                    {client.lastInvoice
+                      ? `laatste factuur ${formatDayShort(client.lastInvoice.invoiceDate)}`
+                      : 'nog niet gefactureerd'}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </Modal>
   )
