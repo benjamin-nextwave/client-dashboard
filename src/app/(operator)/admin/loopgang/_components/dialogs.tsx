@@ -864,66 +864,6 @@ export function ClientListDialog({
   )
 }
 
-// -----------------------------------------------------------------------------
-// Klant kiezen, als opstap naar een andere dialoog
-// -----------------------------------------------------------------------------
-
-export function ClientPickerDialog({
-  clients,
-  title,
-  subtitle,
-  onPick,
-  onClose,
-}: {
-  clients: LoopgangOverviewClient[]
-  title: string
-  subtitle: string
-  onPick: (clientId: string) => void
-  onClose: () => void
-}) {
-  const [search, setSearch] = useState('')
-
-  const matches = clients.filter((c) =>
-    c.companyName.toLowerCase().includes(search.trim().toLowerCase())
-  )
-
-  return (
-    <Modal title={title} subtitle={subtitle} onClose={onClose}>
-      <div className="space-y-3">
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Zoek een klant…"
-          className={fieldClass}
-        />
-
-        {matches.length === 0 ? (
-          <p className="px-1 py-4 text-center text-xs text-gray-500">Geen klant gevonden.</p>
-        ) : (
-          <ul className="max-h-72 space-y-0.5 overflow-y-auto">
-            {matches.map((client) => (
-              <li key={client.id}>
-                <button
-                  type="button"
-                  onClick={() => onPick(client.id)}
-                  className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-gray-50"
-                >
-                  <span className="text-xs font-medium text-gray-900">{client.companyName}</span>
-                  <span className="shrink-0 text-[10px] tabular-nums text-gray-400">
-                    {client.lastInvoice
-                      ? `laatste factuur ${formatDayShort(client.lastInvoice.invoiceDate)}`
-                      : 'nog niet gefactureerd'}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </Modal>
-  )
-}
 
 // -----------------------------------------------------------------------------
 

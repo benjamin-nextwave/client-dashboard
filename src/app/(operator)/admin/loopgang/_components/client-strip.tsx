@@ -15,6 +15,9 @@ interface Props {
   date: string
   today: string
   clients: LoopgangOverviewClient[]
+  /** De enige gekozen klant; alleen bij hem kan er iets vastgelegd worden. */
+  activeClientId: string | null
+  onSelectClient: (clientId: string) => void
 }
 
 /**
@@ -24,7 +27,13 @@ interface Props {
  * Openklappen gebeurt in het vakje zelf. Het raster staat op `items-start`, dus
  * de andere vakjes in dezelfde rij groeien niet mee.
  */
-export function ClientStrip({ date, today, clients }: Props) {
+export function ClientStrip({
+  date,
+  today,
+  clients,
+  activeClientId,
+  onSelectClient,
+}: Props) {
   const [dialog, setDialog] = useState<DialogState | null>(null)
   const [expanded, setExpanded] = useState<string | null>(null)
 
@@ -112,11 +121,25 @@ export function ClientStrip({ date, today, clients }: Props) {
                 {open && (
                   <div className="mt-3 border-t border-gray-200 pt-3">
                     <CycleSummary client={client} />
-                    <ClientActions
-                      client={client}
-                      today={today}
-                      onOpen={(kind: OpenDialog) => setDialog({ clientId: client.id, kind })}
-                    />
+
+                    {/* Vastleggen kan alleen bij de klant die als enige gekozen
+                        is. Staat de kalender op iedereen, dan is dit een
+                        overzicht en geen invoerscherm. */}
+                    {activeClientId === client.id ? (
+                      <ClientActions
+                        client={client}
+                        today={today}
+                        onOpen={(kind: OpenDialog) => setDialog({ clientId: client.id, kind })}
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => onSelectClient(client.id)}
+                        className="mt-2.5 inline-flex items-center gap-1.5 rounded-lg bg-gray-900 px-2.5 py-1 text-[10px] font-semibold text-white transition-colors hover:bg-gray-800"
+                      >
+                        Alleen deze klant tonen om te bewerken
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

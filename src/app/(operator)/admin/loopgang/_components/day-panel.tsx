@@ -18,6 +18,8 @@ interface Props {
   clients: LoopgangOverviewClient[]
   /** De gebeurtenissen van deze dag, in dezelfde volgorde. */
   entries: DayEntry[]
+  /** De enige gekozen klant; alleen bij hem staan de knoppen. */
+  activeClientId: string | null
 }
 
 const STATUS_DOT: Record<EventStatus, string> = {
@@ -46,7 +48,7 @@ const MONTH_NAMES = [
  * Wat er op de gekozen dag moet gebeuren of is gebeurd. De klantenlijst met de
  * volumecijfers staat niet hier maar onder de kalender, in ClientStrip.
  */
-export function DayPanel({ date, today, clients, entries }: Props) {
+export function DayPanel({ date, today, clients, entries, activeClientId }: Props) {
   const [dialog, setDialog] = useState<DialogState | null>(null)
 
   const isFuture = date > today
@@ -104,11 +106,15 @@ export function DayPanel({ date, today, clients, entries }: Props) {
                   ))}
                 </ul>
 
-                <ClientActions
-                  client={client}
-                  today={today}
-                  onOpen={(kind: OpenDialog) => setDialog({ clientId: client.id, kind })}
-                />
+                {/* Alleen bij de klant die als enige gekozen is; anders is dit
+                    paneel een overzicht en geen invoerscherm. */}
+                {activeClientId === client.id && (
+                  <ClientActions
+                    client={client}
+                    today={today}
+                    onOpen={(kind: OpenDialog) => setDialog({ clientId: client.id, kind })}
+                  />
+                )}
               </li>
             ))}
           </ul>
