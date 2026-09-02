@@ -1,4 +1,5 @@
 import { getLoopgangOverview } from '@/lib/data/loopgang-overview'
+import { AiAnalyse } from './_components/ai-analyse'
 import { CalendarView } from './_components/calendar-view'
 
 export const dynamic = 'force-dynamic'
@@ -21,6 +22,8 @@ export default async function LoopgangOverzichtPage({ searchParams }: PageProps)
       </header>
 
       <CalendarView overview={overview} />
+
+      <AiAnalyse month={overview.month} />
     </div>
   )
 }

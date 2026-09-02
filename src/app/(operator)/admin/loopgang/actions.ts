@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { deleteLoopgangPdf, uploadLoopgangPdf } from '@/lib/supabase/storage'
+import { getLoopgangOverview } from '@/lib/data/loopgang-overview'
+import { analyseerLoopgang, type LoopgangAnalyse } from '@/lib/loopgang/analyse'
 import type { MeetingOutcome } from '@/lib/loopgang/cycle'
 import {
   describeTiming,
@@ -586,6 +588,21 @@ function formatDateLong(iso: string): string {
 }
 
 /** Het gewenste aantal mails per werkdag voor deze klant. */
+/**
+ * Laat een model de stand van vandaag samenvatten in vier bakken.
+ *
+ * Draait bewust op verzoek en niet bij het laden van de pagina: het kost een
+ * modelaanroep, en de kalender eronder is ook zonder samenvatting compleet.
+ */
+export async function analyseerLoopgangAction(
+  month?: string
+): Promise<{ analyse?: LoopgangAnalyse; error?: string }> {
+  const overview = await getLoopgangOverview(month)
+  const result = await analyseerLoopgang(overview)
+  if (!result.ok) return { error: result.error }
+  return { analyse: result.analyse }
+}
+
 /**
  * Zet de dag waarop de lopende campagnemaand begon. Vanaf die dag telt de
  * cyclus, in plaats van vanaf de laatste factuur.
