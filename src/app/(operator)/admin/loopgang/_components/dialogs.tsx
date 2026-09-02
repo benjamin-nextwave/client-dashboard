@@ -18,7 +18,6 @@ import {
   setAdminPauseAction,
   saveInvoiceAction,
   saveLeadReportAction,
-  setCampaignTracksAction,
   setDailySendTargetAction,
   setInvoicePaidAction,
   setLoopgangVisibilityAction,
@@ -100,7 +99,7 @@ export function InvoiceDialog({ client, today, onClose }: DialogProps) {
   function submit(formData: FormData) {
     setError(null)
     startTransition(async () => {
-      const result = await saveInvoiceAction(client.id, client.campaignTrack, formData)
+      const result = await saveInvoiceAction(client.id, formData)
       if (result.error) {
         setError(result.error)
         return
@@ -295,7 +294,7 @@ export function LeadReportDialog({ client, today, onClose }: DialogProps) {
   function submit(formData: FormData) {
     setError(null)
     startTransition(async () => {
-      const result = await saveLeadReportAction(client.id, client.campaignTrack, formData)
+      const result = await saveLeadReportAction(client.id, formData)
       if (result.error) {
         setError(result.error)
         return
@@ -435,7 +434,6 @@ export function MeetingDialog({ client, today, onClose }: DialogProps) {
     startTransition(async () => {
       const result = await handleMeetingAction(
         client.id,
-        client.campaignTrack,
         anchor,
         choice,
         choice === 'planned' ? meetingDate || null : null,
@@ -454,7 +452,7 @@ export function MeetingDialog({ client, today, onClose }: DialogProps) {
     if (!anchor) return
     setError(null)
     startTransition(async () => {
-      const result = await resetMeetingAction(client.id, client.campaignTrack, anchor)
+      const result = await resetMeetingAction(client.id, anchor)
       if (result.error) {
         setError(result.error)
         return
@@ -588,7 +586,7 @@ export function PauseDialog({ client, today, onClose }: DialogProps) {
   function toggle(paused: boolean) {
     setError(null)
     startTransition(async () => {
-      const result = await setAdminPauseAction(client.id, client.campaignTrack, paused, note)
+      const result = await setAdminPauseAction(client.id, paused, note)
       if (result.error) {
         setError(result.error)
         return
@@ -752,131 +750,6 @@ export function TargetDialog({ client, onClose }: Omit<DialogProps, 'today'>) {
           De norm is 900 per werkdag. Verander dit alleen als deze klant er bewust van afwijkt.
         </p>
         <ErrorLine text={error} />
-        <div className="flex justify-end gap-2">
-          <button type="button" onClick={onClose} className={ghostButton}>
-            Annuleren
-          </button>
-          <button type="button" onClick={save} disabled={pending} className={primaryButton}>
-            {pending ? 'Opslaan…' : 'Opslaan'}
-          </button>
-        </div>
-      </div>
-    </Modal>
-  )
-}
-
-// -----------------------------------------------------------------------------
-// Eén of twee campagnes
-// -----------------------------------------------------------------------------
-
-/**
- * Sommige klanten draaien twee campagnes naast elkaar met een eigen
- * factuurritme. Dat blijft één klant: alleen wat je vastlegt krijgt het label
- * campagne 1 of 2, zodat elke campagne een eigen cyclus heeft.
- */
-export function CampaignTracksDialog({ client, onClose }: Omit<DialogProps, 'today'>) {
-  const router = useRouter()
-  const [pending, startTransition] = useTransition()
-  const [error, setError] = useState<string | null>(null)
-  const [count, setCount] = useState<1 | 2>(client.campaignTrackCount === 2 ? 2 : 1)
-  const [name1, setName1] = useState(client.campaignTrackCount === 2 ? '' : '')
-  const [name2, setName2] = useState('')
-
-  // De namen komen van de klant, maar het overzicht kent per regel maar één
-  // naam. Bij het openen vullen we de naam van dít spoor vast in; de andere
-  // haalt de gebruiker zelf op als hij hem wil wijzigen.
-  const ownName = client.campaignTrackName ?? ''
-
-  function save() {
-    setError(null)
-    startTransition(async () => {
-      const result = await setCampaignTracksAction(
-        client.id,
-        count,
-        client.campaignTrack === 1 ? name1 || ownName : name1,
-        client.campaignTrack === 2 ? name2 || ownName : name2
-      )
-      if (result.error) {
-        setError(result.error)
-        return
-      }
-      router.refresh()
-      onClose()
-    })
-  }
-
-  return (
-    <Modal
-      title="Campagnes van deze klant"
-      subtitle={`${client.companyName} — één klant, maar eventueel twee campagnes naast elkaar`}
-      onClose={onClose}
-    >
-      <div className="space-y-3">
-        <div className="grid grid-cols-2 gap-2">
-          {([1, 2] as const).map((value) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => setCount(value)}
-              className={`rounded-xl border px-4 py-3 text-left transition-colors ${
-                count === value
-                  ? 'border-gray-900 bg-gray-900 text-white'
-                  : 'border-gray-200 bg-white text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              <div className="text-xs font-semibold">
-                {value === 1 ? 'Eén campagne' : 'Twee campagnes'}
-              </div>
-              <div
-                className={`mt-0.5 text-[10px] ${count === value ? 'text-gray-300' : 'text-gray-400'}`}
-              >
-                {value === 1 ? 'Zoals bij bijna iedereen' : 'Eigen cyclus per campagne'}
-              </div>
-            </button>
-          ))}
-        </div>
-
-        <div>
-          <label className={labelClass} htmlFor="track1">
-            Naam campagne 1
-          </label>
-          <input
-            id="track1"
-            type="text"
-            value={name1}
-            onChange={(e) => setName1(e.target.value)}
-            placeholder={client.campaignTrack === 1 && ownName ? ownName : 'bijvoorbeeld Werving NL'}
-            className={`mt-1 ${fieldClass}`}
-          />
-        </div>
-
-        {count === 2 && (
-          <div>
-            <label className={labelClass} htmlFor="track2">
-              Naam campagne 2
-            </label>
-            <input
-              id="track2"
-              type="text"
-              value={name2}
-              onChange={(e) => setName2(e.target.value)}
-              placeholder={
-                client.campaignTrack === 2 && ownName ? ownName : 'bijvoorbeeld Werving BE'
-              }
-              className={`mt-1 ${fieldClass}`}
-            />
-          </div>
-        )}
-
-        <p className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-[11px] text-gray-600">
-          Facturen, leadrapportages, meetings en pauzes worden per campagne apart bijgehouden.
-          Leads, mails en commissies blijven bij dezelfde klant binnenkomen — het onderscheid is
-          alleen voor jou. Zet je het terug op één campagne, dan blijft alles wat op campagne 2
-          staat gewoon bewaard.
-        </p>
-
-        <ErrorLine text={error} />
-
         <div className="flex justify-end gap-2">
           <button type="button" onClick={onClose} className={ghostButton}>
             Annuleren

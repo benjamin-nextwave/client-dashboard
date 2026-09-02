@@ -8,7 +8,6 @@ import {
   InvoiceDialog,
   LeadReportDialog,
   MeetingDialog,
-  CampaignTracksDialog,
   PauseDialog,
   TargetDialog,
   formatDayShort,
@@ -19,7 +18,7 @@ import {
  * klantenstrook onder de kalender. Eén plek, zodat ze niet uit elkaar lopen.
  */
 
-export type OpenDialog = 'invoice' | 'report' | 'meeting' | 'pause' | 'target' | 'campaigns'
+export type OpenDialog = 'invoice' | 'report' | 'meeting' | 'pause' | 'target'
 
 export interface DialogState {
   /** De sleutel uit het overzicht, niet het klant-id: één klant kan twee regels hebben. */
@@ -79,9 +78,6 @@ export function ClientActions({
       </button>
       <button type="button" onClick={() => onOpen('target')} className={smallButton}>
         Volumenorm
-      </button>
-      <button type="button" onClick={() => onOpen('campaigns')} className={smallButton}>
-        Campagnes
       </button>
       <Link href={leadOverviewHref} className={smallButton}>
         Leadoverzicht →
@@ -164,8 +160,6 @@ export function ClientDialogs({
       return <PauseDialog client={client} today={today} onClose={onClose} />
     case 'target':
       return <TargetDialog client={client} onClose={onClose} />
-    case 'campaigns':
-      return <CampaignTracksDialog client={client} onClose={onClose} />
   }
 }
 

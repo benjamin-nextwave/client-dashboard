@@ -69,13 +69,6 @@ export interface ActionResult {
   error?: string
 }
 
-/**
- * Het spoor waar iets bij hoort: campagne 1 of 2. Alles buiten die twee valt
- * terug op 1, want een klant met één campagne hoort daar hoe dan ook thuis.
- */
-function readTrack(value: number): 1 | 2 {
-  return value === 2 ? 2 : 1
-}
 
 // -----------------------------------------------------------------------------
 // Facturen
@@ -91,7 +84,6 @@ function readTrack(value: number): 1 | 2 {
  */
 export async function saveInvoiceAction(
   clientId: string,
-  campaignTrack: number,
   formData: FormData
 ): Promise<ActionResult> {
   const invoiceDate = readDate(formData, 'invoiceDate')
@@ -120,7 +112,6 @@ export async function saveInvoiceAction(
   // anders zou opnieuw opslaan zonder bijlage de bestaande PDF wissen.
   const row: Record<string, unknown> = {
     client_id: clientId,
-    campaign_track: readTrack(campaignTrack),
     invoice_date: invoiceDate,
     amount_cents: amountCents,
     paid_at: paidAt,
@@ -133,7 +124,7 @@ export async function saveInvoiceAction(
 
   const { error } = await supabase
     .from('client_invoice_marks')
-    .upsert(row, { onConflict: 'client_id,campaign_track,invoice_date' })
+    .upsert(row, { onConflict: 'client_id,invoice_date' })
 
   if (error) {
     if (pdfPath) await deleteLoopgangPdf(pdfPath)
@@ -205,7 +196,6 @@ export async function deleteInvoiceAction(
 
 export async function saveLeadReportAction(
   clientId: string,
-  campaignTrack: number,
   formData: FormData
 ): Promise<ActionResult> {
   const reportDate = readDate(formData, 'reportDate')
@@ -228,7 +218,6 @@ export async function saveLeadReportAction(
 
   const row: Record<string, unknown> = {
     client_id: clientId,
-    campaign_track: readTrack(campaignTrack),
     report_date: reportDate,
     note,
   }
@@ -239,7 +228,7 @@ export async function saveLeadReportAction(
 
   const { error } = await supabase
     .from('client_lead_reports')
-    .upsert(row, { onConflict: 'client_id,campaign_track,report_date' })
+    .upsert(row, { onConflict: 'client_id,report_date' })
 
   if (error) {
     if (pdfPath) await deleteLoopgangPdf(pdfPath)
@@ -293,7 +282,6 @@ const OUTCOMES: MeetingOutcome[] = ['planned', 'stop', 'continue']
  */
 export async function handleMeetingAction(
   clientId: string,
-  campaignTrack: number,
   cycleAnchor: string,
   outcome: MeetingOutcome,
   meetingDate: string | null,
@@ -312,14 +300,13 @@ export async function handleMeetingAction(
   const { error } = await supabase.from('client_evaluation_meetings').upsert(
     {
       client_id: clientId,
-      campaign_track: readTrack(campaignTrack),
-      cycle_anchor: cycleAnchor,
+        cycle_anchor: cycleAnchor,
       outcome,
       meeting_date: outcome === 'planned' ? meetingDate : null,
       note: note?.trim() ? note.trim().slice(0, 2000) : null,
       handled_at: new Date().toISOString(),
     },
-    { onConflict: 'client_id,campaign_track,cycle_anchor' }
+    { onConflict: 'client_id,cycle_anchor' }
   )
 
   if (error) return { error: error.message }
@@ -334,7 +321,6 @@ export async function handleMeetingAction(
 /** Maakt de afhandeling ongedaan; de belherinnering komt terug. */
 export async function resetMeetingAction(
   clientId: string,
-  campaignTrack: number,
   cycleAnchor: string
 ): Promise<ActionResult> {
   const supabase = createAdminClient()
@@ -342,7 +328,6 @@ export async function resetMeetingAction(
     .from('client_evaluation_meetings')
     .delete()
     .eq('client_id', clientId)
-    .eq('campaign_track', readTrack(campaignTrack))
     .eq('cycle_anchor', cycleAnchor)
 
   if (error) return { error: error.message }
@@ -369,12 +354,10 @@ export async function resetMeetingAction(
  */
 export async function setAdminPauseAction(
   clientId: string,
-  campaignTrack: number,
   paused: boolean,
   note: string | null
 ): Promise<ActionResult> {
   const supabase = createAdminClient()
-  const track = readTrack(campaignTrack)
 
   // Twee pauzes achter elkaar zonder hervatting zouden de log onleesbaar maken,
   // en hervatten wat niet stilstaat verschuift de cyclus zonder reden.
@@ -382,7 +365,6 @@ export async function setAdminPauseAction(
     .from('client_campaign_pause_events')
     .select('action')
     .eq('client_id', clientId)
-    .eq('campaign_track', track)
     .order('occurred_at', { ascending: false })
     .limit(1)
     .maybeSingle()
@@ -393,7 +375,6 @@ export async function setAdminPauseAction(
 
   const { error } = await supabase.from('client_campaign_pause_events').insert({
     client_id: clientId,
-    campaign_track: track,
     action: paused ? 'pause' : 'resume',
     campaigns: [],
     note: note?.trim() ? note.trim().slice(0, 2000) : null,
@@ -579,49 +560,6 @@ function formatDateLong(iso: string): string {
   if (!y || !m || !d) return iso
   const date = new Date(Date.UTC(y, m - 1, d))
   return `${WEEKDAY_NAMES[date.getUTCDay()]} ${d} ${MONTH_NAMES[m - 1]} ${y}`
-}
-
-/**
- * Hoeveel campagnes deze klant naast elkaar draait, en hoe ze heten.
- *
- * Puur een onderscheid voor de operator: het blijft één klant met één
- * client_id, en leads, mails en commissies komen gewoon bij die klant binnen.
- * Wat wél splitst is de administratie — facturen, rapportages, meetings en
- * pauzes krijgen het spoor als label, zodat elke campagne een eigen cyclus
- * heeft.
- *
- * Terugzetten naar één campagne verwijdert niets: wat op spoor 2 is vastgelegd
- * blijft in de database staan en komt terug zodra je er weer twee van maakt.
- * Verborgen data stilletjes weggooien is nooit de bedoeling.
- */
-export async function setCampaignTracksAction(
-  clientId: string,
-  count: 1 | 2,
-  name1: string | null,
-  name2: string | null
-): Promise<ActionResult> {
-  if (count !== 1 && count !== 2) return { error: 'Kies één of twee campagnes.' }
-
-  const clean = (value: string | null) => {
-    const trimmed = value?.trim() ?? ''
-    return trimmed === '' ? null : trimmed.slice(0, 80)
-  }
-
-  const supabase = createAdminClient()
-  const { error } = await supabase
-    .from('clients')
-    .update({
-      campaign_track_count: count,
-      campaign_track_1_name: clean(name1),
-      campaign_track_2_name: count === 2 ? clean(name2) : null,
-    })
-    .eq('id', clientId)
-
-  if (error) return { error: error.message }
-
-  console.log(`[loopgang] campagnes ingesteld client=${clientId} aantal=${count}`)
-  revalidate(clientId)
-  return {}
 }
 
 /** Het gewenste aantal mails per werkdag voor deze klant. */

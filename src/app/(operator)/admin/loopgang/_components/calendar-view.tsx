@@ -96,16 +96,6 @@ export function CalendarView({ overview }: Props) {
     ? overview.clients.find((c) => c.key === activeClientKey)
     : undefined
 
-  /**
-   * De andere campagne van dezelfde klant, als die er is. Daarmee wordt de
-   * toggle rechtsbovenin gevuld: één klik en je zit in de andere cyclus.
-   */
-  const siblingTrack =
-    activeClient && activeClient.campaignTrackCount === 2
-      ? overview.clients.find(
-          (c) => c.id === activeClient.id && c.campaignTrack !== activeClient.campaignTrack
-        )
-      : undefined
 
   function toggleClient(key: string) {
     setSelectedClients((prev) =>
@@ -136,29 +126,6 @@ export function CalendarView({ overview }: Props) {
             </div>
           </div>
 
-          {/* De campagnetoggle staat rechtsboven, los van de filterchips: bij een
-              klant met twee campagnes wissel je hiermee tussen de twee cycli. */}
-          {activeClient && siblingTrack && (
-            <div className="flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 p-1">
-              {[activeClient, siblingTrack]
-                .sort((a, b) => a.campaignTrack - b.campaignTrack)
-                .map((track) => (
-                  <button
-                    key={track.key}
-                    type="button"
-                    onClick={() => setSelectedClients([track.key])}
-                    aria-pressed={track.key === activeClient.key}
-                    className={`rounded-full px-3.5 py-1.5 text-[11px] font-semibold transition-colors ${
-                      track.key === activeClient.key
-                        ? 'bg-white text-gray-900 shadow-sm ring-1 ring-gray-900/5'
-                        : 'text-gray-500 hover:text-gray-900'
-                    }`}
-                  >
-                    {track.campaignTrackName ?? `Campagne ${track.campaignTrack}`}
-                  </button>
-                ))}
-            </div>
-          )}
 
           <div className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4">
             <Stat label="Draait" value={overview.totals.running} tone="ok" />

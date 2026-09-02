@@ -153,21 +153,9 @@ export function MonthGrid({ cells, selected, onSelect }: Props) {
  * Klantnamen zijn te lang voor een vakje. Het eerste woord is in de praktijk
  * genoeg om ze uit elkaar te houden; de volledige naam staat in de tooltip en
  * in het dagpaneel.
- *
- * Draait een klant twee campagnes, dan is de bedrijfsnaam juist níét genoeg —
- * beide regels zouden dan hetzelfde heten. Daar komt het eerste woord van de
- * campagnenaam achter, of anders het nummer.
  */
 export function shortLabel(client: LoopgangOverviewClient): string {
-  const name = firstWord(client.companyName)
-  if (client.campaignTrackCount < 2) return name
-  const suffix = client.campaignTrackName
-    ? firstWord(client.campaignTrackName)
-    : String(client.campaignTrack)
-  return `${name} ${suffix}`
-}
-
-function firstWord(value: string): string {
-  const first = value.trim().split(/\s+/)[0] ?? value
+  const parts = client.companyName.trim().split(/\s+/)
+  const first = parts[0] || client.companyName
   return first.length > 12 ? `${first.slice(0, 11)}…` : first
 }

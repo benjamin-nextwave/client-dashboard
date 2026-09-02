@@ -95,19 +95,14 @@ export interface OverviewPause {
 }
 
 export interface LoopgangOverviewClient {
-  /**
-   * Unieke sleutel in het overzicht. Eén klant kan twee campagnes draaien; die
-   * staan hier als twee losse regels, met dezelfde `id` maar een eigen spoor.
-   */
+  /** Unieke sleutel in het overzicht; gelijk aan het klant-id. */
   key: string
   id: string
   companyName: string
-  /** 1 of 2. Bij een klant met één campagne altijd 1. */
-  campaignTrack: number
-  campaignTrackCount: number
-  /** Zoals de eigenaar de campagne heeft genoemd; null als hij naamloos is. */
-  campaignTrackName: string | null
-  /** Bedrijfsnaam, met de campagnenaam erachter zodra er twee zijn. */
+  /**
+   * Wat er op het scherm staat. Gelijk aan de bedrijfsnaam — de loopgang maakt
+   * geen onderscheid tussen campagnes van dezelfde klant.
+   */
   displayName: string
   primaryColor: string
   goLiveDate: string | null
@@ -204,14 +199,6 @@ interface ClientRow {
   loopgang_visible: boolean | null
   is_hidden: boolean | null
   onboarding_status: string | null
-  campaign_track_count: number | null
-  campaign_track_1_name: string | null
-  campaign_track_2_name: string | null
-}
-
-/** De namen van de campagnes van één klant, op index 1 en 2. */
-function trackNames(client: ClientRow): Record<number, string | null> {
-  return { 1: client.campaign_track_1_name, 2: client.campaign_track_2_name }
 }
 
 /** Eerste en laatste dag van een maand die als YYYY-MM binnenkomt. */
@@ -266,7 +253,7 @@ export async function getLoopgangOverview(monthInput?: string): Promise<Loopgang
   const { data: clientRows } = await supabase
     .from('clients')
     .select(
-      'id, company_name, primary_color, go_live_date, daily_send_target, loopgang_visible, is_hidden, onboarding_status, campaign_track_count, campaign_track_1_name, campaign_track_2_name'
+      'id, company_name, primary_color, go_live_date, daily_send_target, loopgang_visible, is_hidden, onboarding_status'
     )
     .order('company_name', { ascending: true })
 
@@ -292,24 +279,24 @@ export async function getLoopgangOverview(monthInput?: string): Promise<Loopgang
       supabase
         .from('client_invoice_marks')
         .select(
-          'id, client_id, campaign_track, invoice_date, amount_cents, paid_at, pdf_url, pdf_path, note'
+          'id, client_id, invoice_date, amount_cents, paid_at, pdf_url, pdf_path, note'
         )
         .in('client_id', clientIds)
         .order('invoice_date', { ascending: false }),
       supabase
         .from('client_lead_reports')
-        .select('id, client_id, campaign_track, report_date, note, pdf_url, pdf_path')
+        .select('id, client_id, report_date, note, pdf_url, pdf_path')
         .in('client_id', clientIds)
         .order('report_date', { ascending: false }),
       supabase
         .from('client_evaluation_meetings')
         .select(
-          'id, client_id, campaign_track, cycle_anchor, outcome, meeting_date, note, handled_at'
+          'id, client_id, cycle_anchor, outcome, meeting_date, note, handled_at'
         )
         .in('client_id', clientIds),
       supabase
         .from('client_campaign_pause_events')
-        .select('id, client_id, campaign_track, action, occurred_at, note')
+        .select('id, client_id, action, occurred_at, note')
         .in('client_id', clientIds)
         .order('occurred_at', { ascending: false }),
       supabase
@@ -321,13 +308,14 @@ export async function getLoopgangOverview(monthInput?: string): Promise<Loopgang
 
   type Row = Record<string, unknown>
 
-  // Alles wat per campagne verschilt wordt op (klant, spoor) gegroepeerd. Bij
-  // een klant met één campagne is dat spoor altijd 1 en verandert er niets.
-  const byTrack = (r: Row) => `${String(r.client_id)}|${Number(r.campaign_track ?? 1)}`
-  const invoicesByTrack = groupBy((invoicesResult.data ?? []) as Row[], byTrack)
-  const reportsByTrack = groupBy((reportsResult.data ?? []) as Row[], byTrack)
-  const meetingsByTrack = groupBy((meetingsResult.data ?? []) as Row[], byTrack)
-  const pausesByTrack = groupBy((pausesResult.data ?? []) as Row[], byTrack)
+  // De loopgang kent één cyclus per klant. Draait een klant twee campagnes, dan
+  // is dat een onderscheid op de klantpagina's — hier tellen ze samen, alsof er
+  // simpelweg meerdere campagnes aan dezelfde klant hangen.
+  const byClient = (r: Row) => String(r.client_id)
+  const invoicesByTrack = groupBy((invoicesResult.data ?? []) as Row[], byClient)
+  const reportsByTrack = groupBy((reportsResult.data ?? []) as Row[], byClient)
+  const meetingsByTrack = groupBy((meetingsResult.data ?? []) as Row[], byClient)
+  const pausesByTrack = groupBy((pausesResult.data ?? []) as Row[], byClient)
 
   // Commissies komen per klant binnen en worden niet gesplitst: de leads komen
   // uit één stroom en er is geen veld dat zegt bij welke campagne ze horen.
@@ -339,23 +327,15 @@ export async function getLoopgangOverview(monthInput?: string): Promise<Loopgang
       // verzendvolume wordt niet gesplitst, dus beide sporen tonen hetzelfde.
       const instantly = await getInstantlySnapshot(client.id, analyticsStart, analyticsEnd)
 
-      const trackCount = client.campaign_track_count === 2 ? 2 : 1
-      const names = trackNames(client)
-
-      return Array.from({ length: trackCount }, (_, i) =>
-        buildTrack(client, i + 1, trackCount, names[i + 1] ?? null, instantly)
-      )
+      return [buildClient(client, instantly)]
     })
   ).flat()
 
-  function buildTrack(
+  function buildClient(
     client: ClientRow,
-    track: number,
-    trackCount: number,
-    trackName: string | null,
     instantly: InstantlySnapshot
   ): LoopgangOverviewClient {
-    const rowKey = `${client.id}|${track}`
+    const rowKey = client.id
 
     const invoices: OverviewInvoice[] = (invoicesByTrack.get(rowKey) ?? []).map((r) => ({
       id: String(r.id),
@@ -459,15 +439,7 @@ export async function getLoopgangOverview(monthInput?: string): Promise<Loopgang
       key: rowKey,
       id: client.id,
       companyName: client.company_name,
-      campaignTrack: track,
-      campaignTrackCount: trackCount,
-      campaignTrackName: trackName,
-      // Zolang een klant één campagne draait blijft de naam ongewijzigd; pas bij
-      // twee is er iets om uit elkaar te houden.
-      displayName:
-        trackCount === 1
-          ? client.company_name
-          : `${client.company_name} — ${trackName ?? `campagne ${track}`}`,
+      displayName: client.company_name,
       primaryColor: client.primary_color ?? '#6366f1',
       goLiveDate,
       dailySendTarget: client.daily_send_target ?? 900,
