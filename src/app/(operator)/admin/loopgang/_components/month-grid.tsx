@@ -126,13 +126,13 @@ export function MonthGrid({ cells, selected, onSelect }: Props) {
               <div className="flex flex-col gap-0.5">
                 {visible.map((entry) => (
                   <span
-                    key={`${entry.client.id}-${entry.event.kind}`}
-                    title={`${entry.client.companyName} — ${entry.event.label}`}
+                    key={`${entry.client.key}-${entry.event.kind}`}
+                    title={`${entry.client.displayName} — ${entry.event.label}`}
                     className={`truncate rounded px-1 py-0.5 text-[10px] font-medium leading-tight ${
                       STATUS_STYLES[entry.event.status]
                     }`}
                   >
-                    {shortName(entry.client.companyName)} · {SHORT_LABEL[entry.event.kind]}
+                    {shortLabel(entry.client)} · {SHORT_LABEL[entry.event.kind]}
                   </span>
                 ))}
                 {hidden > 0 && (
@@ -153,8 +153,21 @@ export function MonthGrid({ cells, selected, onSelect }: Props) {
  * Klantnamen zijn te lang voor een vakje. Het eerste woord is in de praktijk
  * genoeg om ze uit elkaar te houden; de volledige naam staat in de tooltip en
  * in het dagpaneel.
+ *
+ * Draait een klant twee campagnes, dan is de bedrijfsnaam juist níét genoeg —
+ * beide regels zouden dan hetzelfde heten. Daar komt het eerste woord van de
+ * campagnenaam achter, of anders het nummer.
  */
-export function shortName(companyName: string): string {
-  const first = companyName.trim().split(/\s+/)[0] ?? companyName
+export function shortLabel(client: LoopgangOverviewClient): string {
+  const name = firstWord(client.companyName)
+  if (client.campaignTrackCount < 2) return name
+  const suffix = client.campaignTrackName
+    ? firstWord(client.campaignTrackName)
+    : String(client.campaignTrack)
+  return `${name} ${suffix}`
+}
+
+function firstWord(value: string): string {
+  const first = value.trim().split(/\s+/)[0] ?? value
   return first.length > 12 ? `${first.slice(0, 11)}…` : first
 }

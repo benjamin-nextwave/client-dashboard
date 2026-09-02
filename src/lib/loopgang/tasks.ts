@@ -16,6 +16,8 @@ import type { EventKind, LoopgangEvent } from './events'
 export interface TaskSourceClient {
   id: string
   companyName: string
+  /** Bedrijfsnaam met de campagnenaam erachter zodra een klant er twee draait. */
+  displayName: string
   cycle: { workday: number; anchor: string | null }
   events: LoopgangEvent[]
 }
@@ -68,7 +70,7 @@ export function buildTasks(clients: TaskSourceClient[], today: string): Loopgang
 
       tasks.push({
         clientId: client.id,
-        clientName: client.companyName,
+        clientName: client.displayName,
         kind: event.kind,
         label: event.label,
         detail: event.detail,

@@ -55,7 +55,7 @@ export function CalendarView({ overview }: Props) {
 
   const clients = useMemo(() => {
     return overview.clients.filter((client) => {
-      if (selectedClients.length > 0 && !selectedClients.includes(client.id)) return false
+      if (selectedClients.length > 0 && !selectedClients.includes(client.key)) return false
 
       switch (focus) {
         case 'action':
@@ -91,14 +91,25 @@ export function CalendarView({ overview }: Props) {
    * een factuur, rapportage of meeting aan te hangen — een verkeerde klant kiezen
    * zou hier stilletjes de hele cyclus verzetten.
    */
-  const activeClientId = selectedClients.length === 1 ? selectedClients[0] : null
-  const activeClient = activeClientId
-    ? overview.clients.find((c) => c.id === activeClientId)
+  const activeClientKey = selectedClients.length === 1 ? selectedClients[0] : null
+  const activeClient = activeClientKey
+    ? overview.clients.find((c) => c.key === activeClientKey)
     : undefined
 
-  function toggleClient(id: string) {
+  /**
+   * De andere campagne van dezelfde klant, als die er is. Daarmee wordt de
+   * toggle rechtsbovenin gevuld: één klik en je zit in de andere cyclus.
+   */
+  const siblingTrack =
+    activeClient && activeClient.campaignTrackCount === 2
+      ? overview.clients.find(
+          (c) => c.id === activeClient.id && c.campaignTrack !== activeClient.campaignTrack
+        )
+      : undefined
+
+  function toggleClient(key: string) {
     setSelectedClients((prev) =>
-      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
+      prev.includes(key) ? prev.filter((c) => c !== key) : [...prev, key]
     )
   }
 
@@ -124,6 +135,30 @@ export function CalendarView({ overview }: Props) {
                 : 'Geen werkdag — de volumecijfers slaan op de laatste werkdag.'}
             </div>
           </div>
+
+          {/* De campagnetoggle staat rechtsboven, los van de filterchips: bij een
+              klant met twee campagnes wissel je hiermee tussen de twee cycli. */}
+          {activeClient && siblingTrack && (
+            <div className="flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 p-1">
+              {[activeClient, siblingTrack]
+                .sort((a, b) => a.campaignTrack - b.campaignTrack)
+                .map((track) => (
+                  <button
+                    key={track.key}
+                    type="button"
+                    onClick={() => setSelectedClients([track.key])}
+                    aria-pressed={track.key === activeClient.key}
+                    className={`rounded-full px-3.5 py-1.5 text-[11px] font-semibold transition-colors ${
+                      track.key === activeClient.key
+                        ? 'bg-white text-gray-900 shadow-sm ring-1 ring-gray-900/5'
+                        : 'text-gray-500 hover:text-gray-900'
+                    }`}
+                  >
+                    {track.campaignTrackName ?? `Campagne ${track.campaignTrack}`}
+                  </button>
+                ))}
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4">
             <Stat label="Draait" value={overview.totals.running} tone="ok" />
@@ -186,7 +221,7 @@ export function CalendarView({ overview }: Props) {
 
           <span className="self-center text-[11px] text-gray-400">
             {activeClient
-              ? `Bewerken voor ${activeClient.companyName}`
+              ? `Bewerken voor ${activeClient.displayName}`
               : selectedClients.length > 1
                 ? `${selectedClients.length} klanten geselecteerd — kies er één om iets vast te leggen`
                 : 'Kies één klant om een factuur, rapportage of meeting vast te leggen'}
@@ -252,9 +287,9 @@ export function CalendarView({ overview }: Props) {
             const active = selectedClients.includes(client.id)
             return (
               <button
-                key={client.id}
+                key={client.key}
                 type="button"
-                onClick={() => toggleClient(client.id)}
+                onClick={() => toggleClient(client.key)}
                 aria-pressed={active}
                 className={`rounded-full px-3 py-1 text-[11px] font-medium transition-colors ${
                   active
@@ -262,7 +297,7 @@ export function CalendarView({ overview }: Props) {
                     : 'border border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
                 }`}
               >
-                {client.companyName}
+                {client.displayName}
               </button>
             )
           })}
@@ -298,7 +333,7 @@ export function CalendarView({ overview }: Props) {
             today={overview.today}
             clients={clients}
             entries={entriesForSelected}
-            activeClientId={activeClientId}
+            activeClientKey={activeClientKey}
           />
         </div>
       </div>
@@ -309,8 +344,8 @@ export function CalendarView({ overview }: Props) {
         date={selectedDate}
         today={overview.today}
         clients={clients}
-        activeClientId={activeClientId}
-        onSelectClient={(id) => setSelectedClients([id])}
+        activeClientKey={activeClientKey}
+        onSelectClient={(key) => setSelectedClients([key])}
       />
 
       {quick === 'invoice' && activeClient && (

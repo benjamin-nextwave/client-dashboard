@@ -8,6 +8,7 @@ import {
   InvoiceDialog,
   LeadReportDialog,
   MeetingDialog,
+  CampaignTracksDialog,
   PauseDialog,
   TargetDialog,
   formatDayShort,
@@ -18,10 +19,11 @@ import {
  * klantenstrook onder de kalender. Eén plek, zodat ze niet uit elkaar lopen.
  */
 
-export type OpenDialog = 'invoice' | 'report' | 'meeting' | 'pause' | 'target'
+export type OpenDialog = 'invoice' | 'report' | 'meeting' | 'pause' | 'target' | 'campaigns'
 
 export interface DialogState {
-  clientId: string
+  /** De sleutel uit het overzicht, niet het klant-id: één klant kan twee regels hebben. */
+  clientKey: string
   kind: OpenDialog
 }
 
@@ -77,6 +79,9 @@ export function ClientActions({
       </button>
       <button type="button" onClick={() => onOpen('target')} className={smallButton}>
         Volumenorm
+      </button>
+      <button type="button" onClick={() => onOpen('campaigns')} className={smallButton}>
+        Campagnes
       </button>
       <Link href={leadOverviewHref} className={smallButton}>
         Leadoverzicht →
@@ -145,7 +150,7 @@ export function ClientDialogs({
   date: string
   onClose: () => void
 }) {
-  const client = state ? clients.find((c) => c.id === state.clientId) : undefined
+  const client = state ? clients.find((c) => c.key === state.clientKey) : undefined
   if (!state || !client) return null
 
   switch (state.kind) {
@@ -159,6 +164,8 @@ export function ClientDialogs({
       return <PauseDialog client={client} today={today} onClose={onClose} />
     case 'target':
       return <TargetDialog client={client} onClose={onClose} />
+    case 'campaigns':
+      return <CampaignTracksDialog client={client} onClose={onClose} />
   }
 }
 

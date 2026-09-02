@@ -96,6 +96,8 @@ export async function setClientCampaignsPaused(
   const supabase = createAdminClient()
   const { error } = await supabase.from('client_campaign_pause_events').insert({
     client_id: clientId,
+    // Zie de toelichting bij toggleInvoiceMark: deze pagina houdt campagne 1 aan.
+    campaign_track: 1,
     action: paused ? 'pause' : 'resume',
     campaigns: results,
     note: note?.trim() || null,
@@ -132,10 +134,14 @@ export async function toggleInvoiceMark(
 
   const supabase = createAdminClient()
 
+  // Deze pagina kent maar één cyclus per klant en werkt daarom uitsluitend op
+  // campagne 1. Een klant met twee campagnes beheer je op /admin/loopgang; zonder
+  // deze afbakening zou het wissen hier ook de factuur van campagne 2 op
+  // dezelfde dag meenemen.
   if (marked) {
     const { error } = await supabase
       .from('client_invoice_marks')
-      .insert({ client_id: clientId, invoice_date: date })
+      .insert({ client_id: clientId, campaign_track: 1, invoice_date: date })
     // 23505 = deze dag stond al aangevinkt; dat is geen fout voor de gebruiker.
     if (error && error.code !== '23505') return { error: error.message }
   } else {
@@ -143,6 +149,7 @@ export async function toggleInvoiceMark(
       .from('client_invoice_marks')
       .delete()
       .eq('client_id', clientId)
+      .eq('campaign_track', 1)
       .eq('invoice_date', date)
     if (error) return { error: error.message }
   }

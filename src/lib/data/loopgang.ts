@@ -349,6 +349,9 @@ async function getPauseEvents(clientId: string): Promise<LoopgangPauseEvent[]> {
     .from('client_campaign_pause_events')
     .select('id, action, occurred_at, note, campaigns')
     .eq('client_id', clientId)
+    // Deze pagina toont één cyclus; campagne 2 heeft zijn eigen pauzes en die
+    // door elkaar lezen zou onjuiste pauzeperiodes opleveren.
+    .eq('campaign_track', 1)
     .order('occurred_at', { ascending: false })
 
   return (data ?? []).map((row) => ({
@@ -368,6 +371,7 @@ async function getInvoiceMarks(clientId: string): Promise<LoopgangInvoiceMark[]>
     .from('client_invoice_marks')
     .select('id, invoice_date, note, created_at')
     .eq('client_id', clientId)
+    .eq('campaign_track', 1)
     .order('invoice_date', { ascending: false })
 
   return (data ?? []).map((row) => ({

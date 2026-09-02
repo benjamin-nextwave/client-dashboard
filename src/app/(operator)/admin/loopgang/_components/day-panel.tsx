@@ -18,8 +18,8 @@ interface Props {
   clients: LoopgangOverviewClient[]
   /** De gebeurtenissen van deze dag, in dezelfde volgorde. */
   entries: DayEntry[]
-  /** De enige gekozen klant; alleen bij hem staan de knoppen. */
-  activeClientId: string | null
+  /** De enige gekozen campagne; alleen daar staan de knoppen. */
+  activeClientKey: string | null
 }
 
 const STATUS_DOT: Record<EventStatus, string> = {
@@ -48,7 +48,7 @@ const MONTH_NAMES = [
  * Wat er op de gekozen dag moet gebeuren of is gebeurd. De klantenlijst met de
  * volumecijfers staat niet hier maar onder de kalender, in ClientStrip.
  */
-export function DayPanel({ date, today, clients, entries, activeClientId }: Props) {
+export function DayPanel({ date, today, clients, entries, activeClientKey }: Props) {
   const [dialog, setDialog] = useState<DialogState | null>(null)
 
   const isFuture = date > today
@@ -57,7 +57,7 @@ export function DayPanel({ date, today, clients, entries, activeClientId }: Prop
   const byClient = clients
     .map((client) => ({
       client,
-      events: entries.filter((e) => e.client.id === client.id).map((e) => e.event),
+      events: entries.filter((e) => e.client.key === client.key).map((e) => e.event),
     }))
     .filter((group) => group.events.length > 0)
 
@@ -80,9 +80,9 @@ export function DayPanel({ date, today, clients, entries, activeClientId }: Prop
         ) : (
           <ul className="mt-2 space-y-3">
             {byClient.map(({ client, events }) => (
-              <li key={client.id} className="rounded-xl bg-gray-50 p-3">
+              <li key={client.key} className="rounded-xl bg-gray-50 p-3">
                 <div className="flex items-baseline justify-between gap-2">
-                  <span className="text-xs font-semibold text-gray-900">{client.companyName}</span>
+                  <span className="text-xs font-semibold text-gray-900">{client.displayName}</span>
                   {client.cycle.anchor && (
                     <span className="shrink-0 text-[10px] tabular-nums text-gray-400">
                       werkdag {client.cycle.workday}
@@ -108,11 +108,11 @@ export function DayPanel({ date, today, clients, entries, activeClientId }: Prop
 
                 {/* Alleen bij de klant die als enige gekozen is; anders is dit
                     paneel een overzicht en geen invoerscherm. */}
-                {activeClientId === client.id && (
+                {activeClientKey === client.key && (
                   <ClientActions
                     client={client}
                     today={today}
-                    onOpen={(kind: OpenDialog) => setDialog({ clientId: client.id, kind })}
+                    onOpen={(kind: OpenDialog) => setDialog({ clientKey: client.key, kind })}
                   />
                 )}
               </li>

@@ -15,9 +15,9 @@ interface Props {
   date: string
   today: string
   clients: LoopgangOverviewClient[]
-  /** De enige gekozen klant; alleen bij hem kan er iets vastgelegd worden. */
-  activeClientId: string | null
-  onSelectClient: (clientId: string) => void
+  /** De enige gekozen campagne; alleen daar kan er iets vastgelegd worden. */
+  activeClientKey: string | null
+  onSelectClient: (clientKey: string) => void
 }
 
 /**
@@ -31,7 +31,7 @@ export function ClientStrip({
   date,
   today,
   clients,
-  activeClientId,
+  activeClientKey,
   onSelectClient,
 }: Props) {
   const [dialog, setDialog] = useState<DialogState | null>(null)
@@ -59,23 +59,23 @@ export function ClientStrip({
             const sent = client.sentByDate[date] ?? 0
             const pct = Math.min(100, Math.round((sent / client.dailySendTarget) * 100))
             const paused = client.pausedDates.includes(date)
-            const open = expanded === client.id
+            const open = expanded === client.key
 
             return (
               <div
-                key={client.id}
+                key={client.key}
                 className={`rounded-xl border p-3 transition-colors ${
                   open ? 'border-gray-300 bg-gray-50' : 'border-gray-100 bg-white hover:bg-gray-50'
                 }`}
               >
                 <button
                   type="button"
-                  onClick={() => setExpanded(open ? null : client.id)}
+                  onClick={() => setExpanded(open ? null : client.key)}
                   className="w-full text-left"
                 >
                   <div className="flex items-baseline justify-between gap-2">
                     <span className="truncate text-[11px] font-semibold text-gray-900">
-                      {client.companyName}
+                      {client.displayName}
                     </span>
                     {client.cycle.anchor && (
                       <span className="shrink-0 text-[10px] tabular-nums text-gray-400">
@@ -125,19 +125,19 @@ export function ClientStrip({
                     {/* Vastleggen kan alleen bij de klant die als enige gekozen
                         is. Staat de kalender op iedereen, dan is dit een
                         overzicht en geen invoerscherm. */}
-                    {activeClientId === client.id ? (
+                    {activeClientKey === client.key ? (
                       <ClientActions
                         client={client}
                         today={today}
-                        onOpen={(kind: OpenDialog) => setDialog({ clientId: client.id, kind })}
+                        onOpen={(kind: OpenDialog) => setDialog({ clientKey: client.key, kind })}
                       />
                     ) : (
                       <button
                         type="button"
-                        onClick={() => onSelectClient(client.id)}
+                        onClick={() => onSelectClient(client.key)}
                         className="mt-2.5 inline-flex items-center gap-1.5 rounded-lg bg-gray-900 px-2.5 py-1 text-[10px] font-semibold text-white transition-colors hover:bg-gray-800"
                       >
-                        Alleen deze klant tonen om te bewerken
+                        Alleen deze campagne tonen om te bewerken
                       </button>
                     )}
                   </div>
