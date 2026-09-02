@@ -164,6 +164,12 @@ export interface CycleInvoice {
 
 export interface CycleInput {
   today: string
+  /**
+   * De dag waarop de lopende campagnemaand begon. Wint van alles: alleen de
+   * operator weet welke periode een factuur dekt, en een factuur die te laat de
+   * deur uit ging zegt niets over wanneer de volgende maand is begonnen.
+   */
+  cycleStart?: string | null
   /** Laatste factuurdatum; wint van de livegang. */
   lastInvoice: CycleInvoice | null
   /** Livegang van de klant; het anker zolang er nooit gefactureerd is. */
@@ -200,7 +206,7 @@ export interface LoopgangReminder {
 export interface LoopgangCycle {
   /** De datum waar de cyclus vanaf telt; null als hij niet te bepalen is. */
   anchor: string | null
-  anchorSource: 'invoice' | 'go-live' | null
+  anchorSource: 'cycle-start' | 'invoice' | 'go-live' | null
   /** Werkdag van de cyclus waarop we vandaag staan; 0 zolang het anker in de toekomst ligt. */
   workday: number
   calendarDay: number
@@ -243,18 +249,48 @@ function plural(n: number, one: string, many: string): string {
   return `${n} ${n === 1 ? one : many}`
 }
 
+/**
+ * De melding over een openstaande factuur. Staat los van de cyclus: geld dat
+ * niet binnen is blijft opgehaald moeten worden, ook als de campagne stilligt.
+ */
+function paymentReminder(
+  lastInvoice: CycleInvoice | null,
+  today: string
+): LoopgangReminder | null {
+  if (!lastInvoice || lastInvoice.paidAt) return null
+
+  const openDays = daysBetween(lastInvoice.date, today)
+  if (openDays > PAYMENT_TERM_DAYS) {
+    return {
+      kind: 'payment-overdue',
+      severity: 'urgent',
+      title: 'Factuur niet betaald',
+      detail: `${plural(openDays, 'dag', 'dagen')} open, termijn is ${PAYMENT_TERM_DAYS} dagen.`,
+    }
+  }
+  return {
+    kind: 'payment-overdue',
+    severity: 'info',
+    title: 'Factuur staat open',
+    detail: `Betaaltermijn loopt tot ${nlDate(addDays(lastInvoice.date, PAYMENT_TERM_DAYS))}.`,
+  }
+}
+
 export function buildCycle(input: CycleInput): LoopgangCycle {
   const { today, lastInvoice, goLiveDate, meeting } = input
   const isPaused = input.isPaused ?? NEVER_PAUSED
   const pausedNow = input.pausedNow ?? false
   const pausedSince = input.pausedSince ?? null
+  const cycleStart = input.cycleStart ?? null
 
-  const anchor = lastInvoice?.date ?? goLiveDate ?? null
-  const anchorSource: LoopgangCycle['anchorSource'] = lastInvoice
-    ? 'invoice'
-    : goLiveDate
-      ? 'go-live'
-      : null
+  const anchor = cycleStart ?? lastInvoice?.date ?? goLiveDate ?? null
+  const anchorSource: LoopgangCycle['anchorSource'] = cycleStart
+    ? 'cycle-start'
+    : lastInvoice
+      ? 'invoice'
+      : goLiveDate
+        ? 'go-live'
+        : null
 
   const reminders: LoopgangReminder[] = []
 
@@ -310,6 +346,13 @@ export function buildCycle(input: CycleInput): LoopgangCycle {
         : 'De cyclus telt zolang niet door.',
     })
 
+    // Een pauze zet de cyclus stil, geen openstaande rekening. Zonder deze
+    // melding verdwijnt een onbetaalde factuur uit beeld zodra de campagne
+    // wordt gepauzeerd — juist bij een klant die stopt is dat het enige wat er
+    // nog te bewaken valt.
+    const payment = paymentReminder(lastInvoice, today)
+    if (payment) reminders.push(payment)
+
     return {
       anchor,
       anchorSource,
@@ -324,7 +367,7 @@ export function buildCycle(input: CycleInput): LoopgangCycle {
       paused: true,
       pausedSince,
       reminders,
-      urgency: SEVERITY_WEIGHT.warn,
+      urgency: reminders.reduce((sum, r) => sum + SEVERITY_WEIGHT[r.severity], 0),
     }
   }
 
@@ -361,24 +404,8 @@ export function buildCycle(input: CycleInput): LoopgangCycle {
     })
   }
 
-  if (lastInvoice && !lastInvoice.paidAt) {
-    const openDays = daysBetween(lastInvoice.date, today)
-    if (openDays > PAYMENT_TERM_DAYS) {
-      reminders.push({
-        kind: 'payment-overdue',
-        severity: 'urgent',
-        title: 'Factuur niet betaald',
-        detail: `${plural(openDays, 'dag', 'dagen')} open, termijn is ${PAYMENT_TERM_DAYS} dagen.`,
-      })
-    } else {
-      reminders.push({
-        kind: 'payment-overdue',
-        severity: 'info',
-        title: 'Factuur staat open',
-        detail: `Betaaltermijn loopt tot ${nlDate(addDays(lastInvoice.date, PAYMENT_TERM_DAYS))}.`,
-      })
-    }
-  }
+  const payment = paymentReminder(lastInvoice, today)
+  if (payment) reminders.push(payment)
 
   // --- Evaluatiemeeting -----------------------------------------------------
 

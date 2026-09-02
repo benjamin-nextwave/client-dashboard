@@ -106,6 +106,9 @@ export interface LoopgangOverviewClient {
   displayName: string
   primaryColor: string
   goLiveDate: string | null
+  /** Handmatige start van de lopende campagnemaand; wint als anker van de factuurdatum. */
+  cycleStart: string | null
+  cycleStartNote: string | null
   dailySendTarget: number
   isOnboarding: boolean
 
@@ -195,6 +198,8 @@ interface ClientRow {
   company_name: string
   primary_color: string | null
   go_live_date: string | null
+  cycle_start_date: string | null
+  cycle_start_note: string | null
   daily_send_target: number | null
   loopgang_visible: boolean | null
   is_hidden: boolean | null
@@ -253,7 +258,7 @@ export async function getLoopgangOverview(monthInput?: string): Promise<Loopgang
   const { data: clientRows } = await supabase
     .from('clients')
     .select(
-      'id, company_name, primary_color, go_live_date, daily_send_target, loopgang_visible, is_hidden, onboarding_status'
+      'id, company_name, primary_color, go_live_date, cycle_start_date, cycle_start_note, daily_send_target, loopgang_visible, is_hidden, onboarding_status'
     )
     .order('company_name', { ascending: true })
 
@@ -374,10 +379,13 @@ export async function getLoopgangOverview(monthInput?: string): Promise<Loopgang
 
     const lastInvoice = invoices[0] ?? null
     const goLiveDate = client.go_live_date ? String(client.go_live_date).slice(0, 10) : null
+    const cycleStart = client.cycle_start_date
+      ? String(client.cycle_start_date).slice(0, 10)
+      : null
 
     // Het anker bepaalt welke afgehandelde meeting nog meetelt: eentje van een
     // vorige cyclus mag de herinnering van deze cyclus niet stilzetten.
-    const anchor = lastInvoice?.invoiceDate ?? goLiveDate ?? null
+    const anchor = cycleStart ?? lastInvoice?.invoiceDate ?? goLiveDate ?? null
     const meeting = anchor ? (meetings.find((m) => m.cycleAnchor === anchor) ?? null) : null
 
     const cycleMeeting: CycleMeeting | null = meeting
@@ -392,6 +400,7 @@ export async function getLoopgangOverview(monthInput?: string): Promise<Loopgang
 
     const cycle = buildCycle({
       today,
+      cycleStart,
       lastInvoice: lastInvoice
         ? {
             date: lastInvoice.invoiceDate,
@@ -442,6 +451,8 @@ export async function getLoopgangOverview(monthInput?: string): Promise<Loopgang
       displayName: client.company_name,
       primaryColor: client.primary_color ?? '#6366f1',
       goLiveDate,
+      cycleStart,
+      cycleStartNote: client.cycle_start_note ?? null,
       dailySendTarget: client.daily_send_target ?? 900,
       isOnboarding: (client.onboarding_status ?? 'live') === 'onboarding',
 
