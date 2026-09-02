@@ -154,10 +154,13 @@ export function CampaignControls({ clientId, state }: Props) {
             )}
           </p>
         </div>
+        {/* Bewust niet op `isLocked`: een afgeronde onboarding zegt niets over of
+            een klant nog een formulier mag indienen. Dat gebeurt juist vaak
+            later, bij een nieuwe doelgroep of een tweede campagne. */}
         <button
           type="button"
           onClick={handleAllowAnotherForm}
-          disabled={pending || isLocked}
+          disabled={pending}
           className="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-white px-4 py-2 text-xs font-semibold text-indigo-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-indigo-300 hover:bg-indigo-50 hover:shadow disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
         >
           <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
