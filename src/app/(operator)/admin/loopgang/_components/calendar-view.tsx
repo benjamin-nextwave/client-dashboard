@@ -70,7 +70,7 @@ export function CalendarView({ overview }: Props) {
         case 'meeting':
           return client.cycle.reminders.some((r) => r.kind === 'meeting-schedule')
         case 'stalled':
-          return client.sentOnVolumeDate === 0
+          return client.isStalled && !client.isPaused
         default:
           return true
       }

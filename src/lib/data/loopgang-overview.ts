@@ -47,6 +47,25 @@ import { buildEvents, type LoopgangEvent } from '@/lib/loopgang/events'
 /** Hoeveel klanten tegelijk bij Instantly worden opgehaald. */
 const CLIENT_CONCURRENCY = 5
 /**
+ * Hoeveel campagnes van dezelfde klant tegelijk worden opgehaald.
+ *
+ * Zonder deze grens vuurde één klant al zijn campagnes in één keer af — bij
+ * Advies & Meer zijn dat er veertien, met twee aanroepen elk, dus 28 verzoeken
+ * tegelijk. Maal vijf klanten kwamen er ruim honderd verzoeken in de lucht en
+ * begon Instantly te knijpen. Het gevolg was geen foutmelding maar iets veel
+ * vervelenders: bij een willekeurige handvol klanten viel het dagvolume weg,
+ * elke keer bij andere. Vijf maal drie maal twee is dertig, en dat houdt hij.
+ */
+const CAMPAIGN_CONCURRENCY = 3
+/**
+ * Hoeveel werkdagen zonder verzending een campagne stil laat staan.
+ *
+ * Eén dag zegt niets: een campagne die 's ochtends nog niet is begonnen, of een
+ * dag waarop het bestand op was, is niet stilgevallen. Pas als er twee volle
+ * werkdagen niets is verstuurd is er echt iets aan de hand.
+ */
+const STALL_WORKDAYS = 2
+/**
  * Hoe ver terug commissieleads worden opgehaald. Een cyclus duurt ongeveer een
  * maand; 120 dagen dekt ook een klant die al een tijd niet gefactureerd is,
  * zonder de hele geschiedenis binnen te trekken.
@@ -117,6 +136,15 @@ export interface LoopgangOverviewClient {
   volumeDate: string
   volumeDateIsToday: boolean
   sentOnVolumeDate: number
+  /**
+   * Staat de campagne stil? Waar is: geen verzending vandaag én geen verzending
+   * op de laatste twee afgeronde werkdagen. Eén stille dag zegt niets.
+   */
+  isStalled: boolean
+  /** De werkdagen waarop dat is getoetst, zodat het na te rekenen is. */
+  stallWorkdays: string[]
+  /** Laatste dag met verzending binnen het opgehaalde bereik; null als er geen is. */
+  lastSendDate: string | null
   /** Verstuurde mails per dag binnen het opgehaalde bereik. */
   sentByDate: Record<string, number>
   /** Dagen waarop de campagnes bewust stilstonden, binnen het opgehaalde bereik. */
@@ -193,6 +221,20 @@ async function mapWithLimit<T, R>(
   return results
 }
 
+/**
+ * De laatste `n` werkdagen vóór vandaag. Vandaag telt niet mee: die dag loopt
+ * nog, en 's ochtends heeft niemand verstuurd.
+ */
+function recentWorkdays(today: string, n: number): string[] {
+  const days: string[] = []
+  let day = addDays(today, -1)
+  for (let i = 0; i < 30 && days.length < n; i += 1) {
+    if (isWeekday(day)) days.push(day)
+    day = addDays(day, -1)
+  }
+  return days.reverse()
+}
+
 interface ClientRow {
   id: string
   company_name: string
@@ -248,11 +290,16 @@ export async function getLoopgangOverview(monthInput?: string): Promise<Loopgang
   const month = /^\d{4}-\d{2}$/.test(monthInput ?? '') ? (monthInput as string) : today.slice(0, 7)
   const bounds = monthBounds(month)
 
-  // Eén bereik dat zowel de getoonde maand als vandaag dekt: de kalender heeft de
-  // maand nodig, de kopregel het volume van vandaag. Toekomstige dagen leveren
-  // niets op, dus daar stopt het bereik.
-  const analyticsStart = bounds.start < today ? bounds.start : today
-  const analyticsEnd = bounds.end > today ? today : bounds.end
+  // De werkdagen waarop stilstand wordt getoetst. Die kunnen vóór de getoonde
+  // maand liggen — op 1 september kijk je terug naar 28 en 29 augustus — dus ze
+  // bepalen mee hoe ver het bereik terugloopt.
+  const stallWorkdays = recentWorkdays(today, STALL_WORKDAYS)
+
+  // Eén bereik dat de getoonde maand, vandaag en de stildagen dekt. Toekomstige
+  // dagen leveren niets op, dus daar stopt het bereik. De lengte kost niets: de
+  // dagcijfers gaan per campagne in één aanroep.
+  const analyticsStart = [bounds.start, today, ...stallWorkdays].reduce((a, b) => (a < b ? a : b))
+  const analyticsEnd = today
   const volumeDate = todayIsWorkday ? today : lastWorkdayOnOrBefore(today)
 
   const { data: clientRows } = await supabase
@@ -444,6 +491,18 @@ export async function getLoopgangOverview(monthInput?: string): Promise<Loopgang
     const sentOnVolumeDate = instantly.sentPerDay.get(volumeDate) ?? 0
     if (sentOnVolumeDate > 0) sentByDate[volumeDate] = sentOnVolumeDate
 
+    // Stilstand is pas stilstand na twee lege werkdagen. Vandaag telt mee als
+    // hij al iets heeft opgeleverd, maar een lege ochtend maakt niemand stil.
+    const sentToday = instantly.sentPerDay.get(today) ?? 0
+    const isStalled =
+      sentToday === 0 && stallWorkdays.every((d) => (instantly.sentPerDay.get(d) ?? 0) === 0)
+
+    const verzenddagen = [...instantly.sentPerDay.entries()]
+      .filter(([, n]) => n > 0)
+      .map(([d]) => d)
+      .sort()
+    const lastSendDate = verzenddagen[verzenddagen.length - 1] ?? null
+
     const result: LoopgangOverviewClient = {
       key: rowKey,
       id: client.id,
@@ -460,6 +519,9 @@ export async function getLoopgangOverview(monthInput?: string): Promise<Loopgang
       volumeDate,
       volumeDateIsToday: volumeDate === today,
       sentOnVolumeDate,
+      isStalled,
+      stallWorkdays,
+      lastSendDate,
       sentByDate,
       pausedDates,
 
@@ -510,8 +572,9 @@ export async function getLoopgangOverview(monthInput?: string): Promise<Loopgang
   })
 
   const totals = {
-    running: sorted.filter((c) => c.sentOnVolumeDate > 0).length,
-    stalled: sorted.filter((c) => c.sentOnVolumeDate === 0).length,
+    // Een gepauzeerde klant staat bewust stil; die hoort niet bij de alarmbel.
+    running: sorted.filter((c) => !c.isStalled).length,
+    stalled: sorted.filter((c) => c.isStalled && !c.isPaused).length,
     // Een gepauzeerde klant haalt werkdag 20 nooit, maar de periode die wél
     // gedraaid heeft moet net zo goed gefactureerd worden. Beide tellen mee.
     invoicesDue: sorted.filter((c) =>
@@ -570,32 +633,30 @@ async function getInstantlySnapshot(
 
   const failed: string[] = []
 
-  const perCampaign = await Promise.all(
-    refs.map(async (ref) => {
-      const [statusResult, dailyResult] = await Promise.all([
-        tryInstantlyKeys(
-          apiKeys,
-          (key) => getCampaign(ref.instantlyCampaignId, key).then((c) => c.status),
-          (status) => typeof status === 'number'
-        ),
-        tryInstantlyKeys(
-          apiKeys,
-          (key) => getCampaignDailyAnalytics(ref.instantlyCampaignId, rangeStart, rangeEnd, key),
-          (days) => days.length > 0
-        ),
-      ])
+  const perCampaign = await mapWithLimit(refs, CAMPAIGN_CONCURRENCY, async (ref) => {
+    const [statusResult, dailyResult] = await Promise.all([
+      tryInstantlyKeys(
+        apiKeys,
+        (key) => getCampaign(ref.instantlyCampaignId, key).then((c) => c.status),
+        (status) => typeof status === 'number'
+      ),
+      tryInstantlyKeys(
+        apiKeys,
+        (key) => getCampaignDailyAnalytics(ref.instantlyCampaignId, rangeStart, rangeEnd, key),
+        (days) => days.length > 0
+      ),
+    ])
 
-      if (dailyResult.error) {
-        console.error(
-          `[loopgang-overview] dagcijfers mislukt client=${clientId} campaign=${ref.instantlyCampaignId}:`,
-          dailyResult.error
-        )
-        failed.push(ref.name)
-      }
+    if (dailyResult.error) {
+      console.error(
+        `[loopgang-overview] dagcijfers mislukt client=${clientId} campaign=${ref.instantlyCampaignId}:`,
+        dailyResult.error
+      )
+      failed.push(ref.name)
+    }
 
-      return { ref, status: statusResult.value, daily: dailyResult.value ?? [] }
-    })
-  )
+    return { ref, status: statusResult.value, daily: dailyResult.value ?? [] }
+  })
 
   const sentPerDay = new Map<string, number>()
   for (const { daily } of perCampaign) {

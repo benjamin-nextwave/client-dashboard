@@ -125,11 +125,16 @@ function beschrijfKlant(c: LoopgangOverviewClient, vandaag: string): string {
       `  GEPAUZEERD sinds ${c.pausedSince ?? 'onbekend'} (${dagen} dagen). De cyclus telt zolang niet door.`
     )
     if (c.lastPause?.note) regels.push(`  Notitie bij de pauze: ${c.lastPause.note}`)
+  } else if (c.isStalled) {
+    regels.push(
+      `  STAAT STIL: geen verzending vandaag en niet op ${c.stallWorkdays.join(' en ')}.` +
+        (c.lastSendDate ? ` Laatste verzending ${c.lastSendDate}.` : ' Geen verzending gemeten.')
+    )
   } else {
     regels.push(
       c.sentOnVolumeDate > 0
         ? `  Draait: ${c.sentOnVolumeDate} mails op ${c.volumeDate} (norm ${c.dailySendTarget}).`
-        : `  Geen verzending gemeten op ${c.volumeDate} (norm ${c.dailySendTarget}).`
+        : `  Draait; vandaag nog niets verstuurd, laatste verzending ${c.lastSendDate ?? 'onbekend'} (norm ${c.dailySendTarget}).`
     )
   }
 
