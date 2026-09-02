@@ -16,6 +16,14 @@ import {
 
 const OVERVIEW_PATH = '/admin/loopgang'
 
+/**
+ * Het centrale overzicht kent één cyclus per klant, ook als er twee campagnes
+ * naast elkaar draaien: de sporen worden hier samengeteld. Alles wat vanaf deze
+ * pagina wordt vastgelegd komt daarom op spoor 1. Wie per campagne wil boeken
+ * doet dat op de klantpagina, waar de schakelaar staat.
+ */
+const CENTRAL_TRACK = 1
+
 function paths(clientId: string): string[] {
   return [OVERVIEW_PATH, `/admin/clients/${clientId}/loopgang`]
 }
@@ -112,6 +120,7 @@ export async function saveInvoiceAction(
   // anders zou opnieuw opslaan zonder bijlage de bestaande PDF wissen.
   const row: Record<string, unknown> = {
     client_id: clientId,
+    campaign_track: CENTRAL_TRACK,
     invoice_date: invoiceDate,
     amount_cents: amountCents,
     paid_at: paidAt,
@@ -124,15 +133,27 @@ export async function saveInvoiceAction(
 
   const { error } = await supabase
     .from('client_invoice_marks')
-    .upsert(row, { onConflict: 'client_id,invoice_date' })
+    .upsert(row, { onConflict: 'client_id,campaign_track,invoice_date' })
 
   if (error) {
     if (pdfPath) await deleteLoopgangPdf(pdfPath)
     return { error: error.message }
   }
 
+  // De volgende cyclus begint zelden op de dag dat de factuur weggaat: hij
+  // begint op de dag na de periode die je zojuist hebt gefactureerd. Wie dat
+  // hier invult voorkomt dat een late factuur de hele volgende maand opschuift.
+  const nextCycleStart = readDate(formData, 'nextCycleStart')
+  if (nextCycleStart) {
+    const { error: startError } = await supabase
+      .from('clients')
+      .update({ cycle_start_date: nextCycleStart })
+      .eq('id', clientId)
+    if (startError) return { error: startError.message }
+  }
+
   console.log(
-    `[loopgang] factuur opgeslagen client=${clientId} datum=${invoiceDate} bedrag=${amountCents}`
+    `[loopgang] factuur opgeslagen client=${clientId} datum=${invoiceDate} bedrag=${amountCents} volgende-cyclus=${nextCycleStart ?? 'ongewijzigd'}`
   )
   revalidate(clientId)
   return {}
@@ -218,6 +239,7 @@ export async function saveLeadReportAction(
 
   const row: Record<string, unknown> = {
     client_id: clientId,
+    campaign_track: CENTRAL_TRACK,
     report_date: reportDate,
     note,
   }
@@ -228,7 +250,7 @@ export async function saveLeadReportAction(
 
   const { error } = await supabase
     .from('client_lead_reports')
-    .upsert(row, { onConflict: 'client_id,report_date' })
+    .upsert(row, { onConflict: 'client_id,campaign_track,report_date' })
 
   if (error) {
     if (pdfPath) await deleteLoopgangPdf(pdfPath)
@@ -300,13 +322,14 @@ export async function handleMeetingAction(
   const { error } = await supabase.from('client_evaluation_meetings').upsert(
     {
       client_id: clientId,
-        cycle_anchor: cycleAnchor,
+      campaign_track: CENTRAL_TRACK,
+      cycle_anchor: cycleAnchor,
       outcome,
       meeting_date: outcome === 'planned' ? meetingDate : null,
       note: note?.trim() ? note.trim().slice(0, 2000) : null,
       handled_at: new Date().toISOString(),
     },
-    { onConflict: 'client_id,cycle_anchor' }
+    { onConflict: 'client_id,campaign_track,cycle_anchor' }
   )
 
   if (error) return { error: error.message }
@@ -563,6 +586,45 @@ function formatDateLong(iso: string): string {
 }
 
 /** Het gewenste aantal mails per werkdag voor deze klant. */
+/**
+ * Zet de dag waarop de lopende campagnemaand begon. Vanaf die dag telt de
+ * cyclus, in plaats van vanaf de laatste factuur.
+ *
+ * Waarom handmatig: alleen de operator weet welke periode een factuur dekt. Ging
+ * een factuur te laat de deur uit, dan zegt de factuurdatum niets over wanneer
+ * de volgende maand begon — en zonder deze datum schuift die achterstand mee
+ * naar de volgende cyclus in plaats van dat hij wordt gemeld.
+ *
+ * Een lege datum wist de startdatum; de cyclus valt dan terug op de factuurdatum
+ * en anders op de livegang, precies zoals het zonder dit veld werkte.
+ */
+export async function setCycleStartAction(
+  clientId: string,
+  formData: FormData
+): Promise<ActionResult> {
+  const raw = formData.get('cycleStart')
+  const cycleStart = typeof raw === 'string' && raw.trim() !== '' ? readDate(formData, 'cycleStart') : null
+
+  if (typeof raw === 'string' && raw.trim() !== '' && cycleStart === null) {
+    return { error: 'Kies een geldige datum, of laat het veld leeg.' }
+  }
+
+  const supabase = createAdminClient()
+  const { error } = await supabase
+    .from('clients')
+    .update({
+      cycle_start_date: cycleStart,
+      cycle_start_note: cycleStart ? readText(formData, 'cycleStartNote') : null,
+    })
+    .eq('id', clientId)
+
+  if (error) return { error: error.message }
+
+  console.log(`[loopgang] cyclusstart gezet client=${clientId} datum=${cycleStart ?? 'leeg'}`)
+  revalidate(clientId)
+  return {}
+}
+
 export async function setDailySendTargetAction(
   clientId: string,
   target: number

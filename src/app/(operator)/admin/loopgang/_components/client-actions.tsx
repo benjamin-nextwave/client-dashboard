@@ -5,6 +5,7 @@ import { formatEuroCents } from '@/lib/commissions-shared'
 import type { LoopgangOverviewClient } from '@/lib/data/loopgang-overview'
 import { MEETING_WORKDAY } from '@/lib/loopgang/cycle'
 import {
+  CycleStartDialog,
   InvoiceDialog,
   LeadReportDialog,
   MeetingDialog,
@@ -18,7 +19,7 @@ import {
  * klantenstrook onder de kalender. Eén plek, zodat ze niet uit elkaar lopen.
  */
 
-export type OpenDialog = 'invoice' | 'report' | 'meeting' | 'pause' | 'target'
+export type OpenDialog = 'invoice' | 'report' | 'meeting' | 'pause' | 'target' | 'cycleStart'
 
 export interface DialogState {
   /** De sleutel uit het overzicht, niet het klant-id: één klant kan twee regels hebben. */
@@ -76,6 +77,13 @@ export function ClientActions({
       >
         {client.isPaused ? 'Beëindig pauze' : 'Pauze start'}
       </button>
+      <button
+        type="button"
+        onClick={() => onOpen('cycleStart')}
+        className={client.cycleStart ? activeButton : smallButton}
+      >
+        Cyclusstart
+      </button>
       <button type="button" onClick={() => onOpen('target')} className={smallButton}>
         Volumenorm
       </button>
@@ -89,6 +97,20 @@ export function ClientActions({
   )
 }
 
+/** Waar het startpunt van de cyclus vandaan komt. */
+function anchorLabel(source: LoopgangOverviewClient['cycle']['anchorSource']): string {
+  switch (source) {
+    case 'cycle-start':
+      return 'handmatig gezet'
+    case 'invoice':
+      return 'laatste factuur'
+    case 'go-live':
+      return 'livegang'
+    default:
+      return 'onbekend'
+  }
+}
+
 export function CycleSummary({ client }: { client: LoopgangOverviewClient }) {
   const { cycle } = client
   return (
@@ -98,6 +120,11 @@ export function CycleSummary({ client }: { client: LoopgangOverviewClient }) {
         <dd className="font-medium tabular-nums text-gray-900">
           {cycle.anchor ? `werkdag ${cycle.workday} · dag ${cycle.calendarDay}` : 'geen startpunt'}
         </dd>
+        {cycle.anchor && (
+          <dd className="text-[10px] text-gray-400">
+            vanaf {formatDayShort(cycle.anchor)} · {anchorLabel(cycle.anchorSource)}
+          </dd>
+        )}
       </div>
       <div>
         <dt className="text-gray-400">Commissies</dt>
@@ -160,8 +187,15 @@ export function ClientDialogs({
       return <PauseDialog client={client} today={today} onClose={onClose} />
     case 'target':
       return <TargetDialog client={client} onClose={onClose} />
+    case 'cycleStart':
+      return <CycleStartDialog client={client} onClose={onClose} />
   }
 }
 
 const smallButton =
   'inline-flex items-center rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-[10px] font-semibold text-gray-700 transition-colors hover:border-gray-300 hover:bg-gray-50'
+
+// Een handmatig gezette cyclusstart overrulet de factuurdatum. Dat moet je aan
+// de knop kunnen zien, anders zoek je je scheel naar waarom de teller afwijkt.
+const activeButton =
+  'inline-flex items-center rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[10px] font-semibold text-indigo-700 transition-colors hover:bg-indigo-100'

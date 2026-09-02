@@ -18,6 +18,7 @@ import {
   setAdminPauseAction,
   saveInvoiceAction,
   saveLeadReportAction,
+  setCycleStartAction,
   setDailySendTargetAction,
   setInvoicePaidAction,
   setLoopgangVisibilityAction,
@@ -176,6 +177,24 @@ export function InvoiceDialog({ client, today, onClose }: DialogProps) {
             Betaald op <span className="font-normal normal-case text-gray-400">(leeg = nog open)</span>
           </label>
           <input id="paidAt" name="paidAt" type="date" className={`mt-1 ${fieldClass}`} />
+        </div>
+
+        <div>
+          <label className={labelClass} htmlFor="nextCycleStart">
+            Volgende cyclus start op{' '}
+            <span className="font-normal normal-case text-gray-400">(leeg = laten staan)</span>
+          </label>
+          <input
+            id="nextCycleStart"
+            name="nextCycleStart"
+            type="date"
+            className={`mt-1 ${fieldClass}`}
+          />
+          <p className="mt-1 text-[11px] text-gray-500">
+            De dag ná de periode die je zojuist factureert. Vul dit in als de factuur later de
+            deur uit ging dan de campagnemaand liep — anders schuift de achterstand mee naar de
+            volgende cyclus.
+          </p>
         </div>
 
         <div>
@@ -706,6 +725,103 @@ function countDaysBetween(fromIso: string, toIso: string): number {
 
 // -----------------------------------------------------------------------------
 // Verzendnorm
+// -----------------------------------------------------------------------------
+
+// -----------------------------------------------------------------------------
+// Cyclusstart
+// -----------------------------------------------------------------------------
+
+/**
+ * De dag waarop de lopende campagnemaand begon. Zolang dit veld leeg is telt de
+ * cyclus vanaf de laatste factuur — en dat klopt alleen als er op tijd is
+ * gefactureerd.
+ */
+export function CycleStartDialog({ client, onClose }: Omit<DialogProps, 'today'>) {
+  const router = useRouter()
+  const [pending, startTransition] = useTransition()
+  const [error, setError] = useState<string | null>(null)
+
+  function submit(formData: FormData) {
+    setError(null)
+    startTransition(async () => {
+      const result = await setCycleStartAction(client.id, formData)
+      if (result.error) {
+        setError(result.error)
+        return
+      }
+      router.refresh()
+      onClose()
+    })
+  }
+
+  const bron =
+    client.cycle.anchorSource === 'cycle-start'
+      ? 'de startdatum hieronder'
+      : client.cycle.anchorSource === 'invoice'
+        ? 'de laatste factuur'
+        : client.cycle.anchorSource === 'go-live'
+          ? 'de livegang'
+          : 'niets — er is geen startpunt'
+
+  return (
+    <Modal
+      title="Start van de campagnemaand"
+      subtitle={`${client.displayName} — de cyclus telt nu vanaf ${bron}`}
+      onClose={onClose}
+    >
+      <form action={submit} className="space-y-3">
+        <div>
+          <label className={labelClass} htmlFor="cycleStart">
+            Cyclus start op{' '}
+            <span className="font-normal normal-case text-gray-400">(leeg = terug naar de factuurdatum)</span>
+          </label>
+          <input
+            id="cycleStart"
+            name="cycleStart"
+            type="date"
+            defaultValue={client.cycleStart ?? ''}
+            className={`mt-1 ${fieldClass}`}
+          />
+        </div>
+
+        <div>
+          <label className={labelClass} htmlFor="cycleStartNote">
+            Toelichting
+          </label>
+          <textarea
+            id="cycleStartNote"
+            name="cycleStartNote"
+            rows={2}
+            defaultValue={client.cycleStartNote ?? ''}
+            placeholder="Bijvoorbeeld: maand 2/3 loopt vanaf 10 augustus, factuur maand 1 ging pas 21 augustus weg."
+            className={`mt-1 ${fieldClass}`}
+          />
+        </div>
+
+        <p className="rounded-lg bg-gray-50 px-3 py-2 text-[11px] text-gray-600">
+          Vul dit in als de campagnemaand op een andere dag begon dan de laatste factuur. De
+          werkdagteller, de belronde, het meetingvenster en de factuurdeadline verschuiven
+          allemaal mee. Blijft deze datum staan terwijl de cyclus doorloopt, dan gaat de
+          factuurherinnering steeds harder piepen — dat is bewust.
+        </p>
+
+        <ErrorLine text={error} />
+
+        <div className="flex justify-end gap-2 pt-1">
+          <button type="button" onClick={onClose} className={ghostButton}>
+            Annuleren
+          </button>
+          <button type="submit" disabled={pending} className={primaryButton}>
+            {pending ? 'Opslaan…' : 'Opslaan'}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  )
+}
+
+// -----------------------------------------------------------------------------
+// Volumenorm
 // -----------------------------------------------------------------------------
 
 export function TargetDialog({ client, onClose }: Omit<DialogProps, 'today'>) {
