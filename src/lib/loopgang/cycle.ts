@@ -39,6 +39,13 @@ export const PAYMENT_TERM_DAYS = 14
 export const MEETING_WINDOW_FROM = 23
 export const MEETING_WINDOW_TO = 31
 
+/**
+ * Hoe lang een pauze mag duren voordat een niet-gefactureerde periode dringend
+ * wordt. Een campagne staat vaak een dag stil zonder dat er iets aan de hand is;
+ * duurt het langer, dan wacht er werk dat gedaan moet worden.
+ */
+export const PAUSE_GRACE_DAYS = 2
+
 /** Voorbij deze grens stoppen de zoeklussen; een cyclus duurt nooit een jaar. */
 const MAX_SCAN_DAYS = 400
 
@@ -187,6 +194,7 @@ export interface CycleInput {
 export type ReminderKind =
   | 'no-anchor'
   | 'paused'
+  | 'paused-uninvoiced'
   | 'invoice-due'
   | 'payment-overdue'
   | 'meeting-schedule'
@@ -352,6 +360,25 @@ export function buildCycle(input: CycleInput): LoopgangCycle {
     // nog te bewaken valt.
     const payment = paymentReminder(lastInvoice, today)
     if (payment) reminders.push(payment)
+
+    // De periode die vóór de pauze heeft gedraaid moet nog gefactureerd worden.
+    // Dit is de belangrijkste melding van allemaal: een campagne gaat pas weer
+    // live nadat de factuur eruit is, want die factuur bevestigt dat er
+    // consensus is over de leadrapportage. Zonder deze regel bevriest de
+    // werkdagteller op bijvoorbeeld 15, wordt werkdag 20 nooit gehaald, en
+    // blijft een klant maandenlang stilstaan zonder dat iemand iets hoort.
+    const periodInvoiced = lastInvoice !== null && lastInvoice.date >= anchor
+    if (!periodInvoiced && workday > 0) {
+      const stillDays = pausedSince ? daysBetween(pausedSince, today) : 0
+      reminders.push({
+        kind: 'paused-uninvoiced',
+        severity: stillDays > PAUSE_GRACE_DAYS ? 'urgent' : 'warn',
+        title: 'Leadrapportage + factuur nog niet verstuurd',
+        detail: `${plural(workday, 'werkdag', 'werkdagen')} gedraaid sinds ${nlDate(
+          anchor
+        )} en daarna stilgezet. De campagne kan pas weer live als de factuur eruit is.`,
+      })
+    }
 
     return {
       anchor,

@@ -512,7 +512,11 @@ export async function getLoopgangOverview(monthInput?: string): Promise<Loopgang
   const totals = {
     running: sorted.filter((c) => c.sentOnVolumeDate > 0).length,
     stalled: sorted.filter((c) => c.sentOnVolumeDate === 0).length,
-    invoicesDue: sorted.filter((c) => c.cycle.reminders.some((r) => r.kind === 'invoice-due'))
+    // Een gepauzeerde klant haalt werkdag 20 nooit, maar de periode die wél
+    // gedraaid heeft moet net zo goed gefactureerd worden. Beide tellen mee.
+    invoicesDue: sorted.filter((c) =>
+      c.cycle.reminders.some((r) => r.kind === 'invoice-due' || r.kind === 'paused-uninvoiced')
+    )
       .length,
     paymentsOverdue: sorted.filter((c) =>
       c.cycle.reminders.some((r) => r.kind === 'payment-overdue' && r.severity === 'urgent')

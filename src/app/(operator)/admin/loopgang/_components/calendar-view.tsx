@@ -63,7 +63,9 @@ export function CalendarView({ overview }: Props) {
         case 'invoice':
           return client.cycle.reminders.some(
             (r) =>
-              r.kind === 'invoice-due' || (r.kind === 'payment-overdue' && r.severity === 'urgent')
+              r.kind === 'invoice-due' ||
+              r.kind === 'paused-uninvoiced' ||
+              (r.kind === 'payment-overdue' && r.severity === 'urgent')
           )
         case 'meeting':
           return client.cycle.reminders.some((r) => r.kind === 'meeting-schedule')
