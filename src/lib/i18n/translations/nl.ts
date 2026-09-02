@@ -264,6 +264,25 @@ export interface Translations {
   }
   leads: {
     title: string
+    notLiveNotice: string
+    currentPeriod: string
+    noneThisPeriod: string
+    earlierPeriods: string
+    earlierPeriodsHint: string
+    colEmail: string
+    halfPrice: string
+    notBilled: string
+    showReply: string
+    hideReply: string
+    replyEmpty: string
+    objectionTitle: string
+    objectionIntro: string
+    objectionCurrent: string
+    objectionPickCategory: string
+    objectionProposed: string
+    objectionReason: string
+    objectionReasonPlaceholder: string
+    objectionReasonHint: string
     description: string
     weeklyAddsBanner: string
     empty: string
@@ -1127,9 +1146,27 @@ export const nl: Translations = {
   },
 
   leads: {
-    title: 'Campagne leads',
-    description:
-      'Hieronder staan de leads die handmatig zijn toegevoegd vanuit de lopende campagnes.',
+    notLiveNotice: 'Dit wordt niet live bijgehouden, meestal wordt dit handmatig en dagelijks bijgewerkt.',
+    currentPeriod: 'Deze periode',
+    noneThisPeriod: 'Deze periode zijn er nog geen leads opgeleverd.',
+    earlierPeriods: 'Eerder opgeleverd',
+    earlierPeriodsHint: 'Leads uit afgeronde periodes. Deze zijn al afgerekend.',
+    colEmail: 'E-mailadres',
+    halfPrice: 'Halve prijs',
+    notBilled: 'Niet in rekening gebracht',
+    showReply: 'Toon reactie',
+    hideReply: 'Verberg reactie',
+    replyEmpty: 'De reactie is binnengekomen zonder tekst.',
+    objectionTitle: 'Bezwaar maken',
+    objectionIntro: 'Kies de categorie waar deze lead volgens jou in hoort en leg uit waarom. We kijken er met de hand naar.',
+    objectionCurrent: 'Nu ingedeeld als',
+    objectionPickCategory: 'Hoort volgens jou in',
+    objectionProposed: 'Jouw voorstel:',
+    objectionReason: 'Waarom',
+    objectionReasonPlaceholder: 'Bijvoorbeeld: de lead vraagt alleen om informatie, er is geen afspraak voorgesteld.',
+    objectionReasonHint: 'Minstens 10 tekens. Dit komt zo bij ons binnen te staan.',
+    title: 'Leads',
+    description: 'De leads die we voor je hebben opgeleverd, met de categorie en het bedrag dat erbij hoort.',
     weeklyAddsBanner: 'Nieuwe leads worden wekelijks toegevoegd.',
     empty: 'Nog geen leads',
     emptyDescription: 'Zodra er leads zijn toegevoegd verschijnen ze hier.',

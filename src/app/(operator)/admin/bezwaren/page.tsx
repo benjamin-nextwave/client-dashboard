@@ -2,6 +2,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getCampaignLeadsWithObjections } from '@/lib/data/campaign-leads'
 import { ObjectionList } from './_components/objection-list'
 import { CampaignLeadObjectionsSection } from './_components/campaign-lead-objections-section'
+import { getCommissionLeadObjections } from '@/lib/data/commission-lead-objections'
+import { CommissionLeadObjectionsSection } from './_components/commission-lead-objections-section'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,6 +30,9 @@ export default async function BezwarenPage() {
     client_company_name: clientMap.get(o.client_id) ?? 'Onbekend',
   }))
 
+  const commissionObjections = await getCommissionLeadObjections()
+  const pendingCommissionCount = commissionObjections.filter((o) => o.status === 'pending').length
+
   const campaignLeadObjections = await getCampaignLeadsWithObjections()
   const pendingCampaignCount = campaignLeadObjections.filter(
     (l) => l.objectionStatus === 'pending'
@@ -41,6 +46,22 @@ export default async function BezwarenPage() {
           Beoordeel ingediende bezwaren van klanten op leads.
         </p>
       </div>
+
+      <section>
+        <div className="flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-gray-900">Bezwaren op commissieleads</h3>
+          {pendingCommissionCount > 0 && (
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
+              {pendingCommissionCount} open
+            </span>
+          )}
+        </div>
+        <p className="mt-1 text-sm text-gray-500">
+          De klant stelt een andere categorie voor, of vindt dat de lead niet in rekening hoort te
+          worden gebracht. Dit gaat over de factuur.
+        </p>
+        <CommissionLeadObjectionsSection rows={commissionObjections} />
+      </section>
 
       <section>
         <div className="flex items-center gap-2">
