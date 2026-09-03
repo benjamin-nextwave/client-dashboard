@@ -24,6 +24,16 @@ const WEEKDAY_NAMES = [
   'zondag', 'maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag',
 ]
 
+/**
+ * Tot hoeveel gekozen klanten de dagvakjes gekleurd worden.
+ *
+ * De kleur is een uitspraak over één campagne: groen is verstuurd, rood is een
+ * werkdag zonder volume. Bij twintig klanten tegelijk wint altijd het somberste
+ * geval en staat vrijwel elke dag rood — dan zegt de kleur niets meer. Vanaf
+ * vier klanten laten we de vakjes daarom wit.
+ */
+const MAX_CLIENTS_FOR_TONE = 3
+
 type Focus = 'all' | 'action' | 'invoice' | 'meeting' | 'stalled'
 
 const FOCUS_LABELS: Record<Focus, string> = {
@@ -77,9 +87,14 @@ export function CalendarView({ overview }: Props) {
     })
   }, [overview.clients, selectedClients, focus])
 
+  // Kleuren alleen bij een bewuste keuze van een paar klanten. "Iedereen" en
+  // een brede selectie blijven wit.
+  const kleurDagen =
+    selectedClients.length >= 1 && selectedClients.length <= MAX_CLIENTS_FOR_TONE
+
   const cells = useMemo(
-    () => buildCells(overview.month, overview.today, clients),
-    [overview.month, overview.today, clients]
+    () => buildCells(overview.month, overview.today, clients, kleurDagen),
+    [overview.month, overview.today, clients, kleurDagen]
   )
 
   const entriesForSelected = useMemo(
@@ -282,10 +297,27 @@ export function CalendarView({ overview }: Props) {
       </section>
 
       {/* Maandnavigatie */}
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-sm font-semibold text-gray-900">
-          {MONTH_NAMES[(month ?? 1) - 1]} {year}
-        </h2>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+          <h2 className="text-sm font-semibold text-gray-900">
+            {MONTH_NAMES[(month ?? 1) - 1]} {year}
+          </h2>
+
+          {/* De kleuren gaan over één campagne. Staat er een handvol klanten in
+              beeld, dan zegt de legenda wat je ziet; daarboven vertelt hij
+              waarom de vakjes wit blijven. */}
+          {kleurDagen ? (
+            <div className="flex flex-wrap items-center gap-2.5 text-[10px] text-gray-500">
+              <Legend className="bg-emerald-100" label="verstuurd" />
+              <Legend className="bg-amber-100" label={`pauze, dag 1-${PAUSE_ORANGE_DAYS}`} />
+              <Legend className="bg-rose-100" label="stil of langer gepauzeerd" />
+            </div>
+          ) : (
+            <span className="text-[10px] text-gray-400">
+              Kies hooguit {MAX_CLIENTS_FOR_TONE} klanten om de dagen te kleuren.
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-1.5">
           <MonthLink month={prevMonth} label="← vorige" />
           <MonthLink month={overview.today.slice(0, 7)} label="vandaag" />
@@ -391,7 +423,8 @@ function Pill({ text, tone }: { text: string; tone: 'muted' | 'warn' | 'bad' }) 
 function buildCells(
   month: string,
   today: string,
-  clients: LoopgangOverview['clients']
+  clients: LoopgangOverview['clients'],
+  kleuren: boolean
 ): DayCell[] {
   const [year, monthNumber] = month.split('-').map(Number)
   const first = new Date(Date.UTC(year, monthNumber - 1, 1))
@@ -434,7 +467,7 @@ function buildCells(
       entries: byDate.get(date) ?? [],
       running,
       total: clients.length,
-      tone: toneFor(date, today, weekend, inMonth, clients),
+      tone: kleuren ? toneFor(date, today, weekend, inMonth, clients) : null,
     })
   }
 
@@ -502,6 +535,15 @@ function toneFor(
   if (rood > 0) return 'red'
   if (oranje > 0) return 'orange'
   return null
+}
+
+function Legend({ className, label }: { className: string; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1">
+      <span aria-hidden className={`h-2.5 w-2.5 rounded-sm border border-black/5 ${className}`} />
+      {label}
+    </span>
+  )
 }
 
 function shiftMonth(month: string, delta: number): string {
