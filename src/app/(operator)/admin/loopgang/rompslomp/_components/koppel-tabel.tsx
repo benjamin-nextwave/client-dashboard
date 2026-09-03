@@ -205,14 +205,22 @@ export function KoppelTabel({
                     </select>
 
                     {suggestie && (
-                      <button
-                        type="button"
-                        disabled={pending}
-                        onClick={() => koppel(suggestie.candidate.id, contact.id)}
-                        className="mt-1 text-[10px] font-semibold text-indigo-600 transition-colors hover:text-indigo-800 disabled:opacity-40"
-                      >
-                        voorstel: {suggestie.candidate.name} — koppelen
-                      </button>
+                      <div className="mt-1">
+                        <button
+                          type="button"
+                          disabled={pending}
+                          onClick={() => koppel(suggestie.candidate.id, contact.id)}
+                          className="text-[10px] font-semibold text-indigo-600 transition-colors hover:text-indigo-800 disabled:opacity-40"
+                        >
+                          voorstel: {suggestie.candidate.name} — koppelen
+                        </button>
+                        {suggestie.alternatives.length > 0 && (
+                          <span className="ml-1 text-[10px] text-gray-400">
+                            past even goed op{' '}
+                            {suggestie.alternatives.map((a) => a.name).join(', ')}
+                          </span>
+                        )}
+                      </div>
                     )}
                   </td>
                 </tr>

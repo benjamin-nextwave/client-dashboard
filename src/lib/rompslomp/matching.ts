@@ -3,9 +3,11 @@
  *
  * Dit is nadrukkelijk een suggestie en geen automatisme. Van de 56 contacten in
  * Rompslomp matcht ongeveer de helft op naam; de rest factureert onder een
- * statutaire naam of is helemaal geen loopgang-klant. En omdat er zowel
- * "Successr" als "Successr BV" in de klantenlijst staat, zou automatisch kiezen
- * juist daar de verkeerde koppeling maken. De operator bevestigt dus altijd.
+ * statutaire naam of is helemaal geen loopgang-klant. De operator bevestigt dus
+ * altijd.
+ *
+ * Passen er twee klanten even goed, dan komt het voorstel er toch — met de
+ * andere namen erbij, zodat zichtbaar is dat er iets te kiezen valt.
  *
  * Puur: geen database, geen fetch.
  */
@@ -35,6 +37,13 @@ export interface MatchSuggestion {
   candidate: MatchCandidate
   /** 1 = namen zijn gelijk na opschonen, lager = zwakkere gelijkenis. */
   score: number
+  /**
+   * Andere klanten die even goed passen. Meestal leeg. Staat er wel iets in, dan
+   * is het voorstel een gok tussen namen die na het weghalen van de rechtsvorm
+   * niet meer uit elkaar te houden zijn — "Successr" en "Successr BV". Het
+   * voorstel blijft staan, maar het scherm zegt erbij dat er een keuze is.
+   */
+  alternatives: MatchCandidate[]
 }
 
 /**
@@ -52,12 +61,8 @@ export function suggestMatch(
   const doel = compact(contactName)
   if (doel.length < 3) return null
 
-  let beste: MatchSuggestion | null = null
-  // Twee klanten die na het opschonen even goed passen leveren geen voorstel op.
-  // "Successr" en "Successr BV" zijn na het weghalen van de rechtsvorm identiek;
-  // dan is de ene helft van de tijd de verkeerde, en een voorstel dat je zomaar
-  // kunt aanklikken is dan erger dan geen voorstel.
-  let gelijkspel = false
+  let beste: { candidate: MatchCandidate; score: number } | null = null
+  let gelijk: MatchCandidate[] = []
 
   for (const candidate of candidates) {
     if (taken.has(candidate.id)) continue
@@ -81,14 +86,14 @@ export function suggestMatch(
 
     if (beste === null || score > beste.score) {
       beste = { candidate, score }
-      gelijkspel = false
+      gelijk = []
     } else if (score === beste.score) {
-      gelijkspel = true
+      gelijk.push(candidate)
     }
   }
 
-  if (beste === null || beste.score < 0.5 || gelijkspel) return null
-  return beste
+  if (beste === null || beste.score < 0.5) return null
+  return { ...beste, alternatives: gelijk }
 }
 
 /**
