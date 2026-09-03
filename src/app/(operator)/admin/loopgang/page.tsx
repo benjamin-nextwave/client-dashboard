@@ -17,10 +17,6 @@ export default async function LoopgangOverzichtPage({ searchParams }: PageProps)
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Loopgang</h1>
-      </header>
-
       <CalendarView overview={overview} />
 
       <AiAnalyse month={overview.month} />
