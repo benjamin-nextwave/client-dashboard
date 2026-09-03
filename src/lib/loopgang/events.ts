@@ -164,17 +164,15 @@ export function buildEvents(input: BuildEventsInput): LoopgangEvent[] {
   if (!cycle.anchor || cycle.paused) return dedupe(events)
 
   // Het startpunt zelf, zodat je in de kalender ziet waar de cyclus vandaan telt.
-  // Bij een factuur staat er al een 'factuur verstuurd' op dezelfde dag; dan is
-  // een tweede blokje alleen ruis.
-  if (cycle.anchorSource === 'go-live') {
-    events.push({
-      date: cycle.anchor,
-      kind: 'cycle-start',
-      status: 'done',
-      label: 'Livegang — cyclus start',
-      detail: null,
-    })
-  }
+  // In de dagvakjes vervalt dit blokje: daar staat al een groene balk over de
+  // volle breedte. In het dagpaneel hoort het er wel bij.
+  events.push({
+    date: cycle.anchor,
+    kind: 'cycle-start',
+    status: 'done',
+    label: 'Cyclusstart — begin van de periode',
+    detail: null,
+  })
 
   if (cycle.invoiceDueDate) {
     events.push({

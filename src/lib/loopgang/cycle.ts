@@ -172,15 +172,16 @@ export interface CycleInvoice {
 export interface CycleInput {
   today: string
   /**
-   * De dag waarop de lopende campagnemaand begon. Wint van alles: alleen de
+   * De dag waarop de lopende campagnemaand begon — het enige anker dat er is.
+   *
+   * Bewust niet af te leiden uit een factuurdatum of de livegang. Alleen de
    * operator weet welke periode een factuur dekt, en een factuur die te laat de
-   * deur uit ging zegt niets over wanneer de volgende maand is begonnen.
+   * deur uit ging zegt niets over wanneer de volgende maand is begonnen. Zonder
+   * deze datum telt er niets, en dat hoort ook: dan is er geen periode.
    */
   cycleStart?: string | null
-  /** Laatste factuurdatum; wint van de livegang. */
+  /** Laatste factuur; bepaalt de betaalherinnering en of de periode al afgerekend is. */
   lastInvoice: CycleInvoice | null
-  /** Livegang van de klant; het anker zolang er nooit gefactureerd is. */
-  goLiveDate: string | null
   /** De afgehandelde meeting die bij het huidige anker hoort, als die er is. */
   meeting: CycleMeeting | null
   /** Welke dagen in een pauze vielen; die tellen nergens mee. */
@@ -193,6 +194,7 @@ export interface CycleInput {
 
 export type ReminderKind =
   | 'no-anchor'
+  | 'cycle-restart'
   | 'paused'
   | 'paused-uninvoiced'
   | 'invoice-due'
@@ -214,7 +216,7 @@ export interface LoopgangReminder {
 export interface LoopgangCycle {
   /** De datum waar de cyclus vanaf telt; null als hij niet te bepalen is. */
   anchor: string | null
-  anchorSource: 'cycle-start' | 'invoice' | 'go-live' | null
+  anchorSource: 'cycle-start' | null
   /** Werkdag van de cyclus waarop we vandaag staan; 0 zolang het anker in de toekomst ligt. */
   workday: number
   calendarDay: number
@@ -285,20 +287,17 @@ function paymentReminder(
 }
 
 export function buildCycle(input: CycleInput): LoopgangCycle {
-  const { today, lastInvoice, goLiveDate, meeting } = input
+  const { today, lastInvoice, meeting } = input
   const isPaused = input.isPaused ?? NEVER_PAUSED
   const pausedNow = input.pausedNow ?? false
   const pausedSince = input.pausedSince ?? null
   const cycleStart = input.cycleStart ?? null
 
-  const anchor = cycleStart ?? lastInvoice?.date ?? goLiveDate ?? null
-  const anchorSource: LoopgangCycle['anchorSource'] = cycleStart
-    ? 'cycle-start'
-    : lastInvoice
-      ? 'invoice'
-      : goLiveDate
-        ? 'go-live'
-        : null
+  // Alleen de handmatig gezette startdatum telt. Eerder schoof het anker mee met
+  // de laatste factuur, waardoor een factuur die een dag te laat de deur uit ging
+  // de hele volgende periode een dag opschoof zonder dat iemand dat besloot.
+  const anchor = cycleStart
+  const anchorSource: LoopgangCycle['anchorSource'] = cycleStart ? 'cycle-start' : null
 
   const reminders: LoopgangReminder[] = []
 
@@ -306,9 +305,9 @@ export function buildCycle(input: CycleInput): LoopgangCycle {
     reminders.push({
       kind: 'no-anchor',
       severity: 'info',
-      title: 'Geen startpunt bekend',
+      title: 'Cyclusstart nog niet gezet',
       detail:
-        'Deze klant heeft geen livegangdatum en nog geen factuur, dus de cyclus kan niet worden geteld.',
+        'Zonder startdatum telt de werkdagteller niet en komt er geen factuurmoment. Zet hem met de knop Cyclusstart.',
     })
     return {
       anchor: null,
@@ -416,7 +415,21 @@ export function buildCycle(input: CycleInput): LoopgangCycle {
 
   // --- Facturatie -----------------------------------------------------------
 
-  if (workday >= INVOICE_WORKDAY) {
+  // Is er over deze periode al gefactureerd, dan is hij klaar. Het anker schuift
+  // niet vanzelf mee — dat is precies de bedoeling — dus wat er dan nog moet
+  // gebeuren is: de volgende periode starten. Zonder deze melding zou de teller
+  // stilletjes doortellen naar werkdag 30 en zou "factuur versturen" rood
+  // blijven staan voor een factuur die al de deur uit is.
+  const periodInvoiced = lastInvoice !== null && lastInvoice.date >= anchor
+
+  if (periodInvoiced) {
+    reminders.push({
+      kind: 'cycle-restart',
+      severity: workday > INVOICE_WORKDAY ? 'urgent' : 'warn',
+      title: 'Volgende periode nog niet gestart',
+      detail: `Gefactureerd op ${nlDate(lastInvoice.date)}. De teller staat op werkdag ${workday} en loopt door tot je de cyclusstart op de nieuwe begindag zet.`,
+    })
+  } else if (workday >= INVOICE_WORKDAY) {
     const over = workday - INVOICE_WORKDAY
     reminders.push({
       kind: 'invoice-due',

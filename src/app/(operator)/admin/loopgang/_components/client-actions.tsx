@@ -97,18 +97,12 @@ export function ClientActions({
   )
 }
 
-/** Waar het startpunt van de cyclus vandaan komt. */
+/**
+ * Waar het startpunt van de cyclus vandaan komt. Er is nog maar één bron: de
+ * datum die je zelf hebt gezet. Zonder die datum telt er niets.
+ */
 function anchorLabel(source: LoopgangOverviewClient['cycle']['anchorSource']): string {
-  switch (source) {
-    case 'cycle-start':
-      return 'handmatig gezet'
-    case 'invoice':
-      return 'laatste factuur'
-    case 'go-live':
-      return 'livegang'
-    default:
-      return 'onbekend'
-  }
+  return source === 'cycle-start' ? 'handmatig gezet' : 'niet gezet'
 }
 
 export function CycleSummary({ client }: { client: LoopgangOverviewClient }) {

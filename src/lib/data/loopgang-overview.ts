@@ -482,9 +482,12 @@ export async function getLoopgangOverview(monthInput?: string): Promise<Loopgang
       : null
 
     // Het anker bepaalt welke afgehandelde meeting nog meetelt: eentje van een
-    // vorige cyclus mag de herinnering van deze cyclus niet stilzetten.
-    const anchor = cycleStart ?? lastInvoice?.invoiceDate ?? goLiveDate ?? null
-    const meeting = anchor ? (meetings.find((m) => m.cycleAnchor === anchor) ?? null) : null
+    // vorige cyclus mag de herinnering van deze cyclus niet stilzetten. Het is
+    // dezelfde handmatige startdatum die de cyclus telt — zet je hem opnieuw,
+    // dan begint ook de meetingherinnering opnieuw.
+    const meeting = cycleStart
+      ? (meetings.find((m) => m.cycleAnchor === cycleStart) ?? null)
+      : null
 
     const cycleMeeting: CycleMeeting | null = meeting
       ? { outcome: meeting.outcome, meetingDate: meeting.meetingDate }
@@ -506,7 +509,6 @@ export async function getLoopgangOverview(monthInput?: string): Promise<Loopgang
             paidAt: lastInvoice.paidAt,
           }
         : null,
-      goLiveDate,
       meeting: cycleMeeting,
       isPaused: (date) => isInPausedRange(date, pausedRanges),
       pausedNow: openPause !== null,

@@ -77,14 +77,8 @@ function beschrijfKlant(c: LoopgangOverviewClient, vandaag: string): string {
   regels.push(`Klant: ${c.companyName}`)
 
   if (c.cycle.anchor) {
-    const bron =
-      c.cycle.anchorSource === 'cycle-start'
-        ? 'handmatig gezette startdatum'
-        : c.cycle.anchorSource === 'invoice'
-          ? 'laatste factuur'
-          : 'livegang'
     regels.push(
-      `  Cyclus: werkdag ${c.cycle.workday} van ${INVOICE_WORKDAY}, gestart ${c.cycle.anchor} (${bron}).`
+      `  Cyclus: werkdag ${c.cycle.workday} van ${INVOICE_WORKDAY}, gestart ${c.cycle.anchor} (handmatig gezette startdatum).`
     )
     if (c.cycle.invoiceDueDate) {
       const over = daysBetween(vandaag, c.cycle.invoiceDueDate)

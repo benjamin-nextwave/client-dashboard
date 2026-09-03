@@ -757,11 +757,7 @@ export function CycleStartDialog({ client, onClose }: Omit<DialogProps, 'today'>
   const bron =
     client.cycle.anchorSource === 'cycle-start'
       ? 'de startdatum hieronder'
-      : client.cycle.anchorSource === 'invoice'
-        ? 'de laatste factuur'
-        : client.cycle.anchorSource === 'go-live'
-          ? 'de livegang'
-          : 'niets — er is geen startpunt'
+      : 'niets — zonder startdatum telt de cyclus niet'
 
   return (
     <Modal
@@ -773,7 +769,7 @@ export function CycleStartDialog({ client, onClose }: Omit<DialogProps, 'today'>
         <div>
           <label className={labelClass} htmlFor="cycleStart">
             Cyclus start op{' '}
-            <span className="font-normal normal-case text-gray-400">(leeg = terug naar de factuurdatum)</span>
+            <span className="font-normal normal-case text-gray-400">(leeg = de cyclus telt niet)</span>
           </label>
           <input
             id="cycleStart"
@@ -798,11 +794,12 @@ export function CycleStartDialog({ client, onClose }: Omit<DialogProps, 'today'>
           />
         </div>
 
-        <p className="rounded-lg bg-gray-50 px-3 py-2 text-[11px] text-gray-600">
-          Vul dit in als de campagnemaand op een andere dag begon dan de laatste factuur. De
-          werkdagteller, de belronde, het meetingvenster en de factuurdeadline verschuiven
-          allemaal mee. Blijft deze datum staan terwijl de cyclus doorloopt, dan gaat de
-          factuurherinnering steeds harder piepen — dat is bewust.
+        <p className="rounded-lg bg-gray-50 px-3 py-2 text-[11px] leading-snug text-gray-600">
+          Dit is het enige startpunt van de cyclus. De werkdagteller, de belronde, het
+          meetingvenster en de factuurdeadline hangen er allemaal aan. Een factuur verzet
+          hem niet — dat doe jij, aan het begin van elke nieuwe periode. Zolang je dat niet
+          doet blijft de teller doorlopen en staat er &ldquo;Volgende periode nog niet
+          gestart&rdquo; op het overzicht.
         </p>
 
         <ErrorLine text={error} />
