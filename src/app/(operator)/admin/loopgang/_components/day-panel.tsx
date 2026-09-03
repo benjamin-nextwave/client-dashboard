@@ -46,7 +46,7 @@ const MONTH_NAMES = [
 
 /**
  * Wat er op de gekozen dag moet gebeuren of is gebeurd. De klantenlijst met de
- * volumecijfers staat niet hier maar onder de kalender, in ClientStrip.
+ * volumecijfers staat in het overzicht boven de kalender.
  */
 export function DayPanel({ date, today, clients, entries, activeClientKey }: Props) {
   const [dialog, setDialog] = useState<DialogState | null>(null)

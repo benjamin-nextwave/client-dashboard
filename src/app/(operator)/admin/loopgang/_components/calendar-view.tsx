@@ -3,14 +3,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { formatEuroCents, isWeekday } from '@/lib/commissions-shared'
+import { isWeekday } from '@/lib/commissions-shared'
 import type { LoopgangOverview } from '@/lib/data/loopgang-overview'
 import { addDays } from '@/lib/loopgang/cycle'
 import { buildTasks } from '@/lib/loopgang/tasks'
 import { ClientNote } from './client-note'
 import { KixDialog } from './kix-dialog'
-import { ClientStrip } from './client-strip'
 import { DayPanel } from './day-panel'
+import { StatBar } from './stat-bar'
 import { TaskDialog } from './task-dialog'
 import { MonthGrid, PAUSE_ORANGE_DAYS, type DayCell, type DayEntry, type DayTone } from './month-grid'
 import { ClientListDialog, InvoiceDialog, LeadReportDialog } from './dialogs'
@@ -269,25 +269,19 @@ export function CalendarView({ overview }: Props) {
         </div>
       </header>
 
-      {/* Kerncijfers. Eén rij, één kader, haarlijnen ertussen: het zijn zes
-          waarden van dezelfde soort en geen zes losse mededelingen. */}
-      <section className="grid grid-cols-2 overflow-hidden rounded-xl border border-gray-200 bg-white sm:grid-cols-3 sm:divide-x sm:divide-gray-100 lg:grid-cols-6">
-        <Stat label="Draait" value={overview.totals.running} tone="ok" />
-        <Stat label="Staat stil" value={overview.totals.stalled} tone="warn" />
-        <Stat label="Factuur te laat" value={overview.totals.invoicesDue} tone="bad" />
-        <Stat label="Meeting regelen" value={overview.totals.meetingsToPlan} tone="warn" />
-        <Stat label="Bellen vandaag" value={overview.totals.callsToday} tone="warn" />
-        <Stat
-          label="Openstaand"
-          text={formatEuroCents(overview.totals.openInvoiceCents)}
-          tone={overview.totals.paymentsOverdue > 0 ? 'bad' : 'muted'}
-          hint={
-            overview.totals.paymentsOverdue > 0
-              ? `${overview.totals.paymentsOverdue} over de termijn`
-              : 'binnen de termijn'
-          }
-        />
-      </section>
+      <StatBar
+        clients={overview.clients}
+        totals={overview.totals}
+        today={overview.today}
+        activeClientKey={activeClientKey}
+        onSelectClient={(key) => {
+          // Het filter mag de klant die je net aanklikt niet wegfilteren: de
+          // lijst waar je hem uit koos telt over alle klanten, niet over de
+          // gefilterde.
+          setFocus('all')
+          setSelectedClients([key])
+        }}
+      />
 
       {/* Filterbalk. De klantenlijst zit ingeklapt: twintig knoppen naast
           elkaar trekken meer aandacht dan de kalender eronder. */}
@@ -495,16 +489,6 @@ export function CalendarView({ overview }: Props) {
         </div>
       </div>
 
-      {/* De klanten liggen over de volle breedte onder de kalender: naast de
-          kalender werd het een lange kolom die je moest scrollen. */}
-      <ClientStrip
-        date={selectedDate}
-        today={overview.today}
-        clients={clients}
-        activeClientKey={activeClientKey}
-        onSelectClient={(key) => setSelectedClients([key])}
-      />
-
       {quick === 'invoice' && activeClient && (
         <InvoiceDialog client={activeClient} today={selectedDate} onClose={() => setQuick(null)} />
       )}
@@ -547,44 +531,6 @@ function MonthLink({ month, label }: { month: string; label: string }) {
     >
       {label}
     </Link>
-  )
-}
-
-/**
- * Eén kerncijfer in de bovenste rij. Een getal van nul blijft grijs: nul
- * openstaande facturen is goed nieuws en hoort niet te schreeuwen.
- */
-function Stat({
-  label,
-  value,
-  text,
-  tone,
-  hint,
-}: {
-  label: string
-  value?: number
-  text?: string
-  tone: 'ok' | 'warn' | 'bad' | 'muted'
-  hint?: string
-}) {
-  const leeg = value === 0
-  const color =
-    leeg || tone === 'muted'
-      ? 'text-gray-900'
-      : tone === 'ok'
-        ? 'text-emerald-600'
-        : tone === 'warn'
-          ? 'text-amber-600'
-          : 'text-rose-600'
-
-  return (
-    <div className="border-b border-gray-100 px-4 py-3 last:border-b-0 sm:border-b-0">
-      <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{label}</div>
-      <div className={`mt-0.5 text-xl font-semibold tabular-nums tracking-tight ${leeg ? 'text-gray-300' : color}`}>
-        {text ?? value}
-      </div>
-      {hint && <div className="text-[10px] text-gray-400">{hint}</div>}
-    </div>
   )
 }
 
