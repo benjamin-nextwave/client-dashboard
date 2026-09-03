@@ -149,6 +149,12 @@ export interface LoopgangOverviewClient {
   sentByDate: Record<string, number>
   /** Dagen waarop de campagnes bewust stilstonden, binnen het opgehaalde bereik. */
   pausedDates: string[]
+  /**
+   * Per gepauzeerde dag: de hoeveelste werkdag van díé pauze het is. De kalender
+   * kleurt daarop — een pauze van twee dagen is iets anders dan een van drie
+   * weken. Weekenden tellen niet mee, die zijn nooit verzenddagen.
+   */
+  pauseDayByDate: Record<string, number>
 
   isPaused: boolean
   pausedSince: string | null
@@ -481,10 +487,21 @@ export async function getLoopgangOverview(monthInput?: string): Promise<Loopgang
 
     const sentByDate: Record<string, number> = {}
     const pausedDates: string[] = []
+    const pauseDayByDate: Record<string, number> = {}
     for (let date = bounds.start; date <= bounds.end; date = addDays(date, 1)) {
       const sent = instantly.sentPerDay.get(date) ?? 0
-      if (sent > 0) sentByDate[date] = sent
-      else if (isInPausedRange(date, pausedRanges)) pausedDates.push(date)
+      if (sent > 0) {
+        sentByDate[date] = sent
+        continue
+      }
+      const range = pausedRanges.find((r) => date >= r.from && (r.to === null || date <= r.to))
+      if (!range) continue
+      pausedDates.push(date)
+      if (isWeekday(date)) {
+        let n = 0
+        for (let d = range.from; d <= date; d = addDays(d, 1)) if (isWeekday(d)) n += 1
+        pauseDayByDate[date] = n
+      }
     }
     // Vandaag valt buiten de getoonde maand zodra je terugbladert, maar de
     // kopregel heeft het cijfer wel nodig.
@@ -524,6 +541,7 @@ export async function getLoopgangOverview(monthInput?: string): Promise<Loopgang
       lastSendDate,
       sentByDate,
       pausedDates,
+      pauseDayByDate,
 
       isPaused: openPause !== null,
       pausedSince: openPause?.from ?? null,

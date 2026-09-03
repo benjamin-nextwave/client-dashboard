@@ -9,7 +9,7 @@ import { buildTasks } from '@/lib/loopgang/tasks'
 import { ClientStrip } from './client-strip'
 import { DayPanel } from './day-panel'
 import { TaskDialog } from './task-dialog'
-import { MonthGrid, type DayCell, type DayEntry } from './month-grid'
+import { MonthGrid, PAUSE_ORANGE_DAYS, type DayCell, type DayEntry, type DayTone } from './month-grid'
 import { ClientListDialog, InvoiceDialog, LeadReportDialog } from './dialogs'
 
 interface Props {
@@ -434,10 +434,66 @@ function buildCells(
       entries: byDate.get(date) ?? [],
       running,
       total: clients.length,
+      tone: toneFor(date, today, weekend, inMonth, clients),
     })
   }
 
   return cells
+}
+
+/**
+ * De kleur van één dagvakje, over alle klanten die door het filter komen.
+ *
+ * Per klant is de dag groen als er is verstuurd, oranje als hij in de eerste
+ * drie werkdagen van een pauze zit, en rood zodra die pauze langer duurt of er
+ * op een werkdag niets is verstuurd terwijl de cyclus al liep. Dagen vóór het
+ * startpunt van een klant tellen voor hem niet mee — daar viel nog niets te
+ * verwachten.
+ *
+ * Het vakje krijgt het somberste geval: één rode klant maakt de dag rood. Zo
+ * zie je bij het terugbladeren in één oogopslag waar het misging, ook als je
+ * niet op één klant hebt gefilterd.
+ */
+function toneFor(
+  date: string,
+  today: string,
+  weekend: boolean,
+  inMonth: boolean,
+  clients: LoopgangOverview['clients']
+): DayTone {
+  if (!inMonth || weekend || date > today) return null
+
+  let beoordeeld = 0
+  let groen = 0
+  let rood = 0
+  let oranje = 0
+
+  for (const client of clients) {
+    // Vóór het anker liep de cyclus nog niet; dan valt er niets te vinden van
+    // een dag zonder verzending.
+    if (!client.cycle.anchor || date < client.cycle.anchor) continue
+    beoordeeld += 1
+
+    if ((client.sentByDate[date] ?? 0) > 0) {
+      groen += 1
+      continue
+    }
+
+    const pauzedag = client.pauseDayByDate[date]
+    if (pauzedag !== undefined) {
+      if (pauzedag <= PAUSE_ORANGE_DAYS) oranje += 1
+      else rood += 1
+      continue
+    }
+
+    rood += 1
+  }
+
+  if (beoordeeld === 0) return null
+  if (groen === beoordeeld) return 'green'
+  if (rood > 0) return 'red'
+  if (oranje > 0) return 'orange'
+  return null
 }
 
 function shiftMonth(month: string, delta: number): string {

@@ -50,6 +50,12 @@ const MONTH_NAMES = [
  */
 export function DayPanel({ date, today, clients, entries, activeClientKey }: Props) {
   const [dialog, setDialog] = useState<DialogState | null>(null)
+  // Op wie slaat het vastleggen? Standaard de klant die als enige gefilterd is;
+  // staat het filter op meerdere klanten, dan kies je hier wie je bedoelt.
+  const [voorKlant, setVoorKlant] = useState<string>('')
+
+  const gekozenKey = activeClientKey ?? voorKlant
+  const gekozen = clients.find((c) => c.key === gekozenKey)
 
   const isFuture = date > today
 
@@ -106,18 +112,56 @@ export function DayPanel({ date, today, clients, entries, activeClientKey }: Pro
                   ))}
                 </ul>
 
-                {/* Alleen bij de klant die als enige gekozen is; anders is dit
-                    paneel een overzicht en geen invoerscherm. */}
-                {activeClientKey === client.key && (
-                  <ClientActions
-                    client={client}
-                    today={today}
-                    onOpen={(kind: OpenDialog) => setDialog({ clientKey: client.key, kind })}
-                  />
-                )}
               </li>
             ))}
           </ul>
+        )}
+      </section>
+
+      <section className="rounded-2xl border border-gray-200 bg-white p-4">
+        <h3 className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+          Vastleggen op deze dag
+        </h3>
+
+        {clients.length === 0 ? (
+          <p className="mt-2 text-xs text-gray-500">Geen klanten in beeld.</p>
+        ) : (
+          <>
+            {/* Bij één gefilterde klant is er niets te kiezen; anders moet je
+                zeggen wie je bedoelt, want een factuur bij de verkeerde klant
+                verzet stilletjes zijn hele cyclus. */}
+            {activeClientKey ? (
+              <p className="mt-1 text-xs text-gray-600">
+                Voor <span className="font-semibold text-gray-900">{gekozen?.displayName}</span>
+              </p>
+            ) : (
+              <select
+                value={voorKlant}
+                onChange={(e) => setVoorKlant(e.target.value)}
+                className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-900 outline-none focus:border-indigo-400"
+              >
+                <option value="">Kies een klant…</option>
+                {clients.map((c) => (
+                  <option key={c.key} value={c.key}>
+                    {c.displayName}
+                  </option>
+                ))}
+              </select>
+            )}
+
+            {gekozen ? (
+              <ClientActions
+                client={gekozen}
+                today={today}
+                onOpen={(kind: OpenDialog) => setDialog({ clientKey: gekozen.key, kind })}
+              />
+            ) : (
+              <p className="mt-2 text-[11px] text-gray-400">
+                Kies een klant om een factuur, rapportage, meeting of pauze op {formatDayShort(date)}{' '}
+                vast te leggen.
+              </p>
+            )}
+          </>
         )}
       </section>
 
@@ -130,6 +174,12 @@ export function DayPanel({ date, today, clients, entries, activeClientKey }: Pro
       />
     </div>
   )
+}
+
+function formatDayShort(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number)
+  if (!y || !m || !d) return iso
+  return `${d} ${MONTH_NAMES[m - 1]}`
 }
 
 function formatDayLong(iso: string): string {

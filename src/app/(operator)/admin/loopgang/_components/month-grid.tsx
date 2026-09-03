@@ -8,6 +8,24 @@ export interface DayEntry {
   event: LoopgangEvent
 }
 
+/**
+ * De kleur van een dagvakje.
+ *
+ *   groen   er is verstuurd
+ *   oranje  pauze, maar nog kort — de eerste drie werkdagen
+ *   rood    pauze die te lang duurt, of een werkdag zonder verzending terwijl
+ *           de campagne wel had moeten draaien
+ *   null    valt buiten de beoordeling: weekend, toekomst, of vóór het
+ *           startpunt van de cyclus
+ *
+ * Bij meerdere klanten in beeld telt het somber­ste geval: alleen als iedereen
+ * verstuurde is het vakje groen.
+ */
+export type DayTone = 'green' | 'orange' | 'red' | null
+
+/** Vanaf welke werkdag van een pauze het vakje rood wordt in plaats van oranje. */
+export const PAUSE_ORANGE_DAYS = 3
+
 export interface DayCell {
   date: string
   dayNumber: number
@@ -19,6 +37,7 @@ export interface DayCell {
   /** Aantal klanten dat die dag verstuurde, en hoeveel er in beeld zijn. */
   running: number
   total: number
+  tone: DayTone
 }
 
 interface Props {
@@ -56,6 +75,16 @@ const STATUS_STYLES: Record<EventStatus, string> = {
   upcoming: 'bg-indigo-50 text-indigo-700',
 }
 
+/**
+ * De achtergrond per kleur. Zacht genoeg om de blokjes erop leesbaar te houden;
+ * het gaat om het patroon over de maand, niet om één vakje.
+ */
+const TONE_STYLES: Record<Exclude<DayTone, null>, string> = {
+  green: 'bg-emerald-100',
+  orange: 'bg-amber-100',
+  red: 'bg-rose-100',
+}
+
 /** Hoeveel blokjes er in een vakje passen voordat er "+n" onder komt. */
 const MAX_CHIPS = 3
 
@@ -88,10 +117,12 @@ export function MonthGrid({ cells, selected, onSelect }: Props) {
               className={`flex min-h-[104px] flex-col gap-1 border-b border-r border-gray-100 p-1.5 text-left transition-colors ${
                 !cell.inMonth
                   ? 'bg-gray-50/60'
-                  : cell.isWeekend
-                    ? 'bg-gray-50/40'
-                    : 'bg-white'
-              } ${isSelected ? 'ring-2 ring-inset ring-gray-900' : 'hover:bg-gray-50'}`}
+                  : cell.tone
+                    ? TONE_STYLES[cell.tone]
+                    : cell.isWeekend
+                      ? 'bg-gray-50/40'
+                      : 'bg-white'
+              } ${isSelected ? 'ring-2 ring-inset ring-gray-900' : 'hover:brightness-95'}`}
             >
               <div className="flex items-center justify-between gap-1">
                 <span
