@@ -56,8 +56,22 @@ export function suggestMatch(
   contactName: string,
   candidates: MatchCandidate[],
   /** Klanten die al gekoppeld zijn; die worden niet nog eens voorgesteld. */
-  taken: Set<string> = new Set()
+  taken: Set<string> = new Set(),
+  /** E-mailadres van de contactpersoon; het domein wijst de klant vaak aan. */
+  contactEmail: string | null = null
 ): MatchSuggestion | null {
+  // Het e-maildomein wint van de naam. "D.C.M.E. B.V." zegt niets, maar
+  // roland@orgtopologies.com wijst Org Topologies aan; hetzelfde geldt voor
+  // "Growth Advisory Europe B.V." op jp@doo.company. Algemene providers slaan we
+  // over: gmail.com wijst niemand aan.
+  const domein = emailDomain(contactEmail)
+  if (domein) {
+    const raak = candidates.filter((c) => !taken.has(c.id) && compact(c.name) === compact(domein))
+    if (raak.length > 0) {
+      return { candidate: raak[0], score: 1, alternatives: raak.slice(1) }
+    }
+  }
+
   const doel = compact(contactName)
   if (doel.length < 3) return null
 
@@ -94,6 +108,22 @@ export function suggestMatch(
 
   if (beste === null || beste.score < 0.5) return null
   return { ...beste, alternatives: gelijk }
+}
+
+/** Vrije e-mailproviders zeggen niets over welk bedrijf het is. */
+const ALGEMENE_PROVIDERS = new Set([
+  'gmail', 'hotmail', 'outlook', 'live', 'icloud', 'yahoo', 'ziggo', 'kpnmail',
+  'planet', 'home', 'upcmail', 'telfort', 'casema', 'chello', 'xs4all', 'me',
+])
+
+/** Het bedrijfsdeel van een e-maildomein: "jp@doo.company" geeft "doo". */
+function emailDomain(email: string | null): string | null {
+  if (!email) return null
+  const na = email.split('@')[1]
+  if (!na) return null
+  const eerste = na.split('.')[0]?.toLowerCase()
+  if (!eerste || eerste.length < 3 || ALGEMENE_PROVIDERS.has(eerste)) return null
+  return eerste
 }
 
 /**

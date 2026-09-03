@@ -24,6 +24,8 @@ export interface KixTask {
   lastSentAt: string
   /** Hoe vaak de taak is verstuurd; 1 bij de eerste keer. */
   reminderCount: number
+  /** De dagen waarop de taak naar Kix ging, oplopend. */
+  sentDates: string[]
   status: 'open' | 'done'
   kixNote: string | null
   meetingDate: string | null
@@ -40,6 +42,7 @@ interface TaskRow {
   first_sent_at: string
   last_sent_at: string
   reminder_count: number
+  sent_dates: unknown
   status: string
   kix_note: string | null
   meeting_date: string | null
@@ -58,6 +61,9 @@ function toTask(row: TaskRow, clientName: string): KixTask {
     firstSentAt: row.first_sent_at,
     lastSentAt: row.last_sent_at,
     reminderCount: row.reminder_count,
+    sentDates: Array.isArray(row.sent_dates)
+      ? row.sent_dates.filter((d): d is string => typeof d === 'string')
+      : [],
     status: row.status === 'done' ? 'done' : 'open',
     kixNote: row.kix_note,
     meetingDate: row.meeting_date,
@@ -66,7 +72,7 @@ function toTask(row: TaskRow, clientName: string): KixTask {
 }
 
 const COLUMNS =
-  'id, client_id, kind, label, detail, due_date, first_sent_at, last_sent_at, reminder_count, status, kix_note, meeting_date, completed_at'
+  'id, client_id, kind, label, detail, due_date, first_sent_at, last_sent_at, reminder_count, sent_dates, status, kix_note, meeting_date, completed_at'
 
 /**
  * Alle Kix-taken, nieuwste verzending eerst. Afgeronde taken blijven staan: het
@@ -123,7 +129,7 @@ export async function recordKixTasks(tasks: KixTaskInput[]): Promise<number> {
   for (const task of tasks) {
     const { data: bestaand, error: leesFout } = await supabase
       .from('loopgang_kix_tasks')
-      .select('id, reminder_count')
+      .select('id, reminder_count, sent_dates')
       .eq('client_id', task.clientId)
       .eq('kind', task.kind)
       .eq('status', 'open')
@@ -135,6 +141,14 @@ export async function recordKixTasks(tasks: KixTaskInput[]): Promise<number> {
       continue
     }
 
+    // De verzenddag komt erbij, maar één keer per dag: twee keer op dezelfde
+    // ochtend versturen is geen tweede dag in de kalender.
+    const vandaag = nu.slice(0, 10)
+    const eerder = Array.isArray(bestaand?.sent_dates)
+      ? (bestaand.sent_dates as unknown[]).filter((d): d is string => typeof d === 'string')
+      : []
+    const dagen = eerder.includes(vandaag) ? eerder : [...eerder, vandaag].sort()
+
     const { error: schrijfFout } = bestaand
       ? await supabase
           .from('loopgang_kix_tasks')
@@ -144,6 +158,7 @@ export async function recordKixTasks(tasks: KixTaskInput[]): Promise<number> {
             due_date: task.dueDate,
             last_sent_at: nu,
             reminder_count: (bestaand.reminder_count as number) + 1,
+            sent_dates: dagen,
             updated_at: nu,
           })
           .eq('id', bestaand.id as string)
@@ -156,6 +171,7 @@ export async function recordKixTasks(tasks: KixTaskInput[]): Promise<number> {
           first_sent_at: nu,
           last_sent_at: nu,
           reminder_count: 1,
+          sent_dates: [vandaag],
           status: 'open',
         })
 

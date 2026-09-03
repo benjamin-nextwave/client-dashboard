@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { formatEuroCents, isWeekday } from '@/lib/commissions-shared'
 import type { LoopgangOverview } from '@/lib/data/loopgang-overview'
 import { addDays } from '@/lib/loopgang/cycle'
+import { dayMarkFor } from '@/lib/loopgang/day-status'
 import { buildTasks } from '@/lib/loopgang/tasks'
 import { ClientNote } from './client-note'
 import { KixDialog } from './kix-dialog'
@@ -153,7 +154,8 @@ export function CalendarView({ overview }: Props) {
         kleurDagen,
         periodClient,
         overview.rangeStart,
-        overview.kixTasks
+        overview.kixTasks,
+        clients.length === 1 ? clients[0] : null
       ),
     [
       effectiveView,
@@ -574,6 +576,21 @@ function MonthLink({ month, label }: { month: string; label: string }) {
   )
 }
 
+/**
+ * De taaksoorten die over het regelen van de evaluatiemeeting gaan. Alleen die
+ * kleuren een klokje groen: een factuurherinnering die naar Kix ging zegt niets
+ * over of hij gebeld heeft.
+ */
+const MEETING_TASK_KINDS = new Set<string>(['meeting-call', 'meeting-mail', 'meeting-window'])
+
+interface MarkContext {
+  cycle: LoopgangOverview['clients'][number]['cycle']
+  pausedDates: Set<string>
+  kixSentDates: Set<string>
+  meetingOutcome: 'planned' | 'stop' | 'continue' | null
+  capStartedOn: string | null
+}
+
 interface Period {
   key: string
   /** Kop boven het raster; alleen gevuld als er meer dan één raster staat. */
@@ -600,7 +617,9 @@ function buildPeriods(
   kleuren: boolean,
   periodClient: LoopgangOverview['clients'][number] | null,
   rangeStart: string,
-  kixTasks: LoopgangOverview['kixTasks']
+  kixTasks: LoopgangOverview['kixTasks'],
+  /** De enige gekozen klant; alleen dan hebben de dagtekens betekenis. */
+  markClient: LoopgangOverview['clients'][number] | null
 ): Period[] {
   // Één keer alle gebeurtenissen op datum zetten, zodat elk vakje alleen nog
   // hoeft op te zoeken. De klantvolgorde is de urgentievolgorde uit de
@@ -633,8 +652,26 @@ function buildPeriods(
     else kixByDate.set(dag, [mark])
   }
 
+  // De onderdelen die het dagteken bepalen: één keer klaarzetten in plaats van
+  // per vakje opnieuw.
+  const markContext = markClient
+    ? {
+        cycle: markClient.cycle,
+        pausedDates: new Set(markClient.pausedDates),
+        kixSentDates: new Set(
+          kixTasks
+            .filter((t) => t.clientId === markClient.id && MEETING_TASK_KINDS.has(t.kind))
+            .flatMap((t) => t.sentDates)
+        ),
+        meetingOutcome: markClient.meeting?.outcome ?? null,
+        capStartedOn: markClient.capStartedOn,
+      }
+    : null
+
   const maak = (dates: string[], focusMonth: string | null) =>
-    dates.map((date) => buildCell(date, focusMonth, today, clients, kleuren, byDate, kixByDate))
+    dates.map((date) =>
+      buildCell(date, focusMonth, today, clients, kleuren, byDate, kixByDate, markContext)
+    )
 
   if (view === 'period' && periodClient?.cycle.anchor) {
     // Het raster begint op de startdatum zelf, niet op de maandag ervoor: die
@@ -700,7 +737,8 @@ function buildCell(
   clients: LoopgangOverview['clients'],
   kleuren: boolean,
   byDate: Map<string, DayEntry[]>,
-  kixByDate: Map<string, KixMark[]>
+  kixByDate: Map<string, KixMark[]>,
+  markContext: MarkContext | null
 ): DayCell {
   // Bij een week- of dagweergave is er geen maand om buiten te vallen: alles
   // wat je ziet hoort erbij.
@@ -731,10 +769,11 @@ function buildCell(
     total: clients.length,
     tone: kleuren ? toneFor(date, today, weekend, inMonth, clients) : null,
     kixSent: kixByDate.get(date) ?? [],
+    mark: markContext ? dayMarkFor({ date, today, ...markContext }) : null,
     periodStart: periodStart.map((c) => c.displayName),
     periodEnd: clients
       .filter((c) => c.cycle.invoiceDueDate === date)
-      .map((c) => c.displayName),
+      .map((c) => (c.cycle.endsOnCap ? `${c.displayName} (cap)` : c.displayName)),
   }
 }
 

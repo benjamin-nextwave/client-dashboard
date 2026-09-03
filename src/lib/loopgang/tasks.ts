@@ -47,7 +47,11 @@ const KIND_WEIGHT: Record<EventKind, number> = {
   'payment-due': 90,
   'meeting-call': 70,
   'meeting-mail': 60,
+  // De drie stukken voor de meeting horen bij elkaar en wegen even zwaar; ze
+  // moeten op dezelfde dag klaar zijn.
+  'lead-report-due': 55,
   analysis: 50,
+  'client-report-due': 45,
   meeting: 40,
   'meeting-window': 20,
   'cycle-start': 0,

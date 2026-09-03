@@ -41,6 +41,8 @@ export type EventKind =
   | 'meeting-window'
   | 'meeting'
   | 'analysis'
+  | 'lead-report-due'
+  | 'client-report-due'
   | 'pause-start'
   | 'pause-resume'
 
@@ -96,8 +98,8 @@ function statusFor(date: string, today: string): EventStatus {
 
 const OUTCOME_LABELS: Record<MeetingOutcome, string> = {
   planned: 'Meeting gepland',
-  stop: 'Geen meeting — klant stoppen',
-  continue: 'Geen meeting — klant doorpakken',
+  stop: 'GEEN MEETING — de klant stopt',
+  continue: 'GEEN MEETING — de klant zet direct door',
 }
 
 export function buildEvents(input: BuildEventsInput): LoopgangEvent[] {
@@ -195,14 +197,40 @@ export function buildEvents(input: BuildEventsInput): LoopgangEvent[] {
         detail: null,
       })
 
+      // Twee dagen voor de meeting moet er drie dingen op tafel liggen. Ze
+      // staan los van elkaar omdat ze los afgevinkt worden en naar verschillende
+      // mensen gaan: de leadrapportage en de factuurinschatting zijn voor de
+      // klant, de analyse is intern voor tijdens het gesprek, en het maandrapport
+      // gaat naar de klant.
       const analysisDate = addDays(meeting.meetingDate, -ANALYSIS_LEAD_DAYS)
-      events.push({
-        date: analysisDate,
-        kind: 'analysis',
-        status: meeting.meetingDate < today ? 'done' : statusFor(analysisDate, today),
-        label: 'Campagne-analyse maken',
-        detail: `${ANALYSIS_LEAD_DAYS} dagen voor de meeting`,
-      })
+      const gedaan = meeting.meetingDate < today
+      const voorbereiding: { kind: EventKind; label: string; detail: string }[] = [
+        {
+          kind: 'lead-report-due',
+          label: 'Leadrapportage maken',
+          detail: 'met een inschatting van de totale factuur',
+        },
+        {
+          kind: 'analysis',
+          label: 'Intern rapport voor de meeting',
+          detail: 'campagne-analyse om het gesprek mee in te gaan',
+        },
+        {
+          kind: 'client-report-due',
+          label: 'Maandrapport voor de klant',
+          detail: null as unknown as string,
+        },
+      ]
+
+      for (const taak of voorbereiding) {
+        events.push({
+          date: analysisDate,
+          kind: taak.kind,
+          status: gedaan ? 'done' : statusFor(analysisDate, today),
+          label: taak.label,
+          detail: taak.detail ?? null,
+        })
+      }
     } else {
       events.push({
         date: cycle.anchor,

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { amsterdamDateString } from '@/lib/commissions-shared'
 import { deleteLoopgangPdf, uploadLoopgangPdf } from '@/lib/supabase/storage'
 import { getLoopgangOverview } from '@/lib/data/loopgang-overview'
 import { recordKixTasks } from '@/lib/data/loopgang-kix-tasks'
@@ -946,5 +947,61 @@ export async function deleteKixTaskAction(id: string): Promise<{ error?: string 
 
   revalidatePath(OVERVIEW_PATH)
   console.log(`[loopgang:kix-taken] taak verwijderd id=${id}`)
+  return {}
+}
+
+// -----------------------------------------------------------------------------
+// Leadplafond — de periode eindigt op de cap in plaats van op werkdag 20.
+// -----------------------------------------------------------------------------
+
+/**
+ * Legt vast dat het leadplafond eraan komt.
+ *
+ * Twee dingen tegelijk. De verwachte capdatum wordt de einddag van de periode:
+ * daar moet de leadrapportage en de factuur heen, niet naar werkdag 20 die dan
+ * toch niet gehaald wordt. En vanaf vandaag lopen de klokjes voor Kix, want het
+ * regelen van de evaluatiemeeting begint op het moment dat je het weet — niet op
+ * een uitgerekende werkdag.
+ *
+ * Die twee staan los van elkaar in de database omdat ze los van elkaar bewegen:
+ * de capdatum mag je bijstellen zonder dat de belronde opnieuw begint.
+ */
+export async function setCapAction(
+  clientId: string,
+  formData: FormData
+): Promise<ActionResult> {
+  const raw = formData.get('capDate')
+  const leeg = typeof raw !== 'string' || raw.trim() === ''
+  const capDate = leeg ? null : readDate(formData, 'capDate')
+
+  if (!leeg && capDate === null) {
+    return { error: 'Kies een geldige datum, of laat het veld leeg om de cap te wissen.' }
+  }
+
+  const supabase = createAdminClient()
+
+  // De startdag van de belronde blijft staan zolang de cap loopt; alleen bij het
+  // wissen gaat hij weg. Zo verzet een bijgestelde capdatum de klokjes niet.
+  const { data: bestaand } = await supabase
+    .from('clients')
+    .select('cap_started_on')
+    .eq('id', clientId)
+    .maybeSingle()
+
+  const startedOn = capDate === null ? null : (bestaand?.cap_started_on ?? amsterdamDateString())
+
+  const { error } = await supabase
+    .from('clients')
+    .update({
+      cap_expected_date: capDate,
+      cap_started_on: startedOn,
+      cap_note: capDate ? readText(formData, 'capNote') : null,
+    })
+    .eq('id', clientId)
+
+  if (error) return { error: error.message }
+
+  console.log(`[loopgang] cap gezet client=${clientId} datum=${capDate ?? 'gewist'}`)
+  revalidate(clientId)
   return {}
 }

@@ -20,6 +20,8 @@ interface Client {
   name: string
   contactId: number | null
   inLoopgang: boolean
+  /** Verborgen klanten staan er wel bij; hun oude facturen moeten koppelbaar zijn. */
+  hidden: boolean
 }
 
 type Filter = 'open' | 'gekoppeld' | 'alles'
@@ -65,8 +67,9 @@ export function KoppelTabel({
         ? null
         : suggestMatch(
             contact.name,
-            clients.filter((c) => c.inLoopgang).map((c) => ({ id: c.id, name: c.name })),
-            bezet
+            clients.map((c) => ({ id: c.id, name: c.name })),
+            bezet,
+            contact.email
           )
       return { contact, client, suggestie }
     })
@@ -169,8 +172,8 @@ export function KoppelTabel({
                 <tr key={contact.id} className="align-middle">
                   <td className="px-4 py-2.5">
                     <div className="text-xs font-semibold text-gray-900">{contact.name}</div>
-                    <div className="text-[10px] tabular-nums text-gray-400">
-                      contact {contact.id}
+                    <div className="text-[10px] text-gray-400">
+                      {contact.email ?? `contact ${contact.id}`}
                     </div>
                   </td>
 
@@ -199,6 +202,7 @@ export function KoppelTabel({
                         <option key={c.id} value={c.id}>
                           {c.name}
                           {c.inLoopgang ? '' : ' (niet in loopgang)'}
+                          {c.hidden ? ' · verborgen' : ''}
                           {c.contactId !== null && c.contactId !== contact.id ? ' · al gekoppeld' : ''}
                         </option>
                       ))}

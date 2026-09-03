@@ -9,10 +9,14 @@ export const dynamic = 'force-dynamic'
 export default async function RompslompKoppelPage() {
   const supabase = createAdminClient()
 
+  // Ook de verborgen klanten die in de loopgang staan: negentien van de klanten
+  // daar zijn is_hidden, en juist die hebben oude facturen in Rompslomp. Op
+  // alleen is_hidden filteren liet ze uit de keuzelijst vallen, waardoor ze niet
+  // te koppelen waren.
   const { data: clientRows } = await supabase
     .from('clients')
-    .select('id, company_name, rompslomp_contact_id, loopgang_visible')
-    .eq('is_hidden', false)
+    .select('id, company_name, rompslomp_contact_id, loopgang_visible, is_hidden')
+    .or('is_hidden.eq.false,loopgang_visible.eq.true')
     .order('company_name')
 
   const clients = (clientRows ?? []).map((c) => ({
@@ -20,6 +24,7 @@ export default async function RompslompKoppelPage() {
     name: c.company_name as string,
     contactId: (c.rompslomp_contact_id as number | null) ?? null,
     inLoopgang: Boolean(c.loopgang_visible),
+    hidden: Boolean(c.is_hidden),
   }))
 
   const configured = isRompslompConfigured('invoices')

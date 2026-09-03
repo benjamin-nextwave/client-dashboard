@@ -184,6 +184,12 @@ export interface CycleInput {
   lastInvoice: CycleInvoice | null
   /** De afgehandelde meeting die bij het huidige anker hoort, als die er is. */
   meeting: CycleMeeting | null
+  /**
+   * De dag waarop het leadplafond wordt verwacht. Is die gezet, dan eindigt de
+   * periode daar in plaats van op werkdag 20: de cap maakt de maand af, niet de
+   * teller.
+   */
+  capDate?: string | null
   /** Welke dagen in een pauze vielen; die tellen nergens mee. */
   isPaused?: PausePredicate
   /** Loopt er op dit moment een pauze? Zo ja, ligt de hele cyclus stil. */
@@ -222,8 +228,13 @@ export interface LoopgangCycle {
   calendarDay: number
   /** Datum waarop werkdag 10 valt — start van de meeting- en belherinneringen. */
   meetingReminderStart: string | null
-  /** Datum waarop werkdag 20 valt — leadrapportage en factuur. */
+  /**
+   * De einddag van de periode: leadrapportage en factuur. Normaal werkdag 20,
+   * en de verwachte capdatum zodra die is gezet.
+   */
   invoiceDueDate: string | null
+  /** Loopt deze periode af op een aangekondigd leadplafond in plaats van op werkdag 20? */
+  endsOnCap: boolean
   /** Kalenderdagen 23 t/m 31, het venster voor de evaluatiemeeting. */
   meetingWindow: { from: string; to: string } | null
   /** Moet er vandaag gebeld worden voor een meeting? */
@@ -316,6 +327,7 @@ export function buildCycle(input: CycleInput): LoopgangCycle {
       calendarDay: 0,
       meetingReminderStart: null,
       invoiceDueDate: null,
+      endsOnCap: false,
       meetingWindow: null,
       callDueToday: false,
       nextCallDate: null,
@@ -331,7 +343,13 @@ export function buildCycle(input: CycleInput): LoopgangCycle {
   const calendarDay = countDays(anchor, today, isPaused)
 
   const meetingReminderStart = nthWorkdayFrom(anchor, MEETING_WORKDAY, isPaused)
-  const invoiceDueDate = nthWorkdayFrom(anchor, INVOICE_WORKDAY, isPaused)
+  const werkdag20 = nthWorkdayFrom(anchor, INVOICE_WORKDAY, isPaused)
+
+  // De cap wint van de teller: is het plafond aangekondigd, dan houdt de periode
+  // daar op, ook als er nog werkdagen over waren.
+  const capDate = input.capDate ?? null
+  const endsOnCap = capDate !== null && capDate >= anchor
+  const invoiceDueDate = endsOnCap ? capDate : werkdag20
   const windowFrom = nthDayFrom(anchor, MEETING_WINDOW_FROM, isPaused)
   const windowTo = nthDayFrom(anchor, MEETING_WINDOW_TO, isPaused)
   const meetingWindow = windowFrom && windowTo ? { from: windowFrom, to: windowTo } : null
@@ -386,6 +404,7 @@ export function buildCycle(input: CycleInput): LoopgangCycle {
       calendarDay,
       meetingReminderStart,
       invoiceDueDate,
+      endsOnCap,
       meetingWindow,
       callDueToday: false,
       nextCallDate: null,
@@ -501,6 +520,7 @@ export function buildCycle(input: CycleInput): LoopgangCycle {
     calendarDay,
     meetingReminderStart,
     invoiceDueDate,
+    endsOnCap,
     meetingWindow,
     callDueToday,
     nextCallDate,

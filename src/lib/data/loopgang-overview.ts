@@ -137,6 +137,11 @@ export interface LoopgangOverviewClient {
   cycleStartNote: string | null
   /** Vrije aantekening die altijd zichtbaar is zodra deze klant is gekozen. */
   operatorNote: string | null
+  /** Verwachte dag waarop het leadplafond wordt bereikt; vervangt werkdag 20. */
+  capExpectedDate: string | null
+  /** De dag waarop dat is aangegeven; vanaf dan lopen de klokjes voor Kix. */
+  capStartedOn: string | null
+  capNote: string | null
   dailySendTarget: number
   isOnboarding: boolean
 
@@ -257,6 +262,9 @@ interface ClientRow {
   company_name: string
   primary_color: string | null
   go_live_date: string | null
+  cap_expected_date: string | null
+  cap_started_on: string | null
+  cap_note: string | null
   cycle_start_date: string | null
   cycle_start_note: string | null
   operator_note: string | null
@@ -335,7 +343,7 @@ export async function getLoopgangOverview(monthInput?: string): Promise<Loopgang
   const { data: clientRows } = await supabase
     .from('clients')
     .select(
-      'id, company_name, primary_color, go_live_date, cycle_start_date, cycle_start_note, operator_note, daily_send_target, loopgang_visible, is_hidden, onboarding_status'
+      'id, company_name, primary_color, go_live_date, cycle_start_date, cycle_start_note, operator_note, cap_expected_date, cap_started_on, cap_note, daily_send_target, loopgang_visible, is_hidden, onboarding_status'
     )
     .order('company_name', { ascending: true })
 
@@ -494,9 +502,17 @@ export async function getLoopgangOverview(monthInput?: string): Promise<Loopgang
     const pausedRanges = buildPausedRanges(pauseEvents)
     const openPause = pausedRanges.find((r) => r.to === null) ?? null
 
+    const capExpectedDate = client.cap_expected_date
+      ? String(client.cap_expected_date).slice(0, 10)
+      : null
+    const capStartedOn = client.cap_started_on
+      ? String(client.cap_started_on).slice(0, 10)
+      : null
+
     const cycle = buildCycle({
       today,
       cycleStart,
+      capDate: capExpectedDate,
       lastInvoice: lastInvoice
         ? {
             date: lastInvoice.invoiceDate,
@@ -602,6 +618,10 @@ export async function getLoopgangOverview(monthInput?: string): Promise<Loopgang
       lastInvoice,
       lastLeadReport: leadReports[0] ?? null,
       meeting,
+
+      capExpectedDate,
+      capStartedOn,
+      capNote: (client.cap_note as string | null) ?? null,
 
       commissionCentsSinceAnchor: commissionCents,
       commissionLeadsSinceAnchor: commissionLeads,

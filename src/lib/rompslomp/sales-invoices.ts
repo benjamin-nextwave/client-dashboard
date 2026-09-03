@@ -33,7 +33,7 @@ interface RawInvoice {
   price_with_vat: string | null
   price_without_vat: string | null
   contact_id: number | null
-  cached_contact: { name?: string | null } | null
+  cached_contact: { name?: string | null; contact_person_email_address?: string | null } | null
   invoice_lines?: { description?: string | null }[]
 }
 
@@ -46,6 +46,8 @@ export interface SalesInvoice {
   invoiceNumber: string | null
   contactId: number | null
   contactName: string | null
+  /** E-mailadres van de contactpersoon; het domein wijst vaak de klant aan. */
+  contactEmail: string | null
   paid: boolean
   /** Bedrag exclusief btw, in centen — zoals de loopgang het bewaart. */
   amountExVatCents: number
@@ -77,6 +79,7 @@ function toInvoice(raw: RawInvoice): SalesInvoice {
     invoiceNumber: raw.invoice_number,
     contactId: raw.contact_id,
     contactName: raw.cached_contact?.name?.trim() || null,
+    contactEmail: raw.cached_contact?.contact_person_email_address?.trim() || null,
     paid: raw.payment_status === 'paid' || raw.payment_status === 'overpaid',
     amountExVatCents: toCents(raw.price_without_vat),
     amountIncVatCents: toCents(raw.price_with_vat),
@@ -121,6 +124,8 @@ export async function listSalesInvoices(from?: string): Promise<RompslompResult<
 export interface RompslompContact {
   id: number
   name: string
+  /** E-mailadres van de contactpersoon, als er een bekend is. */
+  email: string | null
   /** Hoeveel facturen er op dit contact staan. */
   invoiceCount: number
   /** Datum van de nieuwste factuur. */
@@ -143,11 +148,13 @@ export function contactsFromInvoices(invoices: SalesInvoice[]): RompslompContact
     const bestaand = map.get(invoice.contactId)
     if (bestaand) {
       bestaand.invoiceCount += 1
+      if (!bestaand.email && invoice.contactEmail) bestaand.email = invoice.contactEmail
       if (invoice.date > bestaand.lastInvoiceDate) bestaand.lastInvoiceDate = invoice.date
     } else {
       map.set(invoice.contactId, {
         id: invoice.contactId,
         name: invoice.contactName ?? `Contact ${invoice.contactId}`,
+        email: invoice.contactEmail,
         invoiceCount: 1,
         lastInvoiceDate: invoice.date,
       })

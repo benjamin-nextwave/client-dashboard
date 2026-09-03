@@ -1,6 +1,7 @@
 'use client'
 
 import type { EventKind, EventStatus, LoopgangEvent } from '@/lib/loopgang/events'
+import { MARK_LABELS, type DayMark } from '@/lib/loopgang/day-status'
 import type { LoopgangOverviewClient } from '@/lib/data/loopgang-overview'
 
 export interface DayEntry {
@@ -53,6 +54,11 @@ export interface DayCell {
    */
   /** Taken die op deze dag naar Kix zijn gestuurd. */
   kixSent: KixMark[]
+  /**
+   * Wat er die dag van je verwacht wordt. Alleen gevuld bij één gekozen klant:
+   * over twintig klanten tegelijk is er geen enkel teken dat ergens op slaat.
+   */
+  mark: DayMark
   periodStart: string[]
   /**
    * Klanten waarvan de campagneperiode op deze dag eindigt: werkdag 20 vanaf de
@@ -98,6 +104,8 @@ const SHORT_LABEL: Record<EventKind, string> = {
   'meeting-window': 'venster',
   meeting: 'meeting',
   analysis: 'analyse',
+  'lead-report-due': 'leadrapport',
+  'client-report-due': 'maandrapport',
   'pause-start': 'pauze',
   'pause-resume': 'hervat',
 }
@@ -107,6 +115,68 @@ const STATUS_STYLES: Record<EventStatus, string> = {
   overdue: 'bg-rose-100 text-rose-800',
   due: 'bg-amber-100 text-amber-900',
   upcoming: 'bg-indigo-50 text-indigo-700',
+}
+
+/**
+ * Alles wat met de evaluatiemeeting te maken heeft krijgt paars, ongeacht of het
+ * vandaag moet of al gebeurd is. Dat is de enige draad die door de hele tweede
+ * helft van een periode loopt — mailen, bellen, het venster, de meeting zelf en
+ * de analyse eromheen — en die hoor je in één oogopslag terug te vinden.
+ */
+const MEETING_KINDS = new Set<EventKind>([
+  'meeting',
+  'meeting-mail',
+  'meeting-call',
+  'meeting-window',
+  'analysis',
+  'lead-report-due',
+  'client-report-due',
+])
+
+const MEETING_STYLE = 'bg-purple-100 text-purple-800'
+
+/**
+ * Het teken in de hoek van een dagvakje, en zijn kleur.
+ *
+ * Een vinkje betekent "hier hoef je niets te doen", een klokje "hier wordt op je
+ * gewacht". Bewust getekend en geen emoji: die nemen geen tekstkleur aan, en het
+ * hele punt is dat rood, grijs en groen uit elkaar te houden zijn.
+ */
+const MARK_STYLES: Record<Exclude<DayMark, null>, { shape: 'check' | 'clock' | 'pause'; className: string }> = {
+  rest: { shape: 'check', className: 'text-gray-300' },
+  wait: { shape: 'clock', className: 'text-gray-300' },
+  call: { shape: 'clock', className: 'text-rose-500' },
+  sent: { shape: 'clock', className: 'text-emerald-500' },
+  planned: { shape: 'check', className: 'text-purple-600' },
+  continue: { shape: 'check', className: 'text-emerald-600' },
+  stop: { shape: 'check', className: 'text-rose-600' },
+  paused: { shape: 'pause', className: 'text-amber-500' },
+}
+
+function MarkIcon({ mark }: { mark: Exclude<DayMark, null> }) {
+  const { shape, className } = MARK_STYLES[mark]
+
+  return (
+    <svg
+      className={`h-3.5 w-3.5 shrink-0 ${className}`}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.4}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {shape === 'check' && <path d="m5 13 4 4L19 7" />}
+      {shape === 'clock' && (
+        <>
+          <circle cx="12" cy="12" r="8.5" />
+          <path d="M12 7.5V12l3 2" />
+        </>
+      )}
+      {shape === 'pause' && <path d="M9 6v12M15 6v12" />}
+    </svg>
+  )
 }
 
 /**
@@ -214,20 +284,31 @@ export function MonthGrid({
                   {cell.dayNumber}
                 </span>
 
-                {/* Hoeveel klanten die dag verstuurden. Alleen voor dagen die
-                    geweest zijn: van de toekomst weten we het niet. */}
-                {!cell.isFuture && cell.inMonth && !cell.isWeekend && (
-                  <span
-                    className={`text-[10px] font-semibold tabular-nums ${
-                      cell.running === 0
-                        ? 'text-gray-300'
-                        : cell.running === cell.total
-                          ? 'text-emerald-600'
-                          : 'text-amber-600'
-                    }`}
-                  >
-                    {cell.running}/{cell.total}
+                {/* Bij één klant staat hier wat er die dag van je verwacht
+                    wordt; bij meer klanten hoeveel er die dag verstuurden. Die
+                    twee sluiten elkaar uit: een teken over "de meeting moet
+                    geregeld worden" slaat nergens op bij twintig klanten
+                    tegelijk. */}
+                {cell.mark !== null ? (
+                  <span title={MARK_LABELS[cell.mark]}>
+                    <MarkIcon mark={cell.mark} />
                   </span>
+                ) : (
+                  !cell.isFuture &&
+                  cell.inMonth &&
+                  !cell.isWeekend && (
+                    <span
+                      className={`text-[10px] font-semibold tabular-nums ${
+                        cell.running === 0
+                          ? 'text-gray-300'
+                          : cell.running === cell.total
+                            ? 'text-emerald-600'
+                            : 'text-amber-600'
+                      }`}
+                    >
+                      {cell.running}/{cell.total}
+                    </span>
+                  )
                 )}
               </div>
 
@@ -237,7 +318,9 @@ export function MonthGrid({
                     key={`${entry.client.key}-${entry.event.kind}`}
                     title={`${entry.client.displayName} — ${entry.event.label}`}
                     className={`truncate rounded px-1 py-0.5 text-[10px] font-medium leading-tight ${
-                      STATUS_STYLES[entry.event.status]
+                      MEETING_KINDS.has(entry.event.kind)
+                        ? MEETING_STYLE
+                        : STATUS_STYLES[entry.event.status]
                     }`}
                   >
                     {shortLabel(entry.client)} · {SHORT_LABEL[entry.event.kind]}

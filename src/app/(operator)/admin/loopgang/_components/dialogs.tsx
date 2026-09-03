@@ -8,7 +8,7 @@ import type {
   LoopgangOverviewClient,
   OverviewInvoice,
 } from '@/lib/data/loopgang-overview'
-import type { MeetingOutcome } from '@/lib/loopgang/cycle'
+import { INVOICE_WORKDAY, type MeetingOutcome } from '@/lib/loopgang/cycle'
 import {
   deleteInvoiceAction,
   deleteLeadReportAction,
@@ -18,6 +18,7 @@ import {
   setAdminPauseAction,
   saveInvoiceAction,
   saveLeadReportAction,
+  setCapAction,
   setCycleStartAction,
   setDailySendTargetAction,
   setInvoicePaidAction,
@@ -603,6 +604,13 @@ export function PauseDialog({ client, today, onClose }: DialogProps) {
   const pausedDays = client.pausedSince ? countDaysBetween(client.pausedSince, today) : 0
 
   function toggle(paused: boolean) {
+    // Een pauze zonder reden is over twee weken niet meer te herleiden, en juist
+    // dan sta je te kijken waarom de teller stilstaat.
+    if (paused && note.trim() === '') {
+      setError('Geef een reden op. Zonder reden weet niemand later waarom hij stilstond.')
+      return
+    }
+
     setError(null)
     startTransition(async () => {
       const result = await setAdminPauseAction(client.id, paused, note)
@@ -736,6 +744,96 @@ function countDaysBetween(fromIso: string, toIso: string): number {
  * cyclus vanaf de laatste factuur — en dat klopt alleen als er op tijd is
  * gefactureerd.
  */
+/**
+ * Het leadplafond komt eraan.
+ *
+ * Twee dingen tegelijk: de periode eindigt op de verwachte capdatum in plaats
+ * van op werkdag 20, en de belronde voor de evaluatiemeeting begint vandaag in
+ * plaats van op werkdag 10. Dat laatste is het punt — een cap die over een week
+ * valt laat geen tijd om de meeting nog volgens het normale schema te regelen.
+ */
+export function CapDialog({ client, onClose }: Omit<DialogProps, 'today'>) {
+  const router = useRouter()
+  const [pending, startTransition] = useTransition()
+  const [error, setError] = useState<string | null>(null)
+
+  function submit(formData: FormData) {
+    setError(null)
+    startTransition(async () => {
+      const result = await setCapAction(client.id, formData)
+      if (result.error) {
+        setError(result.error)
+        return
+      }
+      router.refresh()
+      onClose()
+    })
+  }
+
+  return (
+    <Modal
+      title="CAP wordt bereikt"
+      subtitle={`${client.displayName} — de periode eindigt dan op de capdatum`}
+      onClose={onClose}
+    >
+      <form action={submit} className="space-y-3">
+        <div>
+          <label className={labelClass} htmlFor="capDate">
+            Cap verwacht op{' '}
+            <span className="font-normal normal-case text-gray-400">(leeg = cap wissen)</span>
+          </label>
+          <input
+            id="capDate"
+            name="capDate"
+            type="date"
+            defaultValue={client.capExpectedDate ?? ''}
+            className={`mt-1 ${fieldClass}`}
+          />
+        </div>
+
+        <div>
+          <label className={labelClass} htmlFor="capNote">
+            Toelichting
+          </label>
+          <textarea
+            id="capNote"
+            name="capNote"
+            rows={2}
+            defaultValue={client.capNote ?? ''}
+            placeholder="Bijvoorbeeld: 80 van de 100 leads binnen, loopt hard door."
+            className={`mt-1 ${fieldClass}`}
+          />
+        </div>
+
+        <p className="rounded-lg bg-gray-50 px-3 py-2 text-[11px] leading-snug text-gray-600">
+          De einddag van de periode verhuist naar deze datum — daar moeten de leadrapportage en
+          de factuur heen, niet naar werkdag {INVOICE_WORKDAY} die dan toch niet gehaald wordt. En
+          de belronde voor de evaluatiemeeting begint meteen, ongeacht op welke werkdag de klant
+          staat.
+          {client.capStartedOn && (
+            <>
+              {' '}
+              De belronde loopt al sinds {formatDayShort(client.capStartedOn)}; een gewijzigde
+              capdatum verzet dat niet.
+            </>
+          )}
+        </p>
+
+        <ErrorLine text={error} />
+
+        <div className="flex justify-end gap-2 pt-1">
+          <button type="button" onClick={onClose} className={ghostButton}>
+            Annuleren
+          </button>
+          <button type="submit" disabled={pending} className={primaryButton}>
+            {pending ? 'Opslaan…' : 'Opslaan'}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  )
+}
+
 export function CycleStartDialog({ client, onClose }: Omit<DialogProps, 'today'>) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()

@@ -5,6 +5,7 @@ import { formatEuroCents } from '@/lib/commissions-shared'
 import type { LoopgangOverviewClient } from '@/lib/data/loopgang-overview'
 import { MEETING_WORKDAY } from '@/lib/loopgang/cycle'
 import {
+  CapDialog,
   CycleStartDialog,
   InvoiceDialog,
   LeadReportDialog,
@@ -19,7 +20,14 @@ import {
  * klantenstrook onder de kalender. Eén plek, zodat ze niet uit elkaar lopen.
  */
 
-export type OpenDialog = 'invoice' | 'report' | 'meeting' | 'pause' | 'target' | 'cycleStart'
+export type OpenDialog =
+  | 'invoice'
+  | 'report'
+  | 'meeting'
+  | 'pause'
+  | 'target'
+  | 'cycleStart'
+  | 'cap'
 
 export interface DialogState {
   /** De sleutel uit het overzicht, niet het klant-id: één klant kan twee regels hebben. */
@@ -83,6 +91,13 @@ export function ClientActions({
         className={client.cycleStart ? activeButton : smallButton}
       >
         Cyclusstart
+      </button>
+      <button
+        type="button"
+        onClick={() => onOpen('cap')}
+        className={client.capExpectedDate ? activeButton : smallButton}
+      >
+        {client.capExpectedDate ? 'CAP gezet' : 'CAP wordt bereikt'}
       </button>
       <button type="button" onClick={() => onOpen('target')} className={smallButton}>
         Volumenorm
@@ -183,6 +198,8 @@ export function ClientDialogs({
       return <TargetDialog client={client} onClose={onClose} />
     case 'cycleStart':
       return <CycleStartDialog client={client} onClose={onClose} />
+    case 'cap':
+      return <CapDialog client={client} onClose={onClose} />
   }
 }
 
