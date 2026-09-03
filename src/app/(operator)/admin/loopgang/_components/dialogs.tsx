@@ -19,6 +19,7 @@ import {
   saveInvoiceAction,
   saveLeadReportAction,
   setCapAction,
+  setStoppedAction,
   setCycleStartAction,
   setDailySendTargetAction,
   setInvoicePaidAction,
@@ -817,6 +818,100 @@ export function CapDialog({ client, onClose }: Omit<DialogProps, 'today'>) {
               capdatum verzet dat niet.
             </>
           )}
+        </p>
+
+        <ErrorLine text={error} />
+
+        <div className="flex justify-end gap-2 pt-1">
+          <button type="button" onClick={onClose} className={ghostButton}>
+            Annuleren
+          </button>
+          <button type="submit" disabled={pending} className={primaryButton}>
+            {pending ? 'Opslaan…' : 'Opslaan'}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  )
+}
+
+/**
+ * De klant is gestopt.
+ *
+ * De laatste campagnedag wordt de einddag van de periode. Alles rond de campagne
+ * vervalt; de openstaande factuur blijft staan, want die verdwijnt niet doordat
+ * iemand stopt. Daarom blijft een gestopte klant in de loopgang staan.
+ */
+export function StoppedDialog({ client, onClose }: Omit<DialogProps, 'today'>) {
+  const router = useRouter()
+  const [pending, startTransition] = useTransition()
+  const [error, setError] = useState<string | null>(null)
+
+  const openstaand = client.invoices.filter((i) => !i.paidAt)
+  const openCents = openstaand.reduce((sum, i) => sum + (i.amountCents ?? 0), 0)
+
+  function submit(formData: FormData) {
+    setError(null)
+    startTransition(async () => {
+      const result = await setStoppedAction(client.id, formData)
+      if (result.error) {
+        setError(result.error)
+        return
+      }
+      router.refresh()
+      onClose()
+    })
+  }
+
+  return (
+    <Modal
+      title="Klant is gestopt"
+      subtitle={`${client.displayName} — de periode eindigt op de laatste campagnedag`}
+      onClose={onClose}
+    >
+      <form action={submit} className="space-y-3">
+        <div>
+          <label className={labelClass} htmlFor="stoppedOn">
+            Laatste campagnedag{' '}
+            <span className="font-normal normal-case text-gray-400">(leeg = niet gestopt)</span>
+          </label>
+          <input
+            id="stoppedOn"
+            name="stoppedOn"
+            type="date"
+            defaultValue={client.stoppedOn ?? ''}
+            className={`mt-1 ${fieldClass}`}
+          />
+        </div>
+
+        <div>
+          <label className={labelClass} htmlFor="stoppedNote">
+            Reden
+          </label>
+          <textarea
+            id="stoppedNote"
+            name="stoppedNote"
+            rows={2}
+            defaultValue={client.stoppedNote ?? ''}
+            placeholder="Bijvoorbeeld: te weinig resultaat, klant stopt per direct."
+            className={`mt-1 ${fieldClass}`}
+          />
+        </div>
+
+        {openstaand.length > 0 && (
+          <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] leading-snug text-amber-900">
+            <span className="font-semibold">
+              {formatEuroCents(openCents)} staat nog open
+            </span>{' '}
+            over {openstaand.length} {openstaand.length === 1 ? 'factuur' : 'facturen'}. Die blijft
+            in beeld: stoppen haalt de klant niet uit het overzicht zolang er geld openstaat.
+          </p>
+        )}
+
+        <p className="rounded-lg bg-gray-50 px-3 py-2 text-[11px] leading-snug text-gray-600">
+          De werkdagteller stopt, de belronde voor de evaluatiemeeting vervalt en er komt geen
+          factuurdeadline op werkdag {INVOICE_WORKDAY} meer. Is de laatste periode nog niet
+          gefactureerd, dan blijft daar een taak voor staan.
         </p>
 
         <ErrorLine text={error} />

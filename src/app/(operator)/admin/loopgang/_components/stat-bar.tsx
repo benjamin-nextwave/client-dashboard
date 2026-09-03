@@ -60,7 +60,7 @@ export function StatBar({ clients, totals, today, activeClientKey, onSelectClien
   // tegel; nu staat het als bijregel bij "Draait" en per klant in de lijst —
   // dezelfde informatie, één kader minder.
   const stilCount = clients.filter(
-    (c) => c.cycle.anchor !== null && !c.isPaused && c.isStalled
+    (c) => c.cycle.anchor !== null && !c.isPaused && c.stoppedOn === null && c.isStalled
   ).length
 
   return (
@@ -233,7 +233,7 @@ function rowsFor(key: StatKey, clients: LoopgangOverviewClient[], today: string)
       // daadwerkelijk verstuurt staat per klant in de toelichting — een klant
       // die stilvalt hoort in deze lijst op te vallen, niet eruit te verdwijnen.
       return clients
-        .filter((c) => c.cycle.anchor !== null && !c.isPaused)
+        .filter((c) => c.cycle.anchor !== null && !c.isPaused && c.stoppedOn === null)
         .map((c) => ({ client: c, detail: runningDetail(c, today) }))
 
     case 'paused':
@@ -366,6 +366,8 @@ function openDetail(client: LoopgangOverviewClient, today: string): string {
     .reduce((sum, i) => sum + (i.amountCents ?? 0), 0)
 
   const delen = [`${formatEuroCents(bedrag)} open`]
+
+  if (client.stoppedOn) delen.push(`GESTOPT op ${formatDayShort(client.stoppedOn)}`)
 
   const oudste = oldestUnpaid(client)
   if (oudste) {

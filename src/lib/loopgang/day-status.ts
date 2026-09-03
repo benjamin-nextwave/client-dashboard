@@ -82,6 +82,13 @@ export function dayMarkFor(input: DayStatusInput): DayMark {
 
   if (pausedDates.has(date)) return 'paused'
 
+  // Een gestopte klant heeft geen meeting meer te regelen. De laatste dag krijgt
+  // het stopteken, de dagen daarvoor blijven gewoon rustdagen — die zijn immers
+  // wel gedraaid.
+  if (cycle.stoppedOn) {
+    return date === cycle.stoppedOn ? 'stop' : 'rest'
+  }
+
   // Een afgehandelde meeting maakt de hele actiehelft af: gepland, doorgaan of
   // stoppen — in alle drie de gevallen valt er niets meer te bellen.
   if (meetingOutcome !== null) return meetingOutcome

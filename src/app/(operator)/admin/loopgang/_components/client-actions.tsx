@@ -6,6 +6,7 @@ import type { LoopgangOverviewClient } from '@/lib/data/loopgang-overview'
 import { MEETING_WORKDAY } from '@/lib/loopgang/cycle'
 import {
   CapDialog,
+  StoppedDialog,
   CycleStartDialog,
   InvoiceDialog,
   LeadReportDialog,
@@ -28,6 +29,7 @@ export type OpenDialog =
   | 'target'
   | 'cycleStart'
   | 'cap'
+  | 'stopped'
 
 export interface DialogState {
   /** De sleutel uit het overzicht, niet het klant-id: één klant kan twee regels hebben. */
@@ -91,6 +93,13 @@ export function ClientActions({
         className={client.cycleStart ? activeButton : smallButton}
       >
         Cyclusstart
+      </button>
+      <button
+        type="button"
+        onClick={() => onOpen('stopped')}
+        className={client.stoppedOn ? stoppedButton : smallButton}
+      >
+        {client.stoppedOn ? 'Gestopt' : 'Klant is gestopt'}
       </button>
       <button
         type="button"
@@ -200,6 +209,8 @@ export function ClientDialogs({
       return <CycleStartDialog client={client} onClose={onClose} />
     case 'cap':
       return <CapDialog client={client} onClose={onClose} />
+    case 'stopped':
+      return <StoppedDialog client={client} onClose={onClose} />
   }
 }
 
@@ -208,5 +219,10 @@ const smallButton =
 
 // Een handmatig gezette cyclusstart overrulet de factuurdatum. Dat moet je aan
 // de knop kunnen zien, anders zoek je je scheel naar waarom de teller afwijkt.
+// Gestopt is geen instelling maar een eindtoestand; die hoort zwaarder te wegen
+// dan een handmatig gezette datum.
+const stoppedButton =
+  'inline-flex items-center rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1 text-[10px] font-semibold text-rose-700 transition-colors hover:bg-rose-100'
+
 const activeButton =
   'inline-flex items-center rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[10px] font-semibold text-indigo-700 transition-colors hover:bg-indigo-100'

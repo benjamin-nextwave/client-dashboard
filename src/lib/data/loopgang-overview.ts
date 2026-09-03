@@ -142,6 +142,9 @@ export interface LoopgangOverviewClient {
   /** De dag waarop dat is aangegeven; vanaf dan lopen de klokjes voor Kix. */
   capStartedOn: string | null
   capNote: string | null
+  /** Laatste dag dat de campagne liep; gevuld zodra de klant is gestopt. */
+  stoppedOn: string | null
+  stoppedNote: string | null
   dailySendTarget: number
   isOnboarding: boolean
 
@@ -267,6 +270,8 @@ interface ClientRow {
   cap_expected_date: string | null
   cap_started_on: string | null
   cap_note: string | null
+  stopped_on: string | null
+  stopped_note: string | null
   cycle_start_date: string | null
   cycle_start_note: string | null
   operator_note: string | null
@@ -344,7 +349,7 @@ export async function getLoopgangOverview(monthInput?: string): Promise<Loopgang
   const { data: clientRows } = await supabase
     .from('clients')
     .select(
-      'id, company_name, primary_color, go_live_date, cycle_start_date, cycle_start_note, operator_note, cap_expected_date, cap_started_on, cap_note, daily_send_target, loopgang_visible, is_hidden, onboarding_status'
+      'id, company_name, primary_color, go_live_date, cycle_start_date, cycle_start_note, operator_note, cap_expected_date, cap_started_on, cap_note, stopped_on, stopped_note, daily_send_target, loopgang_visible, is_hidden, onboarding_status'
     )
     .order('company_name', { ascending: true })
 
@@ -521,6 +526,7 @@ export async function getLoopgangOverview(monthInput?: string): Promise<Loopgang
       today,
       cycleStart,
       capDate: capExpectedDate,
+      stoppedOn: client.stopped_on ? String(client.stopped_on).slice(0, 10) : null,
       lastInvoice: lastInvoice
         ? {
             date: lastInvoice.invoiceDate,
@@ -630,6 +636,8 @@ export async function getLoopgangOverview(monthInput?: string): Promise<Loopgang
       capExpectedDate,
       capStartedOn,
       capNote: (client.cap_note as string | null) ?? null,
+      stoppedOn: client.stopped_on ? String(client.stopped_on).slice(0, 10) : null,
+      stoppedNote: (client.stopped_note as string | null) ?? null,
 
       commissionCentsSinceAnchor: commissionCents,
       commissionLeadsSinceAnchor: commissionLeads,

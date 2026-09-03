@@ -190,6 +190,13 @@ export interface CycleInput {
    * teller.
    */
   capDate?: string | null
+  /**
+   * De laatste dag dat de campagne liep. Is die gezet, dan is de klant gestopt:
+   * de periode eindigt daar en alles rond de campagne vervalt. Wat blijft is de
+   * betaling — een gestopte klant met een openstaande factuur moet je blijven
+   * zien.
+   */
+  stoppedOn?: string | null
   /** Welke dagen in een pauze vielen; die tellen nergens mee. */
   isPaused?: PausePredicate
   /** Loopt er op dit moment een pauze? Zo ja, ligt de hele cyclus stil. */
@@ -235,6 +242,8 @@ export interface LoopgangCycle {
   invoiceDueDate: string | null
   /** Loopt deze periode af op een aangekondigd leadplafond in plaats van op werkdag 20? */
   endsOnCap: boolean
+  /** De laatste dag dat de campagne liep; null zolang de klant doorgaat. */
+  stoppedOn: string | null
   /** Kalenderdagen 23 t/m 31, het venster voor de evaluatiemeeting. */
   meetingWindow: { from: string; to: string } | null
   /** Moet er vandaag gebeld worden voor een meeting? */
@@ -328,6 +337,7 @@ export function buildCycle(input: CycleInput): LoopgangCycle {
       meetingReminderStart: null,
       invoiceDueDate: null,
       endsOnCap: false,
+      stoppedOn: null,
       meetingWindow: null,
       callDueToday: false,
       nextCallDate: null,
@@ -349,12 +359,55 @@ export function buildCycle(input: CycleInput): LoopgangCycle {
   // daar op, ook als er nog werkdagen over waren.
   const capDate = input.capDate ?? null
   const endsOnCap = capDate !== null && capDate >= anchor
-  const invoiceDueDate = endsOnCap ? capDate : werkdag20
+
+  // Een gestopte klant loopt tot zijn stopdag en niet verder. Die wint ook van
+  // de cap: als er allebei iets staat is de campagne feitelijk op de stopdag
+  // opgehouden.
+  const stoppedOn = input.stoppedOn && input.stoppedOn >= anchor ? input.stoppedOn : null
+  const invoiceDueDate = stoppedOn ?? (endsOnCap ? capDate : werkdag20)
   const windowFrom = nthDayFrom(anchor, MEETING_WINDOW_FROM, isPaused)
   const windowTo = nthDayFrom(anchor, MEETING_WINDOW_TO, isPaused)
   const meetingWindow = windowFrom && windowTo ? { from: windowFrom, to: windowTo } : null
 
   const meetingHandled = meeting !== null
+
+  // Een gestopte klant heeft geen campagne meer om over te vergaderen. Alles wat
+  // met de cyclus te maken heeft vervalt; alleen de factuur en de betaling
+  // blijven staan, want die verdwijnen niet doordat iemand stopt.
+  if (stoppedOn) {
+    const gefactureerd = lastInvoice !== null && lastInvoice.date >= anchor
+
+    if (!gefactureerd) {
+      reminders.push({
+        kind: 'invoice-due',
+        severity: 'urgent',
+        title: 'Eindfactuur versturen',
+        detail: `Campagne gestopt op ${nlDate(stoppedOn)}; de laatste periode is nog niet gefactureerd.`,
+      })
+    }
+
+    const betaling = paymentReminder(lastInvoice, today)
+    if (betaling) reminders.push(betaling)
+
+    return {
+      anchor,
+      anchorSource,
+      workday,
+      calendarDay,
+      meetingReminderStart: null,
+      invoiceDueDate,
+      endsOnCap: false,
+      stoppedOn,
+      meetingWindow: null,
+      callDueToday: false,
+      nextCallDate: null,
+      meetingHandled,
+      paused: pausedNow,
+      pausedSince,
+      reminders,
+      urgency: reminders.reduce((sum, r) => sum + SEVERITY_WEIGHT[r.severity], 0),
+    }
+  }
 
   // Een lopende pauze legt de hele cyclus stil: geen factuurherinnering, geen
   // belronde, niets dat als taak naar Kix gaat. De tellers hierboven staan al
@@ -405,6 +458,7 @@ export function buildCycle(input: CycleInput): LoopgangCycle {
       meetingReminderStart,
       invoiceDueDate,
       endsOnCap,
+      stoppedOn,
       meetingWindow,
       callDueToday: false,
       nextCallDate: null,
@@ -521,6 +575,7 @@ export function buildCycle(input: CycleInput): LoopgangCycle {
     meetingReminderStart,
     invoiceDueDate,
     endsOnCap,
+    stoppedOn,
     meetingWindow,
     callDueToday,
     nextCallDate,

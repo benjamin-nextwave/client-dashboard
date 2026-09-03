@@ -798,7 +798,13 @@ function buildCell(
     periodStart: periodStart.map((c) => c.displayName),
     periodEnd: clients
       .filter((c) => c.cycle.invoiceDueDate === date)
-      .map((c) => (c.cycle.endsOnCap ? `${c.displayName} (cap)` : c.displayName)),
+      .map((c) =>
+        c.cycle.stoppedOn
+          ? `${c.displayName} (gestopt)`
+          : c.cycle.endsOnCap
+            ? `${c.displayName} (cap)`
+            : c.displayName
+      ),
   }
 }
 

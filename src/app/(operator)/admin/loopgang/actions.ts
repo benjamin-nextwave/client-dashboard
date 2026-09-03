@@ -1005,3 +1005,43 @@ export async function setCapAction(
   revalidate(clientId)
   return {}
 }
+
+/**
+ * Legt vast dat de klant is gestopt.
+ *
+ * De stopdag is de laatste dag dat de campagne liep en wordt de einddag van de
+ * periode. Alles rond de campagne vervalt daarmee: geen werkdagteller die
+ * doorloopt, geen belronde voor een evaluatiemeeting, geen factuurdeadline op
+ * werkdag 20.
+ *
+ * Wat blijft is het geld. Een openstaande factuur verdwijnt niet doordat iemand
+ * stopt, dus die blijft in het overzicht staan tot hij betaald is — vandaar dat
+ * een gestopte klant in de loopgang blijft en niet wordt verborgen.
+ */
+export async function setStoppedAction(
+  clientId: string,
+  formData: FormData
+): Promise<ActionResult> {
+  const raw = formData.get('stoppedOn')
+  const leeg = typeof raw !== 'string' || raw.trim() === ''
+  const stoppedOn = leeg ? null : readDate(formData, 'stoppedOn')
+
+  if (!leeg && stoppedOn === null) {
+    return { error: 'Kies een geldige laatste campagnedag, of laat het veld leeg.' }
+  }
+
+  const supabase = createAdminClient()
+  const { error } = await supabase
+    .from('clients')
+    .update({
+      stopped_on: stoppedOn,
+      stopped_note: stoppedOn ? readText(formData, 'stoppedNote') : null,
+    })
+    .eq('id', clientId)
+
+  if (error) return { error: error.message }
+
+  console.log(`[loopgang] klant gestopt client=${clientId} datum=${stoppedOn ?? 'teruggedraaid'}`)
+  revalidate(clientId)
+  return {}
+}
