@@ -1,7 +1,6 @@
 /**
- * De taken van vandaag: alles uit de loopgang dat nu moet gebeuren of al te
- * laat is. Wat gebeurd is telt niet als taak, en wat pas volgende week aan de
- * beurt is ook niet.
+ * De taken uit de loopgang: alles wat nu moet gebeuren, al te laat is, of
+ * binnen de horizon aankomt. Wat gebeurd is telt niet als taak.
  *
  * Deze lijst is wat er naar Kix gaat. Daarom staat het opmaken van de tekst
  * hier ook: de mail die Make verstuurt en het lijstje op het scherm moeten
@@ -30,9 +29,11 @@ export interface LoopgangTask {
   detail: string | null
   /** De dag waarop de taak hoorde te gebeuren. */
   date: string
-  status: 'due' | 'overdue'
-  /** Kalenderdagen te laat; 0 als het vandaag moet. */
+  status: 'due' | 'overdue' | 'upcoming'
+  /** Kalenderdagen te laat; 0 als het vandaag moet of nog moet komen. */
   daysLate: number
+  /** Kalenderdagen tot de taak; 0 als hij vandaag of eerder valt. */
+  daysUntil: number
   /** Werkdag van de cyclus waarop de klant staat. */
   workday: number
 }
@@ -60,13 +61,23 @@ const KIND_WEIGHT: Record<EventKind, number> = {
 /**
  * Alles wat vandaag moet gebeuren of al over tijd is, over alle klanten heen.
  * Te laat staat boven vandaag, en binnen dezelfde urgentie weegt het soort taak.
+ *
+ * Met `horizonDays` komt ook mee wat er de komende dagen aankomt. Nul is de
+ * standaard: dat is de lijst die naar Kix gaat als "dit moet nu".
  */
-export function buildTasks(clients: TaskSourceClient[], today: string): LoopgangTask[] {
+export function buildTasks(
+  clients: TaskSourceClient[],
+  today: string,
+  horizonDays = 0
+): LoopgangTask[] {
   const tasks: LoopgangTask[] = []
 
   for (const client of clients) {
     for (const event of client.events) {
-      if (event.status !== 'due' && event.status !== 'overdue') continue
+      if (event.status === 'done') continue
+
+      const until = daysBetween(today, event.date)
+      if (event.status === 'upcoming' && until > horizonDays) continue
 
       tasks.push({
         clientId: client.id,
@@ -77,12 +88,14 @@ export function buildTasks(clients: TaskSourceClient[], today: string): Loopgang
         date: event.date,
         status: event.status,
         daysLate: event.status === 'overdue' ? daysBetween(event.date, today) : 0,
+        daysUntil: event.status === 'upcoming' ? until : 0,
         workday: client.cycle.workday,
       })
     }
   }
 
   return tasks.sort((a, b) => {
+    if (a.daysUntil !== b.daysUntil) return a.daysUntil - b.daysUntil
     if (a.daysLate !== b.daysLate) return b.daysLate - a.daysLate
     if (KIND_WEIGHT[a.kind] !== KIND_WEIGHT[b.kind]) {
       return KIND_WEIGHT[b.kind] - KIND_WEIGHT[a.kind]
@@ -91,9 +104,24 @@ export function buildTasks(clients: TaskSourceClient[], today: string): Loopgang
   })
 }
 
-/** "4 dagen te laat" of "vandaag" — één formulering voor scherm en mail. */
+/**
+ * De urgentiegroep waar een taak in thuishoort. De namen komen overeen met wat
+ * er in het overzicht boven de groep staat.
+ */
+export type TaskUrgency = 'overdue' | 'today' | 'soon'
+
+export function urgencyOf(task: LoopgangTask): TaskUrgency {
+  if (task.status === 'overdue') return 'overdue'
+  if (task.status === 'due') return 'today'
+  return 'soon'
+}
+
+/** "4 dagen te laat", "vandaag" of "over 3 dagen" — één formulering voor scherm en mail. */
 export function describeTiming(task: LoopgangTask): string {
   if (task.status === 'due') return 'vandaag'
+  if (task.status === 'upcoming') {
+    return task.daysUntil === 1 ? 'morgen' : `over ${task.daysUntil} dagen`
+  }
   if (task.daysLate === 1) return '1 dag te laat'
   return `${task.daysLate} dagen te laat`
 }

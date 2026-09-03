@@ -19,6 +19,7 @@
  */
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getKixTasks, type KixTask } from './loopgang-kix-tasks'
 import { getCampaign, getCampaignDailyAnalytics } from '@/lib/instantly/client'
 import { describeCampaignStatus, INSTANTLY_CAMPAIGN_STATUS } from '@/lib/instantly/types'
 import {
@@ -200,6 +201,8 @@ export interface LoopgangOverview {
   clients: LoopgangOverviewClient[]
   /** Alle klanten die in de kalender gezet kúnnen worden, ook de uitgevinkte. */
   clientOptions: LoopgangClientOption[]
+  /** Alles wat er ooit naar Kix is gestuurd, nieuwste verzending eerst. */
+  kixTasks: KixTask[]
   totals: {
     running: number
     stalled: number
@@ -292,6 +295,7 @@ function emptyOverview(
     rangeEnd: end,
     clients: [],
     clientOptions,
+    kixTasks: [],
     totals: {
       running: 0,
       stalled: 0,
@@ -656,6 +660,12 @@ export async function getLoopgangOverview(monthInput?: string): Promise<Loopgang
     ),
   }
 
+  // De namen komen uit het overzicht: de takentabel bewaart alleen het klant-id,
+  // zodat een hernoemde klant ook in de oude taken de nieuwe naam krijgt.
+  const kixTasks = await getKixTasks(
+    new Map(sorted.map((c) => [c.id, c.displayName]))
+  )
+
   return {
     today,
     todayIsWorkday,
@@ -664,6 +674,7 @@ export async function getLoopgangOverview(monthInput?: string): Promise<Loopgang
     rangeEnd: bounds.end,
     clients: sorted,
     clientOptions,
+    kixTasks,
     totals,
   }
 }

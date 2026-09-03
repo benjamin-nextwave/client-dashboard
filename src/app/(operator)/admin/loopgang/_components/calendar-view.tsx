@@ -10,9 +10,17 @@ import { buildTasks } from '@/lib/loopgang/tasks'
 import { ClientNote } from './client-note'
 import { KixDialog } from './kix-dialog'
 import { DayPanel } from './day-panel'
+import { KixHistory } from './kix-history'
 import { StatBar } from './stat-bar'
 import { TaskDialog } from './task-dialog'
-import { MonthGrid, PAUSE_ORANGE_DAYS, type DayCell, type DayEntry, type DayTone } from './month-grid'
+import {
+  MonthGrid,
+  PAUSE_ORANGE_DAYS,
+  type DayCell,
+  type DayEntry,
+  type DayTone,
+  type KixMark,
+} from './month-grid'
 import { ClientListDialog, InvoiceDialog, LeadReportDialog } from './dialogs'
 
 interface Props {
@@ -144,7 +152,8 @@ export function CalendarView({ overview }: Props) {
         clients,
         kleurDagen,
         periodClient,
-        overview.rangeStart
+        overview.rangeStart,
+        overview.kixTasks
       ),
     [
       effectiveView,
@@ -152,6 +161,7 @@ export function CalendarView({ overview }: Props) {
       selectedDate,
       overview.today,
       overview.rangeStart,
+      overview.kixTasks,
       clients,
       kleurDagen,
       periodClient,
@@ -479,6 +489,12 @@ export function CalendarView({ overview }: Props) {
               alleen op de dag die je toevallig hebt aangeklikt. */}
           {activeClient && <ClientNote client={activeClient} />}
 
+          <KixHistory
+            tasks={overview.kixTasks}
+            clientId={activeClient?.id ?? null}
+            clientName={activeClient?.displayName ?? null}
+          />
+
           <DayPanel
             date={selectedDate}
             today={overview.today}
@@ -559,7 +575,8 @@ function buildPeriods(
   clients: LoopgangOverview['clients'],
   kleuren: boolean,
   periodClient: LoopgangOverview['clients'][number] | null,
-  rangeStart: string
+  rangeStart: string,
+  kixTasks: LoopgangOverview['kixTasks']
 ): Period[] {
   // Één keer alle gebeurtenissen op datum zetten, zodat elk vakje alleen nog
   // hoeft op te zoeken. De klantvolgorde is de urgentievolgorde uit de
@@ -573,8 +590,27 @@ function buildPeriods(
     }
   }
 
+  // De dag waarop een taak voor het laatst naar Kix ging. Alleen de klanten die
+  // door het filter komen: anders staat er een blokje bij een klant die je net
+  // hebt weggefilterd.
+  const zichtbaar = new Set(clients.map((c) => c.id))
+  const kixByDate = new Map<string, KixMark[]>()
+  for (const task of kixTasks) {
+    if (!zichtbaar.has(task.clientId)) continue
+    const dag = task.lastSentAt.slice(0, 10)
+    const mark: KixMark = {
+      client: task.clientName,
+      label: task.label,
+      count: task.reminderCount,
+      done: task.status === 'done',
+    }
+    const list = kixByDate.get(dag)
+    if (list) list.push(mark)
+    else kixByDate.set(dag, [mark])
+  }
+
   const maak = (dates: string[], focusMonth: string | null) =>
-    dates.map((date) => buildCell(date, focusMonth, today, clients, kleuren, byDate))
+    dates.map((date) => buildCell(date, focusMonth, today, clients, kleuren, byDate, kixByDate))
 
   if (view === 'period' && periodClient?.cycle.anchor) {
     // Het raster begint op de startdatum zelf, niet op de maandag ervoor: die
@@ -639,7 +675,8 @@ function buildCell(
   today: string,
   clients: LoopgangOverview['clients'],
   kleuren: boolean,
-  byDate: Map<string, DayEntry[]>
+  byDate: Map<string, DayEntry[]>,
+  kixByDate: Map<string, KixMark[]>
 ): DayCell {
   // Bij een week- of dagweergave is er geen maand om buiten te vallen: alles
   // wat je ziet hoort erbij.
@@ -669,6 +706,7 @@ function buildCell(
     running,
     total: clients.length,
     tone: kleuren ? toneFor(date, today, weekend, inMonth, clients) : null,
+    kixSent: kixByDate.get(date) ?? [],
     periodStart: periodStart.map((c) => c.displayName),
     periodEnd: clients
       .filter((c) => c.cycle.invoiceDueDate === date)

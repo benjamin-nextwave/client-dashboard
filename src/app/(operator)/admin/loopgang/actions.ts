@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { deleteLoopgangPdf, uploadLoopgangPdf } from '@/lib/supabase/storage'
 import { getLoopgangOverview } from '@/lib/data/loopgang-overview'
+import { recordKixTasks } from '@/lib/data/loopgang-kix-tasks'
 import { analyseerLoopgang, type LoopgangAnalyse } from '@/lib/loopgang/analyse'
 import { addDays, type MeetingOutcome } from '@/lib/loopgang/cycle'
 import {
@@ -35,6 +36,7 @@ function revalidate(clientId: string): void {
 }
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 function readDate(form: FormData, key: string): string | null {
   const raw = form.get(key)
@@ -529,7 +531,8 @@ export async function sendTasksToWebhookAction(
       taak: task.label,
       toelichting: task.detail ?? '',
       soort: task.kind,
-      status: task.status === 'overdue' ? 'te laat' : 'vandaag',
+      status:
+        task.status === 'overdue' ? 'te laat' : task.status === 'due' ? 'vandaag' : 'komt eraan',
       timing: describeTiming(task),
       vervaldatum: task.date,
       dagen_te_laat: task.daysLate,
@@ -556,6 +559,22 @@ export async function sendTasksToWebhookAction(
       return { error: `Make gaf een fout terug (${response.status}).` }
     }
 
+    // Pas vastleggen als Make hem heeft aangenomen: een taak die niet is
+    // aangekomen mag niet als "al herinnerd" in het overzicht komen te staan.
+    const mislukt = await recordKixTasks(
+      tasks.map((task) => ({
+        clientId: task.clientId,
+        kind: task.kind,
+        label: task.label,
+        detail: task.detail,
+        dueDate: task.date,
+      }))
+    )
+    if (mislukt > 0) {
+      console.error(`[loopgang:taken] ${mislukt} taken niet vastgelegd`)
+    }
+
+    revalidatePath(OVERVIEW_PATH)
     console.log(`[loopgang:taken] ${tasks.length} taken verstuurd datum=${options.date}`)
     return { sent: tasks.length }
   } catch (err) {
@@ -864,5 +883,74 @@ export async function registreerKixAction(input: {
   )
   revalidate(input.clientId)
   revalidatePath('/admin/taken')
+  return {}
+}
+
+// -----------------------------------------------------------------------------
+// Kix-taken — wat er is teruggekoppeld op een verstuurde taak.
+// -----------------------------------------------------------------------------
+
+/**
+ * Werkt één verstuurde taak bij: de notitie van Kix, de datum van de meeting,
+ * en of hij af is.
+ *
+ * Afronden verzet de cyclus niet. Dat gebeurt bewust niet hier: een factuur is
+ * pas verstuurd als hij als factuur is vastgelegd, met bedrag en datum. Deze
+ * knop zegt alleen "Kix is hiermee klaar", zodat de taak uit zijn lijst
+ * verdwijnt en de volgende keer opnieuw geteld wordt.
+ */
+export async function updateKixTaskAction(input: {
+  id: string
+  kixNote?: string | null
+  meetingDate?: string | null
+  status?: 'open' | 'done'
+}): Promise<{ error?: string }> {
+  if (!UUID.test(input.id)) return { error: 'Ongeldige taak.' }
+  if (
+    input.meetingDate !== undefined &&
+    input.meetingDate !== null &&
+    !ISO_DATE.test(input.meetingDate)
+  ) {
+    return { error: 'Ongeldige datum.' }
+  }
+
+  const patch: Record<string, unknown> = { updated_at: new Date().toISOString() }
+  if (input.kixNote !== undefined) {
+    const tekst = input.kixNote?.trim() ?? ''
+    patch.kix_note = tekst === '' ? null : tekst.slice(0, 2000)
+  }
+  if (input.meetingDate !== undefined) patch.meeting_date = input.meetingDate
+  if (input.status !== undefined) {
+    patch.status = input.status
+    patch.completed_at = input.status === 'done' ? new Date().toISOString() : null
+  }
+
+  const supabase = createAdminClient()
+  const { error } = await supabase.from('loopgang_kix_tasks').update(patch).eq('id', input.id)
+
+  if (error) {
+    console.error(`[loopgang:kix-taken] bijwerken mislukt id=${input.id}: ${error.message}`)
+    return { error: 'Opslaan mislukt.' }
+  }
+
+  revalidatePath(OVERVIEW_PATH)
+  console.log(`[loopgang:kix-taken] taak bijgewerkt id=${input.id}`)
+  return {}
+}
+
+/** Verwijdert een verstuurde taak uit de lijst; alleen voor missers. */
+export async function deleteKixTaskAction(id: string): Promise<{ error?: string }> {
+  if (!UUID.test(id)) return { error: 'Ongeldige taak.' }
+
+  const supabase = createAdminClient()
+  const { error } = await supabase.from('loopgang_kix_tasks').delete().eq('id', id)
+
+  if (error) {
+    console.error(`[loopgang:kix-taken] verwijderen mislukt id=${id}: ${error.message}`)
+    return { error: 'Verwijderen mislukt.' }
+  }
+
+  revalidatePath(OVERVIEW_PATH)
+  console.log(`[loopgang:kix-taken] taak verwijderd id=${id}`)
   return {}
 }
