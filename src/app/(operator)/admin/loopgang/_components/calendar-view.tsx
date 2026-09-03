@@ -704,6 +704,14 @@ function buildCell(
   // weekend stuurt niemand, en dan zou elke zaterdag rood staan.
   const running = weekend ? 0 : clients.filter((c) => (c.sentByDate[date] ?? 0) > 0).length
 
+  const periodStart = clients.filter((c) => c.cycle.anchor === date)
+
+  // De balk zegt al dat de cyclus hier begint; het blokje 'start' ernaast is
+  // dan dubbelop.
+  const entries = (byDate.get(date) ?? []).filter(
+    (e) => !(e.event.kind === 'cycle-start' && periodStart.some((c) => c.key === e.client.key))
+  )
+
   return {
     date,
     dayNumber: Number(date.slice(8, 10)),
@@ -711,10 +719,11 @@ function buildCell(
     isWeekend: weekend,
     isToday: date === today,
     isFuture: date > today,
-    entries: byDate.get(date) ?? [],
+    entries,
     running,
     total: clients.length,
     tone: kleuren ? toneFor(date, today, weekend, inMonth, clients) : null,
+    periodStart: periodStart.map((c) => c.displayName),
     periodEnd: clients
       .filter((c) => c.cycle.invoiceDueDate === date)
       .map((c) => c.displayName),

@@ -39,6 +39,11 @@ export interface DayCell {
   total: number
   tone: DayTone
   /**
+   * Klanten waarvan de campagneperiode op deze dag begint — het anker waar de
+   * werkdagteller vanaf loopt.
+   */
+  periodStart: string[]
+  /**
    * Klanten waarvan de campagneperiode op deze dag eindigt: werkdag 20 vanaf de
    * startdatum, met de pauzedagen eruit gerekend. Dat is de dag waarop de
    * leadrapportage en de factuur de deur uit moeten.
@@ -159,16 +164,29 @@ export function MonthGrid({
                       : 'bg-white'
               } ${isSelected ? 'ring-2 ring-inset ring-gray-900' : 'hover:brightness-95'}`}
             >
-              {/* De einddag van de periode is het enige moment dat een harde
-                  deadline is; die verdient een streep en niet een blokje
-                  tussen de rest. */}
-              {cell.periodEnd.length > 0 && (
-                <div
-                  title={`Einde periode: ${cell.periodEnd.join(', ')}`}
-                  className="-mx-1.5 -mt-1.5 mb-0.5 border-t-2 border-gray-900 bg-gray-900 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-white"
-                >
-                  einde periode
-                  {cell.periodEnd.length === 1 ? ` · ${cell.periodEnd[0]}` : ` · ${cell.periodEnd.length} klanten`}
+              {/* Begin en einde van een periode zijn de twee harde ankers in de
+                  maand; die verdienen een streep over de volle breedte en niet
+                  een blokje tussen de rest. Het einde staat bovenaan: valt er op
+                  één dag een einde en een start samen, dan sluit de oude periode
+                  af voordat de nieuwe begint. */}
+              {(cell.periodEnd.length > 0 || cell.periodStart.length > 0) && (
+                <div className="-mx-1.5 -mt-1.5 mb-0.5 flex flex-col">
+                  {cell.periodEnd.length > 0 && (
+                    <div
+                      title={`Einde periode: ${cell.periodEnd.join(', ')}`}
+                      className="border-t-2 border-gray-900 bg-gray-900 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-white"
+                    >
+                      einde periode{namesSuffix(cell.periodEnd)}
+                    </div>
+                  )}
+                  {cell.periodStart.length > 0 && (
+                    <div
+                      title={`Start periode: ${cell.periodStart.join(', ')}`}
+                      className="border-t-2 border-emerald-600 bg-emerald-600 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-white"
+                    >
+                      start periode{namesSuffix(cell.periodStart)}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -226,6 +244,16 @@ export function MonthGrid({
       </div>
     </div>
   )
+}
+
+/**
+ * Achter "start periode" of "einde periode" past nog één klantnaam. Bij meer
+ * klanten op dezelfde dag past er geen enkele, en zegt het aantal meer dan een
+ * willekeurige eerste naam.
+ */
+function namesSuffix(names: string[]): string {
+  if (names.length === 0) return ''
+  return names.length === 1 ? ` · ${names[0]}` : ` · ${names.length} klanten`
 }
 
 /**
