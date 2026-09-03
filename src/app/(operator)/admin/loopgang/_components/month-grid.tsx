@@ -115,7 +115,7 @@ export function MonthGrid({
   showWeekdays = true,
 }: Props) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
+    <div className="bg-white">
       {title && (
         <div className="border-b border-gray-100 px-3 py-2 text-[11px] font-semibold text-gray-700">
           {title}
@@ -123,7 +123,7 @@ export function MonthGrid({
       )}
 
       {columns === 7 && showWeekdays && (
-        <div className="grid grid-cols-7 border-b border-gray-100 bg-gray-50">
+        <div className="grid grid-cols-7 border-b border-gray-100 bg-gray-50/70">
           {WEEKDAY_HEADS.map((day) => (
             <div
               key={day}

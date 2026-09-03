@@ -68,16 +68,16 @@ export function DayPanel({ date, today, clients, entries, activeClientKey }: Pro
     .filter((group) => group.events.length > 0)
 
   return (
-    <div className="space-y-4">
-      <header className="rounded-2xl border border-gray-200 bg-white px-4 py-3">
-        <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+    <div className="divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200 bg-white">
+      <header className="px-4 py-3">
+        <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">
           {date === today ? 'Vandaag' : isFuture ? 'Staat gepland' : 'Geweest'}
         </div>
         <div className="mt-0.5 text-sm font-semibold text-gray-900">{formatDayLong(date)}</div>
       </header>
 
-      <section className="rounded-2xl border border-gray-200 bg-white p-4">
-        <h3 className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+      <section className="px-4 py-3">
+        <h3 className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">
           Op deze dag
         </h3>
 
@@ -118,8 +118,8 @@ export function DayPanel({ date, today, clients, entries, activeClientKey }: Pro
         )}
       </section>
 
-      <section className="rounded-2xl border border-gray-200 bg-white p-4">
-        <h3 className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+      <section className="px-4 py-3">
+        <h3 className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">
           Vastleggen op deze dag
         </h3>
 

@@ -89,6 +89,7 @@ export function CalendarView({ overview }: Props) {
   const [quick, setQuick] = useState<'invoice' | 'report' | null>(null)
   const [managingList, setManagingList] = useState(false)
   const [kixOpen, setKixOpen] = useState(false)
+  const [showClients, setShowClients] = useState(false)
   const [showTasks, setShowTasks] = useState(false)
 
   // Uit alle zichtbare klanten, niet uit de gefilterde: "taken van vandaag" hoort
@@ -221,189 +222,196 @@ export function CalendarView({ overview }: Props) {
           : monthTitle(overview.month)
 
   return (
-    <div className="space-y-5">
-      {/* Vandaag + kerncijfers */}
-      <section className="rounded-2xl border border-gray-200 bg-white p-5">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
-              Vandaag
-            </div>
-            <div className="mt-0.5 text-lg font-semibold tracking-tight text-gray-900">
-              {formatDayLong(overview.today)}
-            </div>
-            <div className="mt-0.5 text-[11px] text-gray-500">
-              {overview.todayIsWorkday
-                ? 'Werkdag — verzendvolume telt vandaag mee.'
-                : 'Geen werkdag — de volumecijfers slaan op de laatste werkdag.'}
-            </div>
-          </div>
-
-
-          <div className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4">
-            <Stat label="Draait" value={overview.totals.running} tone="ok" />
-            <Stat label="Staat stil" value={overview.totals.stalled} tone="warn" />
-            <Stat label="Factuur te laat" value={overview.totals.invoicesDue} tone="bad" />
-            <Stat label="Meeting regelen" value={overview.totals.meetingsToPlan} tone="warn" />
-          </div>
+    <div className="space-y-6">
+      {/* Kopbalk: wat is het vandaag, en wat kun je nu doen. Geen kader — dit
+          is de titel van de pagina, geen blok tussen de blokken. */}
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Loopgang</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            {formatDayLong(overview.today)} ·{' '}
+            {overview.todayIsWorkday
+              ? 'werkdag, het volume van vandaag telt mee'
+              : 'geen werkdag, de cijfers slaan op de laatste werkdag'}
+          </p>
         </div>
 
-        {/* Vastleggen kan altijd, zonder eerst een dag of klant te hoeven
-            zoeken. De datum in de dialoog volgt de dag die in de kalender
-            geselecteerd staat. */}
-        <div className="mt-4 flex flex-wrap gap-2 border-t border-gray-100 pt-4">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={() => setShowTasks(true)}
-            className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-[11px] font-semibold transition-colors ${
+            className={`inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-xs font-semibold transition-colors ${
               tasks.length > 0
                 ? 'bg-rose-600 text-white hover:bg-rose-700'
-                : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
+                : 'border border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
             }`}
           >
-            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-            </svg>
-            Taken van vandaag ({tasks.length})
+            Taken van vandaag
+            <span
+              className={`rounded px-1.5 py-0.5 text-[10px] tabular-nums ${
+                tasks.length > 0 ? 'bg-white/20' : 'bg-gray-100 text-gray-500'
+              }`}
+            >
+              {tasks.length}
+            </span>
           </button>
+
           <button
             type="button"
             onClick={() => setKixOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-2 text-[11px] font-semibold text-white transition-colors hover:bg-indigo-700"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white transition-colors hover:bg-indigo-700"
           >
             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m6-6H6" />
             </svg>
             Kix toevoegen
           </button>
-          <button
-            type="button"
-            onClick={() => setQuick('invoice')}
-            disabled={!activeClient}
-            title={activeClient ? undefined : 'Kies eerst één klant'}
-            className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-[11px] font-semibold transition-colors ${
-              activeClient
-                ? 'bg-gray-900 text-white hover:bg-gray-800'
-                : 'cursor-not-allowed border border-gray-200 bg-gray-50 text-gray-300'
-            }`}
-          >
-            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-            </svg>
-            Factuur toevoegen
-          </button>
-          <button
-            type="button"
-            onClick={() => setQuick('report')}
-            disabled={!activeClient}
-            title={activeClient ? undefined : 'Kies eerst één klant'}
-            className={`inline-flex items-center gap-1.5 rounded-lg border px-3.5 py-2 text-[11px] font-semibold transition-colors ${
-              activeClient
-                ? 'border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
-                : 'cursor-not-allowed border-gray-200 bg-gray-50 text-gray-300'
-            }`}
-          >
-            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-            </svg>
-            Leadrapportage toevoegen
-          </button>
-
-          <span className="self-center text-[11px] text-gray-400">
-            {activeClient
-              ? `Bewerken voor ${activeClient.displayName}`
-              : selectedClients.length > 1
-                ? `${selectedClients.length} klanten geselecteerd — kies er één om iets vast te leggen`
-                : 'Kies één klant om een factuur, rapportage of meeting vast te leggen'}
-          </span>
         </div>
+      </header>
 
-        <div className="mt-3 flex flex-wrap gap-2 border-t border-gray-100 pt-3 text-[11px]">
-          <Pill
-            tone={overview.totals.callsToday > 0 ? 'warn' : 'muted'}
-            text={`${overview.totals.callsToday} klant(en) vandaag bellen voor een meeting`}
-          />
-          <Pill
-            tone={overview.totals.paymentsOverdue > 0 ? 'bad' : 'muted'}
-            text={`${overview.totals.paymentsOverdue} factuur/facturen over de betaaltermijn`}
-          />
-          <Pill
-            tone="muted"
-            text={`Openstaand: ${formatEuroCents(overview.totals.openInvoiceCents)}`}
-          />
-        </div>
+      {/* Kerncijfers. Eén rij, één kader, haarlijnen ertussen: het zijn zes
+          waarden van dezelfde soort en geen zes losse mededelingen. */}
+      <section className="grid grid-cols-2 overflow-hidden rounded-xl border border-gray-200 bg-white sm:grid-cols-3 sm:divide-x sm:divide-gray-100 lg:grid-cols-6">
+        <Stat label="Draait" value={overview.totals.running} tone="ok" />
+        <Stat label="Staat stil" value={overview.totals.stalled} tone="warn" />
+        <Stat label="Factuur te laat" value={overview.totals.invoicesDue} tone="bad" />
+        <Stat label="Meeting regelen" value={overview.totals.meetingsToPlan} tone="warn" />
+        <Stat label="Bellen vandaag" value={overview.totals.callsToday} tone="warn" />
+        <Stat
+          label="Openstaand"
+          text={formatEuroCents(overview.totals.openInvoiceCents)}
+          tone={overview.totals.paymentsOverdue > 0 ? 'bad' : 'muted'}
+          hint={
+            overview.totals.paymentsOverdue > 0
+              ? `${overview.totals.paymentsOverdue} over de termijn`
+              : 'binnen de termijn'
+          }
+        />
       </section>
 
-      {/* Filters */}
-      <section className="space-y-3">
-        <div className="flex flex-wrap gap-1.5">
-          {(Object.keys(FOCUS_LABELS) as Focus[]).map((key) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setFocus(key)}
-              className={`rounded-full px-3.5 py-1.5 text-[11px] font-semibold transition-colors ${
-                focus === key
-                  ? 'bg-gray-900 text-white'
-                  : 'border border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              {FOCUS_LABELS[key]}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
-            Klanten
-          </span>
-
-          {/* Geen selectie betekent iedereen; die knop maakt dat zichtbaar in
-              plaats van dat je moet raden wat er gebeurt als je alles uitzet. */}
-          <button
-            type="button"
-            onClick={() => setSelectedClients([])}
-            aria-pressed={selectedClients.length === 0}
-            className={`rounded-full px-3 py-1 text-[11px] font-semibold transition-colors ${
-              selectedClients.length === 0
-                ? 'bg-gray-900 text-white'
-                : 'border border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
-            }`}
-          >
-            Iedereen
-          </button>
-
-          {overview.clients.map((client) => {
-            const active = selectedClients.includes(client.id)
-            return (
+      {/* Filterbalk. De klantenlijst zit ingeklapt: twintig knoppen naast
+          elkaar trekken meer aandacht dan de kalender eronder. */}
+      <section className="rounded-xl border border-gray-200 bg-white">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
+          <div className="inline-flex rounded-lg bg-gray-100 p-0.5">
+            {(Object.keys(FOCUS_LABELS) as Focus[]).map((key) => (
               <button
-                key={client.key}
+                key={key}
                 type="button"
-                onClick={() => toggleClient(client.key)}
-                aria-pressed={active}
-                className={`rounded-full px-3 py-1 text-[11px] font-medium transition-colors ${
-                  active
-                    ? 'bg-indigo-600 text-white'
-                    : 'border border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+                onClick={() => setFocus(key)}
+                className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+                  focus === key
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-900'
                 }`}
               >
-                {client.displayName}
+                {FOCUS_LABELS[key]}
               </button>
-            )
-          })}
+            ))}
+          </div>
 
           <button
             type="button"
-            onClick={() => setManagingList(true)}
-            className="ml-1 text-[11px] font-semibold text-gray-400 underline-offset-2 hover:text-gray-900 hover:underline"
+            onClick={() => setShowClients((v) => !v)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50"
           >
-            lijst beheren ({overview.clients.length}/{overview.clientOptions.length})
+            {selectedClients.length === 0
+              ? `Alle klanten (${overview.clients.length})`
+              : `${selectedClients.length} gekozen`}
+            <svg
+              className={`h-3 w-3 transition-transform ${showClients ? 'rotate-180' : ''}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={2.5}
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+            </svg>
           </button>
+
+          {selectedClients.length > 0 && !showClients && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              {overview.clients
+                .filter((c) => selectedClients.includes(c.key))
+                .map((c) => (
+                  <button
+                    key={c.key}
+                    type="button"
+                    onClick={() => toggleClient(c.key)}
+                    className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-semibold text-indigo-700 transition-colors hover:bg-indigo-100"
+                  >
+                    {c.displayName}
+                    <span aria-hidden className="text-indigo-400">
+                      &times;
+                    </span>
+                  </button>
+                ))}
+              <button
+                type="button"
+                onClick={() => setSelectedClients([])}
+                className="text-[11px] font-semibold text-gray-400 underline-offset-2 hover:text-gray-900 hover:underline"
+              >
+                wissen
+              </button>
+            </div>
+          )}
+
+          <span className="ml-auto text-[11px] text-gray-400">
+            {activeClient
+              ? `Vastleggen voor ${activeClient.displayName}`
+              : 'Kies één klant om iets vast te leggen'}
+          </span>
         </div>
+
+        {showClients && (
+          <div className="flex flex-wrap items-center gap-1.5 border-t border-gray-100 px-4 py-3">
+            <button
+              type="button"
+              onClick={() => setSelectedClients([])}
+              aria-pressed={selectedClients.length === 0}
+              className={`rounded-full px-3 py-1 text-[11px] font-semibold transition-colors ${
+                selectedClients.length === 0
+                  ? 'bg-gray-900 text-white'
+                  : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              Iedereen
+            </button>
+
+            {overview.clients.map((client) => {
+              const active = selectedClients.includes(client.key)
+              return (
+                <button
+                  key={client.key}
+                  type="button"
+                  onClick={() => toggleClient(client.key)}
+                  aria-pressed={active}
+                  className={`rounded-full px-3 py-1 text-[11px] font-medium transition-colors ${
+                    active
+                      ? 'bg-indigo-600 text-white'
+                      : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  {client.displayName}
+                </button>
+              )
+            })}
+
+            <button
+              type="button"
+              onClick={() => setManagingList(true)}
+              className="ml-1 text-[11px] font-semibold text-gray-400 underline-offset-2 hover:text-gray-900 hover:underline"
+            >
+              lijst beheren ({overview.clients.length}/{overview.clientOptions.length})
+            </button>
+          </div>
+        )}
       </section>
 
-      {/* Maandnavigatie */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      {/* Kalender + wat er die dag speelt */}
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-4 py-3">
         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
           <h2 className="text-sm font-semibold text-gray-900">{periodTitle}</h2>
 
@@ -457,9 +465,7 @@ export function CalendarView({ overview }: Props) {
         </div>
       </div>
 
-      {/* Kalender + wat er die dag speelt */}
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="space-y-3">
+        <div className="divide-y divide-gray-100">
           {periods.map((period) => (
             <MonthGrid
               key={period.key}
@@ -472,6 +478,8 @@ export function CalendarView({ overview }: Props) {
             />
           ))}
         </div>
+        </div>
+
         <div className="space-y-4 lg:sticky lg:top-20 lg:self-start">
           {/* De notitie hoort boven het dagpaneel: hij geldt altijd, niet
               alleen op de dag die je toevallig hebt aangeklikt. */}
@@ -542,35 +550,42 @@ function MonthLink({ month, label }: { month: string; label: string }) {
   )
 }
 
+/**
+ * Eén kerncijfer in de bovenste rij. Een getal van nul blijft grijs: nul
+ * openstaande facturen is goed nieuws en hoort niet te schreeuwen.
+ */
 function Stat({
   label,
   value,
+  text,
   tone,
+  hint,
 }: {
   label: string
-  value: number
-  tone: 'ok' | 'warn' | 'bad'
+  value?: number
+  text?: string
+  tone: 'ok' | 'warn' | 'bad' | 'muted'
+  hint?: string
 }) {
+  const leeg = value === 0
   const color =
-    tone === 'ok' ? 'text-emerald-600' : tone === 'warn' ? 'text-amber-600' : 'text-rose-600'
+    leeg || tone === 'muted'
+      ? 'text-gray-900'
+      : tone === 'ok'
+        ? 'text-emerald-600'
+        : tone === 'warn'
+          ? 'text-amber-600'
+          : 'text-rose-600'
+
   return (
-    <div>
+    <div className="border-b border-gray-100 px-4 py-3 last:border-b-0 sm:border-b-0">
       <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{label}</div>
-      <div className={`text-lg font-semibold tabular-nums ${value === 0 ? 'text-gray-300' : color}`}>
-        {value}
+      <div className={`mt-0.5 text-xl font-semibold tabular-nums tracking-tight ${leeg ? 'text-gray-300' : color}`}>
+        {text ?? value}
       </div>
+      {hint && <div className="text-[10px] text-gray-400">{hint}</div>}
     </div>
   )
-}
-
-function Pill({ text, tone }: { text: string; tone: 'muted' | 'warn' | 'bad' }) {
-  const styles =
-    tone === 'bad'
-      ? 'border-rose-200 bg-rose-50 text-rose-900'
-      : tone === 'warn'
-        ? 'border-amber-200 bg-amber-50 text-amber-900'
-        : 'border-gray-200 bg-gray-50 text-gray-600'
-  return <span className={`rounded-full border px-3 py-1 font-medium ${styles}`}>{text}</span>
 }
 
 interface Period {
