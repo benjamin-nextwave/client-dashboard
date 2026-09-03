@@ -486,6 +486,14 @@ function toneFor(
       continue
     }
 
+    // Vandaag is nog niet afgelopen. Een campagne die vanochtend nog niet is
+    // begonnen is niet stilgevallen, en 's nachts zou anders elke dag rood
+    // beginnen. Groen kan hij wel worden zodra er iets is verstuurd.
+    if (date === today) {
+      beoordeeld -= 1
+      continue
+    }
+
     rood += 1
   }
 
