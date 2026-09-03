@@ -8,6 +8,7 @@ import type { LoopgangOverview } from '@/lib/data/loopgang-overview'
 import { addDays } from '@/lib/loopgang/cycle'
 import { buildTasks } from '@/lib/loopgang/tasks'
 import { ClientNote } from './client-note'
+import { KixDialog } from './kix-dialog'
 import { ClientStrip } from './client-strip'
 import { DayPanel } from './day-panel'
 import { TaskDialog } from './task-dialog'
@@ -87,6 +88,7 @@ export function CalendarView({ overview }: Props) {
   )
   const [quick, setQuick] = useState<'invoice' | 'report' | null>(null)
   const [managingList, setManagingList] = useState(false)
+  const [kixOpen, setKixOpen] = useState(false)
   const [showTasks, setShowTasks] = useState(false)
 
   // Uit alle zichtbare klanten, niet uit de gefilterde: "taken van vandaag" hoort
@@ -263,6 +265,16 @@ export function CalendarView({ overview }: Props) {
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
             </svg>
             Taken van vandaag ({tasks.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setKixOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-2 text-[11px] font-semibold text-white transition-colors hover:bg-indigo-700"
+          >
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m6-6H6" />
+            </svg>
+            Kix toevoegen
           </button>
           <button
             type="button"
@@ -493,6 +505,15 @@ export function CalendarView({ overview }: Props) {
           client={activeClient}
           today={selectedDate}
           onClose={() => setQuick(null)}
+        />
+      )}
+
+      {kixOpen && (
+        <KixDialog
+          clients={overview.clients}
+          today={overview.today}
+          preselected={activeClient?.id ?? null}
+          onClose={() => setKixOpen(false)}
         />
       )}
 

@@ -5,7 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { deleteLoopgangPdf, uploadLoopgangPdf } from '@/lib/supabase/storage'
 import { getLoopgangOverview } from '@/lib/data/loopgang-overview'
 import { analyseerLoopgang, type LoopgangAnalyse } from '@/lib/loopgang/analyse'
-import type { MeetingOutcome } from '@/lib/loopgang/cycle'
+import { addDays, type MeetingOutcome } from '@/lib/loopgang/cycle'
 import {
   describeTiming,
   formatTasksHtml,
@@ -684,5 +684,185 @@ export async function setDailySendTargetAction(
   if (error) return { error: error.message }
 
   revalidate(clientId)
+  return {}
+}
+
+// -----------------------------------------------------------------------------
+// Kix
+// -----------------------------------------------------------------------------
+
+/**
+ * Wat Kix terugkoppelt over een klant, in één handeling vastgelegd.
+ *
+ * Kix belt en mailt met klanten over de evaluatiemeeting; wat daaruit komt
+ * bepaalt of er gefactureerd wordt en of de campagne weer aan gaat. Dat liep
+ * eerder via losse dialogen, waarbij je zelf moest bedenken welke taken er nog
+ * uit voortkwamen — en juist die vervolgtaken bleven liggen.
+ *
+ * Vervolgtaken krijgen een `created_at` in de toekomst: de takenpagina toont
+ * die als "Plan: <datum>". Dat is het bestaande mechanisme voor werk dat pas
+ * later aan de beurt is.
+ */
+export type KixKeuze =
+  | 'invoice-sent'
+  | 'report-sent'
+  | 'meeting-planned'
+  | 'meeting-continue'
+  | 'meeting-stop'
+
+/** Om 8 uur 's ochtends, zodat een geplande taak boven de dag hangt. */
+function planDatum(vandaag: string, dagenVerder: number): string {
+  return `${addDays(vandaag, dagenVerder)}T08:00:00.000Z`
+}
+
+/** Het anker van de lopende cyclus; nodig om een meeting aan de juiste periode te hangen. */
+async function huidigAnker(clientId: string): Promise<string | null> {
+  const supabase = createAdminClient()
+
+  const { data: client } = await supabase
+    .from('clients')
+    .select('cycle_start_date, go_live_date')
+    .eq('id', clientId)
+    .maybeSingle()
+
+  if (client?.cycle_start_date) return String(client.cycle_start_date).slice(0, 10)
+
+  const { data: factuur } = await supabase
+    .from('client_invoice_marks')
+    .select('invoice_date')
+    .eq('client_id', clientId)
+    .order('invoice_date', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (factuur?.invoice_date) return String(factuur.invoice_date).slice(0, 10)
+  return client?.go_live_date ? String(client.go_live_date).slice(0, 10) : null
+}
+
+export async function registreerKixAction(input: {
+  clientId: string
+  keuze: KixKeuze
+  /** Alleen bij 'meeting-planned'. */
+  meetingDate?: string | null
+  vandaag: string
+}): Promise<ActionResult> {
+  const supabase = createAdminClient()
+  const vandaag = ISO_DATE.test(input.vandaag) ? input.vandaag : new Date().toISOString().slice(0, 10)
+
+  if (input.keuze === 'invoice-sent') {
+    // Bewust zonder bedrag: Kix meldt dat de factuur eruit is, niet wat erop
+    // stond. De factuurdatum is meteen het nieuwe anker van de cyclus.
+    const { error } = await supabase.from('client_invoice_marks').upsert(
+      {
+        client_id: input.clientId,
+        campaign_track: CENTRAL_TRACK,
+        invoice_date: vandaag,
+        note: 'Gemeld door Kix — bedrag nog invullen.',
+      },
+      { onConflict: 'client_id,campaign_track,invoice_date' }
+    )
+    if (error) return { error: error.message }
+    console.log(`[loopgang:kix] factuur gemeld client=${input.clientId} datum=${vandaag}`)
+    revalidate(input.clientId)
+    return {}
+  }
+
+  if (input.keuze === 'report-sent') {
+    const { error } = await supabase.from('client_lead_reports').upsert(
+      {
+        client_id: input.clientId,
+        campaign_track: CENTRAL_TRACK,
+        report_date: vandaag,
+        note: 'Gemeld door Kix.',
+      },
+      { onConflict: 'client_id,campaign_track,report_date' }
+    )
+    if (error) return { error: error.message }
+    console.log(`[loopgang:kix] rapportage gemeld client=${input.clientId} datum=${vandaag}`)
+    revalidate(input.clientId)
+    return {}
+  }
+
+  // De rest legt de uitkomst van de evaluatiemeeting vast, en die hangt aan het
+  // anker van de lopende cyclus.
+  const anker = await huidigAnker(input.clientId)
+  if (!anker) {
+    return {
+      error:
+        'Deze klant heeft geen startpunt: geen cyclusstart, geen factuur en geen livegang. Zet eerst een cyclusstart.',
+    }
+  }
+
+  const uitkomst: MeetingOutcome =
+    input.keuze === 'meeting-planned' ? 'planned' : input.keuze === 'meeting-stop' ? 'stop' : 'continue'
+
+  if (uitkomst === 'planned' && (!input.meetingDate || !ISO_DATE.test(input.meetingDate))) {
+    return { error: 'Kies de datum van de meeting.' }
+  }
+
+  const notitie =
+    input.keuze === 'meeting-planned'
+      ? 'Ingepland door Kix.'
+      : input.keuze === 'meeting-continue'
+        ? 'Kix: geen meeting nodig, klant pakt door. Leadrapportage en factuur moeten eruit voordat de campagne hervat.'
+        : 'Kix: geen meeting nodig, klant stopt. Leadrapportage en factuur moeten nog verstuurd worden.'
+
+  const { error } = await supabase.from('client_evaluation_meetings').upsert(
+    {
+      client_id: input.clientId,
+      campaign_track: CENTRAL_TRACK,
+      cycle_anchor: anker,
+      outcome: uitkomst,
+      meeting_date: uitkomst === 'planned' ? input.meetingDate : null,
+      note: notitie,
+      handled_at: new Date().toISOString(),
+    },
+    { onConflict: 'client_id,campaign_track,cycle_anchor' }
+  )
+  if (error) return { error: error.message }
+
+  // Vervolgtaken. Alleen bij de twee uitkomsten zonder meeting: dan moet er
+  // iets de deur uit voordat er verder iets kan gebeuren.
+  const taken: Array<{ assignee: string; description: string; dagen: number }> = []
+
+  if (input.keuze === 'meeting-continue') {
+    taken.push({
+      assignee: 'benjamin',
+      description: 'Leadrapportage en factuur versturen zodat de campagne hervat kan worden',
+      dagen: 1,
+    })
+  }
+
+  if (input.keuze === 'meeting-stop') {
+    taken.push({
+      assignee: 'benjamin',
+      description: 'Leadrapportage versturen — klant stopt',
+      dagen: 1,
+    })
+    taken.push({
+      assignee: 'kix',
+      description: 'Factuur versturen — klant stopt, twee dagen na de leadrapportage',
+      dagen: 3,
+    })
+  }
+
+  for (const taak of taken) {
+    const { error: taakError } = await supabase.from('operator_check_tasks').insert({
+      check_id: null,
+      client_id: input.clientId,
+      description: taak.description,
+      campaign_names: [],
+      assignee: taak.assignee,
+      requested_by: 'kix',
+      created_at: planDatum(vandaag, taak.dagen),
+    })
+    if (taakError) return { error: `Taak aanmaken mislukt: ${taakError.message}` }
+  }
+
+  console.log(
+    `[loopgang:kix] meeting=${uitkomst} client=${input.clientId} anker=${anker} taken=${taken.length}`
+  )
+  revalidate(input.clientId)
+  revalidatePath('/admin/taken')
   return {}
 }
