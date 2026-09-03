@@ -55,6 +55,20 @@ export function getRompslompToken(kind: TokenKind = 'default'): string | null {
   return token && token.length > 0 ? token : null
 }
 
+/**
+ * Welk token er feitelijk gepakt is. Staat in de foutmelding, zodat een 403 over
+ * ontbrekende rechten meteen laat zien of het aan de sleutel ligt of aan de
+ * rechten van die sleutel — anders zoek je dat op de tast.
+ */
+export function describeTokenSource(kind: TokenKind = 'default'): string {
+  if (kind === 'invoices') {
+    const eigen = process.env.ROMPSLOMP_INVOICES_API_TOKEN?.trim()
+    if (eigen && eigen.length > 0) return 'ROMPSLOMP_INVOICES_API_TOKEN'
+    return 'ROMPSLOMP_API_TOKEN (ROMPSLOMP_INVOICES_API_TOKEN is niet ingesteld)'
+  }
+  return 'ROMPSLOMP_API_TOKEN'
+}
+
 export function getConfiguredCompanyId(): string | null {
   const id = process.env.ROMPSLOMP_COMPANY_ID?.trim()
   return id && id.length > 0 ? id : null
@@ -103,7 +117,14 @@ export async function rompslompGet<T>(
         Accept: 'application/json',
       },
       signal: controller.signal,
-      next: { revalidate: CACHE_SECONDS, tags: [ROMPSLOMP_CACHE_TAG] },
+      // Facturen halen we altijd vers op. De cachesleutel van Next bevat de
+      // Authorization-header niet, dus een antwoord dat met het ene token is
+      // opgehaald zou aan het andere token worden teruggegeven — en die cache
+      // overleeft een deploy. Een 403 van een verkeerd token bleef daardoor
+      // terugkomen nadat het goede token er allang stond.
+      ...(kind === 'invoices'
+        ? { cache: 'no-store' as const }
+        : { next: { revalidate: CACHE_SECONDS, tags: [ROMPSLOMP_CACHE_TAG] } }),
     })
 
     if (!response.ok) {
@@ -113,7 +134,9 @@ export async function rompslompGet<T>(
       )
       return {
         ok: false,
-        error: `Rompslomp gaf ${response.status}${detail ? `: ${detail.slice(0, 200)}` : ''}`,
+        error:
+          `Rompslomp gaf ${response.status}${detail ? `: ${detail.slice(0, 200)}` : ''}` +
+          ` — gebruikt token: ${describeTokenSource(kind)}`,
       }
     }
 
