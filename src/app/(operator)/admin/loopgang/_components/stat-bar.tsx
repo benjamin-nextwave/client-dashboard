@@ -15,21 +15,24 @@ import { formatDayShort } from './dialogs'
 /**
  * De kerncijfers, en achter elk cijfer de klanten die het opmaken.
  *
- * Een getal als "3 staan stil" was tot nu toe een doodlopend spoor: je zag dát
- * er drie stilstonden, maar niet welke. Klik je nu op het cijfer, dan klapt de
- * lijst eronder uit, met per klant het getal dat ertoe doet — hoeveel werkdagen
- * hij al stilstaat, hoeveel dagen de factuur te laat is. Klik je op een klant,
- * dan springt de kalender op zijn periode.
+ * Vier vakken die samen de hele klantenlijst afdekken: wie er draait, wie er
+ * bewust stilstaat, en wie er nog nooit een periode heeft gehad. Plus het geld
+ * dat openstaat.
+ *
+ * Een getal is een doodlopend spoor zolang je niet ziet wie erachter zit. Klik
+ * je op een cijfer, dan klapt de lijst eronder uit met per klant het getal dat
+ * ertoe doet; klik je op een klant, dan springt de kalender op zijn periode.
+ *
+ * Dat een klant stilstaat is geen eigen vak meer maar een regel bij "Draait" —
+ * anders zou hij uit het overzicht verdwijnen op het moment dat er iets mis is.
  */
 
-type StatKey = 'running' | 'stalled' | 'invoice' | 'meeting' | 'call' | 'open'
+type StatKey = 'running' | 'paused' | 'never' | 'open'
 
 const STAT_LABELS: Record<StatKey, string> = {
   running: 'Draait',
-  stalled: 'Staat stil',
-  invoice: 'Factuur te laat',
-  meeting: 'Meeting regelen',
-  call: 'Bellen vandaag',
+  paused: 'Staat op pauze',
+  never: 'Nooit live geweest',
   open: 'Openstaand',
 }
 
@@ -53,29 +56,41 @@ export function StatBar({ clients, totals, today, activeClientKey, onSelectClien
 
   const rows = open ? rowsFor(open, clients, today) : []
 
+  // Hoeveel van de draaiende klanten er feitelijk stilstaan. Dat was een eigen
+  // tegel; nu staat het als bijregel bij "Draait" en per klant in de lijst —
+  // dezelfde informatie, één kader minder.
+  const stilCount = clients.filter(
+    (c) => c.cycle.anchor !== null && !c.isPaused && c.isStalled
+  ).length
+
   return (
     <section className="overflow-hidden rounded-xl border border-gray-200 bg-white">
       {/* Eén rij, haarlijnen ertussen: het zijn zes waarden van dezelfde soort
           en geen zes losse mededelingen. */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 sm:divide-x sm:divide-gray-100 lg:grid-cols-6">
-        <Stat statKey="running" value={totals.running} tone="ok" open={open} onToggle={setOpen} />
-        <Stat statKey="stalled" value={totals.stalled} tone="warn" open={open} onToggle={setOpen} />
+      <div className="grid grid-cols-2 sm:divide-x sm:divide-gray-100 lg:grid-cols-4">
         <Stat
-          statKey="invoice"
-          value={totals.invoicesDue + totals.paymentsOverdue}
-          tone="bad"
+          statKey="running"
+          value={rowsFor('running', clients, today).length}
+          tone="ok"
           open={open}
           onToggle={setOpen}
-          hint={`${totals.invoicesDue} verzenden · ${totals.paymentsOverdue} betalen`}
+          hint={stilCount === 0 ? 'allemaal aan het versturen' : `${stilCount} staat stil`}
         />
         <Stat
-          statKey="meeting"
-          value={totals.meetingsToPlan}
+          statKey="paused"
+          value={rowsFor('paused', clients, today).length}
           tone="warn"
           open={open}
           onToggle={setOpen}
         />
-        <Stat statKey="call" value={totals.callsToday} tone="warn" open={open} onToggle={setOpen} />
+        <Stat
+          statKey="never"
+          value={rowsFor('never', clients, today).length}
+          tone="muted"
+          open={open}
+          onToggle={setOpen}
+          hint="geen cyclusstart gezet"
+        />
         <Stat
           statKey="open"
           text={formatEuroCents(totals.openInvoiceCents)}
@@ -214,29 +229,22 @@ function Stat({
 function rowsFor(key: StatKey, clients: LoopgangOverviewClient[], today: string): StatRow[] {
   switch (key) {
     case 'running':
+      // Iedereen met een lopende periode die niet gepauzeerd is. Of hij ook
+      // daadwerkelijk verstuurt staat per klant in de toelichting — een klant
+      // die stilvalt hoort in deze lijst op te vallen, niet eruit te verdwijnen.
       return clients
-        .filter((c) => !c.isStalled)
+        .filter((c) => c.cycle.anchor !== null && !c.isPaused)
         .map((c) => ({ client: c, detail: runningDetail(c, today) }))
 
-    case 'stalled':
+    case 'paused':
       return clients
-        .filter((c) => c.isStalled && !c.isPaused)
-        .map((c) => ({ client: c, detail: stalledDetail(c, today) }))
+        .filter((c) => c.isPaused)
+        .map((c) => ({ client: c, detail: pausedDetail(c, today) }))
 
-    case 'invoice':
+    case 'never':
       return clients
-        .map((c) => ({ client: c, detail: invoiceDetail(c, today) }))
-        .filter((r): r is StatRow => r.detail !== null)
-
-    case 'meeting':
-      return clients
-        .filter((c) => c.cycle.reminders.some((r) => r.kind === 'meeting-schedule'))
-        .map((c) => ({ client: c, detail: meetingDetail(c) }))
-
-    case 'call':
-      return clients
-        .filter((c) => c.cycle.callDueToday)
-        .map((c) => ({ client: c, detail: meetingDetail(c) }))
+        .filter((c) => c.cycle.anchor === null)
+        .map((c) => ({ client: c, detail: neverDetail(c) }))
 
     case 'open':
       return clients
@@ -246,62 +254,97 @@ function rowsFor(key: StatKey, clients: LoopgangOverviewClient[], today: string)
 }
 
 /**
- * Hoe lang een klant al meedraait. De werkdag van de cyclus zegt wanneer de
- * factuur moet; de werkdagen sinds de livegang zeggen hoe lang hij al klant is.
+ * Hoe lang een klant al meedraait, en of hij dat ook echt doet.
+ *
+ * De werkdag van de cyclus zegt wanneer de factuur moet; de werkdagen sinds de
+ * livegang zeggen hoe lang hij al klant is. Staat hij stil, dan staat dat
+ * vooraan — dat is het enige wat je op dat moment nog wil weten.
  */
 function runningDetail(client: LoopgangOverviewClient, today: string): string {
   const delen: string[] = []
 
-  delen.push(
-    client.cycle.anchor
-      ? `werkdag ${client.cycle.workday} van ${INVOICE_WORKDAY}`
-      : 'nog geen startpunt'
-  )
+  if (client.isStalled) delen.push(stalledDetail(client, today))
+
+  delen.push(`werkdag ${client.cycle.workday} van ${INVOICE_WORKDAY}`)
 
   if (client.goLiveDate && client.goLiveDate <= today) {
     delen.push(`${plural(countWorkdays(client.goLiveDate, today), 'werkdag', 'werkdagen')} live`)
   }
 
-  if (client.isPaused) delen.push('gepauzeerd')
+  const factuur = invoiceDetail(client, today)
+  if (factuur) delen.push(factuur)
 
   return delen.join(' · ')
 }
 
 /** Hoe lang er al niets is verstuurd, geteld in werkdagen na de laatste zending. */
 function stalledDetail(client: LoopgangOverviewClient, today: string): string {
-  if (!client.lastSendDate) {
-    return 'geen verzending in het opgehaalde bereik'
-  }
+  if (!client.lastSendDate) return 'geen verzending in beeld'
 
   const stil = countWorkdays(addDays(client.lastSendDate, 1), today)
-  return `${plural(stil, 'werkdag', 'werkdagen')} stil · laatst verstuurd ${formatDayShort(
+  return `STAAT STIL — ${plural(stil, 'werkdag', 'werkdagen')} sinds ${formatDayShort(
     client.lastSendDate
   )}`
 }
 
+/** Sinds wanneer de pauze loopt, en waarom. */
+function pausedDetail(client: LoopgangOverviewClient, today: string): string {
+  const delen: string[] = []
+
+  if (client.pausedSince) {
+    const dagen = daysBetween(client.pausedSince, today)
+    delen.push(
+      `${plural(dagen, 'dag', 'dagen')} · sinds ${formatDayShort(client.pausedSince)}`
+    )
+  } else {
+    delen.push('sinds onbekend')
+  }
+
+  if (client.cycle.anchor) delen.push(`stond op werkdag ${client.cycle.workday}`)
+
+  const reden = client.lastPause?.note?.trim()
+  if (reden) delen.push(`"${reden}"`)
+
+  return delen.join(' · ')
+}
+
 /**
- * Waarom de factuur te laat is: hij is nog niet de deur uit, of hij is niet
- * betaald. Dat zijn twee verschillende problemen met twee verschillende
- * oplossingen, dus ze staan er allebei bij als ze allebei spelen.
- *
- * Geeft null als er niets aan de hand is; daarmee bepaalt deze functie ook
- * meteen wie er in de lijst thuishoort.
+ * Waarom er niets geteld wordt. Zonder cyclusstart loopt er geen periode, dus
+ * geen werkdagteller en geen factuurmoment. De laatste factuur staat erbij als
+ * aanknopingspunt voor de vraag of hier ooit iets gedraaid heeft.
+ */
+function neverDetail(client: LoopgangOverviewClient): string {
+  const delen = ['geen cyclusstart']
+
+  if (client.lastInvoice) {
+    delen.push(`laatste factuur ${formatDayShort(client.lastInvoice.invoiceDate)}`)
+  } else {
+    delen.push('nooit gefactureerd')
+  }
+
+  if (client.goLiveDate) delen.push(`livegang ${formatDayShort(client.goLiveDate)}`)
+
+  return delen.join(' · ')
+}
+
+/**
+ * Wat er met de factuur mis is: hij is nog niet de deur uit, of hij is niet
+ * betaald. Geeft null als er niets aan de hand is.
  */
 function invoiceDetail(client: LoopgangOverviewClient, today: string): string | null {
   const delen: string[] = []
   const { cycle } = client
 
   if (cycle.reminders.some((r) => r.kind === 'paused-uninvoiced')) {
-    delen.push('niet verzonden — stilgezet zonder factuur')
+    delen.push('factuur niet verzonden')
   } else if (cycle.reminders.some((r) => r.kind === 'invoice-due')) {
-    // De einddag zelf is werkdag 20; alles daarna is over tijd.
     const over = cycle.invoiceDueDate
       ? Math.max(0, countWorkdays(cycle.invoiceDueDate, today) - 1)
       : 0
     delen.push(
       over === 0
-        ? `niet verzonden — vandaag is werkdag ${INVOICE_WORKDAY}`
-        : `niet verzonden — ${plural(over, 'werkdag', 'werkdagen')} te laat`
+        ? `vandaag is werkdag ${INVOICE_WORKDAY}`
+        : `factuur ${plural(over, 'werkdag', 'werkdagen')} te laat`
     )
   }
 
@@ -309,27 +352,11 @@ function invoiceDetail(client: LoopgangOverviewClient, today: string): string | 
   if (oudste) {
     const open = daysBetween(oudste, today)
     if (open > PAYMENT_TERM_DAYS) {
-      delen.push(
-        `niet betaald — ${plural(open - PAYMENT_TERM_DAYS, 'dag', 'dagen')} over de termijn`
-      )
+      delen.push(`niet betaald — ${plural(open - PAYMENT_TERM_DAYS, 'dag', 'dagen')} over termijn`)
     }
   }
 
   return delen.length > 0 ? delen.join(' · ') : null
-}
-
-/** Waar de meeting in de cyclus staat, en wanneer er weer gebeld wordt. */
-function meetingDetail(client: LoopgangOverviewClient): string {
-  const { cycle } = client
-  const delen: string[] = [`werkdag ${cycle.workday} van ${INVOICE_WORKDAY}`]
-
-  if (cycle.meetingReminderStart) {
-    delen.push(`loopt sinds ${formatDayShort(cycle.meetingReminderStart)}`)
-  }
-  if (cycle.callDueToday) delen.push('vandaag bellen')
-  else if (cycle.nextCallDate) delen.push(`bellen op ${formatDayShort(cycle.nextCallDate)}`)
-
-  return delen.join(' · ')
 }
 
 /** Hoeveel er openstaat, en of de oudste factuur nog binnen de termijn valt. */
