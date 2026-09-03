@@ -71,6 +71,12 @@ const STALL_WORKDAYS = 2
  * zonder de hele geschiedenis binnen te trekken.
  */
 const COMMISSION_LOOKBACK_DAYS = 120
+/**
+ * Hoe ver de dagcijfers maximaal teruggehaald worden om de startdatum van een
+ * lopende periode te dekken. Een cyclus duurt ongeveer een maand; een half jaar
+ * dekt ook een klant die lang heeft stilgestaan.
+ */
+const ANCHOR_LOOKBACK_DAYS = 180
 
 export interface OverviewCampaign {
   id: string
@@ -128,6 +134,8 @@ export interface LoopgangOverviewClient {
   /** Handmatige start van de lopende campagnemaand; wint als anker van de factuurdatum. */
   cycleStart: string | null
   cycleStartNote: string | null
+  /** Vrije aantekening die altijd zichtbaar is zodra deze klant is gekozen. */
+  operatorNote: string | null
   dailySendTarget: number
   isOnboarding: boolean
 
@@ -248,6 +256,7 @@ interface ClientRow {
   go_live_date: string | null
   cycle_start_date: string | null
   cycle_start_note: string | null
+  operator_note: string | null
   daily_send_target: number | null
   loopgang_visible: boolean | null
   is_hidden: boolean | null
@@ -322,7 +331,7 @@ export async function getLoopgangOverview(monthInput?: string): Promise<Loopgang
   const { data: clientRows } = await supabase
     .from('clients')
     .select(
-      'id, company_name, primary_color, go_live_date, cycle_start_date, cycle_start_note, daily_send_target, loopgang_visible, is_hidden, onboarding_status'
+      'id, company_name, primary_color, go_live_date, cycle_start_date, cycle_start_note, operator_note, daily_send_target, loopgang_visible, is_hidden, onboarding_status'
     )
     .order('company_name', { ascending: true })
 
@@ -390,11 +399,32 @@ export async function getLoopgangOverview(monthInput?: string): Promise<Loopgang
   // uit één stroom en er is geen veld dat zegt bij welke campagne ze horen.
   const leadsByClient = groupBy((leadsResult.data ?? []) as Row[], (r) => String(r.client_id))
 
+  // Het vroegste anker van de klanten in beeld. De periodeweergave begint op de
+  // startdatum van een klant, en zonder dagcijfers vanaf die dag zou daar een
+  // lege kalender staan — precies de verwarring die we eerder hadden. Meer dan
+  // een half jaar terug halen we niet: dan is de periode toch niet meer de
+  // lopende.
+  const vroegsteAnker = clients.reduce<string | null>((vroegste, client) => {
+    const facturen = invoicesByTrack.get(client.id) ?? []
+    const laatsteFactuur = facturen[0] ? String(facturen[0].invoice_date).slice(0, 10) : null
+    const anker =
+      (client.cycle_start_date ? String(client.cycle_start_date).slice(0, 10) : null) ??
+      laatsteFactuur ??
+      (client.go_live_date ? String(client.go_live_date).slice(0, 10) : null)
+    if (!anker) return vroegste
+    return vroegste === null || anker < vroegste ? anker : vroegste
+  }, null)
+
+  const ondergrens = addDays(today, -ANCHOR_LOOKBACK_DAYS)
+  const dataStart = [analyticsStart, vroegsteAnker ?? analyticsStart]
+    .reduce((a, b) => (a < b ? a : b))
+  const bereikStart = dataStart < ondergrens ? ondergrens : dataStart
+
   const built = (
     await mapWithLimit(clients, CLIENT_CONCURRENCY, async (client) => {
       // Eén keer per klant ophalen, ook als er twee campagnes zijn: het
       // verzendvolume wordt niet gesplitst, dus beide sporen tonen hetzelfde.
-      const instantly = await getInstantlySnapshot(client.id, analyticsStart, analyticsEnd)
+      const instantly = await getInstantlySnapshot(client.id, bereikStart, analyticsEnd)
 
       return [buildClient(client, instantly)]
     })
@@ -499,7 +529,8 @@ export async function getLoopgangOverview(monthInput?: string): Promise<Loopgang
     const sentByDate: Record<string, number> = {}
     const pausedDates: string[] = []
     const pauseDayByDate: Record<string, number> = {}
-    for (let date = bounds.start; date <= bounds.end; date = addDays(date, 1)) {
+    const lusStart = bereikStart < bounds.start ? bereikStart : bounds.start
+    for (let date = lusStart; date <= bounds.end; date = addDays(date, 1)) {
       const sent = instantly.sentPerDay.get(date) ?? 0
       if (sent > 0) {
         sentByDate[date] = sent
@@ -540,6 +571,7 @@ export async function getLoopgangOverview(monthInput?: string): Promise<Loopgang
       goLiveDate,
       cycleStart,
       cycleStartNote: client.cycle_start_note ?? null,
+      operatorNote: client.operator_note ?? null,
       dailySendTarget: client.daily_send_target ?? 900,
       isOnboarding: (client.onboarding_status ?? 'live') === 'onboarding',
 
@@ -628,7 +660,7 @@ export async function getLoopgangOverview(monthInput?: string): Promise<Loopgang
     today,
     todayIsWorkday,
     month,
-    rangeStart: bounds.start,
+    rangeStart: bereikStart < bounds.start ? bereikStart : bounds.start,
     rangeEnd: bounds.end,
     clients: sorted,
     clientOptions,

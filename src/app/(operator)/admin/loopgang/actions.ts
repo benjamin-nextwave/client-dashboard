@@ -642,6 +642,31 @@ export async function setCycleStartAction(
   return {}
 }
 
+/**
+ * De vrije aantekening bij een klant. Leeg opslaan wist hem.
+ *
+ * Bewust overschrijven en geen geschiedenis: dit veld hoort te zeggen wat er nú
+ * geldt. Wie er een logboek van maakt leest het niet meer.
+ */
+export async function setClientNoteAction(
+  clientId: string,
+  note: string
+): Promise<ActionResult> {
+  const schoon = note.trim().slice(0, 2000)
+
+  const supabase = createAdminClient()
+  const { error } = await supabase
+    .from('clients')
+    .update({ operator_note: schoon === '' ? null : schoon })
+    .eq('id', clientId)
+
+  if (error) return { error: error.message }
+
+  console.log(`[loopgang] klantnotitie bijgewerkt client=${clientId} lengte=${schoon.length}`)
+  revalidate(clientId)
+  return {}
+}
+
 export async function setDailySendTargetAction(
   clientId: string,
   target: number

@@ -38,6 +38,12 @@ export interface DayCell {
   running: number
   total: number
   tone: DayTone
+  /**
+   * Klanten waarvan de campagneperiode op deze dag eindigt: werkdag 20 vanaf de
+   * startdatum, met de pauzedagen eruit gerekend. Dat is de dag waarop de
+   * leadrapportage en de factuur de deur uit moeten.
+   */
+  periodEnd: string[]
 }
 
 interface Props {
@@ -51,6 +57,11 @@ interface Props {
    * kolom vervalt de weekdagbalk: die zegt niets over een enkele dag.
    */
   columns?: 7 | 1
+  /**
+   * De weekdagbalk klopt alleen als het raster op maandag begint. De
+   * periodeweergave begint op de startdatum van de klant, dus daar vervalt hij.
+   */
+  showWeekdays?: boolean
 }
 
 const WEEKDAY_HEADS = ['ma', 'di', 'wo', 'do', 'vr', 'za', 'zo']
@@ -95,7 +106,14 @@ const TONE_STYLES: Record<Exclude<DayTone, null>, string> = {
 /** Hoeveel blokjes er in een vakje passen voordat er "+n" onder komt. */
 const MAX_CHIPS = 3
 
-export function MonthGrid({ cells, selected, onSelect, title, columns = 7 }: Props) {
+export function MonthGrid({
+  cells,
+  selected,
+  onSelect,
+  title,
+  columns = 7,
+  showWeekdays = true,
+}: Props) {
   return (
     <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
       {title && (
@@ -104,7 +122,7 @@ export function MonthGrid({ cells, selected, onSelect, title, columns = 7 }: Pro
         </div>
       )}
 
-      {columns === 7 && (
+      {columns === 7 && showWeekdays && (
         <div className="grid grid-cols-7 border-b border-gray-100 bg-gray-50">
           {WEEKDAY_HEADS.map((day) => (
             <div
@@ -141,6 +159,19 @@ export function MonthGrid({ cells, selected, onSelect, title, columns = 7 }: Pro
                       : 'bg-white'
               } ${isSelected ? 'ring-2 ring-inset ring-gray-900' : 'hover:brightness-95'}`}
             >
+              {/* De einddag van de periode is het enige moment dat een harde
+                  deadline is; die verdient een streep en niet een blokje
+                  tussen de rest. */}
+              {cell.periodEnd.length > 0 && (
+                <div
+                  title={`Einde periode: ${cell.periodEnd.join(', ')}`}
+                  className="-mx-1.5 -mt-1.5 mb-0.5 border-t-2 border-gray-900 bg-gray-900 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-white"
+                >
+                  einde periode
+                  {cell.periodEnd.length === 1 ? ` · ${cell.periodEnd[0]}` : ` · ${cell.periodEnd.length} klanten`}
+                </div>
+              )}
+
               <div className="flex items-center justify-between gap-1">
                 <span
                   className={`flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-semibold tabular-nums ${

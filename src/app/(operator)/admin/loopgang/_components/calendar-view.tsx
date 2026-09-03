@@ -1,12 +1,13 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { formatEuroCents, isWeekday } from '@/lib/commissions-shared'
 import type { LoopgangOverview } from '@/lib/data/loopgang-overview'
 import { addDays } from '@/lib/loopgang/cycle'
 import { buildTasks } from '@/lib/loopgang/tasks'
+import { ClientNote } from './client-note'
 import { ClientStrip } from './client-strip'
 import { DayPanel } from './day-panel'
 import { TaskDialog } from './task-dialog'
@@ -40,16 +41,17 @@ const MAX_CLIENTS_FOR_TONE = 3
  * waarin het werk van deze en de komende dagen past zonder dat je scrollt.
  * Drie maanden is om terug te kijken, een dag om je op één klant te richten.
  */
-type View = 'quarter' | 'month' | 'week' | 'day'
+type View = 'period' | 'quarter' | 'month' | 'week' | 'day'
 
 const VIEW_LABELS: Record<View, string> = {
+  period: 'Sinds periodestart',
   quarter: '3 maanden',
   month: 'Maand',
   week: 'Week',
   day: 'Dag',
 }
 
-const VIEW_ORDER: View[] = ['quarter', 'month', 'week', 'day']
+const VIEW_ORDER: View[] = ['period', 'quarter', 'month', 'week', 'day']
 
 type Focus = 'all' | 'action' | 'invoice' | 'meeting' | 'stalled'
 
@@ -68,6 +70,18 @@ export function CalendarView({ overview }: Props) {
   const [selectedClients, setSelectedClients] = useState<string[]>([])
   const [focus, setFocus] = useState<Focus>('all')
   const [view, setView] = useState<View>('week')
+
+  /**
+   * De weergave volgt wie je hebt aangeklikt. Eén klant: dan wil je zijn hele
+   * lopende periode zien, vanaf de startdatum. Meerdere klanten: dan is een
+   * periode niet te tekenen, want ze beginnen op verschillende dagen — dan is
+   * de maand het gemeenschappelijke raster. Niemand gekozen: de week.
+   *
+   * Een handmatige keuze blijft staan tot je de selectie wijzigt.
+   */
+  useEffect(() => {
+    setView(selectedClients.length === 1 ? 'period' : selectedClients.length > 1 ? 'month' : 'week')
+  }, [selectedClients.length])
   const [selectedDate, setSelectedDate] = useState<string>(() =>
     overview.today.slice(0, 7) === overview.month ? overview.today : overview.rangeStart
   )
@@ -111,9 +125,34 @@ export function CalendarView({ overview }: Props) {
   const kleurDagen =
     selectedClients.length >= 1 && selectedClients.length <= MAX_CLIENTS_FOR_TONE
 
+  // De periodeweergave heeft precies één klant met een startpunt nodig; anders
+  // valt hij terug op de maand.
+  const periodClient =
+    clients.length === 1 && clients[0].cycle.anchor ? clients[0] : null
+  const effectiveView: View = view === 'period' && !periodClient ? 'month' : view
+
   const periods = useMemo(
-    () => buildPeriods(view, overview.month, selectedDate, overview.today, clients, kleurDagen),
-    [view, overview.month, selectedDate, overview.today, clients, kleurDagen]
+    () =>
+      buildPeriods(
+        effectiveView,
+        overview.month,
+        selectedDate,
+        overview.today,
+        clients,
+        kleurDagen,
+        periodClient,
+        overview.rangeStart
+      ),
+    [
+      effectiveView,
+      overview.month,
+      selectedDate,
+      overview.today,
+      overview.rangeStart,
+      clients,
+      kleurDagen,
+      periodClient,
+    ]
   )
 
   const entriesForSelected = useMemo(() => {
@@ -167,13 +206,15 @@ export function CalendarView({ overview }: Props) {
 
   // De kop zegt wat je ziet, niet welke maand toevallig geladen is.
   const periodTitle =
-    view === 'day'
+    effectiveView === 'period' && periodClient
+      ? `${periodClient.displayName} — sinds ${formatDayShort(periodClient.cycle.anchor as string)}`
+      : effectiveView === 'day'
       ? formatDayLong(selectedDate)
-      : view === 'week'
+      : effectiveView === 'week'
         ? `week van ${formatDayShort(startOfWeek(selectedDate))} t/m ${formatDayShort(
             addDays(startOfWeek(selectedDate), 6)
           )}`
-        : view === 'quarter'
+        : effectiveView === 'quarter'
           ? `${monthTitle(prevMonth)} — ${monthTitle(nextMonth)}`
           : monthTitle(overview.month)
 
@@ -388,7 +429,7 @@ export function CalendarView({ overview }: Props) {
             ))}
           </div>
 
-          {view === 'week' || view === 'day' ? (
+          {effectiveView === 'week' || effectiveView === 'day' ? (
             <>
               <StepButton label="← vorige" onClick={() => step(-1)} />
               <StepButton label="vandaag" onClick={() => goToday()} />
@@ -414,11 +455,16 @@ export function CalendarView({ overview }: Props) {
               selected={selectedDate}
               onSelect={setSelectedDate}
               title={period.title}
-              columns={view === 'day' ? 1 : 7}
+              columns={effectiveView === 'day' ? 1 : 7}
+              showWeekdays={effectiveView !== 'period'}
             />
           ))}
         </div>
-        <div className="lg:sticky lg:top-20 lg:self-start">
+        <div className="space-y-4 lg:sticky lg:top-20 lg:self-start">
+          {/* De notitie hoort boven het dagpaneel: hij geldt altijd, niet
+              alleen op de dag die je toevallig hebt aangeklikt. */}
+          {activeClient && <ClientNote client={activeClient} />}
+
           <DayPanel
             date={selectedDate}
             today={overview.today}
@@ -529,7 +575,9 @@ function buildPeriods(
   selectedDate: string,
   today: string,
   clients: LoopgangOverview['clients'],
-  kleuren: boolean
+  kleuren: boolean,
+  periodClient: LoopgangOverview['clients'][number] | null,
+  rangeStart: string
 ): Period[] {
   // Één keer alle gebeurtenissen op datum zetten, zodat elk vakje alleen nog
   // hoeft op te zoeken. De klantvolgorde is de urgentievolgorde uit de
@@ -545,6 +593,24 @@ function buildPeriods(
 
   const maak = (dates: string[], focusMonth: string | null) =>
     dates.map((date) => buildCell(date, focusMonth, today, clients, kleuren, byDate))
+
+  if (view === 'period' && periodClient?.cycle.anchor) {
+    // Het raster begint op de startdatum zelf, niet op de maandag ervoor: die
+    // dag is het hele punt van deze weergave. Verder dan het opgehaalde bereik
+    // kunnen we niet, anders staan er dagen zonder cijfers.
+    const start =
+      periodClient.cycle.anchor < rangeStart ? rangeStart : periodClient.cycle.anchor
+
+    // Tot en met de einddag van de periode, of tot vandaag als die verder ligt —
+    // een periode die over tijd is hoor je te zien lopen.
+    const einde = periodClient.cycle.invoiceDueDate ?? today
+    const laatste = einde > today ? einde : today
+
+    const dates: string[] = []
+    for (let d = start; d <= laatste && dates.length < 120; d = addDays(d, 1)) dates.push(d)
+
+    return [{ key: `periode-${start}`, cells: maak(dates, null) }]
+  }
 
   if (view === 'day') {
     return [{ key: selectedDate, cells: maak([selectedDate], null) }]
@@ -613,6 +679,9 @@ function buildCell(
     running,
     total: clients.length,
     tone: kleuren ? toneFor(date, today, weekend, inMonth, clients) : null,
+    periodEnd: clients
+      .filter((c) => c.cycle.invoiceDueDate === date)
+      .map((c) => c.displayName),
   }
 }
 
