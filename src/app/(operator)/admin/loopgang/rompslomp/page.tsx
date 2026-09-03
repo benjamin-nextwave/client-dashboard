@@ -22,7 +22,7 @@ export default async function RompslompKoppelPage() {
     inLoopgang: Boolean(c.loopgang_visible),
   }))
 
-  const configured = isRompslompConfigured()
+  const configured = isRompslompConfigured('invoices')
   const result = configured ? await listSalesInvoices() : null
   const invoices = result?.ok ? result.value : []
   const contacts = contactsFromInvoices(invoices)

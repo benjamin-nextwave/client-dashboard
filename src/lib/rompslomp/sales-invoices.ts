@@ -100,7 +100,10 @@ export async function listSalesInvoices(from?: string): Promise<RompslompResult<
   for (let page = 1; page <= MAX_PAGES; page += 1) {
     const result = await rompslompGet<{ sales_invoices?: RawInvoice[] }>(
       `/companies/${companyId}/sales_invoices`,
-      { selection: SELECTION, per_page: PER_PAGE, page, 'search[from]': from }
+      { selection: SELECTION, per_page: PER_PAGE, page, 'search[from]': from },
+      // Het uitgaven-token heeft geen recht op facturen; dit is de enige plek
+      // waar het factuurtoken voor bedoeld is.
+      'invoices'
     )
 
     if (!result.ok) return result

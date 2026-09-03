@@ -36,7 +36,21 @@ export const ROMPSLOMP_CACHE_TAG = 'rompslomp'
 
 export type RompslompResult<T> = { ok: true; value: T } | { ok: false; error: string }
 
-export function getRompslompToken(): string | null {
+/**
+ * Welk token er gebruikt wordt.
+ *
+ *   default   ROMPSLOMP_API_TOKEN — het token voor uitgaven
+ *   invoices  ROMPSLOMP_INVOICES_API_TOKEN — apart token met leesrecht op
+ *             uitgaande facturen, zodat het uitgaven-token niet opgerekt hoeft
+ *             te worden. Ontbreekt hij, dan valt hij terug op het andere.
+ */
+export type TokenKind = 'default' | 'invoices'
+
+export function getRompslompToken(kind: TokenKind = 'default'): string | null {
+  const eigen =
+    kind === 'invoices' ? process.env.ROMPSLOMP_INVOICES_API_TOKEN?.trim() : undefined
+  if (eigen && eigen.length > 0) return eigen
+
   const token = process.env.ROMPSLOMP_API_TOKEN?.trim()
   return token && token.length > 0 ? token : null
 }
@@ -46,8 +60,8 @@ export function getConfiguredCompanyId(): string | null {
   return id && id.length > 0 ? id : null
 }
 
-export function isRompslompConfigured(): boolean {
-  return getRompslompToken() !== null
+export function isRompslompConfigured(kind: TokenKind = 'default'): boolean {
+  return getRompslompToken(kind) !== null
 }
 
 /**
@@ -58,9 +72,10 @@ export function isRompslompConfigured(): boolean {
  */
 export async function rompslompGet<T>(
   path: string,
-  query?: Record<string, string | number | undefined>
+  query?: Record<string, string | number | undefined>,
+  kind: TokenKind = 'default'
 ): Promise<RompslompResult<T>> {
-  const token = getRompslompToken()
+  const token = getRompslompToken(kind)
   if (!token) {
     return { ok: false, error: 'Geen ROMPSLOMP_API_TOKEN ingesteld.' }
   }
