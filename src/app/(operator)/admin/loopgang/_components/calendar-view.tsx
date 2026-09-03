@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { isWeekday } from '@/lib/commissions-shared'
+import { formatEuroCents, isWeekday } from '@/lib/commissions-shared'
 import type { LoopgangOverview } from '@/lib/data/loopgang-overview'
 import { addDays } from '@/lib/loopgang/cycle'
 import { buildTasks } from '@/lib/loopgang/tasks'
@@ -425,6 +425,23 @@ export function CalendarView({ overview }: Props) {
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-4 py-3">
         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
           <h2 className="text-sm font-semibold text-gray-900">{periodTitle}</h2>
+
+          {/* De commissie over de lopende periode. Alleen hier: bij één klant
+              die vanaf zijn startdatum in beeld staat is het een uitspraak over
+              precies de periode die je ziet. Over een maandraster met twintig
+              klanten zou hetzelfde getal nergens op slaan. */}
+          {effectiveView === 'period' && periodClient && (
+            <span className="text-[11px] text-gray-500">
+              <span className="font-semibold tabular-nums text-gray-900">
+                {formatEuroCents(periodClient.commissionCentsSinceAnchor)}
+              </span>{' '}
+              commissie ·{' '}
+              <span className="tabular-nums">
+                {periodClient.commissionLeadsSinceAnchor}
+              </span>{' '}
+              {periodClient.commissionLeadsSinceAnchor === 1 ? 'lead' : 'leads'}
+            </span>
+          )}
 
           {/* De kleuren gaan over één campagne. Staat er een handvol klanten in
               beeld, dan zegt de legenda wat je ziet; daarboven vertelt hij
