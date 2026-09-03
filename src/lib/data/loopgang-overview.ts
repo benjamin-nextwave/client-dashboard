@@ -20,6 +20,7 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getKixTasks, type KixTask } from './loopgang-kix-tasks'
+import { getInstantlyCache } from './loopgang-instantly-cache'
 import { getCampaign, getCampaignDailyAnalytics } from '@/lib/instantly/client'
 import { describeCampaignStatus, INSTANTLY_CAMPAIGN_STATUS } from '@/lib/instantly/types'
 import {
@@ -46,7 +47,6 @@ import {
 import { buildEvents, type LoopgangEvent } from '@/lib/loopgang/events'
 
 /** Hoeveel klanten tegelijk bij Instantly worden opgehaald. */
-const CLIENT_CONCURRENCY = 5
 /**
  * Hoeveel campagnes van dezelfde klant tegelijk worden opgehaald.
  *
@@ -187,6 +187,8 @@ export interface LoopgangOverviewClient {
   events: LoopgangEvent[]
   /** Instantly gaf een fout; de cijfers van deze klant kunnen onvolledig zijn. */
   analyticsError: string | null
+  /** Wanneer de cijfers van deze klant voor het laatst zijn opgehaald. */
+  analyticsSyncedAt: string | null
 }
 
 /** Eén regel in het beheerscherm van de klantenlijst. */
@@ -337,7 +339,6 @@ export async function getLoopgangOverview(monthInput?: string): Promise<Loopgang
 
   // Toekomstige dagen leveren niets op, dus daar stopt het ophalen.
   const analyticsStart = [bounds.start, today, ...stallWorkdays].reduce((a, b) => (a < b ? a : b))
-  const analyticsEnd = today
   const volumeDate = todayIsWorkday ? today : lastWorkdayOnOrBefore(today)
 
   const { data: clientRows } = await supabase
@@ -427,19 +428,26 @@ export async function getLoopgangOverview(monthInput?: string): Promise<Loopgang
     .reduce((a, b) => (a < b ? a : b))
   const bereikStart = dataStart < ondergrens ? ondergrens : dataStart
 
-  const built = (
-    await mapWithLimit(clients, CLIENT_CONCURRENCY, async (client) => {
-      // Eén keer per klant ophalen, ook als er twee campagnes zijn: het
-      // verzendvolume wordt niet gesplitst, dus beide sporen tonen hetzelfde.
-      const instantly = await getInstantlySnapshot(client.id, bereikStart, analyticsEnd)
+  // Uit de opgeslagen stand, niet live. Ruim honderd Instantly-aanroepen in één
+  // verzoek liepen te vaak deels stuk, en een campagne die stilviel op een lege
+  // lijst maakte van een draaiende klant een stilstaande. Verversen doe je met
+  // de knop, waar je het ziet gebeuren.
+  const cache = await getInstantlyCache()
 
-      return [buildClient(client, instantly)]
-    })
-  ).flat()
+  const built = clients.map((client) => {
+    const entry = cache.get(client.id) ?? null
+    const instantly: InstantlySnapshot = {
+      campaigns: entry?.snapshot.campaigns ?? [],
+      sentPerDay: new Map(Object.entries(entry?.snapshot.sentPerDay ?? {})),
+      error: entry ? entry.error : 'Nog niet opgehaald — druk op Ververs cijfers',
+    }
+    return buildClient(client, instantly, entry?.syncedAt ?? null)
+  })
 
   function buildClient(
     client: ClientRow,
-    instantly: InstantlySnapshot
+    instantly: InstantlySnapshot,
+    syncedAt: string | null
   ): LoopgangOverviewClient {
     const rowKey = client.id
 
@@ -640,6 +648,7 @@ export async function getLoopgangOverview(monthInput?: string): Promise<Loopgang
         meeting: cycleMeeting,
       }),
       analyticsError: instantly.error,
+      analyticsSyncedAt: syncedAt,
     }
 
     return result
@@ -696,13 +705,13 @@ export async function getLoopgangOverview(monthInput?: string): Promise<Loopgang
   }
 }
 
-interface InstantlySnapshot {
+export interface InstantlySnapshot {
   campaigns: OverviewCampaign[]
   sentPerDay: Map<string, number>
   error: string | null
 }
 
-async function getInstantlySnapshot(
+export async function getInstantlySnapshot(
   clientId: string,
   rangeStart: string,
   rangeEnd: string

@@ -13,6 +13,7 @@ import { KixDialog } from './kix-dialog'
 import { DayPanel } from './day-panel'
 import { KixHistory } from './kix-history'
 import { StatBar } from './stat-bar'
+import { SyncButton } from './sync-button'
 import { TaskDialog } from './task-dialog'
 import {
   MonthGrid,
@@ -216,6 +217,22 @@ export function CalendarView({ overview }: Props) {
     )
   }
 
+  // De oudste verversing telt: staat er één klant van gisteren tussen, dan zijn
+  // de cijfers als geheel van gisteren.
+  const laatstOpgehaald = (() => {
+    const stempels = overview.clients
+      .map((c) => c.analyticsSyncedAt)
+      .filter((s): s is string => s !== null)
+    if (stempels.length === 0) return null
+    const oudste = stempels.reduce((a, b) => (a < b ? a : b))
+    return new Date(oudste).toLocaleString('nl-NL', {
+      day: 'numeric',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  })()
+
   const prevMonth = shiftMonth(overview.month, -1)
   const nextMonth = shiftMonth(overview.month, 1)
 
@@ -245,10 +262,18 @@ export function CalendarView({ overview }: Props) {
             {overview.todayIsWorkday
               ? 'werkdag, het volume van vandaag telt mee'
               : 'geen werkdag, de cijfers slaan op de laatste werkdag'}
+            {' · '}
+            <span className={laatstOpgehaald === null ? 'font-semibold text-amber-600' : ''}>
+              {laatstOpgehaald === null
+                ? 'cijfers nog niet opgehaald'
+                : `cijfers van ${laatstOpgehaald}`}
+            </span>
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <SyncButton activeClientId={activeClient?.id ?? null} />
+
           <button
             type="button"
             onClick={() => setShowTasks(true)}
