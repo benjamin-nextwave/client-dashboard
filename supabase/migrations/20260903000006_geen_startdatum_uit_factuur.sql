@@ -1,0 +1,30 @@
+-- =============================================================================
+-- STARTDATUM TERUGDRAAIEN VOOR VIER KLANTEN
+-- =============================================================================
+-- Migratie 20260903000004 zette voor klanten zonder startdatum de datum van hun
+-- laatste factuur, zodat het gedrag gelijk bleef op het moment van omschakelen.
+-- Voor vier van hen klopte die aanname niet: die zijn nooit live gegaan, en een
+-- factuur voor een setup fee of een testmaand is geen begin van een campagne-
+-- periode.
+--
+-- Deze migratie maakt hun startdatum weer leeg. Daarmee tellen ze niet mee in de
+-- cyclus: geen werkdagteller, geen factuurmoment, geen belronde — wat klopt,
+-- want er loopt niets.
+--
+-- De waarden die worden weggehaald, voor het geval ze terug moeten:
+--   Glamorous Goat        2026-03-16
+--   Van Dyck Brown        2026-05-08
+--   Schripsema Instituut  2026-08-26
+--   Successr              2026-09-01
+--
+-- Armora (2026-08-27) en Org Topologies (2026-09-01) kwamen uit dezelfde
+-- backfill maar blijven staan; die draaien wel.
+--
+-- Op naam en niet op id, zodat het leesbaar blijft. loopgang_visible erbij zodat
+-- een gelijknamige klant buiten de loopgang niet meegaat.
+--
+-- Eén statement per regel, geen DO-blokken — de SQL-editor van Supabase knipt
+-- statements op regeleinden.
+-- =============================================================================
+
+UPDATE public.clients SET cycle_start_date = NULL, cycle_start_note = NULL WHERE loopgang_visible = TRUE AND company_name IN ('Glamorous Goat', 'Van Dyck Brown', 'Schripsema Instituut', 'Successr');

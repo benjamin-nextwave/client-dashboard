@@ -734,28 +734,21 @@ function planDatum(vandaag: string, dagenVerder: number): string {
   return `${addDays(vandaag, dagenVerder)}T08:00:00.000Z`
 }
 
-/** Het anker van de lopende cyclus; nodig om een meeting aan de juiste periode te hangen. */
+/**
+ * Het anker van de lopende cyclus; nodig om een meeting aan de juiste periode te
+ * hangen. Alleen de handmatig gezette startdatum telt — een factuurdatum of een
+ * livegang is geen startpunt.
+ */
 async function huidigAnker(clientId: string): Promise<string | null> {
   const supabase = createAdminClient()
 
   const { data: client } = await supabase
     .from('clients')
-    .select('cycle_start_date, go_live_date')
+    .select('cycle_start_date')
     .eq('id', clientId)
     .maybeSingle()
 
-  if (client?.cycle_start_date) return String(client.cycle_start_date).slice(0, 10)
-
-  const { data: factuur } = await supabase
-    .from('client_invoice_marks')
-    .select('invoice_date')
-    .eq('client_id', clientId)
-    .order('invoice_date', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-
-  if (factuur?.invoice_date) return String(factuur.invoice_date).slice(0, 10)
-  return client?.go_live_date ? String(client.go_live_date).slice(0, 10) : null
+  return client?.cycle_start_date ? String(client.cycle_start_date).slice(0, 10) : null
 }
 
 export async function registreerKixAction(input: {
@@ -770,7 +763,8 @@ export async function registreerKixAction(input: {
 
   if (input.keuze === 'invoice-sent') {
     // Bewust zonder bedrag: Kix meldt dat de factuur eruit is, niet wat erop
-    // stond. De factuurdatum is meteen het nieuwe anker van de cyclus.
+    // stond. Het anker van de cyclus verschuift hier niet — dat is een aparte
+    // beslissing die jij met de knop Cyclusstart neemt.
     const { error } = await supabase.from('client_invoice_marks').upsert(
       {
         client_id: input.clientId,

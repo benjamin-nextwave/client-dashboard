@@ -409,12 +409,7 @@ export async function getLoopgangOverview(monthInput?: string): Promise<Loopgang
   // een half jaar terug halen we niet: dan is de periode toch niet meer de
   // lopende.
   const vroegsteAnker = clients.reduce<string | null>((vroegste, client) => {
-    const facturen = invoicesByTrack.get(client.id) ?? []
-    const laatsteFactuur = facturen[0] ? String(facturen[0].invoice_date).slice(0, 10) : null
-    const anker =
-      (client.cycle_start_date ? String(client.cycle_start_date).slice(0, 10) : null) ??
-      laatsteFactuur ??
-      (client.go_live_date ? String(client.go_live_date).slice(0, 10) : null)
+    const anker = client.cycle_start_date ? String(client.cycle_start_date).slice(0, 10) : null
     if (!anker) return vroegste
     return vroegste === null || anker < vroegste ? anker : vroegste
   }, null)
