@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { formatEuroCents, isWeekday } from '@/lib/commissions-shared'
 import type { LoopgangOverview } from '@/lib/data/loopgang-overview'
 import { addDays } from '@/lib/loopgang/cycle'
@@ -34,6 +35,22 @@ const WEEKDAY_NAMES = [
  */
 const MAX_CLIENTS_FOR_TONE = 3
 
+/**
+ * Hoeveel je in één keer ziet. Een week is de standaard: dat is het venster
+ * waarin het werk van deze en de komende dagen past zonder dat je scrollt.
+ * Drie maanden is om terug te kijken, een dag om je op één klant te richten.
+ */
+type View = 'quarter' | 'month' | 'week' | 'day'
+
+const VIEW_LABELS: Record<View, string> = {
+  quarter: '3 maanden',
+  month: 'Maand',
+  week: 'Week',
+  day: 'Dag',
+}
+
+const VIEW_ORDER: View[] = ['quarter', 'month', 'week', 'day']
+
 type Focus = 'all' | 'action' | 'invoice' | 'meeting' | 'stalled'
 
 const FOCUS_LABELS: Record<Focus, string> = {
@@ -45,10 +62,12 @@ const FOCUS_LABELS: Record<Focus, string> = {
 }
 
 export function CalendarView({ overview }: Props) {
+  const router = useRouter()
   // Leeg is de standaard en betekent iedereen: de kalender is eerst een
   // maandoverzicht van alles wat er speelt.
   const [selectedClients, setSelectedClients] = useState<string[]>([])
   const [focus, setFocus] = useState<Focus>('all')
+  const [view, setView] = useState<View>('week')
   const [selectedDate, setSelectedDate] = useState<string>(() =>
     overview.today.slice(0, 7) === overview.month ? overview.today : overview.rangeStart
   )
@@ -92,15 +111,18 @@ export function CalendarView({ overview }: Props) {
   const kleurDagen =
     selectedClients.length >= 1 && selectedClients.length <= MAX_CLIENTS_FOR_TONE
 
-  const cells = useMemo(
-    () => buildCells(overview.month, overview.today, clients, kleurDagen),
-    [overview.month, overview.today, clients, kleurDagen]
+  const periods = useMemo(
+    () => buildPeriods(view, overview.month, selectedDate, overview.today, clients, kleurDagen),
+    [view, overview.month, selectedDate, overview.today, clients, kleurDagen]
   )
 
-  const entriesForSelected = useMemo(
-    () => cells.find((c) => c.date === selectedDate)?.entries ?? [],
-    [cells, selectedDate]
-  )
+  const entriesForSelected = useMemo(() => {
+    for (const period of periods) {
+      const cell = period.cells.find((c) => c.date === selectedDate)
+      if (cell) return cell.entries
+    }
+    return []
+  }, [periods, selectedDate])
 
   /**
    * Vastleggen kan alleen bij precies één gekozen klant. Bij iedereen of bij een
@@ -114,15 +136,46 @@ export function CalendarView({ overview }: Props) {
     : undefined
 
 
+  /**
+   * Een week of dag verder of terug. Blijft de nieuwe dag binnen het opgehaalde
+   * venster, dan hoeft er niets herladen te worden; stapt hij eruit, dan halen
+   * we de maand op waar hij in valt.
+   */
+  function step(richting: 1 | -1) {
+    const doel = addDays(selectedDate, richting * (view === 'week' ? 7 : 1))
+    setSelectedDate(doel)
+    if (doel < overview.rangeStart || doel > overview.rangeEnd) {
+      router.push(`/admin/loopgang?maand=${doel.slice(0, 7)}`)
+    }
+  }
+
+  function goToday() {
+    setSelectedDate(overview.today)
+    if (overview.today < overview.rangeStart || overview.today > overview.rangeEnd) {
+      router.push(`/admin/loopgang?maand=${overview.today.slice(0, 7)}`)
+    }
+  }
+
   function toggleClient(key: string) {
     setSelectedClients((prev) =>
       prev.includes(key) ? prev.filter((c) => c !== key) : [...prev, key]
     )
   }
 
-  const [year, month] = overview.month.split('-').map(Number)
   const prevMonth = shiftMonth(overview.month, -1)
   const nextMonth = shiftMonth(overview.month, 1)
+
+  // De kop zegt wat je ziet, niet welke maand toevallig geladen is.
+  const periodTitle =
+    view === 'day'
+      ? formatDayLong(selectedDate)
+      : view === 'week'
+        ? `week van ${formatDayShort(startOfWeek(selectedDate))} t/m ${formatDayShort(
+            addDays(startOfWeek(selectedDate), 6)
+          )}`
+        : view === 'quarter'
+          ? `${monthTitle(prevMonth)} — ${monthTitle(nextMonth)}`
+          : monthTitle(overview.month)
 
   return (
     <div className="space-y-5">
@@ -299,9 +352,7 @@ export function CalendarView({ overview }: Props) {
       {/* Maandnavigatie */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-          <h2 className="text-sm font-semibold text-gray-900">
-            {MONTH_NAMES[(month ?? 1) - 1]} {year}
-          </h2>
+          <h2 className="text-sm font-semibold text-gray-900">{periodTitle}</h2>
 
           {/* De kleuren gaan over één campagne. Staat er een handvol klanten in
               beeld, dan zegt de legenda wat je ziet; daarboven vertelt hij
@@ -318,16 +369,55 @@ export function CalendarView({ overview }: Props) {
             </span>
           )}
         </div>
-        <div className="flex items-center gap-1.5">
-          <MonthLink month={prevMonth} label="← vorige" />
-          <MonthLink month={overview.today.slice(0, 7)} label="vandaag" />
-          <MonthLink month={nextMonth} label="volgende →" />
+        <div className="flex flex-wrap items-center gap-1.5">
+          {/* De weergaveschakelaar staat naast de navigatie: eerst kiezen hoe
+              groot je venster is, dan waar je heen springt. */}
+          <div className="mr-1 inline-flex rounded-lg border border-gray-200 p-0.5">
+            {VIEW_ORDER.map((v) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setView(v)}
+                aria-pressed={view === v}
+                className={`rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+                  view === v ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                {VIEW_LABELS[v]}
+              </button>
+            ))}
+          </div>
+
+          {view === 'week' || view === 'day' ? (
+            <>
+              <StepButton label="← vorige" onClick={() => step(-1)} />
+              <StepButton label="vandaag" onClick={() => goToday()} />
+              <StepButton label="volgende →" onClick={() => step(1)} />
+            </>
+          ) : (
+            <>
+              <MonthLink month={prevMonth} label="← vorige" />
+              <MonthLink month={overview.today.slice(0, 7)} label="vandaag" />
+              <MonthLink month={nextMonth} label="volgende →" />
+            </>
+          )}
         </div>
       </div>
 
       {/* Kalender + wat er die dag speelt */}
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <MonthGrid cells={cells} selected={selectedDate} onSelect={setSelectedDate} />
+        <div className="space-y-3">
+          {periods.map((period) => (
+            <MonthGrid
+              key={period.key}
+              cells={period.cells}
+              selected={selectedDate}
+              onSelect={setSelectedDate}
+              title={period.title}
+              columns={view === 'day' ? 1 : 7}
+            />
+          ))}
+        </div>
         <div className="lg:sticky lg:top-20 lg:self-start">
           <DayPanel
             date={selectedDate}
@@ -416,25 +506,31 @@ function Pill({ text, tone }: { text: string; tone: 'muted' | 'warn' | 'bad' }) 
   return <span className={`rounded-full border px-3 py-1 font-medium ${styles}`}>{text}</span>
 }
 
+interface Period {
+  key: string
+  /** Kop boven het raster; alleen gevuld als er meer dan één raster staat. */
+  title?: string
+  cells: DayCell[]
+}
+
+/** De maandag van de week waar `date` in valt. */
+function startOfWeek(date: string): string {
+  const day = new Date(`${date}T00:00:00Z`).getUTCDay()
+  return addDays(date, -((day + 6) % 7))
+}
+
 /**
- * De vakjes van het maandraster, inclusief de dagen van de vorige en volgende
- * maand die de eerste en laatste week aanvullen. De week begint op maandag.
+ * De rasters die bij de gekozen weergave horen. Drie maanden levert drie
+ * rasters op, de rest één.
  */
-function buildCells(
+function buildPeriods(
+  view: View,
   month: string,
+  selectedDate: string,
   today: string,
   clients: LoopgangOverview['clients'],
   kleuren: boolean
-): DayCell[] {
-  const [year, monthNumber] = month.split('-').map(Number)
-  const first = new Date(Date.UTC(year, monthNumber - 1, 1))
-  const daysInMonth = new Date(Date.UTC(year, monthNumber, 0)).getUTCDate()
-
-  // getUTCDay: 0 = zondag. Wij beginnen op maandag, dus zondag schuift naar 6.
-  const offset = (first.getUTCDay() + 6) % 7
-  const gridStart = addDays(`${month}-01`, -offset)
-  const cellCount = Math.ceil((offset + daysInMonth) / 7) * 7
-
+): Period[] {
   // Één keer alle gebeurtenissen op datum zetten, zodat elk vakje alleen nog
   // hoeft op te zoeken. De klantvolgorde is de urgentievolgorde uit de
   // datalaag; die bepaalt ook welke blokjes als eerste in een vol vakje passen.
@@ -447,31 +543,77 @@ function buildCells(
     }
   }
 
-  const cells: DayCell[] = []
-  for (let i = 0; i < cellCount; i += 1) {
-    const date = addDays(gridStart, i)
-    const inMonth = date.slice(0, 7) === month
-    const weekend = !isWeekday(date)
+  const maak = (dates: string[], focusMonth: string | null) =>
+    dates.map((date) => buildCell(date, focusMonth, today, clients, kleuren, byDate))
 
-    // Alleen werkdagen tellen mee in "hoeveel klanten draaiden er": in het
-    // weekend stuurt niemand, en dan zou elke zaterdag rood staan.
-    const running = weekend ? 0 : clients.filter((c) => (c.sentByDate[date] ?? 0) > 0).length
-
-    cells.push({
-      date,
-      dayNumber: Number(date.slice(8, 10)),
-      inMonth,
-      isWeekend: weekend,
-      isToday: date === today,
-      isFuture: date > today,
-      entries: byDate.get(date) ?? [],
-      running,
-      total: clients.length,
-      tone: kleuren ? toneFor(date, today, weekend, inMonth, clients) : null,
-    })
+  if (view === 'day') {
+    return [{ key: selectedDate, cells: maak([selectedDate], null) }]
   }
 
-  return cells
+  if (view === 'week') {
+    const start = startOfWeek(selectedDate)
+    const dates = Array.from({ length: 7 }, (_, i) => addDays(start, i))
+    return [{ key: start, cells: maak(dates, null) }]
+  }
+
+  const maanden =
+    view === 'quarter' ? [shiftMonth(month, -1), month, shiftMonth(month, 1)] : [month]
+
+  return maanden.map((m) => ({
+    key: m,
+    title: view === 'quarter' ? monthTitle(m) : undefined,
+    cells: maak(monthDates(m), m),
+  }))
+}
+
+/** Alle vakjes van een maandraster, inclusief de aanvullende rand­dagen. */
+function monthDates(month: string): string[] {
+  const [year, monthNumber] = month.split('-').map(Number)
+  const first = new Date(Date.UTC(year, monthNumber - 1, 1))
+  const daysInMonth = new Date(Date.UTC(year, monthNumber, 0)).getUTCDate()
+
+  // getUTCDay: 0 = zondag. Wij beginnen op maandag, dus zondag schuift naar 6.
+  const offset = (first.getUTCDay() + 6) % 7
+  const gridStart = addDays(`${month}-01`, -offset)
+  const cellCount = Math.ceil((offset + daysInMonth) / 7) * 7
+
+  return Array.from({ length: cellCount }, (_, i) => addDays(gridStart, i))
+}
+
+function monthTitle(month: string): string {
+  const [y, m] = month.split('-').map(Number)
+  return `${MONTH_NAMES[(m ?? 1) - 1]} ${y}`
+}
+
+function buildCell(
+  date: string,
+  focusMonth: string | null,
+  today: string,
+  clients: LoopgangOverview['clients'],
+  kleuren: boolean,
+  byDate: Map<string, DayEntry[]>
+): DayCell {
+  // Bij een week- of dagweergave is er geen maand om buiten te vallen: alles
+  // wat je ziet hoort erbij.
+  const inMonth = focusMonth === null || date.slice(0, 7) === focusMonth
+  const weekend = !isWeekday(date)
+
+  // Alleen werkdagen tellen mee in "hoeveel klanten draaiden er": in het
+  // weekend stuurt niemand, en dan zou elke zaterdag rood staan.
+  const running = weekend ? 0 : clients.filter((c) => (c.sentByDate[date] ?? 0) > 0).length
+
+  return {
+    date,
+    dayNumber: Number(date.slice(8, 10)),
+    inMonth,
+    isWeekend: weekend,
+    isToday: date === today,
+    isFuture: date > today,
+    entries: byDate.get(date) ?? [],
+    running,
+    total: clients.length,
+    tone: kleuren ? toneFor(date, today, weekend, inMonth, clients) : null,
+  }
 }
 
 /**
@@ -535,6 +677,23 @@ function toneFor(
   if (rood > 0) return 'red'
   if (oranje > 0) return 'orange'
   return null
+}
+
+function formatDayShort(iso: string): string {
+  const [, m, d] = iso.split('-').map(Number)
+  return `${d} ${MONTH_NAMES[(m ?? 1) - 1]}`
+}
+
+function StepButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="rounded-lg border border-gray-200 px-2.5 py-1 text-[11px] font-semibold text-gray-600 transition-colors hover:border-gray-300 hover:bg-gray-50"
+    >
+      {label}
+    </button>
+  )
 }
 
 function Legend({ className, label }: { className: string; label: string }) {

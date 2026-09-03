@@ -254,6 +254,13 @@ interface ClientRow {
   onboarding_status: string | null
 }
 
+/** De maand `delta` maanden verderop, als YYYY-MM. */
+export function shiftMonth(month: string, delta: number): string {
+  const [y, m] = month.split('-').map(Number)
+  const next = new Date(Date.UTC(y, m - 1 + delta, 1))
+  return `${next.getUTCFullYear()}-${String(next.getUTCMonth() + 1).padStart(2, '0')}`
+}
+
 /** Eerste en laatste dag van een maand die als YYYY-MM binnenkomt. */
 export function monthBounds(month: string): { start: string; end: string } {
   const [y, m] = month.split('-').map(Number)
@@ -294,16 +301,20 @@ export async function getLoopgangOverview(monthInput?: string): Promise<Loopgang
   const today = amsterdamDateString()
   const todayIsWorkday = isWeekday(today)
   const month = /^\d{4}-\d{2}$/.test(monthInput ?? '') ? (monthInput as string) : today.slice(0, 7)
-  const bounds = monthBounds(month)
+  // Het venster is bewust een maand ruimer aan beide kanten dan de gekozen
+  // maand. De kalender kan op drie maanden staan, en dan moeten de buurmaanden
+  // er al in zitten. Dat kost niets: dagcijfers gaan per campagne in één
+  // aanroep, ongeacht de lengte van het bereik.
+  const bounds = {
+    start: monthBounds(shiftMonth(month, -1)).start,
+    end: monthBounds(shiftMonth(month, 1)).end,
+  }
 
-  // De werkdagen waarop stilstand wordt getoetst. Die kunnen vóór de getoonde
-  // maand liggen — op 1 september kijk je terug naar 28 en 29 augustus — dus ze
-  // bepalen mee hoe ver het bereik terugloopt.
+  // De werkdagen waarop stilstand wordt getoetst. Die kunnen vóór het venster
+  // liggen, dus ze bepalen mee hoe ver het terugloopt.
   const stallWorkdays = recentWorkdays(today, STALL_WORKDAYS)
 
-  // Eén bereik dat de getoonde maand, vandaag en de stildagen dekt. Toekomstige
-  // dagen leveren niets op, dus daar stopt het bereik. De lengte kost niets: de
-  // dagcijfers gaan per campagne in één aanroep.
+  // Toekomstige dagen leveren niets op, dus daar stopt het ophalen.
   const analyticsStart = [bounds.start, today, ...stallWorkdays].reduce((a, b) => (a < b ? a : b))
   const analyticsEnd = today
   const volumeDate = todayIsWorkday ? today : lastWorkdayOnOrBefore(today)

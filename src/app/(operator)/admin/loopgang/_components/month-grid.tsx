@@ -44,6 +44,13 @@ interface Props {
   cells: DayCell[]
   selected: string | null
   onSelect: (date: string) => void
+  /** Kop boven het raster; gebruikt bij de driemaandsweergave. */
+  title?: string
+  /**
+   * Zeven kolommen voor een maand of week, één voor de dagweergave. Bij één
+   * kolom vervalt de weekdagbalk: die zegt niets over een enkele dag.
+   */
+  columns?: 7 | 1
 }
 
 const WEEKDAY_HEADS = ['ma', 'di', 'wo', 'do', 'vr', 'za', 'zo']
@@ -88,21 +95,29 @@ const TONE_STYLES: Record<Exclude<DayTone, null>, string> = {
 /** Hoeveel blokjes er in een vakje passen voordat er "+n" onder komt. */
 const MAX_CHIPS = 3
 
-export function MonthGrid({ cells, selected, onSelect }: Props) {
+export function MonthGrid({ cells, selected, onSelect, title, columns = 7 }: Props) {
   return (
     <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
-      <div className="grid grid-cols-7 border-b border-gray-100 bg-gray-50">
-        {WEEKDAY_HEADS.map((day) => (
-          <div
-            key={day}
-            className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide text-gray-400"
-          >
-            {day}
-          </div>
-        ))}
-      </div>
+      {title && (
+        <div className="border-b border-gray-100 px-3 py-2 text-[11px] font-semibold text-gray-700">
+          {title}
+        </div>
+      )}
 
-      <div className="grid grid-cols-7">
+      {columns === 7 && (
+        <div className="grid grid-cols-7 border-b border-gray-100 bg-gray-50">
+          {WEEKDAY_HEADS.map((day) => (
+            <div
+              key={day}
+              className="px-2 py-2 text-center text-[10px] font-semibold uppercase tracking-wide text-gray-400"
+            >
+              {day}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className={columns === 7 ? 'grid grid-cols-7' : 'grid grid-cols-1'}>
         {cells.map((cell) => {
           const isSelected = selected === cell.date
           const visible = cell.entries.slice(0, MAX_CHIPS)
@@ -114,7 +129,9 @@ export function MonthGrid({ cells, selected, onSelect }: Props) {
               type="button"
               onClick={() => onSelect(cell.date)}
               aria-pressed={isSelected}
-              className={`flex min-h-[104px] flex-col gap-1 border-b border-r border-gray-100 p-1.5 text-left transition-colors ${
+              className={`flex ${
+                columns === 1 ? 'min-h-[180px]' : 'min-h-[104px]'
+              } flex-col gap-1 border-b border-r border-gray-100 p-1.5 text-left transition-colors ${
                 !cell.inMonth
                   ? 'bg-gray-50/60'
                   : cell.tone
