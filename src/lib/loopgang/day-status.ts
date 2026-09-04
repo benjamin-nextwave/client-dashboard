@@ -24,7 +24,7 @@
  * Puur: alleen datums en de cyclus in, één teken uit. Geen database, geen API.
  */
 
-import { CALL_INTERVAL_DAYS, daysBetween, type LoopgangCycle } from './cycle'
+import { callDatesFor, type LoopgangCycle } from './cycle'
 import { isWeekday } from '@/lib/commissions-shared'
 
 /**
@@ -99,7 +99,7 @@ export function dayMarkFor(input: DayStatusInput): DayMark {
   // daadwerkelijk hebt benaderd, ook als dat een tussenliggende dag was.
   if (kixSentDates.has(date)) return 'sent'
 
-  return isCallDay(date, cycle, capStartedOn) ? 'call' : 'wait'
+  return isCallDay(date, cycle) ? 'call' : 'wait'
 }
 
 /**
@@ -125,14 +125,13 @@ function inActionPhase(
 }
 
 /**
- * Moet Kix op deze dag bellen? Vanaf het begin van de actiehelft elke twee
- * kalenderdagen — dezelfde telling als de belherinnering in de cyclus, zodat de
- * kalender en het dagpaneel niet uit elkaar lopen.
+ * Moet Kix op deze dag bellen? De beldagen hangen aan de einddag van de periode —
+ * 14, 10, 8, 4 en 2 dagen ervoor — en komen uit dezelfde functie als de
+ * belherinnering in de cyclus, zodat de kalender en het dagpaneel niet uit
+ * elkaar lopen.
  */
-function isCallDay(date: string, cycle: LoopgangCycle, capStartedOn: string | null): boolean {
-  const start = actionPhaseStart(cycle, capStartedOn)
-  if (start === null || date < start) return false
-  return daysBetween(start, date) % CALL_INTERVAL_DAYS === 0
+function isCallDay(date: string, cycle: LoopgangCycle): boolean {
+  return callDatesFor(cycle.anchor, cycle.invoiceDueDate).includes(date)
 }
 
 /** Korte uitleg bij een teken, voor de tooltip in de kalender. */

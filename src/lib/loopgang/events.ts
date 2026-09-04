@@ -17,7 +17,10 @@
 
 import {
   ANALYSIS_LEAD_DAYS,
-  CALL_INTERVAL_DAYS,
+  MAX_CALL_ATTEMPTS,
+  URGENT_FROM_ATTEMPT,
+  callAttemptFor,
+  callDatesFor,
   INVOICE_WORKDAY,
   MEETING_WINDOW_FROM,
   MEETING_WINDOW_TO,
@@ -90,25 +93,15 @@ export interface BuildEventsInput {
 }
 
 /**
- * Hoeveel belpogingen er in een periode zitten, en vanaf welke het urgent wordt.
- *
- * Vanaf de derde: dan zijn er meer pogingen op dan er over zijn, en moet Kix
- * weten dat dit niet nog een keer kan schuiven. De hoeveelheid tijd die er nog
- * in de maand zit bepaalt de urgentie bewust níét — die twee liepen door elkaar
- * heen, en het pogingnummer is het duidelijkste signaal.
- */
-const MAX_CALL_ATTEMPTS = 5
-const URGENT_FROM_ATTEMPT = 3
-
-/**
  * De staart achter een meetingtaak: hoeveel dagen er nog zijn om de meeting
- * gehad te hebben. Telt naar de einddag van de periode, want daarna is er niets
- * meer te evalueren voordat er gefactureerd wordt.
+ * gehad te hebben, geteld vanaf de dag waarop de taak valt. Telt naar de einddag
+ * van de periode, want daarna is er niets meer te evalueren voordat er
+ * gefactureerd wordt.
  */
-function deadlineTekst(invoiceDueDate: string | null, today: string): string {
+function deadlineTekst(invoiceDueDate: string | null, vanaf: string): string {
   if (!invoiceDueDate) return ''
 
-  const dagen = daysBetween(today, invoiceDueDate)
+  const dagen = daysBetween(vanaf, invoiceDueDate)
   if (dagen < 0) return ' — de meeting is over tijd'
   if (dagen === 0) return ' — de meeting moet vandaag gehad zijn'
   if (dagen === 1) return ' — binnen 1 dag meeting gehad hebben'
@@ -270,36 +263,42 @@ export function buildEvents(input: BuildEventsInput): LoopgangEvent[] {
     // De afteller staat in het label en niet in de toelichting, want die gaat mee
     // in de mail naar Kix. Hij moet aan de taak zelf kunnen zien hoeveel tijd er
     // nog is, zonder de cyclus te hoeven kennen.
-    const deadline = deadlineTekst(cycle.invoiceDueDate, today)
-
     if (cycle.meetingReminderStart) {
       events.push({
         date: cycle.meetingReminderStart,
         kind: 'meeting-mail',
         status: statusFor(cycle.meetingReminderStart, today),
-        label: `Kix mailt voor een meeting${deadline}`,
+        label: `Kix mailt voor een meeting${deadlineTekst(
+          cycle.invoiceDueDate,
+          cycle.meetingReminderStart
+        )}`,
         detail: `werkdag ${MEETING_WORKDAY} van de cyclus`,
       })
     }
 
     // Alleen de eerstvolgende belpoging. Het nummer bepaalt de urgentie: vanaf de
-    // derde van vijf wordt de taak als urgent gemarkeerd, want dan zijn er meer
-    // pogingen op dan er over zijn.
-    if (cycle.nextCallDate && cycle.meetingReminderStart) {
-      const poging = Math.min(
-        MAX_CALL_ATTEMPTS,
-        Math.floor(
-          daysBetween(cycle.meetingReminderStart, cycle.nextCallDate) / CALL_INTERVAL_DAYS
-        ) + 1
-      )
+    // derde van vijf, want dan zijn er meer pogingen op dan er over zijn.
+    if (cycle.nextCallDate) {
+      const poging =
+        callAttemptFor(cycle.nextCallDate, cycle.anchor, cycle.invoiceDueDate) ??
+        MAX_CALL_ATTEMPTS
       const urgent = poging >= URGENT_FROM_ATTEMPT
+      const resterend = callDatesFor(cycle.anchor, cycle.invoiceDueDate).filter(
+        (d) => d > cycle.nextCallDate!
+      ).length
 
       events.push({
         date: cycle.nextCallDate,
         kind: 'meeting-call',
         status: statusFor(cycle.nextCallDate, today),
-        label: `${urgent ? '[Urgent] ' : ''}Bellen voor een meeting (poging ${poging}/${MAX_CALL_ATTEMPTS})${deadline}`,
-        detail: `daarna elke ${CALL_INTERVAL_DAYS} dagen`,
+        label: `${urgent ? '[Urgent] ' : ''}Bellen voor een meeting (poging ${poging}/${MAX_CALL_ATTEMPTS})${deadlineTekst(
+          cycle.invoiceDueDate,
+          cycle.nextCallDate
+        )}`,
+        detail:
+          resterend > 0
+            ? `daarna nog ${resterend} ${resterend === 1 ? 'poging' : 'pogingen'}`
+            : 'laatste belmoment van deze periode',
       })
     }
 

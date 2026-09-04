@@ -31,6 +31,55 @@ export const INVOICE_WORKDAY = 20
 export const MEETING_WORKDAY = 10
 /** Kalenderdagen tussen twee belpogingen zolang de meeting niet staat. */
 export const CALL_INTERVAL_DAYS = 2
+
+/**
+ * Hoeveel dagen vóór de einddag van de periode Kix moet bellen.
+ *
+ * Aan de einddag opgehangen en niet aan werkdag 10: de vraag is niet hoe lang de
+ * belronde loopt maar hoeveel tijd er nog is om de meeting gehad te hebben. Dat
+ * betekent ook dat een pauze of een aangekondigd leadplafond vanzelf goed gaat —
+ * die verzetten de einddag, en de hele belronde schuift mee.
+ *
+ * Vanaf de derde poging is de taak urgent: dan zijn er meer pogingen op dan er
+ * over zijn.
+ */
+export const CALL_OFFSETS = [14, 10, 8, 4, 2]
+
+export const MAX_CALL_ATTEMPTS = CALL_OFFSETS.length
+
+export const URGENT_FROM_ATTEMPT = 3
+
+/**
+ * De beldagen van een periode, oplopend. Leeg als er geen einddag is — zonder
+ * einddag is er niets om naartoe te tellen.
+ *
+ * Beldagen die vóór het anker vallen doen niet mee: bij een korte periode, of
+ * bij een cap die over een paar dagen valt, zijn de vroege pogingen simpelweg
+ * niet meer aan de orde.
+ */
+export function callDatesFor(anchor: string | null, invoiceDueDate: string | null): string[] {
+  if (!anchor || !invoiceDueDate) return []
+
+  return CALL_OFFSETS.map((offset) => addDays(invoiceDueDate, -offset))
+    .filter((date) => date >= anchor)
+    .sort()
+}
+
+/** Het hoeveelste belmoment een datum is; null als het geen beldag is. */
+export function callAttemptFor(
+  date: string,
+  anchor: string | null,
+  invoiceDueDate: string | null
+): number | null {
+  const dagen = callDatesFor(anchor, invoiceDueDate)
+  const index = dagen.indexOf(date)
+  if (index === -1) return null
+
+  // Vallen er vroege pogingen weg omdat de periode kort is, dan tellen de
+  // overgebleven pogingen door vanaf het eind: bij nog één beldag te gaan is dat
+  // poging 5 van 5 en niet poging 1.
+  return MAX_CALL_ATTEMPTS - dagen.length + index + 1
+}
 /** Hoeveel dagen vóór de meeting de campagne-analyse gemaakt moet zijn. */
 export const ANALYSIS_LEAD_DAYS = 2
 /** Betaaltermijn in kalenderdagen na de factuurdatum. */
@@ -475,15 +524,19 @@ export function buildCycle(input: CycleInput): LoopgangCycle {
   // anker — anders zou de eerste belronde op een willekeurig moment vallen.
   let callDueToday = false
   let nextCallDate: string | null = null
-  const callWindowOpen =
-    !meetingHandled && meetingReminderStart !== null && today >= meetingReminderStart
 
-  if (callWindowOpen && meetingReminderStart) {
-    const elapsed = daysBetween(meetingReminderStart, today)
-    callDueToday = elapsed % CALL_INTERVAL_DAYS === 0
-    nextCallDate = callDueToday
-      ? today
-      : addDays(today, CALL_INTERVAL_DAYS - (elapsed % CALL_INTERVAL_DAYS))
+  if (!meetingHandled && invoiceDueDate) {
+    const beldagen = callDatesFor(anchor, invoiceDueDate)
+    callDueToday = beldagen.includes(today)
+    nextCallDate = beldagen.find((d) => d >= today) ?? null
+
+    // Zijn alle belmomenten voorbij terwijl de periode nog loopt, dan is bellen
+    // vandaag het enige dat er nog op zit. Beter een laatste poging dan een
+    // belronde die stilletjes ophoudt met een meeting die er nooit kwam.
+    if (nextCallDate === null && today <= invoiceDueDate) {
+      nextCallDate = today
+      callDueToday = true
+    }
   }
 
   // --- Facturatie -----------------------------------------------------------
