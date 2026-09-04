@@ -11,6 +11,8 @@ import {
   INVOICE_TASK_KINDS,
   MEETING_TASK_KINDS,
   REPORT_TASK_KINDS,
+  storageKindFor,
+  type KixTaskInput,
 } from '@/lib/data/loopgang-kix-tasks'
 import { analyseerLoopgang, type LoopgangAnalyse } from '@/lib/loopgang/analyse'
 import { addDays, type MeetingOutcome } from '@/lib/loopgang/cycle'
@@ -583,15 +585,22 @@ export async function sendTasksToWebhookAction(
 
     // Pas vastleggen als Make hem heeft aangenomen: een taak die niet is
     // aangekomen mag niet als "al herinnerd" in het overzicht komen te staan.
-    const mislukt = await recordKixTasks(
-      tasks.map((task) => ({
+    // Mailen, bellen en het meetingvenster komen op één soort terecht: voor Kix
+    // is dat één taak, hoeveel pogingen er ook in zitten. Vink je er twee uit
+    // dezelfde reeks aan, dan is dat samen één verzending en niet twee.
+    const teBewaren = new Map<string, KixTaskInput>()
+    for (const task of tasks) {
+      const kind = storageKindFor(task.kind)
+      teBewaren.set(`${task.clientId}|${kind}`, {
         clientId: task.clientId,
-        kind: task.kind,
+        kind,
         label: task.label,
         detail: task.detail,
         dueDate: task.date,
-      }))
-    )
+      })
+    }
+
+    const mislukt = await recordKixTasks([...teBewaren.values()])
     if (mislukt > 0) {
       console.error(`[loopgang:taken] ${mislukt} taken niet vastgelegd`)
     }

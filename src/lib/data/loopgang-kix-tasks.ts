@@ -243,8 +243,32 @@ export async function closeKixTasks(
   return gesloten
 }
 
-/** De taaksoorten die over het regelen van de evaluatiemeeting gaan. */
-export const MEETING_TASK_KINDS = ['meeting-mail', 'meeting-call', 'meeting-window']
+/**
+ * Het regelen van de evaluatiemeeting is één taak, geen reeks.
+ *
+ * In de kalender zijn het losse gebeurtenissen — mailen op poging 1, bellen op
+ * 2 tot en met 5 — maar voor Kix is het één ding dat af moet. Werden ze los
+ * opgeslagen, dan kreeg hij er drie naast elkaar in zijn lijst, elk met een
+ * eigen teller, terwijl het steeds dezelfde vraag is: is die meeting al
+ * geregeld?
+ *
+ * Alles uit die reeks landt daarom op één soort. De teller telt dan alle
+ * pogingen bij elkaar op, wat precies is wat je wil weten.
+ */
+export const MEETING_TASK_KIND = 'meeting-arrange'
+
+const MEETING_EVENT_KINDS = ['meeting-mail', 'meeting-call', 'meeting-window']
+
+/** Onder welke soort een gebeurtenis wordt bewaard. */
+export function storageKindFor(eventKind: string): string {
+  return MEETING_EVENT_KINDS.includes(eventKind) ? MEETING_TASK_KIND : eventKind
+}
+
+/**
+ * De soorten die bij het regelen van de meeting horen. De losse gebeurtenis-
+ * soorten staan er nog bij voor rijen van vóór het samenvoegen.
+ */
+export const MEETING_TASK_KINDS = [MEETING_TASK_KIND, ...MEETING_EVENT_KINDS]
 
 /** De taaksoorten die vervallen zodra de factuur van deze periode is vastgelegd. */
 export const INVOICE_TASK_KINDS = ['invoice-due']

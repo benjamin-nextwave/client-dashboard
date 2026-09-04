@@ -11,6 +11,7 @@ import { buildTasks } from '@/lib/loopgang/tasks'
 import { ClientNote } from './client-note'
 import { KixDialog } from './kix-dialog'
 import { DayPanel } from './day-panel'
+import { MEETING_TASK_KINDS } from '@/lib/data/loopgang-kix-tasks'
 import { KixHistory } from './kix-history'
 import { MeetingReports } from './meeting-reports'
 import { StatBar } from './stat-bar'
@@ -646,7 +647,7 @@ function MonthLink({ month, label }: { month: string; label: string }) {
  * kleuren een klokje groen: een factuurherinnering die naar Kix ging zegt niets
  * over of hij gebeld heeft.
  */
-const MEETING_TASK_KINDS = new Set<string>(['meeting-call', 'meeting-mail', 'meeting-window'])
+const MEETING_KIX_KINDS = new Set<string>(MEETING_TASK_KINDS)
 
 /**
  * Waar Kix voor aan de lat staat: mailen en bellen voor de evaluatiemeeting, en
@@ -719,7 +720,7 @@ function buildPeriods(
         pausedDates: new Set(markClient.pausedDates),
         kixSentDates: new Set(
           kixTasks
-            .filter((t) => t.clientId === markClient.id && MEETING_TASK_KINDS.has(t.kind))
+            .filter((t) => t.clientId === markClient.id && MEETING_KIX_KINDS.has(t.kind))
             .flatMap((t) => t.sentDates)
         ),
         meetingOutcome: markClient.meeting?.outcome ?? null,

@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import type { KixTask } from '@/lib/data/loopgang-kix-tasks'
+import { storageKindFor, type KixTask } from '@/lib/data/loopgang-kix-tasks'
 import type { LoopgangOverviewClient } from '@/lib/data/loopgang-overview'
 import {
   buildTasks,
@@ -262,7 +262,7 @@ export function TodoView({ clients, kixTasks, today }: Props) {
               <ul className="divide-y divide-gray-100 border-t border-gray-100 bg-white">
                 {groepTaken.map((task) => {
                   const key = taskKey(task)
-                  const eerder = verstuurd.get(key)
+                  const eerder = verstuurd.get(`${task.clientId}|${storageKindFor(task.kind)}`)
                   return (
                     <li key={key}>
                       <label className="flex cursor-pointer items-start gap-2.5 px-4 py-2.5 transition-colors hover:bg-gray-50">
