@@ -5,7 +5,6 @@ import type { LoopgangOverview } from '@/lib/data/loopgang-overview'
 import { buildTasks } from '@/lib/loopgang/tasks'
 import { AiAnalyse } from './ai-analyse'
 import { CalendarView } from './calendar-view'
-import { FloatingTasks } from './floating-tasks'
 import { KixTasksView } from './kix-tasks-view'
 import { TodoView } from './todo-view'
 
@@ -80,14 +79,6 @@ export function LoopgangTabs({ overview }: { overview: LoopgangOverview }) {
       )}
 
       {tab === 'kix' && <KixTasksView tasks={overview.kixTasks} />}
-
-      {/* Zweeft over alle tabbladen heen: wat vandaag moet en wat te laat is,
-          hoor je te zien zonder eerst ergens naartoe te navigeren. */}
-      <FloatingTasks
-        clients={overview.clients}
-        kixTasks={overview.kixTasks}
-        today={overview.today}
-      />
     </div>
   )
 }
