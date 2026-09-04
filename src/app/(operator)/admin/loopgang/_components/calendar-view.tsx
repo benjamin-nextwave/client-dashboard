@@ -12,6 +12,7 @@ import { ClientNote } from './client-note'
 import { KixDialog } from './kix-dialog'
 import { DayPanel } from './day-panel'
 import { KixHistory } from './kix-history'
+import { MeetingReports } from './meeting-reports'
 import { StatBar } from './stat-bar'
 import { SyncButton } from './sync-button'
 import { TaskDialog } from './task-dialog'
@@ -101,6 +102,7 @@ export function CalendarView({ overview }: Props) {
   const [kixOpen, setKixOpen] = useState(false)
   const [showClients, setShowClients] = useState(false)
   const [showTasks, setShowTasks] = useState(false)
+  const [kixOnly, setKixOnly] = useState(false)
 
   // Uit alle zichtbare klanten, niet uit de gefilterde: "taken van vandaag" hoort
   // compleet te zijn, ook als het filter net op één klant staat.
@@ -156,7 +158,8 @@ export function CalendarView({ overview }: Props) {
         periodClient,
         overview.rangeStart,
         overview.kixTasks,
-        clients.length === 1 ? clients[0] : null
+        clients.length === 1 ? clients[0] : null,
+        kixOnly
       ),
     [
       effectiveView,
@@ -168,6 +171,7 @@ export function CalendarView({ overview }: Props) {
       clients,
       kleurDagen,
       periodClient,
+      kixOnly,
     ]
   )
 
@@ -347,6 +351,19 @@ export function CalendarView({ overview }: Props) {
               </button>
             ))}
           </div>
+
+          <button
+            type="button"
+            onClick={() => setKixOnly((v) => !v)}
+            aria-pressed={kixOnly}
+            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+              kixOnly
+                ? 'bg-purple-600 text-white hover:bg-purple-700'
+                : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            Kix-filter
+          </button>
 
           <button
             type="button"
@@ -540,11 +557,23 @@ export function CalendarView({ overview }: Props) {
               alleen op de dag die je toevallig hebt aangeklikt. */}
           {activeClient && <ClientNote client={activeClient} />}
 
-          <KixHistory
-            tasks={overview.kixTasks}
-            clientId={activeClient?.id ?? null}
-            clientName={activeClient?.displayName ?? null}
-          />
+          {/* Op een meetingdag horen de drie stukken erbij: uploaden als jij
+              kijkt, downloaden als Kix kijkt. */}
+          {activeClient && entriesForSelected.some((e) => e.event.kind === 'meeting') && (
+            <MeetingReports
+              client={activeClient}
+              reports={overview.meetingReports}
+              kixMode={kixOnly}
+            />
+          )}
+
+          {!kixOnly && (
+            <KixHistory
+              tasks={overview.kixTasks}
+              clientId={activeClient?.id ?? null}
+              clientName={activeClient?.displayName ?? null}
+            />
+          )}
 
           <DayPanel
             date={selectedDate}
@@ -608,6 +637,16 @@ function MonthLink({ month, label }: { month: string; label: string }) {
  */
 const MEETING_TASK_KINDS = new Set<string>(['meeting-call', 'meeting-mail', 'meeting-window'])
 
+/**
+ * Waar Kix voor aan de lat staat: mailen en bellen voor de evaluatiemeeting, en
+ * de meeting zelf. De start- en einddag van de periode blijven staan als
+ * context — die balken zijn geen taak maar het kader waarbinnen hij werkt.
+ *
+ * Alles daarbuiten is van Benjamin: facturen, betalingen, leadrapportages,
+ * pauzes en de drie stukken die vóór de meeting klaar moeten zijn.
+ */
+const KIX_KINDS = new Set<string>(['meeting-mail', 'meeting-call', 'meeting'])
+
 interface MarkContext {
   cycle: LoopgangOverview['clients'][number]['cycle']
   pausedDates: Set<string>
@@ -644,7 +683,9 @@ function buildPeriods(
   rangeStart: string,
   kixTasks: LoopgangOverview['kixTasks'],
   /** De enige gekozen klant; alleen dan hebben de dagtekens betekenis. */
-  markClient: LoopgangOverview['clients'][number] | null
+  markClient: LoopgangOverview['clients'][number] | null,
+  /** Alleen tonen waar Kix voor verantwoordelijk is. */
+  kixOnly: boolean
 ): Period[] {
   // Één keer alle gebeurtenissen op datum zetten, zodat elk vakje alleen nog
   // hoeft op te zoeken. De klantvolgorde is de urgentievolgorde uit de
@@ -652,6 +693,7 @@ function buildPeriods(
   const byDate = new Map<string, DayEntry[]>()
   for (const client of clients) {
     for (const event of client.events) {
+      if (kixOnly && !KIX_KINDS.has(event.kind)) continue
       const list = byDate.get(event.date)
       if (list) list.push({ client, event })
       else byDate.set(event.date, [{ client, event }])
@@ -664,6 +706,9 @@ function buildPeriods(
   const zichtbaar = new Set(clients.map((c) => c.id))
   const kixByDate = new Map<string, KixMark[]>()
   for (const task of kixTasks) {
+    // "Naar Kix gestuurd" is jouw administratie; in zijn eigen beeld hoort dat
+    // niet thuis.
+    if (kixOnly) break
     if (!zichtbaar.has(task.clientId)) continue
     const dag = task.lastSentAt.slice(0, 10)
     const mark: KixMark = {

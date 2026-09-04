@@ -1045,3 +1045,92 @@ export async function setStoppedAction(
   revalidate(clientId)
   return {}
 }
+
+// -----------------------------------------------------------------------------
+// De drie rapporten bij een evaluatiemeeting.
+// -----------------------------------------------------------------------------
+
+/**
+ * Uploadt één rapport en hangt het aan de lopende periode van deze klant.
+ *
+ * Aan het cyclusanker en niet aan de meetingdatum: een meeting die verzet wordt
+ * houdt dezelfde rapporten. Uploaden over een bestaand rapport heen vervangt het
+ * en ruimt het oude bestand op — anders blijft er een wees in de bucket achter.
+ */
+export async function uploadMeetingReportAction(
+  clientId: string,
+  formData: FormData
+): Promise<ActionResult> {
+  const kind = formData.get('kind')
+  if (kind !== 'month' && kind !== 'lead' && kind !== 'internal') {
+    return { error: 'Onbekend soort rapport.' }
+  }
+
+  const anchor = readDate(formData, 'cycleAnchor')
+  if (!anchor) return { error: 'Deze klant heeft geen lopende periode.' }
+
+  const file = formData.get('file')
+  if (!(file instanceof File) || file.size === 0) {
+    return { error: 'Kies een PDF-bestand.' }
+  }
+
+  const upload = await uploadLoopgangPdf('meeting-reports', clientId, file)
+  if ('error' in upload) return { error: upload.error }
+
+  const supabase = createAdminClient()
+
+  const { data: bestaand } = await supabase
+    .from('loopgang_meeting_reports')
+    .select('file_path')
+    .eq('client_id', clientId)
+    .eq('cycle_anchor', anchor)
+    .eq('kind', kind)
+    .maybeSingle()
+
+  const { error } = await supabase.from('loopgang_meeting_reports').upsert(
+    {
+      client_id: clientId,
+      cycle_anchor: anchor,
+      kind,
+      file_url: upload.url,
+      file_path: upload.path,
+      uploaded_at: new Date().toISOString(),
+    },
+    { onConflict: 'client_id,cycle_anchor,kind' }
+  )
+
+  if (error) {
+    await deleteLoopgangPdf(upload.path)
+    return { error: error.message }
+  }
+
+  if (bestaand?.file_path) await deleteLoopgangPdf(bestaand.file_path as string)
+
+  console.log(`[loopgang:rapport] geüpload client=${clientId} anker=${anchor} soort=${kind}`)
+  revalidate(clientId)
+  return {}
+}
+
+/** Verwijdert een geüpload rapport, inclusief het bestand. */
+export async function deleteMeetingReportAction(
+  clientId: string,
+  reportId: string
+): Promise<ActionResult> {
+  if (!UUID.test(reportId)) return { error: 'Ongeldig rapport.' }
+
+  const supabase = createAdminClient()
+  const { data: rij } = await supabase
+    .from('loopgang_meeting_reports')
+    .select('file_path')
+    .eq('id', reportId)
+    .maybeSingle()
+
+  const { error } = await supabase.from('loopgang_meeting_reports').delete().eq('id', reportId)
+  if (error) return { error: error.message }
+
+  if (rij?.file_path) await deleteLoopgangPdf(rij.file_path as string)
+
+  console.log(`[loopgang:rapport] verwijderd id=${reportId}`)
+  revalidate(clientId)
+  return {}
+}

@@ -226,7 +226,7 @@ export async function deleteNewsImage(newsItemId: string): Promise<void> {
 // dezelfde policies betekenen zonder dat er iets mee opgelost wordt.
 const LOOPGANG_BUCKET = 'loopgang-docs'
 
-export type LoopgangDocKind = 'invoices' | 'lead-reports'
+export type LoopgangDocKind = 'invoices' | 'lead-reports' | 'meeting-reports'
 
 export async function uploadLoopgangPdf(
   kind: LoopgangDocKind,

@@ -21,6 +21,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getKixTasks, type KixTask } from './loopgang-kix-tasks'
 import { getInstantlyCache } from './loopgang-instantly-cache'
+import { getMeetingReports, type MeetingReport } from './loopgang-meeting-reports'
 import { getCampaign, getCampaignDailyAnalytics } from '@/lib/instantly/client'
 import { describeCampaignStatus, INSTANTLY_CAMPAIGN_STATUS } from '@/lib/instantly/types'
 import {
@@ -213,6 +214,8 @@ export interface LoopgangOverview {
   clientOptions: LoopgangClientOption[]
   /** Alles wat er ooit naar Kix is gestuurd, nieuwste verzending eerst. */
   kixTasks: KixTask[]
+  /** De rapporten die bij de evaluatiemeetings horen. */
+  meetingReports: MeetingReport[]
   totals: {
     running: number
     stalled: number
@@ -311,6 +314,7 @@ function emptyOverview(
     clients: [],
     clientOptions,
     kixTasks: [],
+    meetingReports: [],
     totals: {
       running: 0,
       stalled: 0,
@@ -696,9 +700,10 @@ export async function getLoopgangOverview(monthInput?: string): Promise<Loopgang
 
   // De namen komen uit het overzicht: de takentabel bewaart alleen het klant-id,
   // zodat een hernoemde klant ook in de oude taken de nieuwe naam krijgt.
-  const kixTasks = await getKixTasks(
-    new Map(sorted.map((c) => [c.id, c.displayName]))
-  )
+  const [kixTasks, meetingReports] = await Promise.all([
+    getKixTasks(new Map(sorted.map((c) => [c.id, c.displayName]))),
+    getMeetingReports(),
+  ])
 
   return {
     today,
@@ -709,6 +714,7 @@ export async function getLoopgangOverview(monthInput?: string): Promise<Loopgang
     clients: sorted,
     clientOptions,
     kixTasks,
+    meetingReports,
     totals,
   }
 }
