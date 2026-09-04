@@ -27,15 +27,6 @@ export type DayTone = 'green' | 'orange' | 'red' | null
 /** Vanaf welke werkdag van een pauze het vakje rood wordt in plaats van oranje. */
 export const PAUSE_ORANGE_DAYS = 3
 
-/** Een taak die op deze dag naar Kix ging. */
-export interface KixMark {
-  client: string
-  label: string
-  /** Hoe vaak de taak in totaal is verstuurd; 1 bij de eerste keer. */
-  count: number
-  done: boolean
-}
-
 export interface DayCell {
   date: string
   dayNumber: number
@@ -52,8 +43,6 @@ export interface DayCell {
    * Klanten waarvan de campagneperiode op deze dag begint — het anker waar de
    * werkdagteller vanaf loopt.
    */
-  /** Taken die op deze dag naar Kix zijn gestuurd. */
-  kixSent: KixMark[]
   /**
    * Wat er die dag van je verwacht wordt. Alleen gevuld bij één gekozen klant:
    * over twintig klanten tegelijk is er geen enkel teken dat ergens op slaat.
@@ -332,22 +321,6 @@ export function MonthGrid({
                   </span>
                 )}
 
-                {/* Wat er die dag naar Kix is gegaan. Eigen kleur, want dit is
-                    geen gebeurtenis in de cyclus maar iets dat jij hebt gedaan —
-                    en het is precies wat je zoekt als je je afvraagt of je hem
-                    hier al aan herinnerd hebt. */}
-                {cell.kixSent.map((mark) => (
-                  <span
-                    key={`kix-${mark.client}-${mark.label}`}
-                    title={`Naar Kix: ${mark.client} — ${mark.label} (${mark.count}x verstuurd)`}
-                    className={`truncate rounded px-1 py-0.5 text-[10px] font-medium leading-tight ${
-                      mark.done ? 'bg-gray-100 text-gray-400' : 'bg-indigo-100 text-indigo-800'
-                    }`}
-                  >
-                    kix → {mark.client.split(/\s+/)[0]}
-                    {mark.count > 1 ? ` ${mark.count}×` : ''}
-                  </span>
-                ))}
               </div>
             </button>
           )

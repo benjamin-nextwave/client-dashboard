@@ -22,7 +22,6 @@ import {
   type DayCell,
   type DayEntry,
   type DayTone,
-  type KixMark,
 } from './month-grid'
 import { ClientListDialog, InvoiceDialog, LeadReportDialog } from './dialogs'
 
@@ -712,31 +711,9 @@ function buildPeriods(
     }
   }
 
-  // De dag waarop een taak voor het laatst naar Kix ging. Alleen de klanten die
-  // door het filter komen: anders staat er een blokje bij een klant die je net
-  // hebt weggefilterd.
-  const zichtbaar = new Set(clients.map((c) => c.id))
-  const kixByDate = new Map<string, KixMark[]>()
-  for (const task of kixTasks) {
-    // "Naar Kix gestuurd" is jouw administratie; in zijn eigen beeld hoort dat
-    // niet thuis.
-    if (kixOnly) break
-    if (!zichtbaar.has(task.clientId)) continue
-    const dag = task.lastSentAt.slice(0, 10)
-    const mark: KixMark = {
-      client: task.clientName,
-      label: task.label,
-      count: task.reminderCount,
-      done: task.status === 'done',
-    }
-    const list = kixByDate.get(dag)
-    if (list) list.push(mark)
-    else kixByDate.set(dag, [mark])
-  }
-
   // De onderdelen die het dagteken bepalen: één keer klaarzetten in plaats van
   // per vakje opnieuw.
-  const markContext = markClient
+  const markContext: MarkContext | null = markClient
     ? {
         cycle: markClient.cycle,
         pausedDates: new Set(markClient.pausedDates),
@@ -752,7 +729,7 @@ function buildPeriods(
 
   const maak = (dates: string[], focusMonth: string | null) =>
     dates.map((date) =>
-      buildCell(date, focusMonth, today, clients, kleuren, byDate, kixByDate, markContext)
+      buildCell(date, focusMonth, today, clients, kleuren, byDate, markContext)
     )
 
   if (view === 'period' && periodClient?.cycle.anchor) {
@@ -819,7 +796,6 @@ function buildCell(
   clients: LoopgangOverview['clients'],
   kleuren: boolean,
   byDate: Map<string, DayEntry[]>,
-  kixByDate: Map<string, KixMark[]>,
   markContext: MarkContext | null
 ): DayCell {
   // Bij een week- of dagweergave is er geen maand om buiten te vallen: alles
@@ -850,7 +826,6 @@ function buildCell(
     running,
     total: clients.length,
     tone: kleuren ? toneFor(date, today, weekend, inMonth, clients) : null,
-    kixSent: kixByDate.get(date) ?? [],
     mark: markContext ? dayMarkFor({ date, today, ...markContext }) : null,
     periodStart: periodStart.map((c) => c.displayName),
     periodEnd: clients
