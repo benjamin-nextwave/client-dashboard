@@ -185,3 +185,69 @@ export async function recordKixTasks(tasks: KixTaskInput[]): Promise<number> {
 
   return mislukt
 }
+
+/**
+ * Sluit de openstaande Kix-taken van een bepaalde soort voor één klant.
+ *
+ * Nodig omdat een taak twee levens leidt: als gebeurtenis in de kalender, die
+ * vanzelf verdwijnt zodra de onderliggende zaak geregeld is, en als rij in deze
+ * tabel, die blijft staan tot iemand hem afvinkt. Legde Kix een meeting vast als
+ * "niet nodig", dan verdween de belronde uit de kalender terwijl "Bellen voor
+ * een meeting" gewoon in zijn lijst bleef staan.
+ *
+ * De reden komt in kix_note te staan, maar alleen als daar nog niets stond: wat
+ * Kix zelf heeft ingevuld is belangrijker dan onze aantekening.
+ */
+export async function closeKixTasks(
+  clientId: string,
+  kinds: string[],
+  reason: string
+): Promise<number> {
+  if (kinds.length === 0) return 0
+
+  const supabase = createAdminClient()
+  const nu = new Date().toISOString()
+
+  const { data, error } = await supabase
+    .from('loopgang_kix_tasks')
+    .select('id, kix_note')
+    .eq('client_id', clientId)
+    .eq('status', 'open')
+    .in('kind', kinds)
+
+  if (error) {
+    console.error(`[loopgang:kix-taken] afsluiten mislukt client=${clientId}: ${error.message}`)
+    return 0
+  }
+
+  const rijen = (data ?? []) as { id: string; kix_note: string | null }[]
+  let gesloten = 0
+
+  for (const rij of rijen) {
+    const { error: schrijfFout } = await supabase
+      .from('loopgang_kix_tasks')
+      .update({
+        status: 'done',
+        completed_at: nu,
+        kix_note: rij.kix_note?.trim() ? rij.kix_note : reason,
+        updated_at: nu,
+      })
+      .eq('id', rij.id)
+
+    if (!schrijfFout) gesloten += 1
+  }
+
+  if (gesloten > 0) {
+    console.log(`[loopgang:kix-taken] ${gesloten} taken afgesloten client=${clientId}: ${reason}`)
+  }
+  return gesloten
+}
+
+/** De taaksoorten die over het regelen van de evaluatiemeeting gaan. */
+export const MEETING_TASK_KINDS = ['meeting-mail', 'meeting-call', 'meeting-window']
+
+/** De taaksoorten die vervallen zodra de factuur van deze periode is vastgelegd. */
+export const INVOICE_TASK_KINDS = ['invoice-due']
+
+/** De taaksoorten die vervallen zodra de leadrapportage is vastgelegd. */
+export const REPORT_TASK_KINDS = ['lead-report', 'lead-report-due']

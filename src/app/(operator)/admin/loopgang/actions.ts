@@ -5,7 +5,13 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { amsterdamDateString } from '@/lib/commissions-shared'
 import { deleteLoopgangPdf, uploadLoopgangPdf } from '@/lib/supabase/storage'
 import { getLoopgangOverview } from '@/lib/data/loopgang-overview'
-import { recordKixTasks } from '@/lib/data/loopgang-kix-tasks'
+import {
+  closeKixTasks,
+  recordKixTasks,
+  INVOICE_TASK_KINDS,
+  MEETING_TASK_KINDS,
+  REPORT_TASK_KINDS,
+} from '@/lib/data/loopgang-kix-tasks'
 import { analyseerLoopgang, type LoopgangAnalyse } from '@/lib/loopgang/analyse'
 import { addDays, type MeetingOutcome } from '@/lib/loopgang/cycle'
 import {
@@ -17,6 +23,12 @@ import {
 
 // Auth volgt het bestaande admin-patroon: middleware (src/middleware.ts) gate't
 // /admin op user_role='operator'. Acties draaien met service_role (RLS bypass).
+
+const MEETING_AFGEROND: Record<MeetingOutcome, string> = {
+  planned: 'Meeting ingepland — hier hoeft niet meer voor gebeld te worden.',
+  continue: 'Geen meeting nodig, de klant zet door — belronde vervalt.',
+  stop: 'Geen meeting nodig, de klant stopt — belronde vervalt.',
+}
 
 const OVERVIEW_PATH = '/admin/loopgang'
 
@@ -157,6 +169,8 @@ export async function saveInvoiceAction(
     if (startError) return { error: startError.message }
   }
 
+  await closeKixTasks(clientId, INVOICE_TASK_KINDS, 'Factuur vastgelegd in de loopgang.')
+
   console.log(
     `[loopgang] factuur opgeslagen client=${clientId} datum=${invoiceDate} bedrag=${amountCents} volgende-cyclus=${nextCycleStart ?? 'ongewijzigd'}`
   )
@@ -262,6 +276,8 @@ export async function saveLeadReportAction(
     return { error: error.message }
   }
 
+  await closeKixTasks(clientId, REPORT_TASK_KINDS, 'Leadrapportage vastgelegd in de loopgang.')
+
   console.log(`[loopgang] leadrapportage opgeslagen client=${clientId} datum=${reportDate}`)
   revalidate(clientId)
   return {}
@@ -338,6 +354,11 @@ export async function handleMeetingAction(
   )
 
   if (error) return { error: error.message }
+
+  // De belronde verdwijnt hiermee uit de kalender, maar de rijen in de
+  // takentabel blijven anders op 'open' staan — dan zag Kix nog steeds "Bellen
+  // voor een meeting" terwijl er net was besloten dat die niet nodig is.
+  await closeKixTasks(clientId, MEETING_TASK_KINDS, MEETING_AFGEROND[outcome])
 
   console.log(
     `[loopgang] meeting afgehandeld client=${clientId} anker=${cycleAnchor} uitkomst=${outcome}`
@@ -872,6 +893,8 @@ export async function registreerKixAction(input: {
     })
     if (taakError) return { error: `Taak aanmaken mislukt: ${taakError.message}` }
   }
+
+  await closeKixTasks(input.clientId, MEETING_TASK_KINDS, MEETING_AFGEROND[uitkomst])
 
   console.log(
     `[loopgang:kix] meeting=${uitkomst} client=${input.clientId} anker=${anker} taken=${taken.length}`
