@@ -96,10 +96,12 @@ interface MarkRow {
  * de eerste synchronisatie elke met de hand ingevoerde factuur verdubbelen, en
  * daarmee de werkdagteller van die klant verzetten.
  *
- * De betaaldag is een schatting. Rompslomp geeft wél of een factuur betaald is,
- * maar niet wanneer — er is geen endpoint dat betalingen teruggeeft. We zetten
- * daarom de dag waarop we het voor het eerst zagen, en overschrijven een
- * bestaande betaaldatum nooit.
+ * De betaaldatum blijft met rust. Rompslomp geeft wél of een factuur betaald is,
+ * maar niet wanneer — er is geen endpoint dat betalingen teruggeeft. Eerder
+ * vulden we daarom de dag in waarop we het voor het eerst zagen, maar dat leverde
+ * drieëndertig facturen op die allemaal op dezelfde dag "betaald" waren. Een
+ * verzonnen datum is erger dan geen datum: hij ziet er even echt uit als een
+ * goede en je gaat erop rekenen. Betaald afvinken doe je met de hand.
  */
 export async function syncInvoicesAction(): Promise<SyncResult> {
   const supabase = createAdminClient()
@@ -179,8 +181,6 @@ export async function syncInvoicesAction(): Promise<SyncResult> {
           .update({
             invoice_date: invoice.date,
             amount_cents: invoice.amountExVatCents,
-            // Een betaaldatum die er al staat is beter dan onze schatting.
-            paid_at: bestaand.paid_at ?? (invoice.paid ? today : null),
             note: notitie || null,
             rompslomp_invoice_id: invoice.id,
           })
@@ -196,7 +196,6 @@ export async function syncInvoicesAction(): Promise<SyncResult> {
           client_id: client.id,
           invoice_date: invoice.date,
           amount_cents: invoice.amountExVatCents,
-          paid_at: invoice.paid ? today : null,
           note: notitie || null,
           campaign_track: CENTRAL_TRACK,
           rompslomp_invoice_id: invoice.id,

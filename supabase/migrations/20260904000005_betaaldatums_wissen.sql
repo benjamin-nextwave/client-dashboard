@@ -1,0 +1,25 @@
+-- =============================================================================
+-- DE VERZONNEN BETAALDATUMS WEG
+-- =============================================================================
+-- Bij het overnemen van de facturen uit Rompslomp werd de betaaldatum ingevuld
+-- met de dag waarop we voor het eerst zagen dat een factuur betaald was. Dat
+-- leek een redelijke schatting maar is het niet: Rompslomp geeft wél of een
+-- factuur betaald is, niet wanneer. Het gevolg is drieëndertig facturen die
+-- allemaal op dezelfde dag "betaald" zijn — 3 en 4 september.
+--
+-- Een verzonnen datum is erger dan geen datum. Hij ziet er even echt uit als een
+-- goede, en de betaaltermijn wordt eruit berekend.
+--
+-- Deze migratie wist alleen de datums die op een synchronisatiedag vielen én van
+-- een uit Rompslomp overgenomen factuur zijn. De veertien oudere betaaldatums
+-- blijven staan: die stonden er al vóór de koppeling en zijn met de hand
+-- ingevoerd — het overnemen heeft ze alleen behouden.
+--
+-- De factuurdatum zelf klopt wel en blijft dus staan; die komt rechtstreeks uit
+-- Rompslomp. Betaald afvinken gaat vanaf nu weer met de hand.
+--
+-- Eén statement per regel, geen DO-blokken — de SQL-editor van Supabase knipt
+-- statements op regeleinden.
+-- =============================================================================
+
+UPDATE public.client_invoice_marks SET paid_at = NULL WHERE rompslomp_invoice_id IS NOT NULL AND paid_at IN ('2026-09-03', '2026-09-04');
