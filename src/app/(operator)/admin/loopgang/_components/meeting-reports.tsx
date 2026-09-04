@@ -24,16 +24,26 @@ import { deleteMeetingReportAction, uploadMeetingReportAction } from '../actions
 
 const VOLGORDE: ReportKind[] = ['month', 'lead', 'internal']
 
+/**
+ * Op de einddag van een periode gaan er twee stukken naar de klant: de
+ * leadrapportage en het maandrapport. Het interne rapport hoort daar niet bij —
+ * dat is er om zelf het gesprek mee in te gaan.
+ */
+const EINDDAG_SOORTEN: ReportKind[] = ['lead', 'month']
+
 export function MeetingReports({
   client,
   reports,
   kixMode,
+  variant = 'meeting',
 }: {
   client: LoopgangOverviewClient
   /** Alle rapporten; hier wordt op klant en anker gefilterd. */
   reports: MeetingReport[]
   /** Met het Kix-filter aan kun je alleen downloaden. */
   kixMode: boolean
+  /** Op de einddag gaat het om de twee stukken die de deur uit moeten. */
+  variant?: 'meeting' | 'einddag'
 }) {
   const anchor = client.cycle.anchor
   if (!anchor) return null
@@ -41,23 +51,42 @@ export function MeetingReports({
   const vanDezePeriode = reports.filter(
     (r) => r.clientId === client.id && r.cycleAnchor === anchor
   )
+  const soorten = variant === 'einddag' ? EINDDAG_SOORTEN : VOLGORDE
+  const ontbreekt = soorten.filter((k) => !vanDezePeriode.some((r) => r.kind === k))
 
   return (
     <section className="rounded-xl border border-gray-200 bg-white">
       <div className="border-b border-gray-100 px-4 py-2.5">
         <h3 className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
-          Rapporten bij deze meeting
+          {variant === 'einddag' ? 'Mee naar de klant' : 'Rapporten bij deze meeting'}
         </h3>
         <p className="mt-0.5 text-[10px] text-gray-400">
-          {client.displayName} · periode vanaf {anchor}
+          {variant === 'einddag'
+            ? `${client.displayName} · laatste dag van de periode${
+                client.cycle.stoppedOn
+                  ? ' (gestopt)'
+                  : client.cycle.endsOnCap
+                    ? ' (cap)'
+                    : ''
+              }`
+            : `${client.displayName} · periode vanaf ${anchor}`}
         </p>
       </div>
+
+      {variant === 'einddag' && ontbreekt.length > 0 && (
+        <p className="border-b border-amber-100 bg-amber-50 px-4 py-2 text-[10px] font-medium leading-snug text-amber-900">
+          {ontbreekt.map((k) => REPORT_LABELS[k]).join(' en ')}{' '}
+          {ontbreekt.length === 1 ? 'ontbreekt nog' : 'ontbreken nog'} — deze
+          {ontbreekt.length === 1 ? ' hoort' : ' horen'} vandaag naar de klant.
+        </p>
+      )}
 
       <ReportSlots
         clientId={client.id}
         anchor={anchor}
         reports={vanDezePeriode}
         kixMode={kixMode}
+        kinds={soorten}
       />
     </section>
   )
@@ -73,18 +102,21 @@ export function ReportSlots({
   anchor,
   reports,
   kixMode,
+  kinds = VOLGORDE,
 }: {
   clientId: string
   anchor: string
   /** De rapporten van precies deze klant en deze periode. */
   reports: MeetingReport[]
   kixMode: boolean
+  /** Welke soorten er getoond worden; standaard alle drie. */
+  kinds?: ReportKind[]
 }) {
   const bijSoort = new Map(reports.map((r) => [r.kind, r]))
 
   return (
     <div className="divide-y divide-gray-50">
-      {VOLGORDE.map((kind) => (
+      {kinds.map((kind) => (
         <ReportRow
           key={kind}
           kind={kind}

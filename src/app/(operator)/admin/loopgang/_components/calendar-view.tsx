@@ -558,13 +558,25 @@ export function CalendarView({ overview }: Props) {
           {activeClient && <ClientNote client={activeClient} />}
 
           {/* Op een meetingdag horen de drie stukken erbij: uploaden als jij
-              kijkt, downloaden als Kix kijkt. */}
-          {activeClient && entriesForSelected.some((e) => e.event.kind === 'meeting') && (
+              kijkt, downloaden als Kix kijkt. Op de laatste dag van de periode —
+              werkdag 20, de cap of de stopdag — gaat het om de twee die naar de
+              klant moeten. */}
+          {activeClient && selectedDate === activeClient.cycle.invoiceDueDate ? (
             <MeetingReports
               client={activeClient}
               reports={overview.meetingReports}
               kixMode={kixOnly}
+              variant="einddag"
             />
+          ) : (
+            activeClient &&
+            entriesForSelected.some((e) => e.event.kind === 'meeting') && (
+              <MeetingReports
+                client={activeClient}
+                reports={overview.meetingReports}
+                kixMode={kixOnly}
+              />
+            )
           )}
 
           {!kixOnly && (
