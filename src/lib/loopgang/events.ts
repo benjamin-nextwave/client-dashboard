@@ -24,7 +24,6 @@ import {
   INVOICE_WORKDAY,
   MEETING_WINDOW_FROM,
   MEETING_WINDOW_TO,
-  MEETING_WORKDAY,
   PAYMENT_TERM_DAYS,
   addDays,
   daysBetween,
@@ -263,21 +262,12 @@ export function buildEvents(input: BuildEventsInput): LoopgangEvent[] {
     // De afteller staat in het label en niet in de toelichting, want die gaat mee
     // in de mail naar Kix. Hij moet aan de taak zelf kunnen zien hoeveel tijd er
     // nog is, zonder de cyclus te hoeven kennen.
-    if (cycle.meetingReminderStart) {
-      events.push({
-        date: cycle.meetingReminderStart,
-        kind: 'meeting-mail',
-        status: statusFor(cycle.meetingReminderStart, today),
-        label: `Kix mailt voor een meeting${deadlineTekst(
-          cycle.invoiceDueDate,
-          cycle.meetingReminderStart
-        )}`,
-        detail: `werkdag ${MEETING_WORKDAY} van de cyclus`,
-      })
-    }
-
-    // Alleen de eerstvolgende belpoging. Het nummer bepaalt de urgentie: vanaf de
+    // Alleen de eerstvolgende poging. Het nummer bepaalt de urgentie: vanaf de
     // derde van vijf, want dan zijn er meer pogingen op dan er over zijn.
+    //
+    // De eerste poging is een mailtje, de rest bellen. Eerder stond de mail als
+    // losse taak op werkdag 10 naast poging 1 van de belronde, en die twee vielen
+    // op dezelfde dag — twee regels voor één handeling.
     if (cycle.nextCallDate) {
       const poging =
         callAttemptFor(cycle.nextCallDate, cycle.anchor, cycle.invoiceDueDate) ??
@@ -287,11 +277,15 @@ export function buildEvents(input: BuildEventsInput): LoopgangEvent[] {
         (d) => d > cycle.nextCallDate!
       ).length
 
+      const mailen = poging === 1
+
       events.push({
         date: cycle.nextCallDate,
-        kind: 'meeting-call',
+        kind: mailen ? 'meeting-mail' : 'meeting-call',
         status: statusFor(cycle.nextCallDate, today),
-        label: `${urgent ? '[Urgent] ' : ''}Bellen voor een meeting (poging ${poging}/${MAX_CALL_ATTEMPTS})${deadlineTekst(
+        label: `${urgent ? '[Urgent] ' : ''}${
+          mailen ? 'Mailen' : 'Bellen'
+        } voor een meeting (poging ${poging}/${MAX_CALL_ATTEMPTS})${deadlineTekst(
           cycle.invoiceDueDate,
           cycle.nextCallDate
         )}`,

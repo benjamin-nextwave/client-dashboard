@@ -41,7 +41,6 @@ export function MeetingReports({
   const vanDezePeriode = reports.filter(
     (r) => r.clientId === client.id && r.cycleAnchor === anchor
   )
-  const bijSoort = new Map(vanDezePeriode.map((r) => [r.kind, r]))
 
   return (
     <section className="rounded-xl border border-gray-200 bg-white">
@@ -54,19 +53,48 @@ export function MeetingReports({
         </p>
       </div>
 
-      <div className="divide-y divide-gray-50">
-        {VOLGORDE.map((kind) => (
-          <ReportRow
-            key={kind}
-            kind={kind}
-            report={bijSoort.get(kind) ?? null}
-            clientId={client.id}
-            anchor={anchor}
-            kixMode={kixMode}
-          />
-        ))}
-      </div>
+      <ReportSlots
+        clientId={client.id}
+        anchor={anchor}
+        reports={vanDezePeriode}
+        kixMode={kixMode}
+      />
     </section>
+  )
+}
+
+/**
+ * De drie regels voor één periode. Los bruikbaar, zodat het paneel naast de
+ * kalender en het tabblad Rapporten dezelfde knoppen en dezelfde meldingen
+ * geven — twee plekken die uit elkaar lopen is erger dan één plek te weinig.
+ */
+export function ReportSlots({
+  clientId,
+  anchor,
+  reports,
+  kixMode,
+}: {
+  clientId: string
+  anchor: string
+  /** De rapporten van precies deze klant en deze periode. */
+  reports: MeetingReport[]
+  kixMode: boolean
+}) {
+  const bijSoort = new Map(reports.map((r) => [r.kind, r]))
+
+  return (
+    <div className="divide-y divide-gray-50">
+      {VOLGORDE.map((kind) => (
+        <ReportRow
+          key={kind}
+          kind={kind}
+          report={bijSoort.get(kind) ?? null}
+          clientId={clientId}
+          anchor={anchor}
+          kixMode={kixMode}
+        />
+      ))}
+    </div>
   )
 }
 

@@ -6,6 +6,7 @@ import { buildTasks } from '@/lib/loopgang/tasks'
 import { AiAnalyse } from './ai-analyse'
 import { CalendarView } from './calendar-view'
 import { KixTasksView } from './kix-tasks-view'
+import { ReportsView } from './reports-view'
 import { TodoView } from './todo-view'
 
 /**
@@ -19,7 +20,7 @@ import { TodoView } from './todo-view'
  * wordt niets opnieuw opgehaald bij het wisselen.
  */
 
-type Tab = 'kalender' | 'todo' | 'kix'
+type Tab = 'kalender' | 'todo' | 'kix' | 'rapporten'
 
 export function LoopgangTabs({ overview }: { overview: LoopgangOverview }) {
   const [tab, setTab] = useState<Tab>('kalender')
@@ -28,10 +29,22 @@ export function LoopgangTabs({ overview }: { overview: LoopgangOverview }) {
   const openTaken = buildTasks(overview.clients, overview.today).length
   const openKix = overview.kixTasks.filter((t) => t.status === 'open').length
 
+  // Op het tabblad staat wat er nog ontbreekt, niet wat er al ligt: een teller
+  // die naar nul loopt is het enige nuttige getal hier.
+  const rapportenOpen = overview.clients.filter((c) => {
+    if (!c.cycle.anchor) return false
+    const van =
+      overview.meetingReports.filter(
+        (r) => r.clientId === c.id && r.cycleAnchor === c.cycle.anchor
+      ).length
+    return van < 3
+  }).length
+
   const tabs: { key: Tab; label: string; badge: number | null }[] = [
     { key: 'kalender', label: 'Kalender', badge: null },
     { key: 'todo', label: 'Te doen', badge: openTaken },
     { key: 'kix', label: 'Kix taken', badge: openKix },
+    { key: 'rapporten', label: 'Rapporten', badge: rapportenOpen },
   ]
 
   return (
@@ -79,6 +92,10 @@ export function LoopgangTabs({ overview }: { overview: LoopgangOverview }) {
       )}
 
       {tab === 'kix' && <KixTasksView tasks={overview.kixTasks} />}
+
+      {tab === 'rapporten' && (
+        <ReportsView clients={overview.clients} reports={overview.meetingReports} />
+      )}
     </div>
   )
 }
