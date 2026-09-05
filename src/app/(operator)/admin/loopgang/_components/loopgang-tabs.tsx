@@ -6,6 +6,7 @@ import { buildTasks } from '@/lib/loopgang/tasks'
 import { AiAnalyse } from './ai-analyse'
 import { CalendarView } from './calendar-view'
 import { KixTasksView } from './kix-tasks-view'
+import { InvoicesView } from './invoices-view'
 import { ReportsView } from './reports-view'
 import { TodoView } from './todo-view'
 
@@ -20,7 +21,7 @@ import { TodoView } from './todo-view'
  * wordt niets opnieuw opgehaald bij het wisselen.
  */
 
-type Tab = 'kalender' | 'todo' | 'kix' | 'rapporten'
+type Tab = 'kalender' | 'todo' | 'kix' | 'rapporten' | 'facturen'
 
 export function LoopgangTabs({ overview }: { overview: LoopgangOverview }) {
   const [tab, setTab] = useState<Tab>('kalender')
@@ -40,11 +41,18 @@ export function LoopgangTabs({ overview }: { overview: LoopgangOverview }) {
     return van < 3
   }).length
 
+  // Het getal telt wat er nog binnen moet komen, niet hoeveel facturen er zijn.
+  const openFacturen = overview.clients.reduce(
+    (n, c) => n + c.invoices.filter((i) => !i.paidAt).length,
+    0
+  )
+
   const tabs: { key: Tab; label: string; badge: number | null }[] = [
     { key: 'kalender', label: 'Kalender', badge: null },
     { key: 'todo', label: 'Te doen', badge: openTaken },
     { key: 'kix', label: 'Kix taken', badge: openKix },
     { key: 'rapporten', label: 'Rapporten', badge: rapportenOpen },
+    { key: 'facturen', label: 'Facturen', badge: openFacturen },
   ]
 
   return (
@@ -95,6 +103,10 @@ export function LoopgangTabs({ overview }: { overview: LoopgangOverview }) {
 
       {tab === 'rapporten' && (
         <ReportsView clients={overview.clients} reports={overview.meetingReports} />
+      )}
+
+      {tab === 'facturen' && (
+        <InvoicesView clients={overview.clients} today={overview.today} />
       )}
     </div>
   )
