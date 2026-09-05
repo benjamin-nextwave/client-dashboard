@@ -105,6 +105,13 @@ function deadlineTekst(invoiceDueDate: string | null, vanaf: string): string {
   return ` — binnen ${dagen} dagen meeting gehad hebben`
 }
 
+/** "10 aug" — kort genoeg om twee datums in één label te zetten. */
+function kortDatum(iso: string): string {
+  const [, m, d] = iso.split('-').map(Number)
+  const maanden = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec']
+  return `${d} ${maanden[(m ?? 1) - 1]}`
+}
+
 /** Wat een datum betekent ten opzichte van vandaag. */
 function statusFor(date: string, today: string): EventStatus {
   if (date < today) return 'overdue'
@@ -193,11 +200,34 @@ export function buildEvents(input: BuildEventsInput): LoopgangEvent[] {
   })
 
   if (cycle.invoiceDueDate) {
+    // Twee taken en niet één. "Leadrapportage + factuur" ging over twee
+    // handelingen die los van elkaar gebeuren en los worden afgevinkt; als één
+    // taak bleef hij openstaan zolang er één van de twee ontbrak, zonder te
+    // zeggen welke.
+    //
+    // Ze vinken zichzelf af zodra het stuk is vastgelegd. Een afgeleide deadline
+    // heeft geen knop om aan te vinken — die volgt de feiten, en dat is precies
+    // waarom hij bleef staan nadat de factuur allang was ingevoerd.
+    //
+    // De periode staat in het label omdat Kix er meerdere naast elkaar heeft en
+    // aan "Factuur verzonden" alleen niet ziet welke maand hij moet pakken.
+    const periode = `${kortDatum(cycle.anchor)} – ${kortDatum(cycle.invoiceDueDate)}`
+    const gefactureerd = invoices.some((i) => i.invoiceDate >= (cycle.anchor as string))
+    const gerapporteerd = reports.some((r) => r.reportDate >= (cycle.anchor as string))
+
     events.push({
       date: cycle.invoiceDueDate,
       kind: 'invoice-due',
-      status: statusFor(cycle.invoiceDueDate, today),
-      label: 'Leadrapportage + factuur',
+      status: gefactureerd ? 'done' : statusFor(cycle.invoiceDueDate, today),
+      label: `Factuur verzonden [${periode}]`,
+      detail: `werkdag ${INVOICE_WORKDAY} van de cyclus`,
+    })
+
+    events.push({
+      date: cycle.invoiceDueDate,
+      kind: 'lead-report-due',
+      status: gerapporteerd ? 'done' : statusFor(cycle.invoiceDueDate, today),
+      label: `Leadrapport verzonden [${periode}]`,
       detail: `werkdag ${INVOICE_WORKDAY} van de cyclus`,
     })
   }
