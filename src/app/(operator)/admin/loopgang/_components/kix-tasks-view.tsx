@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import type { KixTask } from '@/lib/data/loopgang-kix-tasks'
+import { MEETING_TASK_KINDS } from '@/lib/data/loopgang-kix-tasks'
 import { updateKixTaskAction, deleteKixTaskAction } from '../actions'
 import { formatDayShort } from './dialogs'
 
@@ -89,6 +90,7 @@ function TaskCard({ task }: { task: KixTask }) {
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
 
+  const meetingTaak = MEETING_TASK_KINDS.includes(task.kind)
   const gewijzigd = note !== (task.kixNote ?? '') || meetingDate !== (task.meetingDate ?? '')
   const afgerond = task.status === 'done'
 
@@ -166,7 +168,7 @@ function TaskCard({ task }: { task: KixTask }) {
         </div>
       </div>
 
-      <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]">
+      <div className={`mt-3 grid gap-2 ${meetingTaak ? 'sm:grid-cols-[1fr_auto]' : ''}`}>
         <div>
           <label
             htmlFor={`note-${task.id}`}
@@ -184,7 +186,11 @@ function TaskCard({ task }: { task: KixTask }) {
           />
         </div>
 
-        <div>
+        {/* Alleen bij het regelen van de meeting. Een betaaltermijn of een
+            verzonden leadrapport vraagt om een vinkje, niet om een datum — en een
+            leeg datumveld op elke kaart nodigt uit tot invullen wat er niet toe
+            doet. */}
+        <div className={meetingTaak ? '' : 'hidden'}>
           <label
             htmlFor={`date-${task.id}`}
             className="block text-[10px] font-semibold uppercase tracking-wide text-gray-500"
