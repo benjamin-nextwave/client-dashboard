@@ -24,13 +24,14 @@
  * Puur: alleen datums en de cyclus in, één teken uit. Geen database, geen API.
  */
 
-import { callDatesFor, type LoopgangCycle } from './cycle'
+import { MAX_CALL_ATTEMPTS, callAttemptFor, type LoopgangCycle } from './cycle'
 import { isWeekday } from '@/lib/commissions-shared'
 
 /**
  *   rest      rustweken; zorg dat hij draait, verder niets
  *   wait      actieweken, maar vandaag hoeft Kix niet te bellen
- *   call      vandaag moet Kix contact opnemen voor een meeting
+ *   call      vandaag neemt Kix contact op — poging 1 tot en met 4
+ *   call-last vandaag is de laatste poging; hierna is er geen ronde meer over
  *   sent      die taak is op deze dag naar Kix gestuurd
  *   planned   de meeting staat; er valt niets meer te regelen
  *   continue  geen meeting nodig, de klant gaat door
@@ -42,6 +43,7 @@ export type DayMark =
   | 'rest'
   | 'wait'
   | 'call'
+  | 'call-last'
   | 'sent'
   | 'planned'
   | 'continue'
@@ -99,7 +101,14 @@ export function dayMarkFor(input: DayStatusInput): DayMark {
   // daadwerkelijk hebt benaderd, ook als dat een tussenliggende dag was.
   if (kixSentDates.has(date)) return 'sent'
 
-  return isCallDay(date, cycle) ? 'call' : 'wait'
+  // Rood is voorbehouden aan wat niet mag schuiven. Een belpoging mag schuiven —
+  // daar zijn er vijf van — dus die is paars, net als al het andere rond de
+  // meeting. Alleen de laatste poging kleurt rood: daarna is er geen ronde meer
+  // over en wordt het een beslissing in plaats van een herinnering.
+  const poging = callAttemptFor(date, cycle.anchor, cycle.invoiceDueDate)
+  if (poging === null) return 'wait'
+
+  return poging >= MAX_CALL_ATTEMPTS ? 'call-last' : 'call'
 }
 
 /**
@@ -124,21 +133,12 @@ function inActionPhase(
   return start !== null && date >= start
 }
 
-/**
- * Moet Kix op deze dag bellen? De beldagen hangen aan de einddag van de periode —
- * 14, 10, 8, 4 en 2 dagen ervoor — en komen uit dezelfde functie als de
- * belherinnering in de cyclus, zodat de kalender en het dagpaneel niet uit
- * elkaar lopen.
- */
-function isCallDay(date: string, cycle: LoopgangCycle): boolean {
-  return callDatesFor(cycle.anchor, cycle.invoiceDueDate).includes(date)
-}
-
 /** Korte uitleg bij een teken, voor de tooltip in de kalender. */
 export const MARK_LABELS: Record<Exclude<DayMark, null>, string> = {
   rest: 'Rustweek — alleen zorgen dat de campagne draait',
   wait: 'Wacht op een meeting — vandaag hoeft Kix niet te bellen',
-  call: 'Kix moet vandaag contact opnemen voor een meeting',
+  call: 'Kix neemt vandaag contact op voor een meeting',
+  'call-last': 'Laatste poging — hierna is de belronde op',
   sent: 'Taak op deze dag naar Kix gestuurd',
   planned: 'Meeting staat gepland',
   continue: 'Geen meeting nodig — de klant gaat door',

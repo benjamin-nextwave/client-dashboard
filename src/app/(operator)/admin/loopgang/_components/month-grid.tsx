@@ -134,7 +134,8 @@ const MEETING_STYLE = 'bg-purple-100 text-purple-800'
 const MARK_STYLES: Record<Exclude<DayMark, null>, { shape: 'check' | 'clock' | 'pause'; className: string }> = {
   rest: { shape: 'check', className: 'text-gray-300' },
   wait: { shape: 'clock', className: 'text-gray-300' },
-  call: { shape: 'clock', className: 'text-rose-500' },
+  call: { shape: 'clock', className: 'text-purple-500' },
+  'call-last': { shape: 'clock', className: 'text-rose-500' },
   sent: { shape: 'clock', className: 'text-emerald-500' },
   planned: { shape: 'check', className: 'text-purple-600' },
   continue: { shape: 'check', className: 'text-emerald-600' },
