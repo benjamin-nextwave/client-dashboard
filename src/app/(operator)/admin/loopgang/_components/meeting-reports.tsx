@@ -22,14 +22,14 @@ import { deleteMeetingReportAction, uploadMeetingReportAction } from '../actions
  * het ongewisse of je nog moet wachten of dat er iets fout is gegaan.
  */
 
-const VOLGORDE: ReportKind[] = ['month', 'lead', 'internal']
+export const ALLE_SOORTEN: ReportKind[] = ['month', 'lead', 'internal']
 
 /**
  * Op de einddag van een periode gaan er twee stukken naar de klant: de
  * leadrapportage en het maandrapport. Het interne rapport hoort daar niet bij —
  * dat is er om zelf het gesprek mee in te gaan.
  */
-const EINDDAG_SOORTEN: ReportKind[] = ['lead', 'month']
+export const EINDDAG_SOORTEN: ReportKind[] = ['lead', 'month']
 
 export function MeetingReports({
   client,
@@ -51,7 +51,13 @@ export function MeetingReports({
   const vanDezePeriode = reports.filter(
     (r) => r.clientId === client.id && r.cycleAnchor === anchor
   )
-  const soorten = variant === 'einddag' ? EINDDAG_SOORTEN : VOLGORDE
+  // Het interne rapport is er om het gesprek mee in te gaan. Komt er geen
+  // gesprek — de klant zet door of stopt — dan valt het weg; wat overblijft zijn
+  // de twee stukken die naar de klant gaan.
+  const geenMeeting =
+    client.meeting?.outcome === 'continue' || client.meeting?.outcome === 'stop'
+  const soorten =
+    variant === 'einddag' || geenMeeting ? EINDDAG_SOORTEN : ALLE_SOORTEN
   const ontbreekt = soorten.filter((k) => !vanDezePeriode.some((r) => r.kind === k))
 
   return (
@@ -102,7 +108,7 @@ export function ReportSlots({
   anchor,
   reports,
   kixMode,
-  kinds = VOLGORDE,
+  kinds = ALLE_SOORTEN,
 }: {
   clientId: string
   anchor: string

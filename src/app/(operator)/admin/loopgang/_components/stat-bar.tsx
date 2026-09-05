@@ -59,6 +59,14 @@ export function StatBar({ clients, totals, today, activeClientKey, onSelectClien
   // Hoeveel van de draaiende klanten er feitelijk stilstaan. Dat was een eigen
   // tegel; nu staat het als bijregel bij "Draait" en per klant in de lijst —
   // dezelfde informatie, één kader minder.
+  // Uit dezelfde facturen als de lijst eronder, zodat het cijfer en de uitklap
+  // niet uit elkaar kunnen lopen.
+  const openInvoices = clients.flatMap((c) => c.invoices.filter((i) => !i.paidAt))
+  const openInvoiceCount = openInvoices.length
+  const teLaatCount = openInvoices.filter(
+    (i) => daysBetween(i.invoiceDate, today) > PAYMENT_TERM_DAYS
+  ).length
+
   const stilCount = clients.filter(
     (c) => c.cycle.anchor !== null && !c.isPaused && c.stoppedOn === null && c.isStalled
   ).length
@@ -97,11 +105,9 @@ export function StatBar({ clients, totals, today, activeClientKey, onSelectClien
           tone={totals.paymentsOverdue > 0 ? 'bad' : 'muted'}
           open={open}
           onToggle={setOpen}
-          hint={
-            totals.paymentsOverdue > 0
-              ? `${totals.paymentsOverdue} over de termijn`
-              : 'binnen de termijn'
-          }
+          hint={`${openInvoiceCount} ${
+            openInvoiceCount === 1 ? 'factuur' : 'facturen'
+          } · ${teLaatCount} over de termijn`}
         />
       </div>
 
@@ -145,7 +151,7 @@ export function StatBar({ clients, totals, today, activeClientKey, onSelectClien
                       <span className="block truncate text-xs font-semibold text-gray-900">
                         {client.displayName}
                       </span>
-                      <span className="mt-0.5 block text-[11px] leading-snug text-gray-500">
+                      <span className="mt-0.5 block whitespace-pre-line text-[11px] leading-snug text-gray-500">
                         {detail}
                       </span>
                     </span>
@@ -359,27 +365,44 @@ function invoiceDetail(client: LoopgangOverviewClient, today: string): string | 
   return delen.length > 0 ? delen.join(' · ') : null
 }
 
-/** Hoeveel er openstaat, en of de oudste factuur nog binnen de termijn valt. */
+/**
+ * Hoeveel er openstaat, en uit welke facturen dat bestaat.
+ *
+ * De losse facturen staan erbij en niet alleen de optelsom: bij een klant met
+ * twee openstaande facturen is een enkel bedrag niet na te rekenen, en dan lijkt
+ * het niet te kloppen met wat je in het tabblad Facturen ziet staan.
+ */
 function openDetail(client: LoopgangOverviewClient, today: string): string {
-  const bedrag = client.invoices
+  const open = client.invoices
     .filter((i) => !i.paidAt)
-    .reduce((sum, i) => sum + (i.amountCents ?? 0), 0)
+    .sort((a, b) => a.invoiceDate.localeCompare(b.invoiceDate))
 
-  const delen = [`${formatEuroCents(bedrag)} open`]
+  const bedrag = open.reduce((sum, i) => sum + (i.amountCents ?? 0), 0)
+  const delen =
+    open.length > 1
+      ? [`${formatEuroCents(bedrag)} open over ${open.length} facturen`]
+      : []
 
   if (client.stoppedOn) delen.push(`GESTOPT op ${formatDayShort(client.stoppedOn)}`)
+  if (delen.length === 0 && client.stoppedOn === null) delen.push(`${formatEuroCents(bedrag)} open`)
 
-  const oudste = oldestUnpaid(client)
-  if (oudste) {
-    const dagen = daysBetween(oudste, today)
-    delen.push(
-      dagen > PAYMENT_TERM_DAYS
-        ? `${plural(dagen - PAYMENT_TERM_DAYS, 'dag', 'dagen')} over de termijn`
-        : `verstuurd ${formatDayShort(oudste)} · termijn loopt nog`
+  // Elke factuur op een eigen regel, met zijn eigen betaaltermijn. Twee facturen
+  // van dezelfde klant hebben verschillende vervaldagen, en die kun je niet uit
+  // een opgeteld bedrag halen.
+  const regels = open.map((i) => {
+    const over = daysBetween(i.invoiceDate, today) - PAYMENT_TERM_DAYS
+    const termijn = addDays(i.invoiceDate, PAYMENT_TERM_DAYS)
+    return (
+      `${formatDayShort(i.invoiceDate)} · ${formatEuroCents(i.amountCents ?? 0)} · ` +
+      (over > 0
+        ? `${plural(over, 'dag', 'dagen')} over de termijn`
+        : over === 0
+          ? 'termijn verloopt vandaag'
+          : `termijn tot ${formatDayShort(termijn)}`)
     )
-  }
+  })
 
-  return delen.join(' · ')
+  return [delen.join(' · '), ...regels].filter(Boolean).join(NIEUWE_REGEL)
 }
 
 /** De datum van de oudste onbetaalde factuur; die bepaalt de termijn. */
@@ -388,6 +411,8 @@ function oldestUnpaid(client: LoopgangOverviewClient): string | null {
     .filter((i) => !i.paidAt)
     .reduce<string | null>((acc, i) => (acc === null || i.invoiceDate < acc ? i.invoiceDate : acc), null)
 }
+
+const NIEUWE_REGEL = String.fromCharCode(10)
 
 function plural(n: number, enkel: string, meer: string): string {
   return `${n} ${n === 1 ? enkel : meer}`

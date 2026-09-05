@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react'
 import type { MeetingReport } from '@/lib/data/loopgang-meeting-reports'
 import { REPORT_LABELS } from '@/lib/data/loopgang-meeting-reports'
 import type { LoopgangOverviewClient } from '@/lib/data/loopgang-overview'
-import { ReportSlots } from './meeting-reports'
+import { ReportSlots, EINDDAG_SOORTEN, ALLE_SOORTEN } from './meeting-reports'
 import { formatDayShort } from './dialogs'
 
 /**
@@ -31,8 +31,15 @@ const FILTER_LABELS: Record<Filter, string> = {
   alles: 'Alle klanten',
 }
 
-/** Hoeveel stukken er per periode horen te liggen. */
-const AANTAL_SOORTEN = 3
+/**
+ * Hoeveel stukken er per periode horen te liggen.
+ *
+ * Drie bij een geplande meeting: maandrapport, leadrapport en het interne
+ * rapport om het gesprek mee in te gaan. Komt er geen meeting, dan vervalt dat
+ * laatste en blijven de twee over die naar de klant gaan.
+ */
+const AANTAL_MET_MEETING = 3
+const AANTAL_ZONDER_MEETING = 2
 
 export function ReportsView({
   clients,
@@ -58,9 +65,25 @@ export function ReportsView({
 
   const rijen = metPeriode.map((client) => {
     const alles = perKlant.get(client.id) ?? []
-    const huidig = alles.filter((r) => r.cycleAnchor === client.cycle.anchor)
+    const geenMeeting =
+      client.meeting?.outcome === 'continue' || client.meeting?.outcome === 'stop'
+    const nodig = geenMeeting ? AANTAL_ZONDER_MEETING : AANTAL_MET_MEETING
+
+    // Zonder meeting telt het interne rapport niet mee, ook niet als het er
+    // toevallig al ligt van vóór het besluit.
+    const huidig = alles
+      .filter((r) => r.cycleAnchor === client.cycle.anchor)
+      .filter((r) => !(geenMeeting && r.kind === 'internal'))
     const eerder = alles.filter((r) => r.cycleAnchor !== client.cycle.anchor)
-    return { client, huidig, eerder, compleet: huidig.length === AANTAL_SOORTEN }
+
+    return {
+      client,
+      huidig,
+      eerder,
+      nodig,
+      soorten: geenMeeting ? EINDDAG_SOORTEN : ALLE_SOORTEN,
+      compleet: huidig.length >= nodig,
+    }
   })
 
   const zichtbaar = rijen.filter((rij) =>
@@ -75,8 +98,9 @@ export function ReportsView({
         <div>
           <h2 className="text-lg font-semibold tracking-tight text-gray-900">Rapporten</h2>
           <p className="mt-0.5 text-xs text-gray-500">
-            {compleetAantal} van {rijen.length} klanten heeft alle drie de stukken van de lopende
-            periode · maandrapport, leadrapport en intern rapport
+            {compleetAantal} van {rijen.length} klanten heeft de stukken van de lopende periode
+            compleet · maandrapport en leadrapport, plus een intern rapport zodra er een meeting
+            gepland staat
           </p>
         </div>
 
@@ -106,7 +130,7 @@ export function ReportsView({
         </p>
       ) : (
         <div className="grid gap-3 lg:grid-cols-2">
-          {zichtbaar.map(({ client, huidig, eerder, compleet }) => (
+          {zichtbaar.map(({ client, huidig, eerder, compleet, nodig, soorten }) => (
             <article
               key={client.key}
               className="overflow-hidden rounded-xl border border-gray-200 bg-white"
@@ -142,7 +166,7 @@ export function ReportsView({
                     compleet ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
                   }`}
                 >
-                  {huidig.length}/{AANTAL_SOORTEN}
+                  {huidig.length}/{nodig}
                 </span>
               </div>
 
@@ -151,6 +175,7 @@ export function ReportsView({
                 anchor={client.cycle.anchor as string}
                 reports={huidig}
                 kixMode={false}
+                kinds={soorten}
               />
 
               {eerder.length > 0 && <Eerder reports={eerder} />}
