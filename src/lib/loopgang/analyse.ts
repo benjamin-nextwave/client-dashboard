@@ -87,11 +87,6 @@ function beschrijfKlant(c: LoopgangOverviewClient, vandaag: string): string {
           (over === 0 ? ' — dat is vandaag.' : over > 0 ? ` — over ${over} dagen.` : ` — ${-over} dagen geleden.`)
       )
     }
-    if (c.cycle.meetingWindow) {
-      regels.push(
-        `  Evaluatiemeeting hoort tussen ${c.cycle.meetingWindow.from} en ${c.cycle.meetingWindow.to}.`
-      )
-    }
     regels.push(
       `  Kix moet vanaf werkdag ${MEETING_WORKDAY} mailen voor de meeting${
         c.cycle.meetingReminderStart ? ` (${c.cycle.meetingReminderStart})` : ''

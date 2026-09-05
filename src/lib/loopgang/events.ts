@@ -22,8 +22,6 @@ import {
   callAttemptFor,
   callDatesFor,
   INVOICE_WORKDAY,
-  MEETING_WINDOW_FROM,
-  MEETING_WINDOW_TO,
   PAYMENT_TERM_DAYS,
   addDays,
   daysBetween,
@@ -293,16 +291,6 @@ export function buildEvents(input: BuildEventsInput): LoopgangEvent[] {
           resterend > 0
             ? `daarna nog ${resterend} ${resterend === 1 ? 'poging' : 'pogingen'}`
             : 'laatste belmoment van deze periode',
-      })
-    }
-
-    if (cycle.meetingWindow) {
-      events.push({
-        date: cycle.meetingWindow.from,
-        kind: 'meeting-window',
-        status: statusFor(cycle.meetingWindow.from, today),
-        label: 'Meetingvenster opent',
-        detail: `dag ${MEETING_WINDOW_FROM} t/m ${MEETING_WINDOW_TO}`,
       })
     }
   }
