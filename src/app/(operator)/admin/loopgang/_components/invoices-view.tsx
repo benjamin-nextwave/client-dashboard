@@ -227,34 +227,24 @@ function FactuurRij({ rij, today }: { rij: Rij; today: string }) {
       </td>
 
       <td className="px-4 py-2.5">
-        <div className="flex items-center justify-end gap-2">
-          {invoice.paidAt ? (
-            <button
-              type="button"
-              onClick={() => zetBetaald(null)}
+        <div className="flex items-center justify-end gap-3">
+          <BetaaldSchakelaar
+            betaald={invoice.paidAt !== null}
+            pending={pending}
+            onWissel={(aan) => zetBetaald(aan ? today : null)}
+          />
+
+          {/* Kwam het geld op een andere dag binnen, dan corrigeer je de datum
+              hier. Alleen zichtbaar als hij op betaald staat: een datumveld bij
+              een onbetaalde factuur nodigt uit tot een gok. */}
+          {invoice.paidAt && (
+            <input
+              type="date"
+              value={invoice.paidAt}
+              onChange={(e) => e.target.value && zetBetaald(e.target.value)}
               disabled={pending}
-              className="text-[10px] font-semibold text-gray-400 transition-colors hover:text-gray-900 disabled:opacity-50"
-            >
-              toch niet betaald
-            </button>
-          ) : (
-            <>
-              <input
-                type="date"
-                defaultValue={today}
-                onChange={(e) => e.target.value && zetBetaald(e.target.value)}
-                disabled={pending}
-                className="rounded-lg border border-gray-200 px-2 py-1 text-[10px] text-gray-700 outline-none focus:border-emerald-400"
-              />
-              <button
-                type="button"
-                onClick={() => zetBetaald(today)}
-                disabled={pending}
-                className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[10px] font-semibold text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
-              >
-                Betaald
-              </button>
-            </>
+              className="rounded-lg border border-gray-200 px-2 py-1 text-[10px] text-gray-600 outline-none focus:border-emerald-400 disabled:opacity-50"
+            />
           )}
 
           <button
@@ -268,6 +258,51 @@ function FactuurRij({ rij, today }: { rij: Rij; today: string }) {
         </div>
       </td>
     </tr>
+  )
+}
+
+/**
+ * De schakelaar tussen niet betaald en betaald.
+ *
+ * Rood staat links en groen rechts, en de knop draagt zijn eigen tekst. Een
+ * schakelaar zonder woorden dwingt je elke keer opnieuw te bedenken welke kant
+ * "aan" is; hier lees je het gewoon.
+ */
+function BetaaldSchakelaar({
+  betaald,
+  pending,
+  onWissel,
+}: {
+  betaald: boolean
+  pending: boolean
+  onWissel: (aan: boolean) => void
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={betaald}
+      disabled={pending}
+      onClick={() => onWissel(!betaald)}
+      className={`inline-flex items-center gap-1.5 rounded-full px-1 py-1 pr-2.5 text-[10px] font-semibold transition-colors disabled:opacity-50 ${
+        betaald
+          ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
+          : 'bg-rose-100 text-rose-800 hover:bg-rose-200'
+      }`}
+    >
+      <span
+        className={`relative h-4 w-7 shrink-0 rounded-full transition-colors ${
+          betaald ? 'bg-emerald-600' : 'bg-rose-500'
+        }`}
+      >
+        <span
+          className={`absolute top-0.5 h-3 w-3 rounded-full bg-white transition-all ${
+            betaald ? 'left-3.5' : 'left-0.5'
+          }`}
+        />
+      </span>
+      {betaald ? 'Betaald' : 'Niet betaald'}
+    </button>
   )
 }
 
