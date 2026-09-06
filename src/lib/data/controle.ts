@@ -157,6 +157,8 @@ export interface ControleTaskRow {
   requestedBy: TaskPerson | null
   /** Door het model opgeschoonde toelichting. De ingetypte tekst wordt niet bewaard. */
   details: string | null
+  /** De ontvanger moet zich na afronding melden bij degene namens wie de taak is aangemaakt. */
+  notifyOnComplete: boolean
 }
 
 /**
@@ -175,7 +177,7 @@ export async function getAllTasks(
 
   let query = supabase
     .from('operator_check_tasks')
-    .select('id, client_id, description, campaign_names, is_completed, completed_at, created_at, assignee, requested_by, details')
+    .select('id, client_id, description, campaign_names, is_completed, completed_at, created_at, assignee, requested_by, details, notify_on_complete')
     .order('created_at', { ascending: false })
 
   if (persona) query = query.eq('assignee', persona)
@@ -205,6 +207,7 @@ export async function getAllTasks(
     assignee: (t.assignee ?? null) as TaskPerson | null,
     requestedBy: (t.requested_by ?? null) as TaskPerson | null,
     details: (t.details ?? null) as string | null,
+    notifyOnComplete: t.notify_on_complete === true,
   }))
 }
 

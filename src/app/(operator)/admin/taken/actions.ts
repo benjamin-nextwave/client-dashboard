@@ -18,6 +18,8 @@ export interface AddTaskInput {
   task: string
   /** Vrije toelichting. Wordt opgeschoond; de ruwe tekst wordt niet bewaard. */
   rawDescription: string
+  /** De ontvanger meldt zich na afronding bij de aanvrager. */
+  notifyOnComplete?: boolean
 }
 
 export interface AddTaskResult {
@@ -60,6 +62,7 @@ export async function addTask(input: AddTaskInput): Promise<AddTaskResult> {
     assignee: input.assignee,
     requested_by: input.requestedBy,
     details,
+    notify_on_complete: input.notifyOnComplete === true,
   })
 
   if (error) return { error: error.message }

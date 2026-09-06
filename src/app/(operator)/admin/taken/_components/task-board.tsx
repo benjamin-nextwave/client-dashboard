@@ -379,6 +379,26 @@ function TaskRow({
               namens {TASK_PERSON_LABEL[task.requestedBy]}
             </span>
           )}
+          {/* Blijft ook na afvinken staan: juist dan moet het bericht nog de deur uit. */}
+          {task.notifyOnComplete && (
+            <span
+              className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold ring-1 ${
+                task.isCompleted
+                  ? 'bg-gray-100 text-gray-400 ring-gray-200'
+                  : 'bg-amber-100 text-amber-800 ring-amber-200'
+              }`}
+              title={
+                task.requestedBy
+                  ? `Laat ${TASK_PERSON_LABEL[task.requestedBy]} weten zodra dit klaar is`
+                  : 'Laat de aanvrager weten zodra dit klaar is'
+              }
+            >
+              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
+              </svg>
+              Contacteren na afronding
+            </span>
+          )}
           {isFutureTask(task.createdAt) && !task.isCompleted && (
             <span className="inline-flex items-center gap-1 rounded-md bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-800 ring-1 ring-blue-200">
               Plan: {formatPlanDate(task.createdAt)}
