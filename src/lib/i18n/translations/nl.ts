@@ -650,6 +650,19 @@ export interface Translations {
     emptyBody: string
     flowIntro: string
     flowVariantOne: string
+    flowCampaignEyebrow: string
+    flowCampaignCount: string
+    flowPrevCampaign: string
+    flowNextCampaign: string
+    flowMailStep: string
+    flowStepUnnamed: string
+    flowStepCounter: string
+    flowVariantPicker: string
+    flowNoVariants: string
+    flowNoSubject: string
+    flowWhatNext: string
+    flowNextMail: string
+    flowDropoffReasons: string
     flowEmptyTitle: string
     flowEmptyBody: string
     historyEmptyTitle: string
@@ -1559,6 +1572,19 @@ export const nl: Translations = {
       'Zodra NextWave de eerste mailvarianten klaarzet, verschijnen ze hier ter beoordeling.',
     flowIntro: 'Het pad dat een lead doorloopt, van eerste mail tot afhandeling.',
     flowVariantOne: '1 variant',
+    flowCampaignEyebrow: 'Campagne',
+    flowCampaignCount: '{current} van {total}',
+    flowPrevCampaign: 'Vorige campagne',
+    flowNextCampaign: 'Volgende campagne',
+    flowMailStep: 'Mail {number}',
+    flowStepUnnamed: 'Zonder titel',
+    flowStepCounter: 'Mail {current} van {total}',
+    flowVariantPicker: 'Variant',
+    flowNoVariants: 'Voor deze mail staat nog geen tekst klaar.',
+    flowNoSubject: 'Geen onderwerp',
+    flowWhatNext: 'Wat er hierna gebeurt',
+    flowNextMail: 'Door naar mail {number}',
+    flowDropoffReasons: 'Redenen',
     flowEmptyTitle: 'Nog geen campagneflow',
     flowEmptyBody: 'Zodra NextWave de campagneflow publiceert, zie je hier het volledige pad.',
     historyEmptyTitle: 'Nog geen geschiedenis',

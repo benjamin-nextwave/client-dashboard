@@ -7,6 +7,7 @@ import {
   getAllMailVariantFeedback,
   deriveVariantStatus,
   type MailVariant,
+  type MailVariantStatus,
 } from '@/lib/data/campaign'
 import { getPublishedFlowsByClient } from '@/lib/data/campaign-flow'
 import { getLinkedInFlowsByClient } from '@/lib/data/linkedin-flow'
@@ -17,7 +18,7 @@ import { buildMailGroups, countRevisedSince } from './_lib/variant-groups'
 import { TabBar, isMailVariantsTab, type MailVariantsTab } from './_components/tab-bar'
 import { VariantsTab } from './_components/variants-tab'
 import { VariantHistory } from './_components/variant-history'
-import { CampaignFlowDiagram } from './_components/campaign-flow-diagram'
+import { CampaignFlowExplorer } from './_components/campaign-flow-explorer'
 
 export const metadata: Metadata = { title: 'Mailvarianten' }
 export const dynamic = 'force-dynamic'
@@ -66,11 +67,22 @@ export default async function MailvariantenPage({ searchParams }: PageProps) {
 
   // Alleen flows met minimaal één stap; een lege flow zegt de klant niets.
   const visibleFlows = flows.filter((f) => f.steps.length > 0)
-  const linkedInFlows = Object.values(linkedInByFlow)
+  const linkedInFlows = Object.values(linkedInByFlow).filter(
+    (f) => f.enabled && !!f.publishedAt
+  )
 
   // Statusstipje op de flow-varianten. Er is geen relatie tussen campaign_flow_
   // variants en mail_variants in de database, dus we matchen op onderwerp.
   const variantsBySubject = new Map<string, MailVariant>(variants.map((v) => [v.subject, v]))
+  const statusByVariantId: Record<string, MailVariantStatus> = {}
+  for (const flow of visibleFlows) {
+    for (const step of flow.steps) {
+      for (const v of step.variants) {
+        const linked = variantsBySubject.get(v.subject)
+        if (linked) statusByVariantId[v.id] = deriveVariantStatus(linked)
+      }
+    }
+  }
 
   const pdfTime = state.variantsPdfUploadedAt
     ? new Date(state.variantsPdfUploadedAt).getTime()
@@ -107,8 +119,14 @@ export default async function MailvariantenPage({ searchParams }: PageProps) {
       </div>
 
       {/* Vaste hoogte omdat lijst, detail en geschiedenis intern scrollen —
-          dezelfde vorm als de DNC-pagina en de contactenlijst. */}
-      <div className="mt-4 flex h-[calc(100vh-17rem)] min-h-[520px] flex-col">
+          dezelfde vorm als de DNC-pagina en de contactenlijst. De flow is geen
+          lijst maar één doorlopend document: die groeit mee en scrollt met de
+          pagina, anders staat een lange mail klem in een venster van 520px. */}
+      <div
+        className={`mt-4 flex flex-col ${
+          tab === 'flow' ? '' : 'h-[calc(100vh-17rem)] min-h-[520px]'
+        }`}
+      >
         {tab === 'varianten' &&
           (variants.length === 0 ? (
             <EmptyState
@@ -136,19 +154,20 @@ export default async function MailvariantenPage({ searchParams }: PageProps) {
               title={t('mailVariantsPage.flowEmptyTitle')}
               description={t('mailVariantsPage.flowEmptyBody')}
             />
-          ) : (
+          ) : visibleFlows.length === 0 ? (
+            // Zonder mailflow valt er niets te doorlopen; de LinkedIn-flow
+            // blijft dan los zichtbaar, zoals voorheen.
             <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
-              {visibleFlows.map((flow) => (
-                <CampaignFlowDiagram
-                  key={flow.id}
-                  flow={flow}
-                  variantsBySubject={variantsBySubject}
-                />
-              ))}
               {linkedInFlows.map((flow) => (
                 <LinkedInFlowBlock key={flow.flowId} state={flow} />
               ))}
             </div>
+          ) : (
+            <CampaignFlowExplorer
+              flows={visibleFlows}
+              linkedInByFlow={linkedInByFlow}
+              statusByVariantId={statusByVariantId}
+            />
           ))}
 
         {tab === 'geschiedenis' &&
