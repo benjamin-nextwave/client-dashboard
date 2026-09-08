@@ -70,3 +70,50 @@ export async function addTask(input: AddTaskInput): Promise<AddTaskResult> {
   revalidatePath('/admin/taken')
   return { details }
 }
+
+export interface UpdateTaskInput {
+  taskId: string
+  clientId: string
+  assignee: TaskPerson
+  requestedBy: TaskPerson
+  task: string
+  /**
+   * De toelichting zoals hij op de taak moet komen te staan. Anders dan bij
+   * het aanmaken gaat deze tekst *niet* door het model: bij het bewerken zie
+   * je de al opgeschoonde versie, en die nog een keer laten herschrijven
+   * verandert wat je net met de hand hebt rechtgezet.
+   */
+  details: string
+  notifyOnComplete: boolean
+}
+
+/** Past een bestaande taak aan vanaf de takenpagina. */
+export async function updateTask(input: UpdateTaskInput): Promise<{ error?: string }> {
+  const task = input.task.trim()
+  if (!input.taskId) return { error: 'Onbekende taak.' }
+  if (task.length === 0) return { error: 'Beschrijf eerst de taak.' }
+  if (!input.clientId) return { error: 'Kies eerst een klant.' }
+  if (!isTaskPerson(input.assignee)) return { error: 'Kies voor wie de taak is.' }
+  if (!isTaskPerson(input.requestedBy)) return { error: 'Kies namens wie de taak is.' }
+
+  const details = input.details.trim()
+
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from('operator_check_tasks')
+    .update({
+      client_id: input.clientId,
+      description: task,
+      assignee: input.assignee,
+      requested_by: input.requestedBy,
+      details: details.length > 0 ? details : null,
+      notify_on_complete: input.notifyOnComplete === true,
+    })
+    .eq('id', input.taskId)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/admin/taken')
+  revalidatePath('/admin/controle/middag')
+  return {}
+}

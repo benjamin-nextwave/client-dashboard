@@ -11,6 +11,7 @@ import {
 import { toggleTaskCompleted, deleteTask } from '../../controle/actions'
 import { useTasksRealtime } from '@/hooks/use-tasks-realtime'
 import { NewTaskModal } from './new-task-modal'
+import { EditTaskModal } from './edit-task-modal'
 
 function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })
@@ -60,6 +61,7 @@ export function TaskBoard({ tasks, clientOptions }: Props) {
   const [, startTransition] = useTransition()
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set())
   const [addOpen, setAddOpen] = useState(false)
+  const [editing, setEditing] = useState<ControleTaskRow | null>(null)
 
   const hiddenFutureCount = useMemo(
     () => tasks.filter((t) => !t.isCompleted && isFutureTask(t.createdAt)).length,
@@ -246,6 +248,7 @@ export function TaskBoard({ tasks, clientOptions }: Props) {
               pendingIds={pendingIds}
               onToggle={handleToggle}
               onDelete={handleDelete}
+              onEdit={setEditing}
             />
           ))}
         </div>
@@ -257,6 +260,18 @@ export function TaskBoard({ tasks, clientOptions }: Props) {
           onClose={() => setAddOpen(false)}
           onAdded={() => {
             setAddOpen(false)
+            router.refresh()
+          }}
+        />
+      )}
+
+      {editing && (
+        <EditTaskModal
+          task={editing}
+          clientOptions={clientOptions}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null)
             router.refresh()
           }}
         />
@@ -306,12 +321,14 @@ function ClientTaskGroup({
   pendingIds,
   onToggle,
   onDelete,
+  onEdit,
 }: {
   companyName: string
   tasks: ControleTaskRow[]
   pendingIds: Set<string>
   onToggle: (id: string, completed: boolean) => void
   onDelete: (id: string) => void
+  onEdit: (task: ControleTaskRow) => void
 }) {
   const openInGroup = tasks.filter((t) => !t.isCompleted).length
 
@@ -331,6 +348,7 @@ function ClientTaskGroup({
             isPending={pendingIds.has(task.id)}
             onToggle={() => onToggle(task.id, task.isCompleted)}
             onDelete={() => onDelete(task.id)}
+            onEdit={() => onEdit(task)}
           />
         ))}
       </ul>
@@ -343,11 +361,13 @@ function TaskRow({
   isPending,
   onToggle,
   onDelete,
+  onEdit,
 }: {
   task: ControleTaskRow
   isPending: boolean
   onToggle: () => void
   onDelete: () => void
+  onEdit: () => void
 }) {
   return (
     <li className={`flex items-start gap-3 px-5 py-3 transition-colors ${task.isCompleted ? 'bg-gray-50/40' : ''}`}>
@@ -444,17 +464,32 @@ function TaskRow({
         </div>
       </div>
 
-      <button
-        type="button"
-        onClick={onDelete}
-        disabled={isPending}
-        aria-label="Taak verwijderen"
-        className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md text-gray-300 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
-      >
-        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79" />
-        </svg>
-      </button>
+      <div className="flex flex-shrink-0 items-center gap-1">
+        <button
+          type="button"
+          onClick={onEdit}
+          disabled={isPending}
+          title="Taak bewerken"
+          className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold text-gray-400 transition-colors hover:bg-indigo-50 hover:text-indigo-700 disabled:opacity-50"
+        >
+          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" />
+          </svg>
+          Bewerken
+        </button>
+
+        <button
+          type="button"
+          onClick={onDelete}
+          disabled={isPending}
+          aria-label="Taak verwijderen"
+          className="flex h-7 w-7 items-center justify-center rounded-md text-gray-300 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79" />
+          </svg>
+        </button>
+      </div>
     </li>
   )
 }
