@@ -3,6 +3,7 @@
 import {
   TASK_PERSONS,
   TASK_PERSON_LABEL,
+  type TaskKind,
   type TaskPerson,
 } from '@/lib/data/controle'
 
@@ -77,6 +78,50 @@ export function NotifyToggle({
         </span>
       </span>
     </button>
+  )
+}
+
+/**
+ * Taak of vraag. Staat bovenaan het formulier omdat het de rest stuurt: bij een
+ * vraag heten de velden anders, gaat de toelichting niet door het model en
+ * vervalt de meldknop.
+ */
+export function KindPicker({
+  value,
+  onChange,
+}: {
+  value: TaskKind
+  onChange: (v: TaskKind) => void
+}) {
+  const options: { kind: TaskKind; label: string; hint: string }[] = [
+    { kind: 'taak', label: 'Taak', hint: 'Iets dat gedaan moet worden' },
+    { kind: 'vraag', label: 'Vraag', hint: 'Je wilt een antwoord terug' },
+  ]
+
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      {options.map((o) => {
+        const active = value === o.kind
+        return (
+          <button
+            key={o.kind}
+            type="button"
+            onClick={() => onChange(o.kind)}
+            aria-pressed={active}
+            className={`rounded-xl border px-3 py-2.5 text-left transition-colors ${
+              active
+                ? 'border-indigo-300 bg-indigo-50/70 ring-2 ring-indigo-100'
+                : 'border-gray-200 bg-white hover:border-gray-300'
+            }`}
+          >
+            <span className={`block text-xs font-bold ${active ? 'text-indigo-900' : 'text-gray-700'}`}>
+              {o.label}
+            </span>
+            <span className="mt-0.5 block text-[11px] leading-snug text-gray-500">{o.hint}</span>
+          </button>
+        )
+      })}
+    </div>
   )
 }
 

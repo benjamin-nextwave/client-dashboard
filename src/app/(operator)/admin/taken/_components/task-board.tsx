@@ -6,9 +6,11 @@ import {
   TASK_PERSON_LABEL,
   type ControleTaskRow,
   type ManualTaskClientOption,
+  type TaskKind,
   type TaskPerson,
 } from '@/lib/data/controle'
 import { toggleTaskCompleted, deleteTask } from '../../controle/actions'
+import { answerQuestion } from '../actions'
 import { useTasksRealtime } from '@/hooks/use-tasks-realtime'
 import { NewTaskModal } from './new-task-modal'
 import { EditTaskModal } from './edit-task-modal'
@@ -55,6 +57,7 @@ export function TaskBoard({ tasks, clientOptions }: Props) {
   useTasksRealtime()
 
   const [filter, setFilter] = useState<'all' | 'open' | 'done'>('open')
+  const [kindFilter, setKindFilter] = useState<TaskKind | 'alles'>('alles')
   const [person, setPerson] = useState<TaskPerson | 'iedereen'>('iedereen')
   const [search, setSearch] = useState('')
   const [hideFuture, setHideFuture] = useState(true)
@@ -72,6 +75,7 @@ export function TaskBoard({ tasks, clientOptions }: Props) {
     let result = tasks
     if (filter === 'open') result = result.filter((t) => !t.isCompleted)
     if (filter === 'done') result = result.filter((t) => t.isCompleted)
+    if (kindFilter !== 'alles') result = result.filter((t) => t.kind === kindFilter)
     if (person !== 'iedereen') result = result.filter((t) => t.assignee === person)
     if (hideFuture) result = result.filter((t) => !isFutureTask(t.createdAt))
     if (search.trim()) {
@@ -80,11 +84,12 @@ export function TaskBoard({ tasks, clientOptions }: Props) {
         (t) =>
           t.companyName.toLowerCase().includes(q) ||
           t.description.toLowerCase().includes(q) ||
-          (t.details ?? '').toLowerCase().includes(q)
+          (t.details ?? '').toLowerCase().includes(q) ||
+          (t.answer ?? '').toLowerCase().includes(q)
       )
     }
     return result
-  }, [tasks, filter, person, search, hideFuture])
+  }, [tasks, filter, kindFilter, person, search, hideFuture])
 
   const grouped = useMemo(() => {
     const groups = new Map<string, { companyName: string; tasks: ControleTaskRow[] }>()
@@ -97,6 +102,7 @@ export function TaskBoard({ tasks, clientOptions }: Props) {
   }, [filtered])
 
   const openCount = tasks.filter((t) => !t.isCompleted).length
+  const openQuestionCount = tasks.filter((t) => !t.isCompleted && t.kind === 'vraag').length
 
   const handleToggle = (taskId: string, currentlyCompleted: boolean) => {
     setPendingIds((prev) => new Set(prev).add(taskId))
@@ -109,6 +115,13 @@ export function TaskBoard({ tasks, clientOptions }: Props) {
       })
       router.refresh()
     })
+  }
+
+  const handleAnswer = async (taskId: string, answer: string) => {
+    const result = await answerQuestion(taskId, answer)
+    if (result.error) return result.error
+    router.refresh()
+    return null
   }
 
   const handleDelete = (taskId: string) => {
@@ -129,7 +142,11 @@ export function TaskBoard({ tasks, clientOptions }: Props) {
           <p className="mt-0.5 text-sm text-gray-500">
             {openCount === 0
               ? 'Alles afgerond.'
-              : `${openCount} open ${openCount === 1 ? 'taak' : 'taken'} van iedereen bij elkaar.`}
+              : `${openCount} open ${openCount === 1 ? 'punt' : 'punten'} van iedereen bij elkaar${
+                  openQuestionCount > 0
+                    ? `, waarvan ${openQuestionCount} ${openQuestionCount === 1 ? 'vraag' : 'vragen'}`
+                    : ''
+                }.`}
           </p>
         </div>
         <button
@@ -140,7 +157,7 @@ export function TaskBoard({ tasks, clientOptions }: Props) {
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
           </svg>
-          Nieuwe taak
+          Nieuwe taak of vraag
         </button>
       </div>
 
@@ -202,6 +219,21 @@ export function TaskBoard({ tasks, clientOptions }: Props) {
           </button>
 
           <div className="inline-flex rounded-xl border border-gray-200 bg-gray-50 p-1">
+            {(['alles', 'taak', 'vraag'] as const).map((k) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setKindFilter(k)}
+                className={`rounded-lg px-3 py-2 text-xs font-semibold transition-all ${
+                  kindFilter === k ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'
+                }`}
+              >
+                {k === 'alles' ? 'Alles' : k === 'taak' ? 'Taken' : 'Vragen'}
+              </button>
+            ))}
+          </div>
+
+          <div className="inline-flex rounded-xl border border-gray-200 bg-gray-50 p-1">
             {(['open', 'done', 'all'] as const).map((f) => (
               <button
                 key={f}
@@ -227,15 +259,17 @@ export function TaskBoard({ tasks, clientOptions }: Props) {
           </div>
           <p className="mt-4 text-sm font-semibold text-gray-900">
             {tasks.length === 0
-              ? 'Nog geen taken'
+              ? 'Nog geen taken of vragen'
               : filter === 'done'
                 ? 'Nog niets afgerond'
-                : 'Geen taken gevonden'}
+                : kindFilter === 'vraag'
+                  ? 'Geen vragen gevonden'
+                  : 'Geen taken gevonden'}
           </p>
           <p className="mt-1 max-w-sm text-xs text-gray-500">
             {tasks.length === 0
               ? 'Maak er een aan met de knop hierboven, of doorloop een ochtendcontrole.'
-              : 'Pas je filter of zoekterm aan om meer taken te zien.'}
+              : 'Pas je filter of zoekterm aan om meer te zien.'}
           </p>
         </div>
       ) : (
@@ -247,6 +281,7 @@ export function TaskBoard({ tasks, clientOptions }: Props) {
               tasks={group.tasks}
               pendingIds={pendingIds}
               onToggle={handleToggle}
+              onAnswer={handleAnswer}
               onDelete={handleDelete}
               onEdit={setEditing}
             />
@@ -315,11 +350,127 @@ function TaskDetails({ text, completed }: { text: string; completed: boolean }) 
   )
 }
 
+/**
+ * Het antwoord op een vraag: te lezen als hij er is, te typen als hij er niet
+ * is.
+ *
+ * Het veld staat niet meteen open. Een takenlijst met overal een tekstvak
+ * eronder leest niet meer als een lijst, dus er komt eerst een knop.
+ */
+function AnswerBlock({
+  task,
+  isPending,
+  onAnswer,
+}: {
+  task: ControleTaskRow
+  isPending: boolean
+  onAnswer: (answer: string) => Promise<string | null>
+}) {
+  const [open, setOpen] = useState(false)
+  const [text, setText] = useState('')
+  const [sending, setSending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  if (task.answer) {
+    return (
+      <div className="mt-2 rounded-lg border-l-2 border-sky-300 bg-sky-50/60 py-2 pl-3 pr-2">
+        <div className="mb-0.5 text-[10px] font-bold uppercase tracking-wide text-sky-700">
+          Antwoord
+          {task.assignee ? ` van ${TASK_PERSON_LABEL[task.assignee]}` : ''}
+          {task.answeredAt ? ` · ${formatDate(task.answeredAt)} om ${formatTime(task.answeredAt)}` : ''}
+        </div>
+        <div className="whitespace-pre-wrap text-xs leading-relaxed text-gray-700">{task.answer}</div>
+      </div>
+    )
+  }
+
+  // Een afgevinkte vraag zonder antwoord is bewust zo afgesloten — mondeling
+  // besproken, of achterhaald. Dan hoeft het veld er niet meer te staan.
+  if (task.isCompleted) {
+    return (
+      <div className="mt-2 text-[11px] italic text-gray-400">
+        Afgerond zonder antwoord in het dashboard.
+      </div>
+    )
+  }
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        disabled={isPending}
+        className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-[11px] font-bold text-sky-700 transition-colors hover:border-sky-300 hover:bg-sky-100 disabled:opacity-50"
+      >
+        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 0 1 .865-.501 48.172 48.172 0 0 0 3.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z" />
+        </svg>
+        Antwoorden
+      </button>
+    )
+  }
+
+  async function send() {
+    const value = text.trim()
+    if (value.length === 0) {
+      setError('Typ eerst een antwoord.')
+      return
+    }
+    setSending(true)
+    setError(null)
+    const err = await onAnswer(value)
+    setSending(false)
+    if (err) {
+      setError(err)
+      return
+    }
+    setOpen(false)
+    setText('')
+  }
+
+  return (
+    <div className="mt-2 rounded-lg border border-sky-200 bg-sky-50/50 p-2.5">
+      <textarea
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        rows={3}
+        autoFocus
+        placeholder="Typ je antwoord…"
+        className="w-full resize-y rounded-lg border border-sky-200 bg-white px-2.5 py-2 text-xs leading-relaxed text-gray-900 placeholder:text-gray-400 focus:border-sky-400 focus:outline-none focus:ring-4 focus:ring-sky-100"
+      />
+      {error && <p className="mt-1.5 text-[11px] font-medium text-red-600">{error}</p>}
+      <div className="mt-2 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={send}
+          disabled={sending}
+          className="rounded-lg bg-sky-600 px-3 py-1.5 text-[11px] font-bold text-white transition-colors hover:bg-sky-700 disabled:opacity-50"
+        >
+          {sending ? 'Versturen…' : 'Antwoord opslaan'}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setOpen(false)
+            setError(null)
+          }}
+          disabled={sending}
+          className="rounded-lg px-2 py-1.5 text-[11px] font-semibold text-gray-500 transition-colors hover:text-gray-800 disabled:opacity-50"
+        >
+          Annuleren
+        </button>
+        <span className="text-[10.5px] text-gray-400">De vraag gaat hiermee op afgerond.</span>
+      </div>
+    </div>
+  )
+}
+
 function ClientTaskGroup({
   companyName,
   tasks,
   pendingIds,
   onToggle,
+  onAnswer,
   onDelete,
   onEdit,
 }: {
@@ -327,6 +478,7 @@ function ClientTaskGroup({
   tasks: ControleTaskRow[]
   pendingIds: Set<string>
   onToggle: (id: string, completed: boolean) => void
+  onAnswer: (id: string, answer: string) => Promise<string | null>
   onDelete: (id: string) => void
   onEdit: (task: ControleTaskRow) => void
 }) {
@@ -347,6 +499,7 @@ function ClientTaskGroup({
             task={task}
             isPending={pendingIds.has(task.id)}
             onToggle={() => onToggle(task.id, task.isCompleted)}
+            onAnswer={(answer) => onAnswer(task.id, answer)}
             onDelete={() => onDelete(task.id)}
             onEdit={() => onEdit(task)}
           />
@@ -360,15 +513,19 @@ function TaskRow({
   task,
   isPending,
   onToggle,
+  onAnswer,
   onDelete,
   onEdit,
 }: {
   task: ControleTaskRow
   isPending: boolean
   onToggle: () => void
+  onAnswer: (answer: string) => Promise<string | null>
   onDelete: () => void
   onEdit: () => void
 }) {
+  const isVraag = task.kind === 'vraag'
+
   return (
     <li className={`flex items-start gap-3 px-5 py-3 transition-colors ${task.isCompleted ? 'bg-gray-50/40' : ''}`}>
       <button
@@ -389,6 +546,21 @@ function TaskRow({
 
       <div className="min-w-0 flex-1">
         <div className="mb-1 flex flex-wrap items-center gap-1.5">
+          {isVraag && (
+            <span
+              className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ring-1 ${
+                task.isCompleted
+                  ? 'bg-gray-100 text-gray-400 ring-gray-200'
+                  : 'bg-sky-50 text-sky-700 ring-sky-200'
+              }`}
+              title="Op deze regel wordt een antwoord verwacht"
+            >
+              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2.4} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z" />
+              </svg>
+              Vraag
+            </span>
+          )}
           {task.assignee && (
             <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ring-1 ${PERSON_CHIP[task.assignee]}`}>
               {TASK_PERSON_LABEL[task.assignee]}
@@ -426,7 +598,15 @@ function TaskRow({
           )}
         </div>
 
-        <div className={`whitespace-pre-wrap text-sm transition-colors ${task.isCompleted ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
+        <div
+          className={`whitespace-pre-wrap text-sm transition-colors ${
+            task.isCompleted
+              ? isVraag
+                ? 'text-gray-500'
+                : 'text-gray-400 line-through'
+              : 'text-gray-900'
+          }`}
+        >
           {task.description}
         </div>
 
@@ -434,6 +614,10 @@ function TaskRow({
           <div className={`mt-2 rounded-lg border-l-2 border-gray-200 bg-gray-50/70 py-2 pl-3 pr-2 text-xs leading-relaxed ${task.isCompleted ? 'text-gray-400' : 'text-gray-600'}`}>
             <TaskDetails text={task.details} completed={task.isCompleted} />
           </div>
+        )}
+
+        {isVraag && (
+          <AnswerBlock task={task} isPending={isPending} onAnswer={onAnswer} />
         )}
 
         {task.campaignNames.length > 0 && (
@@ -458,7 +642,9 @@ function TaskRow({
           {task.isCompleted && task.completedAt && (
             <>
               {!isFutureTask(task.createdAt) && <span className="text-gray-300">•</span>}
-              <span className="text-emerald-600">Afgerond {formatTime(task.completedAt)}</span>
+              <span className="text-emerald-600">
+                {isVraag && task.answeredAt ? 'Beantwoord' : 'Afgerond'} {formatTime(task.completedAt)}
+              </span>
             </>
           )}
         </div>
@@ -469,7 +655,7 @@ function TaskRow({
           type="button"
           onClick={onEdit}
           disabled={isPending}
-          title="Taak bewerken"
+          title={isVraag ? 'Vraag bewerken' : 'Taak bewerken'}
           className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold text-gray-400 transition-colors hover:bg-indigo-50 hover:text-indigo-700 disabled:opacity-50"
         >
           <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
@@ -482,7 +668,7 @@ function TaskRow({
           type="button"
           onClick={onDelete}
           disabled={isPending}
-          aria-label="Taak verwijderen"
+          aria-label={isVraag ? 'Vraag verwijderen' : 'Taak verwijderen'}
           className="flex h-7 w-7 items-center justify-center rounded-md text-gray-300 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">

@@ -24,6 +24,27 @@ export function isTaskPerson(value: unknown): value is TaskPerson {
   return typeof value === 'string' && (TASK_PERSONS as string[]).includes(value)
 }
 
+/**
+ * Een regel op de takenpagina is een taak of een vraag. Het verschil zit niet
+ * in het werk maar in wat er terug moet komen: bij een taak is afvinken genoeg,
+ * bij een vraag wil de aanvrager een antwoord lezen.
+ *
+ * Rijen van vóór deze splitsing hebben kind NULL. Die lezen we als taak, zodat
+ * de takenlijst er niet anders uitziet dan voorheen.
+ */
+export type TaskKind = 'taak' | 'vraag'
+
+export const TASK_KINDS: TaskKind[] = ['taak', 'vraag']
+
+export const TASK_KIND_LABEL: Record<TaskKind, string> = {
+  taak: 'Taak',
+  vraag: 'Vraag',
+}
+
+export function isTaskKind(value: unknown): value is TaskKind {
+  return value === 'taak' || value === 'vraag'
+}
+
 export interface ControleClientListItem extends ClientListItem {
   lastCheckedAt: string | null
 }
@@ -159,6 +180,12 @@ export interface ControleTaskRow {
   details: string | null
   /** De ontvanger moet zich na afronding melden bij degene namens wie de taak is aangemaakt. */
   notifyOnComplete: boolean
+  /** Taak of vraag. Rijen van vóór de splitsing komen binnen als taak. */
+  kind: TaskKind
+  /** Het antwoord van de ontvanger op een vraag. Letterlijk zoals getypt. */
+  answer: string | null
+  /** Wanneer er geantwoord is. Leeg bij een vraag die zonder antwoord is afgevinkt. */
+  answeredAt: string | null
 }
 
 /**
@@ -177,7 +204,7 @@ export async function getAllTasks(
 
   let query = supabase
     .from('operator_check_tasks')
-    .select('id, client_id, description, campaign_names, is_completed, completed_at, created_at, assignee, requested_by, details, notify_on_complete')
+    .select('id, client_id, description, campaign_names, is_completed, completed_at, created_at, assignee, requested_by, details, notify_on_complete, kind, answer, answered_at')
     .order('created_at', { ascending: false })
 
   if (persona) query = query.eq('assignee', persona)
@@ -208,6 +235,9 @@ export async function getAllTasks(
     requestedBy: (t.requested_by ?? null) as TaskPerson | null,
     details: (t.details ?? null) as string | null,
     notifyOnComplete: t.notify_on_complete === true,
+    kind: t.kind === 'vraag' ? 'vraag' : 'taak',
+    answer: (t.answer ?? null) as string | null,
+    answeredAt: (t.answered_at ?? null) as string | null,
   }))
 }
 

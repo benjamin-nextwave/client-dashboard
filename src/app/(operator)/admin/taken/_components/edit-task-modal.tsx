@@ -4,10 +4,11 @@ import { useEffect, useState, useTransition } from 'react'
 import {
   type ControleTaskRow,
   type ManualTaskClientOption,
+  type TaskKind,
   type TaskPerson,
 } from '@/lib/data/controle'
 import { updateTask } from '../actions'
-import { Field, NotifyToggle, PersonPicker } from './task-form-fields'
+import { Field, KindPicker, NotifyToggle, PersonPicker } from './task-form-fields'
 
 interface Props {
   task: ControleTaskRow
@@ -17,12 +18,16 @@ interface Props {
 }
 
 export function EditTaskModal({ task, clientOptions, onClose, onSaved }: Props) {
+  const [kind, setKind] = useState<TaskKind>(task.kind)
   const [clientId, setClientId] = useState(task.clientId)
   const [assignee, setAssignee] = useState<TaskPerson | ''>(task.assignee ?? '')
   const [requestedBy, setRequestedBy] = useState<TaskPerson | ''>(task.requestedBy ?? '')
   const [description, setDescription] = useState(task.description)
   const [details, setDetails] = useState(task.details ?? '')
   const [notifyOnComplete, setNotifyOnComplete] = useState(task.notifyOnComplete)
+  const [answer, setAnswer] = useState(task.answer ?? '')
+
+  const isVraag = kind === 'vraag'
 
   const [error, setError] = useState<string | null>(null)
   const [saving, startSaving] = useTransition()
@@ -40,19 +45,21 @@ export function EditTaskModal({ task, clientOptions, onClose, onSaved }: Props) 
   function submit() {
     setError(null)
     if (!clientId) return setError('Kies een klant.')
-    if (!assignee) return setError('Kies voor wie de taak is.')
-    if (!requestedBy) return setError('Kies namens wie de taak is.')
-    if (description.trim().length === 0) return setError('Vul de taak in.')
+    if (!assignee) return setError(isVraag ? 'Kies wie moet antwoorden.' : 'Kies voor wie de taak is.')
+    if (!requestedBy) return setError(isVraag ? 'Kies wie de vraag stelt.' : 'Kies namens wie de taak is.')
+    if (description.trim().length === 0) return setError(isVraag ? 'Vul de vraag in.' : 'Vul de taak in.')
 
     startSaving(async () => {
       const result = await updateTask({
         taskId: task.id,
+        kind,
         clientId,
         assignee,
         requestedBy,
         task: description,
         details,
         notifyOnComplete,
+        answer,
       })
       if (result.error) {
         setError(result.error)
@@ -66,7 +73,9 @@ export function EditTaskModal({ task, clientOptions, onClose, onSaved }: Props) 
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-gray-900/40 p-4 backdrop-blur-sm sm:p-8">
       <div className="w-full max-w-2xl rounded-2xl border border-gray-200 bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-          <h2 className="text-lg font-semibold tracking-tight text-gray-900">Taak bewerken</h2>
+          <h2 className="text-lg font-semibold tracking-tight text-gray-900">
+            {isVraag ? 'Vraag bewerken' : 'Taak bewerken'}
+          </h2>
           <button
             type="button"
             onClick={onClose}
@@ -80,6 +89,10 @@ export function EditTaskModal({ task, clientOptions, onClose, onSaved }: Props) 
         </div>
 
         <div className="space-y-5 px-6 py-5">
+          <Field label="Soort">
+            <KindPicker value={kind} onChange={setKind} />
+          </Field>
+
           <Field label="Klant">
             <select
               value={clientId}
@@ -97,21 +110,23 @@ export function EditTaskModal({ task, clientOptions, onClose, onSaved }: Props) 
           </Field>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Voor wie">
+            <Field label={isVraag ? 'Wie antwoordt' : 'Voor wie'}>
               <PersonPicker value={assignee} onChange={setAssignee} name="voor" />
             </Field>
-            <Field label="Namens wie">
+            <Field label={isVraag ? 'Wie vraagt het' : 'Namens wie'}>
               <PersonPicker value={requestedBy} onChange={setRequestedBy} name="namens" />
             </Field>
           </div>
 
-          <NotifyToggle
-            value={notifyOnComplete}
-            onChange={setNotifyOnComplete}
-            requestedBy={requestedBy}
-          />
+          {!isVraag && (
+            <NotifyToggle
+              value={notifyOnComplete}
+              onChange={setNotifyOnComplete}
+              requestedBy={requestedBy}
+            />
+          )}
 
-          <Field label="Taak">
+          <Field label={isVraag ? 'Vraag' : 'Taak'}>
             <input
               type="text"
               value={description}
@@ -122,7 +137,7 @@ export function EditTaskModal({ task, clientOptions, onClose, onSaved }: Props) 
           </Field>
 
           <Field
-            label="Beschrijving"
+            label={isVraag ? 'Toelichting' : 'Beschrijving'}
             hint="Dit is de tekst zoals hij nu op de taak staat. Wat je hier neerzet wordt letterlijk opgeslagen — er gaat geen model meer overheen. Regels die met een streepje beginnen worden als opsomming getoond, regels zonder streepje als kopje."
           >
             <textarea
@@ -133,6 +148,24 @@ export function EditTaskModal({ task, clientOptions, onClose, onSaved }: Props) 
               className="w-full resize-y rounded-xl border border-gray-200 bg-white px-3 py-2.5 font-mono text-xs leading-relaxed text-gray-900 placeholder:text-gray-400 focus:border-indigo-400 focus:outline-none focus:ring-4 focus:ring-indigo-100"
             />
           </Field>
+
+          {/* Alleen bij een vraag, en alleen om een gegeven antwoord recht te
+              zetten. Leegmaken wist het antwoord; het vinkje in de lijst blijft
+              staan zoals het stond. */}
+          {isVraag && (
+            <Field
+              label="Antwoord"
+              hint="Het antwoord van de ontvanger. Hier bij te stellen als er een fout in staat."
+            >
+              <textarea
+                value={answer}
+                onChange={(e) => setAnswer(e.target.value)}
+                rows={4}
+                placeholder="Nog geen antwoord."
+                className="w-full resize-y rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-indigo-400 focus:outline-none focus:ring-4 focus:ring-indigo-100"
+              />
+            </Field>
+          )}
 
           {error && (
             <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700">
