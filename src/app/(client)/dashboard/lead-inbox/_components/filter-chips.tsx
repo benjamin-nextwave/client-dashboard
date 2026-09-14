@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import type { LeadWithStatus, LeadClassification } from '../_lib/types'
-import { CLASSIFICATION_LABEL } from '../_lib/labels'
+import { FOLDER_LABEL } from '../_lib/labels'
 
 const CATEGORIES: LeadClassification[] = [
   'meeting_request',
@@ -12,6 +12,7 @@ const CATEGORIES: LeadClassification[] = [
   'referral',
   'internal_review',
   'not_now_maybe_later',
+  'not_interested',
 ]
 
 export function FilterChips({ leads }: { leads: LeadWithStatus[] }) {
@@ -50,7 +51,7 @@ export function FilterChips({ leads }: { leads: LeadWithStatus[] }) {
             href={`/dashboard/lead-inbox?classification=${cat}`}
             className={chipClasses(isActive)}
           >
-            {CLASSIFICATION_LABEL[cat]} ({count})
+            {FOLDER_LABEL[cat]} ({count})
           </Link>
         )
       })}

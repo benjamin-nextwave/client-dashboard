@@ -7,7 +7,17 @@ export const CLASSIFICATION_LABEL: Record<LeadClassification, string> = {
   referral: 'Doorverwijzing',
   internal_review: 'Intern overleg',
   not_now_maybe_later: 'Niet nu, later mogelijk',
-  not_interested: 'Geen interesse',
+  not_interested: 'Kosteloze lead, mogelijk potentie',
+}
+
+/**
+ * Naam van de map in de zijbalk. Valt terug op het label, behalve waar dat
+ * label te lang is om als mapnaam te lezen: in de zijbalk staat een korte
+ * naam, op de lead zelf de volledige omschrijving.
+ */
+export const FOLDER_LABEL: Record<LeadClassification, string> = {
+  ...CLASSIFICATION_LABEL,
+  not_interested: 'Kosteloze leads',
 }
 
 /**

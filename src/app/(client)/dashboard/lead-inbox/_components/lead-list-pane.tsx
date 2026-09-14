@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useSearchParams, useSelectedLayoutSegment } from 'next/navigation'
 import { useMemo } from 'react'
 import type { LeadWithStatus, LeadClassification } from '../_lib/types'
-import { CLASSIFICATION_DOT, CLASSIFICATION_LABEL } from '../_lib/labels'
+import { CLASSIFICATION_DOT, CLASSIFICATION_LABEL, FOLDER_LABEL } from '../_lib/labels'
 import { unescapeLiteralNewlines } from '../_lib/text'
 
 function formatRelative(iso: string): string {
@@ -122,7 +122,7 @@ export function LeadListPane({
               : isTrash
               ? 'De prullenbak is leeg.'
               : activeFilter
-                ? `Geen beantwoorde leads in "${CLASSIFICATION_LABEL[activeFilter]}".`
+                ? `Geen beantwoorde leads in "${FOLDER_LABEL[activeFilter]}".`
                 : 'Geen leads die op antwoord wachten. Mooi opgeruimd.'}
           </p>
         </div>

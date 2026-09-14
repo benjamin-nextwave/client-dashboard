@@ -3,9 +3,10 @@
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import type { LeadWithStatus, LeadClassification } from '../_lib/types'
-import { CLASSIFICATION_DOT, CLASSIFICATION_LABEL } from '../_lib/labels'
+import { CLASSIFICATION_DOT, FOLDER_LABEL } from '../_lib/labels'
 
-// "not_interested" wordt bewust niet als filter getoond.
+// Kosteloze leads staan onderaan: het zijn er veel en ze zijn het minst
+// dringend, maar ze moeten wél terug te vinden zijn zodra erop geantwoord is.
 const CATEGORIES: LeadClassification[] = [
   'meeting_request',
   'phone_request',
@@ -13,6 +14,7 @@ const CATEGORIES: LeadClassification[] = [
   'referral',
   'internal_review',
   'not_now_maybe_later',
+  'not_interested',
 ]
 
 export function FilterSidebar({ leads }: { leads: LeadWithStatus[] }) {
@@ -81,7 +83,7 @@ export function FilterSidebar({ leads }: { leads: LeadWithStatus[] }) {
                 style={{ background: CLASSIFICATION_DOT[cat] }}
                 aria-hidden
               />
-              <span className="truncate">{CLASSIFICATION_LABEL[cat]}</span>
+              <span className="truncate">{FOLDER_LABEL[cat]}</span>
             </span>
             <span className={countClasses(isActive)}>
               {folderCounts[cat]}
