@@ -1,0 +1,22 @@
+-- =============================================================================
+-- kix_taken_view: soort, antwoord en antwoordmoment voor het Kix-dashboard
+-- =============================================================================
+-- Deze view is ooit met de hand in de SQL-editor gemaakt en stond niet in de
+-- migraties. De definitie hieronder is die van 15 sep 2026, uitgelezen met
+-- pg_get_viewdef, met drie kolommen achteraan erbij.
+--
+-- CREATE OR REPLACE VIEW mag alleen kolommen achteraan toevoegen; de bestaande
+-- dertien blijven letterlijk gelijk, dus het Kix-dashboard merkt niets tot het
+-- de nieuwe kolommen gaat lezen.
+--
+--   task_type    'taak' | 'vraag' | 'mededeling' voor handmatige regels van de
+--                takenpagina (NULL in operator_check_tasks leest als 'taak').
+--                NULL voor de gegenereerde loopgang-taken.
+--   answer       het antwoord op een vraag, anders NULL.
+--   answered_at  wanneer er geantwoord is, anders NULL.
+--
+-- Bewust op een regel: de SQL-editor van Supabase knipt meerregelige
+-- statements op de verkeerde plek af.
+-- =============================================================================
+
+CREATE OR REPLACE VIEW public.kix_taken_view AS SELECT t.id, t.kind, t.label, t.detail, t.due_date, t.status, t.reminder_count, t.sent_dates, t.kix_note, t.meeting_date, t.completed_at, c.company_name AS klant, t.created_at, NULL::text AS task_type, NULL::text AS answer, NULL::timestamptz AS answered_at FROM loopgang_kix_tasks t LEFT JOIN clients c ON c.id = t.client_id UNION ALL SELECT o.id, 'handmatig'::text AS kind, o.description AS label, o.details AS detail, NULL::date AS due_date, CASE WHEN o.is_completed THEN 'done'::text ELSE 'open'::text END AS status, 1 AS reminder_count, '[]'::jsonb AS sent_dates, NULL::text AS kix_note, NULL::date AS meeting_date, o.completed_at, c2.company_name AS klant, o.created_at, COALESCE(o.kind, 'taak') AS task_type, o.answer, o.answered_at FROM operator_check_tasks o LEFT JOIN clients c2 ON c2.id = o.client_id WHERE o.assignee = 'kix'::text;
