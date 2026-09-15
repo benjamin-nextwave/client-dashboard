@@ -81,10 +81,64 @@ export function NotifyToggle({
   )
 }
 
+/** De teksten in het formulier die per soort anders zijn. */
+export const KIND_FORM_COPY: Record<
+  TaskKind,
+  {
+    newTitle: string
+    editTitle: string
+    assigneeLabel: string
+    requestedByLabel: string
+    lineLabel: string
+    linePlaceholder: string
+    submit: string
+    missingAssignee: string
+    missingRequestedBy: string
+    missingLine: string
+  }
+> = {
+  taak: {
+    newTitle: 'Nieuwe taak',
+    editTitle: 'Taak bewerken',
+    assigneeLabel: 'Voor wie',
+    requestedByLabel: 'Namens wie',
+    lineLabel: 'Taak',
+    linePlaceholder: 'Bijv. Campagne pauzeren en klant informeren',
+    submit: 'Taak aanmaken',
+    missingAssignee: 'Kies voor wie de taak is.',
+    missingRequestedBy: 'Kies namens wie de taak is.',
+    missingLine: 'Vul de taak in.',
+  },
+  vraag: {
+    newTitle: 'Nieuwe vraag',
+    editTitle: 'Vraag bewerken',
+    assigneeLabel: 'Wie antwoordt',
+    requestedByLabel: 'Wie vraagt het',
+    lineLabel: 'Vraag',
+    linePlaceholder: 'Bijv. Mag deze klant een tweede campagne erbij?',
+    submit: 'Vraag stellen',
+    missingAssignee: 'Kies wie moet antwoorden.',
+    missingRequestedBy: 'Kies wie de vraag stelt.',
+    missingLine: 'Vul de vraag in.',
+  },
+  mededeling: {
+    newTitle: 'Nieuwe mededeling',
+    editTitle: 'Mededeling bewerken',
+    assigneeLabel: 'Aan wie',
+    requestedByLabel: 'Van wie',
+    lineLabel: 'Mededeling',
+    linePlaceholder: 'Bijv. Klant is vanaf maandag twee weken op vakantie',
+    submit: 'Mededeling versturen',
+    missingAssignee: 'Kies aan wie de mededeling is.',
+    missingRequestedBy: 'Kies van wie de mededeling komt.',
+    missingLine: 'Vul de mededeling in.',
+  },
+}
+
 /**
- * Taak of vraag. Staat bovenaan het formulier omdat het de rest stuurt: bij een
- * vraag heten de velden anders, gaat de toelichting niet door het model en
- * vervalt de meldknop.
+ * Taak, vraag of mededeling. Staat bovenaan het formulier omdat het de rest
+ * stuurt: bij een vraag of mededeling heten de velden anders, gaat de
+ * toelichting niet door het model en vervalt de meldknop.
  */
 export function KindPicker({
   value,
@@ -96,10 +150,11 @@ export function KindPicker({
   const options: { kind: TaskKind; label: string; hint: string }[] = [
     { kind: 'taak', label: 'Taak', hint: 'Iets dat gedaan moet worden' },
     { kind: 'vraag', label: 'Vraag', hint: 'Je wilt een antwoord terug' },
+    { kind: 'mededeling', label: 'Mededeling', hint: 'Ter informatie, niets te doen' },
   ]
 
   return (
-    <div className="grid grid-cols-2 gap-2">
+    <div className="grid grid-cols-3 gap-2">
       {options.map((o) => {
         const active = value === o.kind
         return (

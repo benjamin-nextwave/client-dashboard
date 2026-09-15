@@ -45,6 +45,13 @@ const PERSON_CHIP: Record<TaskPerson, string> = {
   kix: 'bg-fuchsia-50 text-fuchsia-700 ring-fuchsia-200',
 }
 
+const KIND_FILTER_LABEL: Record<TaskKind | 'alles', string> = {
+  alles: 'Alles',
+  taak: 'Taken',
+  vraag: 'Vragen',
+  mededeling: 'Mededelingen',
+}
+
 interface Props {
   tasks: ControleTaskRow[]
   clientOptions: ManualTaskClientOption[]
@@ -103,6 +110,11 @@ export function TaskBoard({ tasks, clientOptions }: Props) {
 
   const openCount = tasks.filter((t) => !t.isCompleted).length
   const openQuestionCount = tasks.filter((t) => !t.isCompleted && t.kind === 'vraag').length
+  const openNoticeCount = tasks.filter((t) => !t.isCompleted && t.kind === 'mededeling').length
+  const openBreakdown = [
+    openQuestionCount > 0 ? `${openQuestionCount} ${openQuestionCount === 1 ? 'vraag' : 'vragen'}` : null,
+    openNoticeCount > 0 ? `${openNoticeCount} ${openNoticeCount === 1 ? 'mededeling' : 'mededelingen'}` : null,
+  ].filter((part): part is string => part !== null)
 
   const handleToggle = (taskId: string, currentlyCompleted: boolean) => {
     setPendingIds((prev) => new Set(prev).add(taskId))
@@ -143,9 +155,7 @@ export function TaskBoard({ tasks, clientOptions }: Props) {
             {openCount === 0
               ? 'Alles afgerond.'
               : `${openCount} open ${openCount === 1 ? 'punt' : 'punten'} van iedereen bij elkaar${
-                  openQuestionCount > 0
-                    ? `, waarvan ${openQuestionCount} ${openQuestionCount === 1 ? 'vraag' : 'vragen'}`
-                    : ''
+                  openBreakdown.length > 0 ? `, waarvan ${openBreakdown.join(' en ')}` : ''
                 }.`}
           </p>
         </div>
@@ -157,7 +167,7 @@ export function TaskBoard({ tasks, clientOptions }: Props) {
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
           </svg>
-          Nieuwe taak of vraag
+          Nieuwe taak, vraag of mededeling
         </button>
       </div>
 
@@ -219,7 +229,7 @@ export function TaskBoard({ tasks, clientOptions }: Props) {
           </button>
 
           <div className="inline-flex rounded-xl border border-gray-200 bg-gray-50 p-1">
-            {(['alles', 'taak', 'vraag'] as const).map((k) => (
+            {(['alles', 'taak', 'vraag', 'mededeling'] as const).map((k) => (
               <button
                 key={k}
                 type="button"
@@ -228,7 +238,7 @@ export function TaskBoard({ tasks, clientOptions }: Props) {
                   kindFilter === k ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'
                 }`}
               >
-                {k === 'alles' ? 'Alles' : k === 'taak' ? 'Taken' : 'Vragen'}
+                {KIND_FILTER_LABEL[k]}
               </button>
             ))}
           </div>
@@ -259,12 +269,14 @@ export function TaskBoard({ tasks, clientOptions }: Props) {
           </div>
           <p className="mt-4 text-sm font-semibold text-gray-900">
             {tasks.length === 0
-              ? 'Nog geen taken of vragen'
+              ? 'Nog geen taken, vragen of mededelingen'
               : filter === 'done'
                 ? 'Nog niets afgerond'
                 : kindFilter === 'vraag'
                   ? 'Geen vragen gevonden'
-                  : 'Geen taken gevonden'}
+                  : kindFilter === 'mededeling'
+                    ? 'Geen mededelingen gevonden'
+                    : 'Geen taken gevonden'}
           </p>
           <p className="mt-1 max-w-sm text-xs text-gray-500">
             {tasks.length === 0
@@ -525,6 +537,9 @@ function TaskRow({
   onEdit: () => void
 }) {
   const isVraag = task.kind === 'vraag'
+  // Bij een mededeling betekent het vinkje "gelezen", niet "gedaan".
+  const isMededeling = task.kind === 'mededeling'
+  const noun = isVraag ? 'Vraag' : isMededeling ? 'Mededeling' : 'Taak'
 
   return (
     <li className={`flex items-start gap-3 px-5 py-3 transition-colors ${task.isCompleted ? 'bg-gray-50/40' : ''}`}>
@@ -532,7 +547,11 @@ function TaskRow({
         type="button"
         onClick={onToggle}
         disabled={isPending}
-        aria-label={task.isCompleted ? 'Markeer als open' : 'Markeer als afgerond'}
+        aria-label={
+          task.isCompleted
+            ? isMededeling ? 'Markeer als ongelezen' : 'Markeer als open'
+            : isMededeling ? 'Markeer als gelezen' : 'Markeer als afgerond'
+        }
         className={`mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md border-2 transition-all ${
           task.isCompleted ? 'border-emerald-500 bg-emerald-500' : 'border-gray-300 bg-white hover:border-indigo-500'
         } ${isPending ? 'opacity-50' : ''}`}
@@ -559,6 +578,21 @@ function TaskRow({
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z" />
               </svg>
               Vraag
+            </span>
+          )}
+          {isMededeling && (
+            <span
+              className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ring-1 ${
+                task.isCompleted
+                  ? 'bg-gray-100 text-gray-400 ring-gray-200'
+                  : 'bg-orange-50 text-orange-700 ring-orange-200'
+              }`}
+              title="Ter informatie — hier hoeft niets mee te gebeuren"
+            >
+              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" strokeWidth={2.4} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 1 1 0-9h.75c.704 0 1.402-.03 2.09-.09m0 9.18c.253.962.584 1.892.985 2.783.247.55.06 1.21-.463 1.511l-.657.38c-.551.318-1.26.117-1.527-.461a20.845 20.845 0 0 1-1.44-4.282m3.102.069a18.03 18.03 0 0 1-.59-4.59c0-1.586.205-3.124.59-4.59m0 9.18a23.848 23.848 0 0 1 8.835 2.535M10.34 6.66a23.847 23.847 0 0 0 8.835-2.535m0 0A23.74 23.74 0 0 0 18.795 3m.38 1.125a23.91 23.91 0 0 1 1.014 5.395m-1.014 8.855c-.118.38-.245.754-.38 1.125m.38-1.125a23.91 23.91 0 0 0 1.014-5.395m0-3.46c.495.413.811 1.035.811 1.73 0 .695-.316 1.317-.811 1.73m0-3.46a24.347 24.347 0 0 1 0 3.46" />
+              </svg>
+              Mededeling
             </span>
           )}
           {task.assignee && (
@@ -601,7 +635,7 @@ function TaskRow({
         <div
           className={`whitespace-pre-wrap text-sm transition-colors ${
             task.isCompleted
-              ? isVraag
+              ? isVraag || isMededeling
                 ? 'text-gray-500'
                 : 'text-gray-400 line-through'
               : 'text-gray-900'
@@ -618,6 +652,22 @@ function TaskRow({
 
         {isVraag && (
           <AnswerBlock task={task} isPending={isPending} onAnswer={onAnswer} />
+        )}
+
+        {/* Het vinkje links doet hetzelfde, maar bij een bericht zoek je eerder
+            naar een knop dan naar een afvinkvakje. */}
+        {isMededeling && !task.isCompleted && (
+          <button
+            type="button"
+            onClick={onToggle}
+            disabled={isPending}
+            className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-orange-200 bg-orange-50 px-3 py-1.5 text-[11px] font-bold text-orange-700 transition-colors hover:border-orange-300 hover:bg-orange-100 disabled:opacity-50"
+          >
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.4} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+            </svg>
+            Gelezen
+          </button>
         )}
 
         {task.campaignNames.length > 0 && (
@@ -643,7 +693,8 @@ function TaskRow({
             <>
               {!isFutureTask(task.createdAt) && <span className="text-gray-300">•</span>}
               <span className="text-emerald-600">
-                {isVraag && task.answeredAt ? 'Beantwoord' : 'Afgerond'} {formatTime(task.completedAt)}
+                {isVraag && task.answeredAt ? 'Beantwoord' : isMededeling ? 'Gelezen' : 'Afgerond'}{' '}
+                {formatTime(task.completedAt)}
               </span>
             </>
           )}
@@ -655,7 +706,7 @@ function TaskRow({
           type="button"
           onClick={onEdit}
           disabled={isPending}
-          title={isVraag ? 'Vraag bewerken' : 'Taak bewerken'}
+          title={`${noun} bewerken`}
           className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold text-gray-400 transition-colors hover:bg-indigo-50 hover:text-indigo-700 disabled:opacity-50"
         >
           <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
@@ -668,7 +719,7 @@ function TaskRow({
           type="button"
           onClick={onDelete}
           disabled={isPending}
-          aria-label={isVraag ? 'Vraag verwijderen' : 'Taak verwijderen'}
+          aria-label={`${noun} verwijderen`}
           className="flex h-7 w-7 items-center justify-center rounded-md text-gray-300 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">

@@ -16,7 +16,7 @@ import { cleanupTaskDescription } from '@/lib/taken/beschrijving'
 
 export interface AddTaskInput {
   clientId: string
-  /** Taak of vraag. Bepaalt of de toelichting door het model gaat. */
+  /** Taak, vraag of mededeling. Bepaalt of de toelichting door het model gaat. */
   kind: TaskKind
   /** Voor wie de taak is. */
   assignee: TaskPerson
@@ -47,7 +47,7 @@ export async function addTask(input: AddTaskInput): Promise<AddTaskResult> {
   const task = input.task.trim()
   if (task.length === 0) return { error: 'Beschrijf eerst de taak.' }
   if (!input.clientId) return { error: 'Kies eerst een klant.' }
-  if (!isTaskKind(input.kind)) return { error: 'Kies of dit een taak of een vraag is.' }
+  if (!isTaskKind(input.kind)) return { error: 'Kies of dit een taak, vraag of mededeling is.' }
   if (!isTaskPerson(input.assignee)) return { error: 'Kies voor wie de taak is.' }
   if (!isTaskPerson(input.requestedBy)) return { error: 'Kies namens wie de taak is.' }
 
@@ -56,9 +56,9 @@ export async function addTask(input: AddTaskInput): Promise<AddTaskResult> {
   if (raw.length > 0) {
     // Alleen bij een taak gaat de toelichting door het model. Dat model splitst
     // de tekst in taken en mededelingen, en dat onderscheid slaat bij een vraag
-    // nergens op: daar is de toelichting context bij de vraag. Die wordt dus
-    // bewaard zoals hij is getypt.
-    if (input.kind === 'vraag') {
+    // of mededeling nergens op: daar is de toelichting het bericht zelf. Die
+    // wordt dus bewaard zoals hij is getypt.
+    if (input.kind !== 'taak') {
       details = raw
     } else {
       const cleaned = await cleanupTaskDescription(raw, {
@@ -79,8 +79,9 @@ export async function addTask(input: AddTaskInput): Promise<AddTaskResult> {
     assignee: input.assignee,
     requested_by: input.requestedBy,
     details,
-    // Een vraag is beantwoord of niet; een los berichtje erbij zou dubbelop zijn.
-    notify_on_complete: input.kind === 'vraag' ? false : input.notifyOnComplete === true,
+    // Een vraag is beantwoord of niet, en een mededeling valt niets af te
+    // ronden; een los berichtje erbij zou in beide gevallen dubbelop zijn.
+    notify_on_complete: input.kind === 'taak' ? input.notifyOnComplete === true : false,
     kind: input.kind,
   })
 
@@ -119,7 +120,7 @@ export async function updateTask(input: UpdateTaskInput): Promise<{ error?: stri
   if (!input.taskId) return { error: 'Onbekende taak.' }
   if (task.length === 0) return { error: 'Beschrijf eerst de taak.' }
   if (!input.clientId) return { error: 'Kies eerst een klant.' }
-  if (!isTaskKind(input.kind)) return { error: 'Kies of dit een taak of een vraag is.' }
+  if (!isTaskKind(input.kind)) return { error: 'Kies of dit een taak, vraag of mededeling is.' }
   if (!isTaskPerson(input.assignee)) return { error: 'Kies voor wie de taak is.' }
   if (!isTaskPerson(input.requestedBy)) return { error: 'Kies namens wie de taak is.' }
 
@@ -135,7 +136,7 @@ export async function updateTask(input: UpdateTaskInput): Promise<{ error?: stri
       assignee: input.assignee,
       requested_by: input.requestedBy,
       details: details.length > 0 ? details : null,
-      notify_on_complete: input.kind === 'vraag' ? false : input.notifyOnComplete === true,
+      notify_on_complete: input.kind === 'taak' ? input.notifyOnComplete === true : false,
       kind: input.kind,
       answer: answer.length > 0 ? answer : null,
       // Een gewiste of nooit gegeven antwoordtekst laat geen antwoordmoment na.

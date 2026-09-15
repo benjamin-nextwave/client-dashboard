@@ -25,24 +25,27 @@ export function isTaskPerson(value: unknown): value is TaskPerson {
 }
 
 /**
- * Een regel op de takenpagina is een taak of een vraag. Het verschil zit niet
- * in het werk maar in wat er terug moet komen: bij een taak is afvinken genoeg,
- * bij een vraag wil de aanvrager een antwoord lezen.
+ * Een regel op de takenpagina is een taak, een vraag of een mededeling. Het
+ * verschil zit niet in het werk maar in wat er terug moet komen: bij een taak
+ * is afvinken genoeg, bij een vraag wil de aanvrager een antwoord lezen, en bij
+ * een mededeling hoeft er niets te gebeuren behalve dat de ontvanger hem leest.
+ * Afvinken betekent daar "gelezen".
  *
  * Rijen van vóór deze splitsing hebben kind NULL. Die lezen we als taak, zodat
  * de takenlijst er niet anders uitziet dan voorheen.
  */
-export type TaskKind = 'taak' | 'vraag'
+export type TaskKind = 'taak' | 'vraag' | 'mededeling'
 
-export const TASK_KINDS: TaskKind[] = ['taak', 'vraag']
+export const TASK_KINDS: TaskKind[] = ['taak', 'vraag', 'mededeling']
 
 export const TASK_KIND_LABEL: Record<TaskKind, string> = {
   taak: 'Taak',
   vraag: 'Vraag',
+  mededeling: 'Mededeling',
 }
 
 export function isTaskKind(value: unknown): value is TaskKind {
-  return value === 'taak' || value === 'vraag'
+  return typeof value === 'string' && (TASK_KINDS as string[]).includes(value)
 }
 
 export interface ControleClientListItem extends ClientListItem {
@@ -180,7 +183,7 @@ export interface ControleTaskRow {
   details: string | null
   /** De ontvanger moet zich na afronding melden bij degene namens wie de taak is aangemaakt. */
   notifyOnComplete: boolean
-  /** Taak of vraag. Rijen van vóór de splitsing komen binnen als taak. */
+  /** Taak, vraag of mededeling. Rijen van vóór de splitsing komen binnen als taak. */
   kind: TaskKind
   /** Het antwoord van de ontvanger op een vraag. Letterlijk zoals getypt. */
   answer: string | null
@@ -235,7 +238,7 @@ export async function getAllTasks(
     requestedBy: (t.requested_by ?? null) as TaskPerson | null,
     details: (t.details ?? null) as string | null,
     notifyOnComplete: t.notify_on_complete === true,
-    kind: t.kind === 'vraag' ? 'vraag' : 'taak',
+    kind: isTaskKind(t.kind) ? t.kind : 'taak',
     answer: (t.answer ?? null) as string | null,
     answeredAt: (t.answered_at ?? null) as string | null,
   }))

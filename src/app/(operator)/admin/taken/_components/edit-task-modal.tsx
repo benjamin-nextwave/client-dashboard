@@ -8,7 +8,7 @@ import {
   type TaskPerson,
 } from '@/lib/data/controle'
 import { updateTask } from '../actions'
-import { Field, KindPicker, NotifyToggle, PersonPicker } from './task-form-fields'
+import { Field, KIND_FORM_COPY, KindPicker, NotifyToggle, PersonPicker } from './task-form-fields'
 
 interface Props {
   task: ControleTaskRow
@@ -28,6 +28,7 @@ export function EditTaskModal({ task, clientOptions, onClose, onSaved }: Props) 
   const [answer, setAnswer] = useState(task.answer ?? '')
 
   const isVraag = kind === 'vraag'
+  const copy = KIND_FORM_COPY[kind]
 
   const [error, setError] = useState<string | null>(null)
   const [saving, startSaving] = useTransition()
@@ -45,9 +46,9 @@ export function EditTaskModal({ task, clientOptions, onClose, onSaved }: Props) 
   function submit() {
     setError(null)
     if (!clientId) return setError('Kies een klant.')
-    if (!assignee) return setError(isVraag ? 'Kies wie moet antwoorden.' : 'Kies voor wie de taak is.')
-    if (!requestedBy) return setError(isVraag ? 'Kies wie de vraag stelt.' : 'Kies namens wie de taak is.')
-    if (description.trim().length === 0) return setError(isVraag ? 'Vul de vraag in.' : 'Vul de taak in.')
+    if (!assignee) return setError(copy.missingAssignee)
+    if (!requestedBy) return setError(copy.missingRequestedBy)
+    if (description.trim().length === 0) return setError(copy.missingLine)
 
     startSaving(async () => {
       const result = await updateTask({
@@ -74,7 +75,7 @@ export function EditTaskModal({ task, clientOptions, onClose, onSaved }: Props) 
       <div className="w-full max-w-2xl rounded-2xl border border-gray-200 bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
           <h2 className="text-lg font-semibold tracking-tight text-gray-900">
-            {isVraag ? 'Vraag bewerken' : 'Taak bewerken'}
+            {copy.editTitle}
           </h2>
           <button
             type="button"
@@ -110,15 +111,15 @@ export function EditTaskModal({ task, clientOptions, onClose, onSaved }: Props) 
           </Field>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label={isVraag ? 'Wie antwoordt' : 'Voor wie'}>
+            <Field label={copy.assigneeLabel}>
               <PersonPicker value={assignee} onChange={setAssignee} name="voor" />
             </Field>
-            <Field label={isVraag ? 'Wie vraagt het' : 'Namens wie'}>
+            <Field label={copy.requestedByLabel}>
               <PersonPicker value={requestedBy} onChange={setRequestedBy} name="namens" />
             </Field>
           </div>
 
-          {!isVraag && (
+          {kind === 'taak' && (
             <NotifyToggle
               value={notifyOnComplete}
               onChange={setNotifyOnComplete}
@@ -126,19 +127,19 @@ export function EditTaskModal({ task, clientOptions, onClose, onSaved }: Props) 
             />
           )}
 
-          <Field label={isVraag ? 'Vraag' : 'Taak'}>
+          <Field label={copy.lineLabel}>
             <input
               type="text"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Bijv. Campagne pauzeren en klant informeren"
+              placeholder={copy.linePlaceholder}
               className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-indigo-400 focus:outline-none focus:ring-4 focus:ring-indigo-100"
             />
           </Field>
 
           <Field
-            label={isVraag ? 'Toelichting' : 'Beschrijving'}
-            hint="Dit is de tekst zoals hij nu op de taak staat. Wat je hier neerzet wordt letterlijk opgeslagen — er gaat geen model meer overheen. Regels die met een streepje beginnen worden als opsomming getoond, regels zonder streepje als kopje."
+            label={kind === 'taak' ? 'Beschrijving' : 'Toelichting'}
+            hint="Dit is de tekst zoals hij nu op de regel staat. Wat je hier neerzet wordt letterlijk opgeslagen — er gaat geen model meer overheen. Regels die met een streepje beginnen worden als opsomming getoond, regels zonder streepje als kopje."
           >
             <textarea
               value={details}
