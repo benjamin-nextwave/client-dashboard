@@ -1,5 +1,6 @@
 'use client'
 
+import { Fragment, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useT } from '@/lib/i18n/client'
@@ -26,6 +27,8 @@ export function OperatorHeader({ signOutAction }: OperatorHeaderProps) {
     // en hoort bij de tab Klanten.
     { href: '/admin/loopgang', label: 'Loopgang', match: (p: string) => p === '/admin/loopgang' },
     { href: '/admin/commissies', label: 'Commissies', match: (p: string) => p.startsWith('/admin/commissies') },
+    // Financieel is geen losse pagina maar een uitklapmenu; het zit hierna in de
+    // balk en staat daarom niet in deze lijst.
     { href: '/admin/overzicht', label: 'Overzicht', match: (p: string) => p.startsWith('/admin/overzicht') },
     { href: '/admin/news', label: t('operator.nav.news'), match: (p: string) => p.startsWith('/admin/news') },
     { href: '/admin/errors', label: 'Fouten', match: (p: string) => p.startsWith('/admin/errors') },
@@ -46,17 +49,19 @@ export function OperatorHeader({ signOutAction }: OperatorHeaderProps) {
           {NAV.map((item) => {
             const active = item.match(pathname)
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all ${
-                  active
-                    ? 'bg-white text-gray-900 shadow-sm ring-1 ring-gray-900/5'
-                    : 'text-gray-500 hover:text-gray-900'
-                }`}
-              >
-                {item.label}
-              </Link>
+              <Fragment key={item.href}>
+                <Link
+                  href={item.href}
+                  className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all ${
+                    active
+                      ? 'bg-white text-gray-900 shadow-sm ring-1 ring-gray-900/5'
+                      : 'text-gray-500 hover:text-gray-900'
+                  }`}
+                >
+                  {item.label}
+                </Link>
+                {item.href === '/admin/commissies' && <FinancieelMenu pathname={pathname} />}
+              </Fragment>
             )
           })}
         </nav>
@@ -89,5 +94,86 @@ export function OperatorHeader({ signOutAction }: OperatorHeaderProps) {
         </div>
       </div>
     </header>
+  )
+}
+
+const FINANCIEEL = [
+  { href: '/admin/financieel/facturen', label: 'Facturen' },
+  { href: '/admin/financieel/uitgaves', label: 'Uitgaves' },
+]
+
+/**
+ * Facturen en uitgaves zijn allebei geldpagina's zonder eigen plek in de balk.
+ * Ze krijgen daarom één knop met een uitklapmenu, zodat de balk niet twee tabs
+ * langer wordt voor iets wat je een paar keer per maand opent.
+ */
+function FinancieelMenu({ pathname }: { pathname: string }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const active = pathname.startsWith('/admin/financieel')
+
+  // Zonder dit blijft het menu openstaan zodra je ergens anders klikt.
+  useEffect(() => {
+    if (!open) return
+    function onPointerDown(event: MouseEvent) {
+      if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onPointerDown)
+    return () => document.removeEventListener('mousedown', onPointerDown)
+  }, [open])
+
+  // Na een navigatie hoort het menu dicht te zijn.
+  useEffect(() => {
+    setOpen(false)
+  }, [pathname])
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className={`flex items-center gap-1 rounded-full px-4 py-1.5 text-xs font-semibold transition-all ${
+          active || open
+            ? 'bg-white text-gray-900 shadow-sm ring-1 ring-gray-900/5'
+            : 'text-gray-500 hover:text-gray-900'
+        }`}
+      >
+        Financieel
+        <svg
+          className={`h-3 w-3 transition-transform ${open ? 'rotate-180' : ''}`}
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={2.5}
+          stroke="currentColor"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+        </svg>
+      </button>
+
+      {open && (
+        <div
+          role="menu"
+          className="absolute left-1/2 top-full z-50 mt-2 w-40 -translate-x-1/2 overflow-hidden rounded-xl border border-gray-200 bg-white p-1 shadow-lg"
+        >
+          {FINANCIEEL.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              role="menuitem"
+              onClick={() => setOpen(false)}
+              className={`block rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${
+                pathname.startsWith(item.href)
+                  ? 'bg-gray-100 text-gray-900'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+              }`}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
