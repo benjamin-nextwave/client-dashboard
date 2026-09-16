@@ -62,17 +62,10 @@ export const campaignFormSchema = z
       .trim()
       .email('Ongeldig e-mailadres')
       .nullable(),
+    // De domeinvraag staat niet meer in het formulier. De velden blijven in het
+    // schema staan zodat eerder ingediende antwoorden leesbaar blijven.
     domainsChoice: z.enum(['user', 'nextwave']).nullable(),
     domainsText: z.string().trim().nullable(),
-  })
-  .superRefine((val, ctx) => {
-    if (val.domainsChoice === 'user' && (!val.domainsText || val.domainsText.length === 0)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['domainsText'],
-        message: 'Geef domeinsuggesties op, kies NextWave, of sla over',
-      })
-    }
   })
 
 export type CampaignFormValues = z.infer<typeof campaignFormSchema>
@@ -91,7 +84,6 @@ export const SKIPPABLE_FIELDS = [
   'examples',
   'comments',
   'positiveReplyEmail',
-  'domains',
 ] as const
 
 export type SkippableField = (typeof SKIPPABLE_FIELDS)[number]

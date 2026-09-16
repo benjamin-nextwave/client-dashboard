@@ -142,22 +142,24 @@ export function SubmissionsViewer({ submissions, fallbackCompanyName }: Props) {
       <Answer number={11} title="Opmerkingen of aanvullingen" value={activeData.comments} multiline />
       <Answer number={12} title="E-mailadres voor positieve reacties" value={activeData.positiveReplyEmail} />
 
-      <Answer number={13} title="Domeinen voor mailboxen">
-        {activeData.domainsChoice === null ? (
-          <SkippedLabel />
-        ) : activeData.domainsChoice === 'nextwave' ? (
-          <div className="inline-flex items-center gap-2 rounded-lg bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700 ring-1 ring-indigo-100">
-            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-            </svg>
-            NextWave kiest de domeinen
-          </div>
-        ) : (
-          <pre className="whitespace-pre-wrap font-sans text-sm text-gray-800">
-            {activeData.domainsText || '—'}
-          </pre>
-        )}
-      </Answer>
+      {/* De domeinvraag is uit het formulier gehaald; alleen inzendingen van
+          vóór die wijziging hebben hier nog een antwoord. */}
+      {activeData.domainsChoice !== null && (
+        <Answer number={13} title="Domeinen voor mailboxen">
+          {activeData.domainsChoice === 'nextwave' ? (
+            <div className="inline-flex items-center gap-2 rounded-lg bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700 ring-1 ring-indigo-100">
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+              </svg>
+              NextWave kiest de domeinen
+            </div>
+          ) : (
+            <pre className="whitespace-pre-wrap font-sans text-sm text-gray-800">
+              {activeData.domainsText || '—'}
+            </pre>
+          )}
+        </Answer>
+      )}
     </div>
   )
 }

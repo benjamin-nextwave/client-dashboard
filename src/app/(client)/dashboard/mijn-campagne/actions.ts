@@ -1004,16 +1004,6 @@ export async function submitCampaignForm(
     companySizes = formData.getAll('companySizes').map((s) => String(s)) as CampaignFormValues['companySizes']
   }
 
-  // Domains — single skip flag covers both choice and text
-  let domainsChoice: CampaignFormValues['domainsChoice'] = null
-  let domainsText: CampaignFormValues['domainsText'] = null
-  if (!isSkipped('domains')) {
-    domainsChoice = (formData.get('domainsChoice') === 'nextwave' ? 'nextwave' : 'user') as
-      | 'user'
-      | 'nextwave'
-    domainsText = String(formData.get('domainsText') ?? '').trim()
-  }
-
   const raw: Partial<CampaignFormValues> = {
     companyName: textOrNull('companyName'),
     senderName: textOrNull('senderName'),
@@ -1027,8 +1017,10 @@ export async function submitCampaignForm(
     examples: textOrNull('examples'),
     comments: textOrNull('comments'),
     positiveReplyEmail: textOrNull('positiveReplyEmail'),
-    domainsChoice,
-    domainsText,
+    // De domeinvraag staat niet meer in het formulier; de velden blijven bestaan
+    // zodat oude inzendingen en de webhook-structuur intact blijven.
+    domainsChoice: null,
+    domainsText: null,
   }
 
   const parsed = campaignFormSchema.safeParse(raw)
@@ -1088,10 +1080,8 @@ export async function submitCampaignForm(
       examples: answers.examples,
       comments: answers.comments,
       positiveReplyEmail: answers.positiveReplyEmail,
-      domains:
-        answers.domainsChoice === null
-          ? null
-          : { choice: answers.domainsChoice, text: answers.domainsText },
+      // Sleutel blijft staan zodat de Make-scenario's hun mapping houden.
+      domains: null,
     },
     skipped_fields: Object.entries({
       companyName: answers.companyName,
@@ -1106,7 +1096,6 @@ export async function submitCampaignForm(
       examples: answers.examples,
       comments: answers.comments,
       positiveReplyEmail: answers.positiveReplyEmail,
-      domains: answers.domainsChoice,
     })
       .filter(([, v]) => v === null)
       .map(([k]) => k),

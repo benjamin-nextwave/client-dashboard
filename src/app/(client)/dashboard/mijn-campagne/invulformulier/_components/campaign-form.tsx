@@ -44,7 +44,6 @@ interface FormDraft {
   sectors: string[]
   locations: LocationEntry[]
   sizes: string[]
-  domainsChoice: 'user' | 'nextwave'
 }
 
 /**
@@ -52,7 +51,7 @@ interface FormDraft {
  * worden apart bewaard, dus uit de FormData-ronde gelaten om te voorkomen dat
  * er twee bronnen voor dezelfde waarde ontstaan.
  */
-const STATE_DRIVEN_FIELDS = new Set(['sectors', 'locations', 'companySizes', 'domainsChoice'])
+const STATE_DRIVEN_FIELDS = new Set(['sectors', 'locations', 'companySizes'])
 
 type FormState = {
   fieldErrors?: Record<string, string>
@@ -79,7 +78,6 @@ type SkipName =
   | 'examples'
   | 'comments'
   | 'positiveReplyEmail'
-  | 'domains'
 
 export function CampaignForm({ action, companyName }: Props) {
   const router = useRouter()
@@ -133,8 +131,6 @@ export function CampaignForm({ action, companyName }: Props) {
   const toggleSize = (size: string) =>
     setSizes((prev) => (prev.includes(size) ? prev.filter((s) => s !== size) : [...prev, size]))
 
-  const [domainsChoice, setDomainsChoice] = useState<'user' | 'nextwave'>('user')
-
   const formRef = useRef<HTMLFormElement>(null)
   // Pas bewaren nadat een eventueel bestaand concept is teruggezet; anders
   // overschrijft de eerste render het concept met lege velden.
@@ -168,9 +164,6 @@ export function CampaignForm({ action, companyName }: Props) {
         if (Array.isArray(draft.sectors) && draft.sectors.length > 0) setSectors(draft.sectors)
         if (Array.isArray(draft.locations) && draft.locations.length > 0) setLocations(draft.locations)
         if (Array.isArray(draft.sizes)) setSizes(draft.sizes)
-        if (draft.domainsChoice === 'user' || draft.domainsChoice === 'nextwave') {
-          setDomainsChoice(draft.domainsChoice)
-        }
 
         const fields = draft.fields
         if (fields && typeof fields === 'object') {
@@ -202,7 +195,6 @@ export function CampaignForm({ action, companyName }: Props) {
       sectors,
       locations,
       sizes,
-      domainsChoice,
     }
 
     try {
@@ -210,9 +202,9 @@ export function CampaignForm({ action, companyName }: Props) {
     } catch {
       // Opslag vol of geblokkeerd — het formulier zelf blijft gewoon werken.
     }
-  }, [skipped, sectors, locations, sizes, domainsChoice])
+  }, [skipped, sectors, locations, sizes])
 
-  // De keuzes die in React-state leven (sectoren, locaties, groottes, domeinen)
+  // De keuzes die in React-state leven (sectoren, locaties, groottes)
   // lopen niet via een invoergebeurtenis op het formulier, dus die worden hier
   // bewaard zodra ze wijzigen.
   useEffect(() => {
@@ -557,50 +549,6 @@ export function CampaignForm({ action, companyName }: Props) {
           title="Voer een geldig e-mailadres in"
           className={inputClass(!!errors.positiveReplyEmail)}
         />
-      </Question>
-
-      {/* Q13 */}
-      <Question
-        number={13}
-        title="Domeinen voor mailboxen"
-        description="We hebben 2 domeinen nodig: één voor het versturen en één als backup. Gebruik géén domeinen die je al actief inzet voor bedrijfsmail of website. Voeg bijvoorbeeld een woord uit je slogan toe of gebruik de locatie (als je bedrijf 'bedrijf.nl' is, koop dan 'bedrijf-amsterdam.nl' en 'bedrijven.nl')."
-        skipped={isSkipped('domains')}
-        onToggleSkip={() => toggleSkip('domains')}
-        skipName="domains"
-        error={errors.domainsText}
-      >
-        <input type="hidden" name="domainsChoice" value={domainsChoice} />
-        <div className="space-y-3">
-          <textarea
-            name="domainsText"
-            rows={4}
-            placeholder="Geef suggesties of toelichtingen"
-            disabled={domainsChoice === 'nextwave'}
-            className={`${inputClass(!!errors.domainsText)} ${
-              domainsChoice === 'nextwave' ? 'cursor-not-allowed bg-gray-100 text-gray-400' : ''
-            }`}
-          />
-          <button
-            type="button"
-            onClick={() => setDomainsChoice((prev) => (prev === 'user' ? 'nextwave' : 'user'))}
-            className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-semibold transition-all ${
-              domainsChoice === 'nextwave'
-                ? 'border-indigo-500 bg-indigo-50 text-indigo-700 ring-2 ring-indigo-100'
-                : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
-            }`}
-          >
-            {domainsChoice === 'nextwave' ? (
-              <>
-                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                </svg>
-                NextWave kiest de domeinen
-              </>
-            ) : (
-              'Laat het NextWave team domeinen kiezen'
-            )}
-          </button>
-        </div>
       </Question>
 
       {/* Sticky submit */}
