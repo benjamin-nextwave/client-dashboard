@@ -122,6 +122,7 @@ export async function getLeadsWithStatusForCustomer(
         .from('leads')
         .select(LEAD_COLUMNS)
         .eq('customer_id', customerId)
+        .eq('hidden', false)
         .order('last_reply_at', { ascending: false }),
       supabase
         .from('outbound_replies')
@@ -242,6 +243,7 @@ export async function getLeadById(
     .select(LEAD_COLUMNS)
     .eq('customer_id', customerId)
     .eq('id', leadId)
+    .eq('hidden', false)
     .maybeSingle()
 
   if (error) throw new Error(`getLeadById: ${error.message}`)

@@ -338,6 +338,8 @@ async function getLeadInboxAsCampaignLeads(
         'id, customer_id, email, name, classification, thread_id, first_campaign_id, sending_account, first_reply_at, last_reply_at, replies, created_at, updated_at'
       )
       .eq('customer_id', customerId)
+      // Service-role omzeilt RLS, dus het verbergen moet hier expliciet.
+      .eq('hidden', false)
       .order('first_reply_at', { ascending: false }),
     admin.from('lead_inbox_objections').select('*').eq('client_id', clientId),
   ])
