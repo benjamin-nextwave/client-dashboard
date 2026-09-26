@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { fetchAllRows } from '@/lib/supabase/fetch-all'
 import { getClientList } from './admin-stats'
 import { getClientsWithLastCheck } from './controle'
 import { getExpenseTotals } from '@/lib/rompslomp/expenses'
@@ -211,8 +212,10 @@ export async function getCommissionControlClients(): Promise<CommissionControlCl
  */
 export async function getClientsWithCommissionData(): Promise<CommissionControlClient[]> {
   const supabase = createAdminClient()
-  const [{ data }, clients] = await Promise.all([
-    supabase.from('operator_commission_leads').select('client_id'),
+  const [data, clients] = await Promise.all([
+    fetchAllRows<{ client_id: string }>((from, to) =>
+      supabase.from('operator_commission_leads').select('client_id').order('id').range(from, to)
+    ),
     getClientList(),
   ])
   const nameById = new Map(clients.map((c) => [c.id, c.companyName]))
@@ -384,17 +387,21 @@ export async function getClientCommissionOverview(
   to: string
 ): Promise<ClientCommissionOverview> {
   const supabase = createAdminClient()
-  const [{ data }, firstLeadDate] = await Promise.all([
-    supabase
-      .from('operator_commission_leads')
-      .select('campaign_name, entry_date, category_name, unit_price_cents, is_half_price')
-      .eq('client_id', clientId)
-      .gte('entry_date', from)
-      .lte('entry_date', to),
+  const [data, firstLeadDate] = await Promise.all([
+    fetchAllRows<LeadRow>((rangeFrom, rangeTo) =>
+      supabase
+        .from('operator_commission_leads')
+        .select('campaign_name, entry_date, category_name, unit_price_cents, is_half_price')
+        .eq('client_id', clientId)
+        .gte('entry_date', from)
+        .lte('entry_date', to)
+        .order('id')
+        .range(rangeFrom, rangeTo)
+    ),
     getFirstLeadDate(clientId),
   ])
 
-  return buildClientOverview(from, to, leadsToRawEntries((data ?? []) as LeadRow[]), firstLeadDate)
+  return buildClientOverview(from, to, leadsToRawEntries(data), firstLeadDate)
 }
 
 // ---------------------------------------------------------------------------
@@ -406,12 +413,21 @@ export async function getCompanyCommissionOverview(
   to: string
 ): Promise<CompanyCommissionOverview> {
   const supabase = createAdminClient()
-  const [{ data }, clients, firstLeadByClient] = await Promise.all([
-    supabase
-      .from('operator_commission_leads')
-      .select('client_id, entry_date, unit_price_cents, is_half_price')
-      .gte('entry_date', from)
-      .lte('entry_date', to),
+  const [data, clients, firstLeadByClient] = await Promise.all([
+    fetchAllRows<{
+      client_id: string
+      entry_date: string
+      unit_price_cents: number
+      is_half_price: boolean | null
+    }>((rangeFrom, rangeTo) =>
+      supabase
+        .from('operator_commission_leads')
+        .select('client_id, entry_date, unit_price_cents, is_half_price')
+        .gte('entry_date', from)
+        .lte('entry_date', to)
+        .order('id')
+        .range(rangeFrom, rangeTo)
+    ),
     getClientList(),
     getFirstLeadDateByClient(),
   ])
@@ -421,13 +437,8 @@ export async function getCompanyCommissionOverview(
   // Per klant: commissie-som + set van dagen met leads.
   const commissionByClient = new Map<string, number>()
   const daysByClient = new Map<string, Set<string>>()
-  for (const r of (data ?? []) as Array<{
-    client_id: string
-    entry_date: string
-    unit_price_cents: number
-    is_half_price: boolean | null
-  }>) {
-    const sub = effectiveLeadPriceCents(r.unit_price_cents ?? 0, r.is_half_price ?? false)
+  for (const r of data) {
+    const sub =effectiveLeadPriceCents(r.unit_price_cents ?? 0, r.is_half_price ?? false)
     commissionByClient.set(r.client_id, (commissionByClient.get(r.client_id) ?? 0) + sub)
     const set = daysByClient.get(r.client_id) ?? new Set<string>()
     set.add(r.entry_date)
@@ -506,18 +517,21 @@ export interface CommissionLeadHistoryRow {
 /** Alle commissie-leads (nieuwste eerst), verrijkt met de klantnaam. */
 export async function getAllCommissionLeads(): Promise<CommissionLeadHistoryRow[]> {
   const supabase = createAdminClient()
-  const [{ data }, clients] = await Promise.all([
-    supabase
-      .from('operator_commission_leads')
-      .select('id, client_id, lead_email, campaign_name, category_id, category_name, entry_date, unit_price_cents, is_checked, is_rejected, is_half_price, note')
-      .order('entry_date', { ascending: false })
-      .order('created_at', { ascending: false })
-      .limit(5000),
+  const [data, clients] = await Promise.all([
+    fetchAllRows<Record<string, unknown>>((from, to) =>
+      supabase
+        .from('operator_commission_leads')
+        .select('id, client_id, lead_email, campaign_name, category_id, category_name, entry_date, unit_price_cents, is_checked, is_rejected, is_half_price, note')
+        .order('entry_date', { ascending: false })
+        .order('created_at', { ascending: false })
+        .order('id')
+        .range(from, to)
+    ),
     getClientList(),
   ])
   const nameById = new Map(clients.map((c) => [c.id, c.companyName]))
   return (
-    (data ?? []) as Array<{
+    data as unknown as Array<{
       id: string
       client_id: string
       lead_email: string
@@ -588,25 +602,27 @@ export async function getCommissionChartSeries(
   clientIds?: string[]
 ): Promise<CommissionChartSeries> {
   const supabase = createAdminClient()
-  let query = supabase
-    .from('operator_commission_leads')
-    .select('client_id, entry_date, unit_price_cents, is_half_price')
-    .gte('entry_date', from)
-    .lte('entry_date', to)
-
-  if (clientIds && clientIds.length > 0) {
-    query = query.in('client_id', clientIds)
-  }
-
-  const { data } = await query
-
-  const commissionByDate = new Map<string, number>()
-  for (const r of (data ?? []) as Array<{
+  const data = await fetchAllRows<{
     client_id: string
     entry_date: string
     unit_price_cents: number
     is_half_price: boolean | null
-  }>) {
+  }>((rangeFrom, rangeTo) => {
+    let query = supabase
+      .from('operator_commission_leads')
+      .select('client_id, entry_date, unit_price_cents, is_half_price')
+      .gte('entry_date', from)
+      .lte('entry_date', to)
+
+    if (clientIds && clientIds.length > 0) {
+      query = query.in('client_id', clientIds)
+    }
+
+    return query.order('id').range(rangeFrom, rangeTo)
+  })
+
+  const commissionByDate = new Map<string, number>()
+  for (const r of data) {
     const price = effectiveLeadPriceCents(r.unit_price_cents ?? 0, r.is_half_price ?? false)
     commissionByDate.set(r.entry_date, (commissionByDate.get(r.entry_date) ?? 0) + price)
   }

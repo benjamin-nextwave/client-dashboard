@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { fetchAllRows } from '@/lib/supabase/fetch-all'
 import { effectiveLeadPriceCents } from '@/lib/commissions-shared'
 
 /**
@@ -175,13 +176,17 @@ export async function getClientLeadsOverzicht(clientId: string): Promise<ClientL
     null
 
   const [{ data: leadRows }, { data: objectionRows }, { data: categoryRows }] = await Promise.all([
-    supabase
-      .from('operator_commission_leads')
-      .select(
-        'id, entry_date, lead_email, campaign_name, category_name, unit_price_cents, is_half_price, is_rejected'
-      )
-      .eq('client_id', clientId)
-      .order('entry_date', { ascending: false }),
+    fetchAllRows<LeadRow>((from, to) =>
+      supabase
+        .from('operator_commission_leads')
+        .select(
+          'id, entry_date, lead_email, campaign_name, category_name, unit_price_cents, is_half_price, is_rejected'
+        )
+        .eq('client_id', clientId)
+        .order('entry_date', { ascending: false })
+        .order('id')
+        .range(from, to)
+    ).then((data) => ({ data })),
     supabase
       .from('commission_lead_objections')
       .select(

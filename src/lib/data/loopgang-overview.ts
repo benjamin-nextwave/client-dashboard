@@ -19,6 +19,7 @@
  */
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { fetchAllRows } from '@/lib/supabase/fetch-all'
 import { getKixTasks, type KixTask } from './loopgang-kix-tasks'
 import { getInstantlyCache } from './loopgang-instantly-cache'
 import { getMeetingReports, type MeetingReport } from './loopgang-meeting-reports'
@@ -399,11 +400,17 @@ export async function getLoopgangOverview(monthInput?: string): Promise<Loopgang
         .select('id, client_id, action, occurred_at, note')
         .in('client_id', clientIds)
         .order('occurred_at', { ascending: false }),
-      supabase
-        .from('operator_commission_leads')
-        .select('client_id, entry_date, unit_price_cents, is_half_price, is_rejected')
-        .in('client_id', clientIds)
-        .gte('entry_date', commissionSince),
+      // Honderdtwintig dagen aan leads is ruim boven de 1000 rijen die PostgREST
+      // per verzoek teruggeeft; zonder paginatie vielen er bedragen weg.
+      fetchAllRows<Record<string, unknown>>((from, to) =>
+        supabase
+          .from('operator_commission_leads')
+          .select('client_id, entry_date, unit_price_cents, is_half_price, is_rejected')
+          .in('client_id', clientIds)
+          .gte('entry_date', commissionSince)
+          .order('id')
+          .range(from, to)
+      ).then((data) => ({ data })),
     ])
 
   type Row = Record<string, unknown>
